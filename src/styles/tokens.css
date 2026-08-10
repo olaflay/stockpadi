@@ -1,0 +1,248 @@
+/**
+ * Design tokens — StockPadi.
+ * Lead system: Samsung One UI (one-handed, thumb-reach, focus blocks).
+ * Borrowed: Meta's data-lite/accessibility discipline (WCAG AA, low-end
+ * device legibility); Material Design 3's token vocabulary — tonal
+ * role/container color pairs, state-layer opacities, state-driven motion —
+ * used here as a CSS structure only, not M3's layout or components.
+ * See .agents/rules/design-system.md.
+ *
+ * Every value a component needs comes from here. No hardcoded hex or pixel
+ * values in component code — see the ban list in
+ * .agents/rules/zero-ai-slop-design.md Section 1.
+ *
+ * --color-brand-accent is the one token a per-client fork is expected to
+ * override (via src/config/branding.ts), everything else is fixed structure
+ * shared by every deployment of this codebase.
+ *
+ * Deliberately NOT implemented from the M3 spec, to stay light and because
+ * this product has no product need for them: secondary/tertiary tonal
+ * color roles and dynamic (Material You) color generation — this product
+ * has one brand accent, not a multi-hue theming system; the full 15-role
+ * Display/Headline/Title/Body/Label type scale — collapsed to the 7 sizes
+ * One UI's screens actually use; the full 16-token motion duration scale —
+ * collapsed to 3 steps that map to real state changes in this product.
+ */
+
+:root {
+  /* Brand accent, overridden at runtime from src/config/branding.ts */
+  --color-brand-accent: #0a6e4d;
+  --color-brand-accent-contrast: #ffffff;
+  --color-brand-accent-active: var(--color-brand-accent);
+
+  /* Surface / text, light mode. Checked for WCAG AA contrast, not eyeballed. */
+  --color-surface: #ffffff;
+  --color-surface-container: #f4f5f4;
+  --color-surface-container-high: #e9ebe9;
+  --color-on-surface: #14181a;
+  --color-on-surface-muted: #565f61;
+  --color-border: #d9dcda;
+
+  --color-success: #1a7f3c;
+  --color-warning: #a15c00;
+  --color-danger: #b3261e;
+
+  /* A trading signal (running low on stock), not a system error — kept as
+     its own token, deliberately not --color-danger, so a stock alert never
+     visually reads as "something broke." */
+  --color-stock-alert: #dc2626;
+
+  /* Status containers: tonal role/container pairs (M3 pattern) for badges
+     and chips — e.g. a low-stock chip, so status reads as a tinted surface
+     rather than a saturated fill competing with the content around it. */
+  --color-success-container: #d7f2df;
+  --color-on-success-container: #0d4d21;
+  --color-warning-container: #ffe8c2;
+  --color-on-warning-container: #5c3800;
+  --color-danger-container: #fbdad7;
+  --color-on-danger-container: #7a140d;
+
+  /* On-role text/icon color for a *solid* fill of that role (M3 pattern) —
+     e.g. white text on a filled danger button for a void/delete action. */
+  --color-on-success: #ffffff;
+  --color-on-warning: #ffffff;
+  --color-on-danger: #ffffff;
+
+  /* Outline vs outline-variant (M3 pattern): --color-border is the
+     stronger outline (inputs); this is the subtler one, for decorative
+     list dividers that shouldn't compete with real borders. */
+  --color-outline-variant: #e4e6e4;
+
+  /* Inverse surface (M3 pattern): used for a snackbar/toast so it reads as
+     a distinct floating layer instead of blending into the page. */
+  --color-inverse-surface: #2d3132;
+  --color-inverse-on-surface: #eef1f1;
+
+  /* Scrim: modal/sheet backdrop. Same value in both themes, per M3. */
+  --color-scrim: rgba(0, 0, 0, 0.4);
+
+  /* Type scale: mobile-first, One UI reads large and legible at arm's length */
+  /* Fluid, not fixed: a hero number (sale total, dashboard figures) must
+     stay on one line rather than wrap or leak on a narrow phone. Scales
+     continuously between 24px and 32px with viewport width instead of
+     jumping at a breakpoint; pair with `truncate` at the call site as a
+     last-resort floor for pathologically long values. */
+  --font-size-display: clamp(1.5rem, 1.1rem + 3vw, 2rem); /* 24–32px — dashboard hero numbers */
+  --font-size-title-lg: clamp(1.25rem, 1.05rem + 1.5vw, 1.5rem); /* 20–24px — screen titles */
+  --font-size-title: clamp(1.0625rem, 0.95rem + 1vw, 1.25rem);   /* 17–20px — section titles, sale total */
+
+  /* Fixed below this line, deliberately: body/label/caption are already the
+     small end of the scale. Shrinking them further on a narrow phone would
+     violate the WCAG AA / low-end-legibility rule this product is locked
+     to — reading text must never get smaller than its current size. */
+  --font-size-body-lg: 1.0625rem; /* 17px — primary reading text */
+  --font-size-body: 0.9375rem;    /* 15px — secondary text */
+  --font-size-label: 0.8125rem;   /* 13px — form labels, chips */
+  --font-size-caption: 0.75rem;   /* 12px — timestamps, meta */
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+
+  /* Weight: named so components never hardcode a numeric weight. */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-emphasis: 600; /* buttons, labels, anything actionable */
+
+  /* Spacing: 4px base grid */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Shape: graduated by role, not applied uniformly. Focus blocks (the one
+     thing on a screen that matters) get the largest radius. */
+  --radius-inline: 0.375rem;  /* chips, badges */
+  --radius-control: 0.625rem; /* buttons, inputs */
+  --radius-card: 0.875rem;    /* standard cards */
+  --radius-focus-block: 1.5rem; /* the current-sale-total block, low-stock count */
+  --radius-full: 9999px; /* pills, avatars — the fully-rounded end of the M3 shape scale */
+
+  /* Elevation: named scale, never a stacked box-shadow improvised per component */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.06), 0 1px 1px rgba(20, 24, 26, 0.04);
+  --elevation-2: 0 2px 8px rgba(20, 24, 26, 0.10), 0 1px 2px rgba(20, 24, 26, 0.06);
+  --elevation-3: 0 8px 24px rgba(20, 24, 26, 0.14), 0 2px 4px rgba(20, 24, 26, 0.08);
+  --elevation-4: 0 12px 32px rgba(20, 24, 26, 0.16), 0 4px 8px rgba(20, 24, 26, 0.10);
+  --elevation-5: 0 16px 40px rgba(20, 24, 26, 0.18), 0 6px 12px rgba(20, 24, 26, 0.12);
+  /* Same weight as elevation-2, flipped upward — for a sticky bottom bar
+     lifting off the content behind it (negative Y offset). */
+  --elevation-sticky-top: 0 -2px 8px rgba(20, 24, 26, 0.10), 0 -1px 2px rgba(20, 24, 26, 0.06);
+
+  /* Touch target floor, non-negotiable per PRD Section 8 */
+  --touch-target-min: 2.75rem; /* 44px */
+
+  /* State layers: an opacity applied over a component's base color on
+     interaction (M3 pattern), not a separate hardcoded color per state. */
+  --state-opacity-hover: 0.08;
+  --state-opacity-focus: 0.12;
+  --state-opacity-pressed: 0.12;
+  --state-opacity-dragged: 0.16;
+  --state-opacity-disabled-container: 0.12;
+  --state-opacity-disabled-content: 0.38;
+
+  /* Motion: every duration/easing here must map to a real state change
+     (toast, skeleton, offline banner, sync indicator, sheet/dialog) — see
+     the screen-state checklist in .agents/rules/design-system.md. Kept to
+     three steps, not M3's full 16-token duration scale, to stay light. */
+  --motion-duration-short: 60ms;  /* state-layer/color changes */
+  --motion-duration-medium: 120ms; /* toast, skeleton shimmer cycle */
+  --motion-duration-long: 180ms;   /* larger movement: sheet/dialog enter */
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --easing-emphasized: cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-short: 0ms;
+    --motion-duration-medium: 0ms;
+    --motion-duration-long: 0ms;
+  }
+}
+
+/* Dark values shared by two triggers: the OS preference (system default,
+   unless the user has pinned "light") and an explicit data-theme="dark"
+   set by the Settings > Appearance switch (src/features/settings), which
+   overrides the OS preference either way. See src/features/settings/ThemeProvider.tsx. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-surface: #121516;
+    --color-surface-container: #1b1f20;
+    --color-surface-container-high: #262b2c;
+    --color-on-surface: #e7ebec;
+    --color-on-surface-muted: #a4adaf;
+    --color-border: #33393a;
+    --color-brand-accent-active: #4ade80;
+
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    --color-stock-alert: #fb7185;
+
+    --color-success-container: #0f3d20;
+    --color-on-success-container: #a6e6b8;
+    --color-warning-container: #4a3300;
+    --color-on-warning-container: #ffd48a;
+    --color-danger-container: #5c1712;
+    --color-on-danger-container: #ffb4ab;
+
+    --color-on-success: #0d4d21;
+    --color-on-warning: #4a3300;
+    --color-on-danger: #690005;
+
+    --color-outline-variant: #43494a;
+
+    --color-inverse-surface: #e7ebec;
+    --color-inverse-on-surface: #262b2c;
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --elevation-4: 0 12px 32px rgba(0, 0, 0, 0.65);
+    --elevation-5: 0 16px 40px rgba(0, 0, 0, 0.7);
+    --elevation-sticky-top: 0 -2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-surface: #121516;
+  --color-surface-container: #1b1f20;
+  --color-surface-container-high: #262b2c;
+  --color-on-surface: #e7ebec;
+  --color-on-surface-muted: #a4adaf;
+  --color-border: #33393a;
+  --color-brand-accent-active: #4ade80;
+
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-stock-alert: #fb7185;
+
+  --color-success-container: #0f3d20;
+  --color-on-success-container: #a6e6b8;
+  --color-warning-container: #4a3300;
+  --color-on-warning-container: #ffd48a;
+  --color-danger-container: #5c1712;
+  --color-on-danger-container: #ffb4ab;
+
+  --color-on-success: #0d4d21;
+  --color-on-warning: #4a3300;
+  --color-on-danger: #690005;
+
+  --color-outline-variant: #43494a;
+
+  --color-inverse-surface: #e7ebec;
+  --color-inverse-on-surface: #262b2c;
+
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --elevation-4: 0 12px 32px rgba(0, 0, 0, 0.65);
+  --elevation-5: 0 16px 40px rgba(0, 0, 0, 0.7);
+  --elevation-sticky-top: 0 -2px 8px rgba(0, 0, 0, 0.5);
+}

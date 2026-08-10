@@ -1,0 +1,3 @@
+# Purchases & Suppliers
+
+Recording stock received against a branch and a supplier (name + phone only — there's no draft/PO lifecycle before receiving, and no supplier balance/amount-owed tracking; a `Purchase` is created already-received). A separate bulk "Update stock" screen (`/purchases/update-stock`) lets you reconcile stock count, price, expiry, SKU, and name for every product in one pass — its stock edits still go through the same `writeStockAdjustment` ledger path, not this screen's purchase-receipt path. Receiving a purchase generates `stock_movements` rows; see `.agents/skills/add-stock-movement-type.md`.
