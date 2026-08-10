@@ -15,9 +15,12 @@ interface RateLimitRecord {
 }
 
 // In-memory store. In a multi-instance setup, this would be Redis or Postgres.
-// Since this app runs on a single VPS instance, this is highly efficient.
+// Since this app runs as a single Pxxl instance, this is highly efficient.
 // Resets on process restart — acceptable for the single-instance deployment
-// this is scoped to, not a general-purpose distributed rate limiter.
+// this is scoped to, not a general-purpose distributed rate limiter. If this
+// project is ever scaled to multiple Pxxl instances, this must move to a
+// shared store (Redis or Postgres) or attempts can be bypassed by hitting
+// different instances.
 const rateLimitsByIpAndEmail = new Map<string, RateLimitRecord>();
 const rateLimitsByEmail = new Map<string, RateLimitRecord>();
 

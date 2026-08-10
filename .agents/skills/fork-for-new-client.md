@@ -9,11 +9,11 @@ Per `.agents/rules/reusability-and-multi-client.md`, this should be an afternoon
 
 ## 1. Fresh infrastructure, always, never shared
 
-Provision a new VPS for this client, following `.agents/rules/hosting-and-deployment.md`. Do not add the new client to the existing VPS or the existing Supabase instance. Isolation between clients is a locked decision from the original PRD process, not a cost-saving shortcut to skip when it's inconvenient.
+Provision a new Pxxl project and a new Supabase Cloud project for this client, following `.agents/rules/hosting-and-deployment.md`. Do not add the new client to the existing Pxxl project or the existing Supabase Cloud project. Isolation between clients is a locked decision from the original PRD process, not a cost-saving shortcut to skip when it's inconvenient.
 
 ## 2. Deploy the same codebase
 
-Fork or branch the repository (decide which based on how much divergence is expected, a fork if this is likely to become a long-lived separate client relationship, a branch if it's closer to a pilot). Point Coolify at the new VPS and the new repository reference.
+Fork or branch the repository (decide which based on how much divergence is expected, a fork if this is likely to become a long-lived separate client relationship, a branch if it's closer to a pilot). Point the new Pxxl project at the new repository reference.
 
 ## 3. Configuration, not code
 

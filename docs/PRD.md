@@ -121,6 +121,8 @@ graph TD
     A --> N[PostHog]
 ```
 
+> **Superseded:** the hosting narrative and diagram below (self-hosted VPS via Coolify) reflect the original research. Actual hosting is now Pxxl (app) + Supabase Cloud (backend) — see `.agents/rules/hosting-and-deployment.md`. Kept here as the historical record of why VPS was the original recommendation.
+
 **Hosting decision.** Primary recommendation: self-hosted Supabase stack (Postgres, Auth, Realtime, Storage, Edge Functions) and the Next.js app, both deployed on a single VPS (Hetzner or DigitalOcean, 2GB RAM class) through Coolify for git-push deploys and automated backups. This was chosen after checking actual developer sentiment rather than defaulting to the managed-cloud option: when Supabase-alternative discussions on Reddit are sorted by votes, the consistent top recommendation is self-hosting on a cheap VPS rather than switching to a different managed platform,  and the full Supabase stack runs comfortably on a $10/month, 2GB RAM droplet.  This keeps the exact architecture already designed (same Postgres schema, same RLS roles, same Edge Function ledger logic), it changes only where it runs.
 
 Fallback, if ops time is the scarcer resource than money: Render, managed Postgres plus a web service instance, Postgres starting around $7/month with real backups and point-in-time recovery on higher tiers,  no server maintenance required.
@@ -301,7 +303,7 @@ Polishing the physical retail experience and deepening the data value based on r
 | --- | --- |
 | Sync conflicts corrupt stock counts | Delta-ledger design (Section 10.2) makes this structurally hard to trigger, not just policy-guarded |
 | Low-end device storage limits under months of offline use | Periodic local pruning of fully-synced records older than 90 days; full history stays server-side |
-| Self-hosted VPS is a single point of failure | Coolify-managed automated backups, monitored uptime, documented restore procedure before Phase 1 goes live |
+| Single Pxxl instance / Supabase Cloud project is a single point of failure | Supabase Cloud automated backups, monitored uptime, documented restore procedure before Phase 1 goes live |
 | Codebase drifts into client-specific hardcoding, breaking reusability for a future client | Enforce the Section 9 config-boundary discipline from the start, review before merging whether a change belongs in config or core |
 | Onboarding distrust after a bad experience with a competitor app | Guided "try it in airplane mode" moment during onboarding, not just a marketing claim |
 
@@ -323,6 +325,8 @@ TypeScript strict mode throughout. Unit tests required for all `stock_movements`
 
 ## 23. Cost Analysis
 
+> **Superseded:** the self-hosted VPS/Coolify plan below was the original recommendation. Hosting was later moved to Pxxl (app) + Supabase Cloud (backend) — see `.agents/rules/hosting-and-deployment.md` for the current, locked decision and why. This section is kept as the historical research record, not the current plan.
+
 | Item | Estimate |
 | --- | --- |
 | VPS (Hetzner or DigitalOcean, 2GB RAM) running self-hosted Supabase and the Next.js app via Coolify | Roughly $10-20/month, a comparable stack has been run on a $10/month 2GB droplet |
@@ -342,7 +346,7 @@ Figures are modeled from published 2026 rates and comparable real-world deployme
 4. Stock and customer credit balance are delta-merged via an append-only ledger, never overwritten.
 5. Refunds and voids require an online connection.
 6. Payment method is recorded as a tag in MVP, not processed live.
-7. Hosting: self-hosted Supabase and Next.js on one VPS via Coolify, chosen over Vercel plus Supabase Cloud after checking real developer cost sentiment; Render as the zero-ops fallback.
+7. Hosting: originally self-hosted Supabase and Next.js on one VPS via Coolify, chosen over Vercel plus Supabase Cloud after checking real developer cost sentiment; Render as the zero-ops fallback. **Superseded** — current hosting is Pxxl + Supabase Cloud, see `.agents/rules/hosting-and-deployment.md`.
 8. PocketBase considered and rejected in favor of keeping Postgres's transactional and RLS guarantees for financial/stock data.
 
 **Primary sources:** Loyverse Support Center, Square Developer Docs, Zoho Inventory user forum, PowerSync documentation, Reddit-sourced Supabase/Vercel alternative discussions (via selfhost.dev's vote-sorted summary and independent developer write-ups), Statista/StatCounter Nigeria mobile data, Konga PWA case coverage.

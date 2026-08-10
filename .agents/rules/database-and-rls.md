@@ -31,7 +31,7 @@ A Cashier or Inventory Staff account is scoped to the branch or branches they ar
 
 ## Migration discipline
 
-Every schema change ships as a versioned migration, never a manual edit against the running database. Migrations get applied identically in local development and on the VPS via the deployment process in `.agents/rules/hosting-and-deployment.md`. Do not hand-edit the schema on the production VPS to fix something quickly, write the migration, even under time pressure, because the alternative is a schema that has silently drifted from what's in version control.
+Every schema change ships as a versioned migration, never a manual edit against the running database. Migrations get applied identically in local development and against the Supabase Cloud project via the deployment process in `.agents/rules/hosting-and-deployment.md`. Do not hand-edit the schema on the production Supabase Cloud project to fix something quickly, write the migration, even under time pressure, because the alternative is a schema that has silently drifted from what's in version control.
 
 ## Audit logging
 

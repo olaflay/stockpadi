@@ -16,7 +16,7 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 
 ## Stack
 
-Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, Workbox for service worker and background sync, self-hosted Supabase (Postgres, Auth, Realtime, Storage, Edge Functions) and Oracle, deployed via Coolify on a single VPS (Hetzner or DigitalOcean). No Vercel, no Supabase Cloud. That choice is explained and locked in `.agents/rules/hosting-and-deployment.md`, do not silently reintroduce a managed platform because it seems simpler mid-build.
+Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, Workbox for service worker and background sync, Supabase Cloud (Postgres, Auth, Realtime, Storage, Edge Functions) as the managed backend, deployed via Pxxl (git-push deploys from GitHub). That choice is explained and locked in `.agents/rules/hosting-and-deployment.md`, do not silently reintroduce a different hosting platform because it seems simpler mid-build.
 
 ## Locked decisions (do not silently override any of these)
 
@@ -25,7 +25,7 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, W
 3. Payment method is recorded as a tag (cash, transfer, POS terminal, credit). The app never processes, stores, or transmits live card or wallet payment data. Full rule: `.agents/rules/payment-and-pci-scope.md`.
 4. Refunds and voids require an online connection. Never build an offline path for either, even if asked, without surfacing the conflict first.
 5. Design system lead is Samsung One UI (one-handed, thumb-reach layout), borrowing Meta's data-lite discipline for low-end Android on weak connections. Full rule: `.agents/rules/design-system.md`.
-6. Hosting is self-hosted Supabase plus the Next.js app, both on one VPS via Coolify. Full rule: `.agents/rules/hosting-and-deployment.md`.
+6. Hosting is the Next.js app on Pxxl plus Supabase Cloud (managed) as the backend. Full rule: `.agents/rules/hosting-and-deployment.md`.
 7. The codebase must stay forkable for a future client without a rewrite: branding, business-type defaults, and credentials live in configuration, never hardcoded. Full rule: `.agents/rules/reusability-and-multi-client.md`.
 
 ## Rules index (`.agents/rules/`)
@@ -34,7 +34,7 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, W
 |---|---|
 | `offline-sync-and-ledger.md` | The delta-merge ledger, conflict resolution per entity, what must never become a mutable field |
 | `database-and-rls.md` | Schema conventions, single-tenant RLS by role, migration discipline |
-| `hosting-and-deployment.md` | Self-hosted Supabase and Next.js on Coolify, backups, secrets, why this over Vercel/Supabase Cloud |
+| `hosting-and-deployment.md` | Pxxl app hosting plus Supabase Cloud, backups, secrets, why this over the previous self-hosted VPS plan |
 | `payment-and-pci-scope.md` | The payment-method-as-tag boundary, what to do if asked to add real payment processing |
 | `design-system.md` | Samsung One UI lead system, Meta data-lite borrowing, tokens, the screen-state checklist |
 | `testing-and-qa.md` | What must have an automated test before merge, especially ledger and sync logic |
@@ -58,7 +58,7 @@ Procedural playbooks for recurring build tasks. Read the relevant one before sta
 | `write-edge-function.md` | Adding or modifying an Edge Function |
 | `add-business-type-template.md` | Adding a new business-type default (beyond Grocery, Pharmacy, Electronics, General Retail) |
 | `fork-for-new-client.md` | Standing up a second client deployment from this codebase |
-| `vps-deploy-and-backup-check.md` | Deploying to or verifying the health of the Coolify/VPS hosting |
+| `pxxl-deploy-and-backup-check.md` | Deploying to or verifying the health of the Pxxl/Supabase Cloud hosting |
 
 ## If something isn't covered here
 

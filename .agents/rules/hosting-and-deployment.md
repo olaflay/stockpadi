@@ -2,31 +2,30 @@
 
 ## The decision
 
-Self-hosted Supabase (Postgres, Auth, Realtime, Storage, Edge Functions) and the Next.js app, both deployed on a single VPS, managed through Coolify for git-push deploys and automated backups. Not Vercel. Not Supabase Cloud.
+The Next.js app deploys on **Pxxl** (git-push deploys from GitHub, auto-detected Next.js build, automatic HTTPS/CDN, environment variables managed in the Pxxl dashboard). The backend is **Supabase Cloud** (managed Postgres, Auth, Realtime, Storage, Edge Functions). Not a self-hosted VPS. Not Vercel.
 
-**VPS provider: Oracle Cloud "Always Free" tier**, chosen over a paid Hetzner/DigitalOcean droplet specifically for $0/month cost — confirmed with Olaflay, cost was the deciding constraint over operational simplicity. This carries real, accepted tradeoffs a paid VPS doesn't have:
-- Free-tier Ampere (ARM) instances are frequently capacity-constrained in popular regions; provisioning one is not guaranteed on the first attempt.
-- Oracle has a documented history of flagging free-tier accounts as inactive/abusive and reclaiming resources or suspending accounts with little warning. Mitigate this deliberately: keep the instance genuinely active (real traffic, regular logins), enable Oracle's billing/usage alerts, and treat the automated-backup requirement below as non-negotiable specifically because of this risk, not just as general hygiene.
-- If this risk ever becomes unacceptable (an account suspension actually happens, or capacity issues block a needed resize), the documented fallback is a paid Hetzner/DigitalOcean droplet at $10-20/month, same Coolify setup, no other architecture change needed.
+## Why this supersedes the original self-hosted VPS plan
 
-## Why, so this doesn't get silently reversed mid-build
+This project was originally scoped for a self-hosted Supabase + Coolify stack on an Oracle Cloud free-tier VPS (see `docs/PRD.md` for that original research). That plan was superseded — confirmed with Olaflay — in favor of Pxxl plus Supabase Cloud, prioritizing zero ops burden (no server patching, no manual backup/restore verification, no Oracle free-tier suspension risk) over the marginal cost savings of self-hosting. Supabase Cloud's managed pricing tiers are well within range for this workload's scale (1-6 branches per client), and Pxxl's git-push workflow matches the existing GitHub-based flow with no VPS or reverse-proxy config to maintain.
 
-This was chosen after checking real developer cost sentiment rather than defaulting to the managed-cloud option that most tutorials assume. Reddit threads on Supabase alternatives consistently surface self-hosting on a cheap VPS as the top-voted recommendation over switching to a different managed BaaS. A developer running the equivalent stack reported it working comfortably on a $10/month, 2GB RAM droplet. A purpose-built migration tool exists specifically because Supabase's own hosted pricing curve runs from $25/month toward several thousand dollars a month at scale that this deployment will never reach, self-hosting for this workload runs $20 to $200 a month depending on tier, and this deployment sits at the low end of that range.
+If hosting is ever moved again, update this file and `AGENTS.md`'s locked decisions together, do not leave them disagreeing.
 
-The same research process ruled out Vercel specifically because of billing unpredictability, not capability. A recurring, well-documented failure mode across independent write-ups is a normal month at a few hundred GB of bandwidth turning into a $400+ bill in a traffic spike month, for workloads far smaller than what this deployment is architected for. This app is offline-first by design, most of its work happens against local IndexedDB, it does not need Vercel's edge-rendering strengths to function well.
+## Deployment workflow
 
-PocketBase was considered and rejected. It is the most Reddit-loved self-hosted BaaS right now and would be cheaper still, but its SQLite foundation and simpler rule engine would require rebuilding the transactional guarantees the ledger and RLS design depend on. That is not a hosting decision, it is redoing finished architecture work to save a small amount of money on a system holding another business's real financial and stock data.
+Push to the branch Pxxl watches (`main`). Pxxl auto-detects the Next.js build, runs `npm run build`, and deploys with zero downtime. Confirm the build succeeded in the Pxxl dashboard and that the app is actually reachable and functioning post-deploy, not just that the build step reported success. A green build is not the same as a working deployment. See `.agents/skills/pxxl-deploy-and-backup-check.md` for the concrete checklist.
 
-Render (managed Postgres plus a managed web service, no self-hosting) is the documented fallback if VPS operations ever become the wrong tradeoff for available time. It costs somewhat more than the self-hosted VPS but removes all patching, backup, and uptime responsibility. If this deployment's hosting is ever moved to Render, update this file and `AGENTS.md`'s locked decisions together, do not leave them disagreeing.
+## Database migrations on deploy
 
-## Edge reverse proxy
+Migrations run against the Supabase Cloud project via the Supabase CLI (`npx supabase db push` or the linked project's migration flow), in a fixed order, matching exactly what ran in local development. Never apply a migration manually against the production database outside this process, per `.agents/rules/database-and-rls.md`.
 
-An explicit nginx reverse proxy sits in front of the Coolify-managed app and Supabase containers (template at `deploy/nginx/stockpadi.conf`), terminating TLS and forwarding to the app and to Supabase's Kong gateway. This is additive to, not a replacement for, Coolify (Coolify still owns the containers, git-push deploys, and backups) — confirmed with Olaflay when this was added, so it does not get silently reversed as "Coolify already has a proxy built in."
+## Edge Functions
 
-## Operational requirements on the VPS
+`sync-push`, `manage-staff`, `send-verification`, `verify-email`, and `void-sale` under `supabase/functions/` deploy via `npx supabase functions deploy <name>` against the linked Supabase Cloud project. Deploy migrations before deploying functions that assume the resulting schema, never the other way around.
 
-Automated backups configured through Coolify, verified working, not just configured. A documented restore procedure that has actually been tested once before this goes live with real client data, not assumed to work because the backup job runs on schedule. Uptime monitoring with an alert that reaches Olaflay directly, not just a dashboard nobody checks. See `.agents/skills/vps-deploy-and-backup-check.md` for the concrete checklist.
+## Operational requirements
+
+Supabase Cloud provides automated Postgres backups on paid tiers — confirm the project's backup retention matches what real client data requires, this is not automatic on the free tier. A documented restore procedure that has actually been tested once before this goes live with real client data, not assumed to work because Supabase says backups are enabled. Uptime monitoring with an alert that reaches Olaflay directly (Supabase's own status page plus a lightweight external uptime check on the Pxxl-hosted URL), not just a dashboard nobody checks. See `.agents/skills/pxxl-deploy-and-backup-check.md`.
 
 ## Secrets and environment configuration
 
-Database credentials, Supabase service keys, and any future payment provider keys live in environment variables managed through Coolify, never committed to the repository, never hardcoded in a config file that gets checked in. This is also a reusability requirement, see `.agents/rules/reusability-and-multi-client.md`, a second client's credentials must never be reachable from the first client's deployment.
+Database credentials, Supabase service keys, SMTP credentials, and any future payment provider keys live in environment variables managed through the Pxxl dashboard (app-side) and Supabase's project settings (Edge Function secrets), never committed to the repository, never hardcoded in a config file that gets checked in. This is also a reusability requirement, see `.agents/rules/reusability-and-multi-client.md` — a second client's credentials must never be reachable from the first client's deployment.

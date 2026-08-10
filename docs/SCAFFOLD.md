@@ -4,7 +4,7 @@ What exists in this repo as of the initial scaffold, why, and what's still a stu
 
 ## Stack as built
 
-Next.js 16 (App Router, Turbopack for dev), React 19, TypeScript strict mode, Tailwind CSS v4 (CSS-first config, no `tailwind.config.js`). Dexie 4 over IndexedDB for local-first storage. Supabase JS client pointed at a self-hosted instance (no URL/keys committed). Serwist (Workbox successor) for the service worker. Vitest + fake-indexeddb for tests. lucide-react for icons (emoji icons are banned by `.agents/rules/zero-ai-slop-design.md`).
+Next.js 16 (App Router, Turbopack for dev), React 19, TypeScript strict mode, Tailwind CSS v4 (CSS-first config, no `tailwind.config.js`). Dexie 4 over IndexedDB for local-first storage. Supabase JS client pointed at a Supabase Cloud project (no URL/keys committed), deployed on Pxxl. Serwist (Workbox successor) for the service worker. Vitest + fake-indexeddb for tests. lucide-react for icons (emoji icons are banned by `.agents/rules/zero-ai-slop-design.md`).
 
 ## Directory structure
 

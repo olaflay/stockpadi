@@ -23,7 +23,7 @@ export default function AboutSettingsPage() {
         <ShieldCheck size={20} className="mt-0.5 shrink-0 text-on-surface-muted" aria-hidden />
         <p className="text-[length:var(--font-size-caption)] leading-relaxed text-on-surface-muted">
           <b>NDPR Compliance Statement:</b> All sales, inventory, and staff data are stored locally in IndexedDB. No
-          information is transmitted to external servers unless synchronizing with a self-hosted cloud instance.
+          information is transmitted to external servers unless synchronizing with the cloud backend.
         </p>
       </section>
 

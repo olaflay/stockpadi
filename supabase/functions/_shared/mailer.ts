@@ -16,8 +16,8 @@
  *   Brevo        — host: smtp-relay.brevo.com, port: 587, secure: false
  *   Gmail        — host: smtp.gmail.com, port: 465, user: your email, secure: true
  *
- * See .agents/rules/hosting-and-deployment.md for the self-hosted infra
- * context — SMTP secrets live in Coolify's environment variable store.
+ * See .agents/rules/hosting-and-deployment.md for the hosting context —
+ * SMTP secrets live in Supabase's Edge Function secrets store.
  */
 
 // Nodemailer runs inside Deno via the npm: specifier.
