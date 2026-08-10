@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online-status";

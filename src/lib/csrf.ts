@@ -31,7 +31,7 @@ export async function verifyCsrfToken(submittedToken: string): Promise<boolean> 
       Buffer.from(storedToken, "utf8"),
       Buffer.from(submittedToken, "utf8")
     );
-  } catch (e) {
+  } catch {
     // Fails if lengths don't match
     return false;
   }

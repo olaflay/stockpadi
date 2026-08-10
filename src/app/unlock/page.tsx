@@ -38,6 +38,10 @@ const LOCKOUT_SCHEDULE: Array<{ afterAttempts: number; lockSeconds: number }> = 
 ];
 const FORCE_RELOGIN_AFTER_ATTEMPTS = 10;
 
+function getSystemTime(): number {
+  return Date.now();
+}
+
 export default function UnlockPage() {
   const router = useRouter();
   const users = useLiveQuery(() => db.localUsers.toArray(), []);
@@ -46,7 +50,8 @@ export default function UnlockPage() {
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => getSystemTime());
+
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   const activeUsers = users?.filter((u) => u.isActive) ?? [];
@@ -62,7 +67,7 @@ export default function UnlockPage() {
   // update live without requiring a retry tap.
   useEffect(() => {
     if (!isLocked) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => setNow(getSystemTime()), 1000);
     return () => clearInterval(interval);
   }, [isLocked]);
 
@@ -72,7 +77,7 @@ export default function UnlockPage() {
     const user = activeUsers.find((u) => u.id === effectiveSelectedId);
     if (!user) return;
 
-    if (user.pinLockedUntil && new Date(user.pinLockedUntil).getTime() > Date.now()) {
+    if (user.pinLockedUntil && new Date(user.pinLockedUntil).getTime() > getSystemTime()) {
       setError(`Too many attempts. Try again in ${lockRemainingSeconds}s.`);
       setPin("");
       return;
@@ -84,7 +89,7 @@ export default function UnlockPage() {
       if (!ok) {
         const attempts = (user.failedPinAttempts ?? 0) + 1;
         const tier = [...LOCKOUT_SCHEDULE].reverse().find((t) => attempts >= t.afterAttempts);
-        const lockedUntil = tier ? new Date(Date.now() + tier.lockSeconds * 1000).toISOString() : null;
+        const lockedUntil = tier ? new Date(getSystemTime() + tier.lockSeconds * 1000).toISOString() : null;
         await db.localUsers.update(user.id, { failedPinAttempts: attempts, pinLockedUntil: lockedUntil });
 
         if (attempts >= FORCE_RELOGIN_AFTER_ATTEMPTS) {
@@ -303,7 +308,7 @@ export default function UnlockPage() {
                     disabled={isLocked}
                     aria-label="4-digit PIN"
                   />
-                  <div 
+                  <div
                     className="flex justify-center gap-4 py-2 cursor-text relative z-10"
                     onClick={() => document.getElementById("pin-input")?.focus()}
                   >
@@ -312,11 +317,10 @@ export default function UnlockPage() {
                       return (
                         <div
                           key={index}
-                          className={`flex h-14 w-14 items-center justify-center rounded-[var(--radius-control)] border-2 text-[length:var(--font-size-title)] font-bold transition-all duration-[var(--motion-duration-short)] ${
-                            hasChar
+                          className={`flex h-14 w-14 items-center justify-center rounded-[var(--radius-control)] border-2 text-[length:var(--font-size-title)] font-bold transition-all duration-[var(--motion-duration-short)] ${hasChar
                               ? "border-brand-accent bg-brand-accent/5 text-on-surface"
                               : "border-border text-on-surface-muted bg-surface-container"
-                          }`}
+                            }`}
                         >
                           {hasChar ? (showPin ? pin[index] : "•") : "—"}
                         </div>

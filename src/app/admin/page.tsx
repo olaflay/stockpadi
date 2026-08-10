@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
@@ -39,15 +39,7 @@ export default function SuperAdminPage() {
     return u && u.role === "super_admin" ? u : null;
   }, []);
 
-  useEffect(() => {
-    if (adminUser === null) {
-      router.replace("/login");
-    } else if (adminUser) {
-      fetchTenants();
-    }
-  }, [adminUser, router]);
-
-  async function fetchTenants() {
+  const fetchTenants = useCallback(async () => {
     setLoading(true);
     try {
       const supabase = getSupabase();
@@ -88,7 +80,15 @@ export default function SuperAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (adminUser === null) {
+      router.replace("/login");
+    } else if (adminUser) {
+      setTimeout(() => fetchTenants(), 0);
+    }
+  }, [adminUser, router, fetchTenants]);
 
   async function toggleTenantStatus(tenantId: string, currentStatus: boolean) {
     setTogglingId(tenantId);
@@ -116,7 +116,7 @@ export default function SuperAdminPage() {
         `Tenant ${newStatus ? "activated" : "suspended"} successfully.`,
         newStatus ? "success" : "warning"
       );
-      
+
       // Update local state
       setTenants((prev) =>
         prev.map((t) => (t.id === tenantId ? { ...t, is_active: newStatus } : t))
@@ -219,11 +219,10 @@ export default function SuperAdminPage() {
                         {tenant.name}
                       </h2>
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          tenant.is_active
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${tenant.is_active
                             ? "bg-success-container text-on-success-container"
                             : "bg-danger-container text-on-danger-container"
-                        }`}
+                          }`}
                       >
                         {tenant.is_active ? <CheckCircle size={10} /> : <XCircle size={10} />}
                         {tenant.is_active ? "Active" : "Suspended"}
@@ -244,11 +243,10 @@ export default function SuperAdminPage() {
                     type="button"
                     onClick={() => toggleTenantStatus(tenant.id, tenant.is_active)}
                     disabled={togglingId === tenant.id}
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-                      tenant.is_active
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${tenant.is_active
                         ? "text-danger hover:bg-danger/10"
                         : "text-brand-accent hover:bg-brand-accent/10"
-                    }`}
+                      }`}
                     title={tenant.is_active ? "Suspend Tenant" : "Activate Tenant"}
                   >
                     <Power size={18} />

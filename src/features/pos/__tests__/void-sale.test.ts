@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { db, type CustomerCreditMovement } from "@/lib/db";
+import { db } from "@/lib/db";
 import { completeSale, type CartLine } from "@/features/pos/complete-sale";
 import { voidSale } from "@/features/pos/void-sale";
 import { getCurrentStock } from "@/features/inventory/stock";

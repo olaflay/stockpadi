@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { db } from "@/lib/db";
@@ -34,7 +34,7 @@ export default function LoginForm({ csrfToken }: { csrfToken: string }) {
     const params = new URLSearchParams(window.location.search);
     const force = params.get("force") === "true";
     if (force) {
-      setChecking(false);
+      setTimeout(() => setChecking(false), 0);
       return;
     }
     db.localUsers.toArray().then((users) => {
@@ -68,7 +68,13 @@ export default function LoginForm({ csrfToken }: { csrfToken: string }) {
       }
 
       if (result.profile) {
-        let profileData: any = null;
+        let profileData: {
+          id: string;
+          full_name: string;
+          role: string;
+          pin_hash: string | null;
+          is_active: boolean;
+        } | null = null;
         // We must fetch the user profile from the DB to seed local db if they are logging in on a new device.
         const supabase = getSupabase();
         if (supabase) {

@@ -60,7 +60,7 @@ function PosPageContent() {
         // are for. router.replace immediately below removes the param so
         // this doesn't re-fire.
         cart.addToCart(prod.id, prod.sellPrice, prod.unitLabel, 1);
-        setStep("cart");
+        setTimeout(() => setStep("cart"), 0);
         // Remove search param from URL to prevent duplicate adds on reload
         router.replace("/pos");
       }

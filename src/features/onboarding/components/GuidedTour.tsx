@@ -104,14 +104,16 @@ export function GuidedTour() {
       if (!storedStep) {
         // Start tour from step 1
         localStorage.setItem(TOUR_STORAGE_KEY, "1");
-        setStep(1);
+        setTimeout(() => setStep(1), 0);
       } else {
-        setStep(parseInt(storedStep, 10));
+        const val = parseInt(storedStep, 10);
+        setTimeout(() => setStep(val), 0);
       }
     } else {
       const storedStep = localStorage.getItem(TOUR_STORAGE_KEY);
       if (storedStep) {
-        setStep(parseInt(storedStep, 10));
+        const val = parseInt(storedStep, 10);
+        setTimeout(() => setStep(val), 0);
       }
     }
   }, [productsCount, user]);
@@ -119,7 +121,7 @@ export function GuidedTour() {
   // Recalculate spotlight positioning whenever pathname or step changes
   useEffect(() => {
     if (step === 0) {
-      setSpotlight(null);
+      setTimeout(() => setSpotlight(null), 0);
       return;
     }
 
@@ -137,7 +139,7 @@ export function GuidedTour() {
 
     const targetId = currentStepConfig.targetId;
     if (!targetId) {
-      setSpotlight(null);
+      setTimeout(() => setSpotlight(null), 0);
       return;
     }
 
@@ -302,19 +304,19 @@ export function GuidedTour() {
         style={
           spotlight
             ? {
-                top: spotlight.top > window.innerHeight / 2
-                  ? spotlight.top - 200 // Position above target
-                  : spotlight.top + spotlight.height + 16, // Position below target
-                left: "5%",
-                right: "5%",
-                margin: "0 auto",
-              }
+              top: spotlight.top > window.innerHeight / 2
+                ? spotlight.top - 200 // Position above target
+                : spotlight.top + spotlight.height + 16, // Position below target
+              left: "5%",
+              right: "5%",
+              margin: "0 auto",
+            }
             : {
-                top: "30%",
-                left: "5%",
-                right: "5%",
-                margin: "0 auto",
-              }
+              top: "30%",
+              left: "5%",
+              right: "5%",
+              margin: "0 auto",
+            }
         }
       >
         <div className="flex items-start justify-between gap-4 mb-2">
@@ -330,7 +332,7 @@ export function GuidedTour() {
             <X size={18} aria-hidden />
           </button>
         </div>
-        
+
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed mb-4">
           {currentStepConfig.description}
         </p>

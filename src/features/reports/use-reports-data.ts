@@ -82,7 +82,6 @@ export function useReportsData() {
   }, [period]);
 
   const products = result?.products ?? [];
-  const stockByProduct = result?.stockByProduct ?? new Map<string, number>();
   const lowStockIds = result?.lowStockIds ?? new Set<string>();
   const lowStockProducts = products.filter((product) => lowStockIds.has(product.id));
 

@@ -46,7 +46,7 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
             }
           });
         }
-      } catch (err) {
+      } catch {
         if (mounted) {
           setError("Failed to start camera. Please check permissions.");
         }

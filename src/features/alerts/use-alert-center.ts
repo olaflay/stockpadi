@@ -14,7 +14,8 @@ function useAcknowledgedIds() {
     try {
       const stored = localStorage.getItem(ACKNOWLEDGED_STORAGE_KEY);
       if (stored) {
-        setAcknowledgedIds(new Set(JSON.parse(stored)));
+        const parsed = new Set<string>(JSON.parse(stored));
+        setTimeout(() => setAcknowledgedIds(parsed), 0);
       }
     } catch {
       // ignore
@@ -46,7 +47,8 @@ export function useAlertCenter() {
     try {
       const stored = localStorage.getItem(ACKNOWLEDGED_STORAGE_KEY);
       if (stored) {
-        setAcknowledgedIds(new Set(JSON.parse(stored)));
+        const parsed = new Set<string>(JSON.parse(stored));
+        setTimeout(() => setAcknowledgedIds(parsed), 0);
       }
     } catch {
       // ignore

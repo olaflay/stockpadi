@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { RippleButton } from "@/components/ui/Ripple";
@@ -11,7 +10,6 @@ import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 
 export default function ResetPasswordForm({ csrfToken }: { csrfToken: string }) {
-  const router = useRouter();
   const isOnline = useOnlineStatus();
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
