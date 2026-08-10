@@ -23,7 +23,6 @@ import { verifyPin } from "@/lib/pin-hash";
 import { startSession } from "@/features/auth/session";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RippleButton } from "@/components/ui/Ripple";
-import { TextInput } from "@/components/ui/TextInput";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 
 // Escalating lockout after repeated wrong PINs — a 4-digit PIN is only

@@ -58,7 +58,7 @@ export default function ImportProductsPage() {
     try {
       const parsed = await parseProductCsv(selected);
       setResult(parsed);
-    } catch (err) {
+    } catch {
       showToast("Failed to parse CSV file", "danger");
       setResult(null);
     } finally {

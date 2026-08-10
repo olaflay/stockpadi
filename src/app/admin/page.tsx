@@ -6,7 +6,6 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { signOut } from "@/features/auth/logout";
-import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RippleButton } from "@/components/ui/Ripple";
 import { Search, Power, ShieldAlert, LogOut, CheckCircle, XCircle } from "lucide-react";

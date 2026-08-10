@@ -62,7 +62,7 @@ export async function createAccountAction(formData: {
     // 2. Check for idempotency: Does the user already exist?
     // We check via admin API instead of auth.users since we only have public schema access easily, 
     // but admin API works.
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = users?.users.find(u => u.email === email.toLowerCase().trim());
 
     if (existingUser) {
