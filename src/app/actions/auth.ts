@@ -75,7 +75,14 @@ export async function createAccountAction(formData: {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password,
-      email_confirm: false,
+      // Auto-confirm at the Supabase Auth level: the app enforces its own
+      // 6-digit email verification (EmailVerificationBanner) tracked via
+      // localUsers.emailVerified. If this stayed false, Supabase's native
+      // "Confirm email" gate would reject the signInWithPassword call made
+      // immediately after account creation below, since a fresh account is
+      // by definition unconfirmed — that's what produced the misleading
+      // "wrong email or password" error right after signup.
+      email_confirm: true,
       user_metadata: {
         full_name: fullName.trim(),
         business_name: businessName.trim(),

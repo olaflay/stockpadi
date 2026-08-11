@@ -23,7 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resolved = useLiveQuery(async () => {
     const session = await db.session.get(SESSION_SINGLETON_ID);
-    if (!session) return { kind: "no-session" as const };
+    if (!session) {
+      // No session row at all: distinguish "known device, just log back in
+      // via PIN" from "this device has never created an account."
+      const users = await db.localUsers.toArray();
+      return users.length > 0 ? { kind: "no-session" as const } : { kind: "no-account" as const };
+    }
     if (new Date(session.expiresAt).getTime() < Date.now()) return { kind: "expired" as const };
     const user = await db.localUsers.get(session.userId);
     if (!user || !user.isActive) return { kind: "no-session" as const };
@@ -40,8 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!resolved) return;
-    if (resolved.kind === "expired") router.replace("/login");
+    // A previously-unlocked device just needs its PIN re-entered, not the
+    // full email/password login screen.
+    if (resolved.kind === "expired") router.replace("/unlock");
     if (resolved.kind === "no-session") router.replace("/unlock");
+    if (resolved.kind === "no-account") router.replace("/register");
     if (resolved.kind === "active" && resolved.user.role === "super_admin") {
       router.replace("/admin");
     }

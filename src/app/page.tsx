@@ -17,9 +17,14 @@ export default function Home() {
           router.replace("/admin");
           return;
         }
+        const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
+        router.replace(profile ? "/sales" : "/onboarding");
+        return;
       }
-      const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
-      router.replace(profile ? "/sales" : "/onboarding");
+      // No active session: a device that already has a local account should
+      // only need a quick PIN unlock, never the full create-account screen.
+      const users = await db.localUsers.toArray();
+      router.replace(users.length > 0 ? "/unlock" : "/register");
     }
     determineRoute();
   }, [router]);

@@ -120,6 +120,15 @@ export default function RegisterForm({ csrfToken }: { csrfToken: string }) {
         return;
       }
 
+      // createAccountAction returns success:true with no userId when the
+      // email is already registered (idempotency, not a fresh account) —
+      // signing in with the just-typed password would legitimately fail
+      // and surface as a confusing "wrong password" error mid-signup.
+      if (!actionResult.userId) {
+        setError("This email is already registered. Try logging in instead.");
+        return;
+      }
+
       // 2. Sign in to establish local session JWT
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),

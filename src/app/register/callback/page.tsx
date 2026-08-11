@@ -51,20 +51,39 @@ export default function RegisterCallbackPage() {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    supabase.auth.getUser().then(({ data, error }) => {
+    supabase.auth.getUser().then(async ({ data, error }) => {
       if (error || !data.user) {
         router.replace("/register");
-      } else {
-        // If the user already has a business profile loaded locally, they are just logging in.
-        db.localUsers.toArray().then((users) => {
-          if (users.find((u) => u.id === data.user.id)) {
-            router.replace("/unlock");
-          } else {
-            setUser(data.user);
-            setUserLoading(false);
-          }
-        });
+        return;
       }
+
+      // Check the server for an existing account rather than only this
+      // device's local IndexedDB — a second/new device has no local users
+      // yet even for someone who already registered elsewhere, and treating
+      // that as "brand new" would re-run business/PIN setup over their real
+      // account and overwrite its role and business metadata.
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id, full_name, role, pin_hash, is_active")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        await db.localUsers.put({
+          id: profile.id,
+          fullName: profile.full_name,
+          role: profile.role as Role,
+          pinHash: profile.pin_hash,
+          isActive: profile.is_active,
+          updatedAt: new Date().toISOString(),
+        });
+        await startSession(profile.id);
+        router.replace(profile.role === "super_admin" ? "/admin" : "/unlock");
+        return;
+      }
+
+      setUser(data.user);
+      setUserLoading(false);
     });
   }, [router]);
 

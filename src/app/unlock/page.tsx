@@ -8,7 +8,7 @@
  *   2. PIN entry — viewing area shows selected user identity; bottom area
  *      holds the PIN input and Unlock CTA within thumb reach.
  * Loading state: a layout-matching skeleton while IndexedDB hydrates.
- * Empty state: redirect to /login (no local users means first-time device).
+ * Empty state: redirect to /register (no local users means first-time device).
  * PIN auto-submit at length 4 — removes friction for the primary action.
  * PIN session expires after 24 hours (see session.ts).
  * See .agents/rules/design-system.md and zero-ai-slop-design.md.
@@ -111,10 +111,10 @@ export default function UnlockPage() {
   }
 
   // Empty state: if IndexedDB has resolved and there are no active users,
-  // this is a fresh device — redirect to /login for full authentication.
+  // this is a fresh device — redirect to /register to create an account.
   useEffect(() => {
     if (users !== undefined && activeUsers.length === 0) {
-      router.replace("/login");
+      router.replace("/register");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users]);
