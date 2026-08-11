@@ -5,11 +5,11 @@ const CSRF_COOKIE_NAME = "x-csrf-token";
 
 /**
  * Reads the CSRF token cookie for the current request. The cookie itself is
- * issued by src/middleware.ts — Next.js only allows setting cookies from a
- * Server Action, a Route Handler, or middleware, never from a plain Server
+ * issued by src/proxy.ts — Next.js only allows setting cookies from a
+ * Server Action, a Route Handler, or proxy, never from a plain Server
  * Component render (which is what this function used to do, and which
  * throws "Cookies can only be modified in a Server Action or Route Handler"
- * at runtime). Every page that calls this must be listed in the middleware
+ * at runtime). Every page that calls this must be listed in the proxy
  * matcher so the cookie is guaranteed to exist by the time this runs.
  */
 export async function generateCsrfToken(): Promise<string> {
