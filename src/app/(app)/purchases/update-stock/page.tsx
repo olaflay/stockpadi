@@ -60,7 +60,12 @@ export default function UpdateStockPage() {
     return (
       <div>
         <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
-        <EmptyState icon={ClipboardList} title="No products yet" description="Add products before updating stock." />
+        <EmptyState
+          icon={ClipboardList}
+          title="No products yet"
+          description="Add products before updating stock."
+          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+        />
       </div>
     );
   }

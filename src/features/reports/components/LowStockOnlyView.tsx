@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Package } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { Product } from "@/types/product";
@@ -14,6 +17,8 @@ export function LowStockOnlyView({
   products: Product[];
   lowStockProducts: Product[];
 }) {
+  const router = useRouter();
+
   return (
     <>
       <p className="mb-4 text-[length:var(--font-size-body)] text-on-surface-muted">
@@ -24,6 +29,7 @@ export function LowStockOnlyView({
           icon={Package}
           title="No products yet"
           description="Low-stock alerts will show up here once products exist."
+          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
         />
       ) : lowStockProducts.length === 0 ? (
         <p className="text-[length:var(--font-size-body)] text-on-surface">Nothing is low on stock right now.</p>

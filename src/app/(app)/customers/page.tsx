@@ -48,6 +48,7 @@ export default function CustomersPage() {
             icon={Users}
             title="No customers yet"
             description="Customers are added when you tag a sale as credit, at checkout."
+            action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
           />
         </div>
       </div>

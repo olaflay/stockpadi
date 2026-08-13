@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { EmptySalesIllustration } from "@/components/illustrations";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,6 +13,7 @@ import { LowStockOnlyView } from "@/features/reports/components/LowStockOnlyView
 import { ReportsBody } from "@/features/reports/components/ReportsBody";
 
 export default function ReportsPage() {
+  const router = useRouter();
   const user = useCurrentUser();
   const {
     period,
@@ -79,6 +81,7 @@ export default function ReportsPage() {
             illustration={EmptySalesIllustration}
             title="No sales yet"
             description="Reports fill in once the first sale is recorded on any branch."
+            action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
           />
         </div>
       </div>

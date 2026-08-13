@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
+import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasRole } from "@/features/auth/use-current-user";
 
@@ -88,12 +89,6 @@ export default function PurchasesPage() {
           />
           {canAdd && (
             <div className="flex flex-col gap-3 pb-10">
-              <button
-                onClick={() => router.push("/purchases/new")}
-                className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity py-3 shadow-[var(--shadow-elevation-1)]"
-              >
-                Record a restock
-              </button>
               <Link
                 href="/purchases/update-stock"
                 className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center rounded-[var(--radius-control)] border border-border text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
@@ -103,6 +98,11 @@ export default function PurchasesPage() {
             </div>
           )}
         </div>
+        {canAdd && (
+          <FAB href="/purchases/new" label="Record a restock">
+            <Plus size={26} aria-hidden />
+          </FAB>
+        )}
       </div>
     );
   }
@@ -135,7 +135,7 @@ export default function PurchasesPage() {
                   <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
                     {supplier?.name ?? "Unknown supplier"}
                   </p>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <p className="shrink-0 font-mono text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(total)}
                   </p>
                 </div>
@@ -150,13 +150,9 @@ export default function PurchasesPage() {
       </ul>
 
       {canAdd && (
-        <RippleLink
-          href="/purchases/new"
-          className="fixed bottom-16 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-transform"
-          aria-label="Record a restock"
-        >
+        <FAB href="/purchases/new" label="Record a restock">
           <Plus size={26} aria-hidden />
-        </RippleLink>
+        </FAB>
       )}
     </div>
   );

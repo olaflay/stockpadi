@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { retryFailedOutboxItems } from "@/features/sync/drain-outbox";
+import { AUTH_DISABLED } from "@/features/auth/dev-auth-bypass";
 
 /**
  * Small, unobtrusive. Failed state takes priority over pending: a change
@@ -13,6 +14,11 @@ export function SyncIndicator() {
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // The dev auth-bypass has no real Supabase session, so drainOutbox() can
+  // never push and this would otherwise sit stuck on "pending" forever,
+  // reading as a bug rather than the expected local-only test mode.
+  if (AUTH_DISABLED) return null;
 
   if (failedCount > 0) {
     return (

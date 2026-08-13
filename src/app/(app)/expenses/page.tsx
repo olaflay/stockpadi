@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
-import { RippleLink } from "@/components/ui/Ripple";
+import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasRole } from "@/features/auth/use-current-user";
@@ -102,9 +102,11 @@ export default function ExpensesPage() {
           icon={Wallet}
           title="No expenses recorded"
           description="Rent, transport, supplies - log what goes out so the profit number is real."
-          action={{ label: "Add an expense", onClick: () => router.push("/expenses/new") }}
           fullScreen
         />
+        <FAB href="/expenses/new" label="Add expense">
+          <Plus size={26} aria-hidden />
+        </FAB>
       </div>
     );
   }
@@ -146,7 +148,7 @@ export default function ExpensesPage() {
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
           Spent, {PERIOD_LABELS[period].toLowerCase()}
         </p>
-        <p className="mt-1 truncate text-[length:var(--font-size-display)] font-semibold text-on-surface">
+        <p className="mt-1 truncate font-mono text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(periodTotal)}
         </p>
         <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -191,7 +193,7 @@ export default function ExpensesPage() {
                       {new Date(expense.createdAtLocal).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
                     </p>
                   </button>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <p className="shrink-0 font-mono text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(expense.amount)}
                   </p>
                   {canDelete && (
@@ -227,13 +229,9 @@ export default function ExpensesPage() {
         </ul>
       )}
 
-      <RippleLink
-        href="/expenses/new"
-        className="fixed bottom-16 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-transform"
-        aria-label="Add expense"
-      >
+      <FAB href="/expenses/new" label="Add expense">
         <Plus size={26} aria-hidden />
-      </RippleLink>
+      </FAB>
     </div>
   );
 }

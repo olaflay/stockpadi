@@ -154,7 +154,7 @@ export default function DashboardPage() {
             <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
               {user.role === "cashier" ? "Your sales today" : "Today's sales"}
             </p>
-            <p className="mt-1 truncate text-[length:var(--font-size-display)] font-semibold text-on-surface">
+            <p className="mt-1 truncate text-[length:var(--font-size-display)] font-mono font-semibold tabular-nums text-on-surface">
               {formatCurrency(metrics.todaysSalesTotal)}
             </p>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-6 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all"
           >
             <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Net cash flow</p>
-            <p className={`mt-1 truncate text-[length:var(--font-size-display)] font-semibold ${netCashFlow < 0 ? 'text-danger' : 'text-success'}`}>
+            <p className={`mt-1 truncate text-[length:var(--font-size-display)] font-mono font-semibold tabular-nums ${netCashFlow < 0 ? 'text-danger' : 'text-success'}`}>
               {formatCurrency(netCashFlow)}
             </p>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
           className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-6 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all"
         >
           <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Low stock</p>
-          <p className="mt-1 truncate text-[length:var(--font-size-display)] font-semibold text-on-surface">
+          <p className="mt-1 truncate text-[length:var(--font-size-display)] font-mono font-semibold tabular-nums text-on-surface">
             {metrics.lowStockCount}
           </p>
           <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">products below threshold</p>

@@ -9,6 +9,7 @@ import { X, ArrowRight, Check } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 
 const TOUR_STORAGE_KEY = "stockpadi_tour_step";
+const TOUR_DISMISSED = "dismissed";
 
 interface TourStep {
   step: number;
@@ -98,9 +99,18 @@ export function GuidedTour() {
   const productsCount = useLiveQuery(() => db.products.count());
 
   useEffect(() => {
+    const storedStep = localStorage.getItem(TOUR_STORAGE_KEY);
+    // An explicit skip must stick — otherwise every fresh page load with 0
+    // products (e.g. re-navigating before adding a first product) re-arms
+    // the tour at step 1 and force-redirects to /dashboard regardless of
+    // where the user was actually trying to go.
+    if (storedStep === TOUR_DISMISSED) {
+      setStep(0);
+      return;
+    }
+
     // Only trigger tour for owner/admin with 0 products
     if (productsCount === 0 && (user.role === "owner" || user.role === "admin")) {
-      const storedStep = localStorage.getItem(TOUR_STORAGE_KEY);
       if (!storedStep) {
         // Start tour from step 1
         localStorage.setItem(TOUR_STORAGE_KEY, "1");
@@ -109,12 +119,9 @@ export function GuidedTour() {
         const val = parseInt(storedStep, 10);
         setTimeout(() => setStep(val), 0);
       }
-    } else {
-      const storedStep = localStorage.getItem(TOUR_STORAGE_KEY);
-      if (storedStep) {
-        const val = parseInt(storedStep, 10);
-        setTimeout(() => setStep(val), 0);
-      }
+    } else if (storedStep) {
+      const val = parseInt(storedStep, 10);
+      setTimeout(() => setStep(val), 0);
     }
   }, [productsCount, user]);
 
@@ -172,7 +179,7 @@ export function GuidedTour() {
   };
 
   const skipTour = () => {
-    localStorage.removeItem(TOUR_STORAGE_KEY);
+    localStorage.setItem(TOUR_STORAGE_KEY, TOUR_DISMISSED);
     setStep(0);
   };
 

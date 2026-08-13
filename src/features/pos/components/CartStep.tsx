@@ -80,7 +80,7 @@ export function CartStep(props: {
       <div className="sticky bottom-0 -mx-5 flex flex-col gap-3 border-t border-border bg-surface px-5 pt-3 pb-4">
         <div className="flex items-center justify-between gap-3 font-semibold text-on-surface">
           <span>Total</span>
-          <span className="text-[length:var(--font-size-title)]">{formatCurrency(total)}</span>
+          <span className="font-mono text-[length:var(--font-size-title)] tabular-nums">{formatCurrency(total)}</span>
         </div>
         <RippleButton
           type="button"

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical } from "lucide-react";
 
 // Loaded on demand — see the matching comment in
 // src/features/pos/components/BrowseStep.tsx.
@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { RippleLink } from "@/components/ui/Ripple";
+import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasRole } from "@/features/auth/use-current-user";
 
@@ -54,9 +55,22 @@ export default function ProductsPage() {
   const [prevQuery, setPrevQuery] = useState("");
   const [prevFilter, setPrevFilter] = useState<ProductFilter>("all");
   const [scanning, setScanning] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   if (debouncedQuery !== prevQuery || filter !== prevFilter) {
     setPrevQuery(debouncedQuery);
@@ -160,13 +174,13 @@ export default function ProductsPage() {
           illustration={EmptyShelfIllustration}
           title="Your shelf is empty"
           description="Add your first product to start selling and tracking stock."
-          action={
-            hasRole(user, CAN_EDIT_PRODUCTS)
-              ? { id: "tour-add-product", label: "Add a product", onClick: () => router.push("/products/new") }
-              : undefined
-          }
           fullScreen
         />
+        {hasRole(user, CAN_EDIT_PRODUCTS) && (
+          <FAB id="tour-add-product" href="/products/new" label="Add product">
+            <Plus size={26} aria-hidden />
+          </FAB>
+        )}
       </div>
     );
   }
@@ -233,22 +247,43 @@ export default function ProductsPage() {
         </div>
 
         {hasRole(user, CAN_EDIT_PRODUCTS) && (
-          <>
-            <Link
-              href="/products/import"
-              className="flex min-h-[var(--touch-target-min)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] bg-surface-container px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+          <div ref={menuRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="More product actions"
+              className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
             >
-              <Upload size={16} aria-hidden />
-              Import
-            </Link>
-            <Link
-              href="/purchases"
-              className="flex min-h-[var(--touch-target-min)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] bg-surface-container px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
-            >
-              <Truck size={16} aria-hidden />
-              Restocks
-            </Link>
-          </>
+              <MoreVertical size={18} aria-hidden />
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-elevation-2)] animate-step-in"
+              >
+                <Link
+                  href="/products/import"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <Upload size={16} aria-hidden />
+                  Import
+                </Link>
+                <Link
+                  href="/purchases"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <Truck size={16} aria-hidden />
+                  Restocks
+                </Link>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -289,7 +324,7 @@ export default function ProductsPage() {
                       {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                     </p>
                   </div>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <p className="shrink-0 font-mono text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(product.sellPrice)}
                   </p>
                 </RippleLink>
@@ -304,13 +339,9 @@ export default function ProductsPage() {
         </div>
       )}
       {hasRole(user, CAN_EDIT_PRODUCTS) && (
-        <RippleLink
-          href="/products/new"
-          className="fixed bottom-16 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-transform"
-          aria-label="Add product"
-        >
+        <FAB id="tour-add-product" href="/products/new" label="Add product">
           <Plus size={26} aria-hidden />
-        </RippleLink>
+        </FAB>
       )}
     </div>
   );

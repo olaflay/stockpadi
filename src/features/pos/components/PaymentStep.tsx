@@ -81,7 +81,7 @@ export function PaymentStep(props: {
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
             {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>
-          <span className="text-[length:var(--font-size-title)] font-semibold text-on-surface">{formatCurrency(total)}</span>
+          <span className="font-mono text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">{formatCurrency(total)}</span>
         </div>
 
         <div className="flex flex-col gap-2">

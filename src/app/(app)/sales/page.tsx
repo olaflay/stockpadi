@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
+import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasRole } from "@/features/auth/use-current-user";
 import type { PaymentMethod } from "@/types/sale";
@@ -93,9 +94,13 @@ export default function SalesPage() {
           icon={Receipt}
           title="No sales yet today"
           description="Completed sales show up here, tap any one to see its full receipt."
-          action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
           fullScreen
         />
+        {hasRole(user, ["owner", "manager", "cashier", "admin"]) && (
+          <FAB href="/pos" label="New sale">
+            <Plus size={26} aria-hidden />
+          </FAB>
+        )}
       </div>
     );
   }
@@ -116,7 +121,7 @@ export default function SalesPage() {
                 className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">
+                  <p className="truncate font-mono text-[length:var(--font-size-body-lg)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(sale.total)}
                     {sale.voidedAt && (
                       <span className="ml-2 text-[length:var(--font-size-caption)] font-normal text-danger">
@@ -138,13 +143,9 @@ export default function SalesPage() {
         })}
       </ul>
       {hasRole(user, ["owner", "manager", "cashier", "admin"]) && (
-        <RippleLink
-          href="/pos"
-          className="fixed bottom-16 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-transform"
-          aria-label="New sale"
-        >
+        <FAB href="/pos" label="New sale">
           <Plus size={26} aria-hidden />
-        </RippleLink>
+        </FAB>
       )}
     </div>
   );

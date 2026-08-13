@@ -110,6 +110,7 @@ export default function StockCountPage() {
               icon={ClipboardList}
               title="No branches yet"
               description="Add a branch in Settings before counting stock."
+              action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
             />
           </div>
         </div>
@@ -221,7 +222,12 @@ export default function StockCountPage() {
       <div className="flex min-h-[calc(100vh-140px)] flex-col">
         <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
         <div className="flex flex-1 items-center justify-center">
-          <EmptyState icon={ClipboardList} title="No products yet" description="Add products before counting stock." />
+          <EmptyState
+            icon={ClipboardList}
+            title="No products yet"
+            description="Add products before counting stock."
+            action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+          />
         </div>
       </div>
     );

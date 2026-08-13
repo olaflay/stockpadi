@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { LocalBranch } from "@/lib/db";
@@ -9,8 +12,17 @@ export function BranchSelectStep({
   branches: LocalBranch[];
   onSelectBranch: (branchId: string) => void;
 }) {
+  const router = useRouter();
+
   if (branches.length === 0) {
-    return <EmptyState icon={ClipboardList} title="No branches yet" description="Add a branch in Settings before updating stock." />;
+    return (
+      <EmptyState
+        icon={ClipboardList}
+        title="No branches yet"
+        description="Add a branch in Settings before updating stock."
+        action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
+      />
+    );
   }
 
   return (
