@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db, BUSINESS_PROFILE_SINGLETON_ID, SESSION_SINGLETON_ID } from "@/lib/db";
+import { AUTH_DISABLED, ensureDevBypassSession } from "@/features/auth/dev-auth-bypass";
 
 /** Routes into onboarding or straight to the dashboard based on local state, no network round trip. */
 export default function Home() {
@@ -10,6 +11,11 @@ export default function Home() {
 
   useEffect(() => {
     async function determineRoute() {
+      if (AUTH_DISABLED) {
+        await ensureDevBypassSession();
+        router.replace("/sales");
+        return;
+      }
       const session = await db.session.get(SESSION_SINGLETON_ID);
       if (session && new Date(session.expiresAt).getTime() > Date.now()) {
         const user = await db.localUsers.get(session.userId);

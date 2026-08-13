@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
 import { signOut } from "@/features/auth/logout";
+import { AUTH_DISABLED, ensureDevBypassSession } from "@/features/auth/dev-auth-bypass";
 
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
@@ -20,6 +21,13 @@ export const CurrentUserContext = createContext<CurrentUser | null>(null);
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+
+  // Writes aren't allowed inside a useLiveQuery callback (Dexie throws
+  // ReadOnlyError), so the bypass provisioning runs once here instead; the
+  // liveQuery below just re-reads once these rows land.
+  useEffect(() => {
+    if (AUTH_DISABLED) ensureDevBypassSession();
+  }, []);
 
   const resolved = useLiveQuery(async () => {
     const session = await db.session.get(SESSION_SINGLETON_ID);

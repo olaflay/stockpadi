@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff, Store, Package, Pill, Cpu } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -18,6 +18,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import type { Role } from "@/types/roles";
 import { createAccountAction } from "@/app/actions/auth";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
+import { AUTH_DISABLED, GOOGLE_AUTH_ENABLED, ensureDevBypassSession } from "@/features/auth/dev-auth-bypass";
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ElementType> = {
   grocery_supermarket: Store,
@@ -45,6 +46,12 @@ export default function RegisterForm({ csrfToken }: { csrfToken: string }) {
   const [busy, setBusy] = useState(false);
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
+
+  useEffect(() => {
+    if (AUTH_DISABLED) {
+      ensureDevBypassSession().then(() => router.replace("/sales"));
+    }
+  }, [router]);
 
   const formComplete =
     fullName.trim() &&
@@ -232,21 +239,25 @@ export default function RegisterForm({ csrfToken }: { csrfToken: string }) {
         )}
 
         <div className="flex flex-col gap-4 mt-5">
-          <RippleButton
-            type="button"
-            onClick={handleGoogleSignUp}
-            disabled={busy}
-            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface text-[length:var(--font-size-body-lg)] font-bold text-on-surface hover:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)] flex items-center justify-center gap-3"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </RippleButton>
+          {GOOGLE_AUTH_ENABLED && (
+            <>
+              <RippleButton
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={busy}
+                className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface text-[length:var(--font-size-body-lg)] font-bold text-on-surface hover:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)] flex items-center justify-center gap-3"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </RippleButton>
 
-          <div className="flex items-center gap-3 w-full opacity-60">
-            <hr className="flex-1 border-border" />
-            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted uppercase">or</span>
-            <hr className="flex-1 border-border" />
-          </div>
+              <div className="flex items-center gap-3 w-full opacity-60">
+                <hr className="flex-1 border-border" />
+                <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted uppercase">or</span>
+                <hr className="flex-1 border-border" />
+              </div>
+            </>
+          )}
 
           <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
             <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">

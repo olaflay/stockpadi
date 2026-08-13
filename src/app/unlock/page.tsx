@@ -24,6 +24,7 @@ import { startSession } from "@/features/auth/session";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
+import { AUTH_DISABLED, ensureDevBypassSession } from "@/features/auth/dev-auth-bypass";
 
 // Escalating lockout after repeated wrong PINs — a 4-digit PIN is only
 // 10,000 combinations and the local PBKDF2 check costs single-digit
@@ -52,6 +53,12 @@ export default function UnlockPage() {
   const [now, setNow] = useState(() => getSystemTime());
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
+
+  useEffect(() => {
+    if (AUTH_DISABLED) {
+      ensureDevBypassSession().then(() => router.replace("/sales"));
+    }
+  }, [router]);
 
   const activeUsers = users?.filter((u) => u.isActive) ?? [];
   // Auto-select when there is exactly one user — no unnecessary picker step.

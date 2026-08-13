@@ -16,6 +16,7 @@ import { loginAction } from "@/app/actions/auth";
 import Link from "next/link";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
+import { AUTH_DISABLED, GOOGLE_AUTH_ENABLED, ensureDevBypassSession } from "@/features/auth/dev-auth-bypass";
 
 export default function LoginForm({ csrfToken }: { csrfToken: string }) {
   const router = useRouter();
@@ -31,6 +32,10 @@ export default function LoginForm({ csrfToken }: { csrfToken: string }) {
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   useEffect(() => {
+    if (AUTH_DISABLED) {
+      ensureDevBypassSession().then(() => router.replace("/sales"));
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const force = params.get("force") === "true";
     if (force) {
@@ -197,21 +202,25 @@ export default function LoginForm({ csrfToken }: { csrfToken: string }) {
       </div>
 
       <div className="flex flex-col gap-4 pb-10 shrink-0">
-        <RippleButton
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={busy}
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface text-[length:var(--font-size-body-lg)] font-bold text-on-surface hover:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)] flex items-center justify-center gap-3"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </RippleButton>
+        {GOOGLE_AUTH_ENABLED && (
+          <>
+            <RippleButton
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={busy}
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface text-[length:var(--font-size-body-lg)] font-bold text-on-surface hover:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)] flex items-center justify-center gap-3"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </RippleButton>
 
-        <div className="flex items-center gap-3 w-full opacity-60">
-          <hr className="flex-1 border-border" />
-          <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted uppercase">or</span>
-          <hr className="flex-1 border-border" />
-        </div>
+            <div className="flex items-center gap-3 w-full opacity-60">
+              <hr className="flex-1 border-border" />
+              <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted uppercase">or</span>
+              <hr className="flex-1 border-border" />
+            </div>
+          </>
+        )}
 
         <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
           <label className="flex flex-col gap-1.5">
