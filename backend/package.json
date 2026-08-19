@@ -1,0 +1,34 @@
+{
+  "name": "stockpadi-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StockPadi backend: Postgres migrations, RLS policies, and Supabase Edge Functions. Split from the original monorepo's supabase/ directory — see docs/BACKEND-SPLIT.md.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file=.env dist/src/server.js",
+    "provision:admin": "node --env-file=.env scripts/provision-platform-admin.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "seed:owner": "node --env-file=.env scripts/seed-owner.mjs",
+    "check:auth": "node scripts/check-auth.mjs",
+    "reset:password": "node scripts/reset-password.mjs",
+    "confirm:users": "node scripts/confirm-users.mjs",
+    "check:confirmation": "node scripts/check-confirmation.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
+    "@types/nodemailer": "^8.0.1",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
+    "@types/node": "^20",
+    "@types/pg": "^8.21.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

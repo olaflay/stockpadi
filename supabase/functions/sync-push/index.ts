@@ -14,6 +14,7 @@
 // write-edge-function.md: the client is not a trusted boundary.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolveAccountContext } from "../_shared/account-context.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -48,28 +49,23 @@ interface SyncItemResult {
   error?: { code: string; message: string };
 }
 
-type AppRole = "owner" | "manager" | "cashier" | "inventory_staff" | "accountant" | "admin";
+type Capability = "sales.create" | "inventory.adjust" | "inventory.receive" | "customers.manage" | "debts.manage" | "expenses.create";
 
-const BRANCH_SCOPED_ROLES: AppRole[] = ["cashier", "inventory_staff"];
 
-// Mirrors the permission matrix in .agents/rules/database-and-rls.md. This is
-// the independent, server-side authorization check the RLS layer can't
-// perform once service_role is in use.
-const ALLOWED_ROLES: Record<SyncEntityType, AppRole[]> = {
-  sale: ["owner", "manager", "cashier", "admin"],
-  stock_adjustment: ["owner", "manager", "inventory_staff", "admin"],
-  purchase_receipt: ["owner", "manager", "inventory_staff", "admin"],
-  customer: ["owner", "manager", "cashier", "inventory_staff", "accountant", "admin"],
-  product: ["owner", "manager", "inventory_staff", "admin"],
-  // Matches the customer_credit_movements_insert RLS policy in
-  // supabase/migrations/20260807054734_rls_policies.sql.
-  credit_payment: ["owner", "manager", "cashier", "accountant", "admin"],
-  // Matches expenses_insert: manager is "limited" to insert + view (no
-  // delete), everyone else on this list is unrestricted.
-  expense: ["owner", "manager", "accountant", "admin"],
-  // Matches suppliers_write.
-  supplier: ["owner", "manager", "inventory_staff", "admin"],
+const ENTITY_CAPABILITY: Record<SyncEntityType, Capability> = {
+  sale: "sales.create",
+  stock_adjustment: "inventory.adjust",
+  purchase_receipt: "inventory.receive",
+  customer: "customers.manage",
+  product: "inventory.adjust",
+  credit_payment: "debts.manage",
+  expense: "expenses.create",
+  supplier: "inventory.receive",
 };
+
+const WORKER_CAPABILITIES: Capability[] = [
+  "sales.create", "inventory.adjust", "inventory.receive", "customers.manage", "debts.manage", "expenses.create",
+];
 
 const RPC_NAME: Record<SyncEntityType, string> = {
   sale: "sync_apply_sale",
@@ -150,26 +146,24 @@ Deno.serve(async (req: Request) => {
 
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Step 2: look up the caller's role and (if branch-scoped) their assigned
-  // branches. Never trust a role or branch claim from the request body.
-  const { data: profile, error: profileError } = await db
-    .from("users")
-    .select("role, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileError || !profile || !profile.is_active) {
-    return errorResponse(403, "FORBIDDEN", "No active staff account for this session");
+  // Step 2: resolve trusted account, tenant, membership, business, worker,
+  // and branch state. This function uses service-role access below, so this
+  // resolver is the authorization boundary and must not be replaced with
+  // request or offline payload claims.
+  const { context, error: contextError } = await resolveAccountContext(db, user);
+  if (!context) {
+    const code = contextError === "Business is not currently verified" ? "BUSINESS_UNAVAILABLE" : "FORBIDDEN";
+    return errorResponse(403, code, contextError ?? "Unable to resolve account context");
   }
 
-  const role = profile.role as AppRole;
-  let assignedBranchIds: Set<string> | null = null;
-  if (BRANCH_SCOPED_ROLES.includes(role)) {
-    const { data: branchRows } = await db.from("user_branches").select("branch_id").eq("user_id", user.id);
-    assignedBranchIds = new Set(
-      (branchRows ?? []).map((row: { branch_id: string }) => row.branch_id)
-    );
+  if (context.accountType === "ADMIN" || !context.businessId) {
+    return errorResponse(403, "FORBIDDEN", "Platform administrators cannot sync tenant operations");
   }
+
+  const capabilities = new Set<Capability>(
+    context.accountType === "BUSINESS_OWNER" ? Object.values(ENTITY_CAPABILITY) : WORKER_CAPABILITIES,
+  );
+  const assignedBranchIds = context.accountType === "WORKER" ? context.branchIds : null;
 
   if (body.device_id) {
     await db
@@ -186,11 +180,11 @@ Deno.serve(async (req: Request) => {
   // validation must not block unrelated items later in the same batch from
   // syncing, since they may belong to a different sale entirely.
   for (const item of body.batch) {
-    if (!ALLOWED_ROLES[item.type]?.includes(role)) {
+    if (!capabilities.has(ENTITY_CAPABILITY[item.type])) {
       results.push({
         clientId: item.client_id,
         status: "error",
-        error: { code: "FORBIDDEN", message: `Role ${role} may not sync a ${item.type}` },
+        error: { code: "FORBIDDEN", message: `This account cannot sync a ${item.type}` },
       });
       continue;
     }

@@ -37,7 +37,7 @@ This is the one rule the codebase treats as non-negotiable (`.agents/rules/offli
 
 **`supabase/migrations/20260807054734_rls_policies.sql`** — role-based RLS per the permission matrix in `.agents/rules/database-and-rls.md`. Branch-scoped roles (cashier, inventory_staff) are restricted via a `user_branches` join; unrestricted roles (owner, manager, accountant, admin) see across branches. **Flagged in the migration's own header comment**: the PRD's "Limited" permission for Manager on expenses/audit-log was undefined, so this migration states an explicit interpretation (insert+select but no delete; no visibility into role-change/PIN-reset audit entries) rather than guessing silently. Confirm before this reads as locked.
 
-Not yet done: these migrations haven't been applied against a live Postgres instance. Docker is installed on this machine but the daemon wasn't running, so `supabase db reset` wasn't possible here — the SQL was reviewed by hand instead. Run it for real once a dev Supabase instance exists.
+Not yet done: these migrations still need to be applied against the linked Supabase Cloud project. Run `npx supabase login`, `npx supabase link --project-ref <ref>`, then `npx supabase db push`; no local Docker stack is part of this deployment workflow.
 
 ## Config layer (reusability boundary)
 

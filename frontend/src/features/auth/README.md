@@ -1,0 +1,3 @@
+Email + password is the normal login flow for Admins, Business Owners and Workers. Workers receive their generated password by email from their Business Owner.
+
+`use-current-user.ts` is the single choke point every screen reads account context through, backed by `AuthProvider.tsx`. The normal entry points are `/login` and `/register`; authentication routes users to `/admin`, `/business`, or `/work`. `assert-permission.ts` is the local write-path guard, while Supabase Edge Functions and PostgreSQL RLS remain the server security boundary. `manage-staff-client.ts` calls the `manage-staff` Edge Function for worker creation, password rotation, and deactivation. The frontend never receives a service-role key.

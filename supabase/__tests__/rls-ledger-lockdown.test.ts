@@ -107,11 +107,12 @@ beforeAll(async () => {
   const biz = await db.query<{ id: string }>(`insert into business_profile (name, business_type, currency) values ('Test', 'general_retail', 'NGN') returning id;`);
   bizId = biz.rows[0].id;
 
-  await db.query(`insert into users (id, business_id, full_name, role) values ($1, $2, 'Test Owner', 'owner');`, [ownerId, bizId]);
+  await db.query(`insert into users (id, business_id, full_name, role, account_type) values ($1, $2, 'Test Owner', 'owner', 'BUSINESS_OWNER');`, [ownerId, bizId]);
 
   const cashier = await db.query<{ id: string }>(`insert into auth.users default values returning id;`);
   cashierId = cashier.rows[0].id;
-  await db.query(`insert into users (id, business_id, full_name, role) values ($1, $2, 'Test Cashier', 'cashier');`, [cashierId, bizId]);
+  await db.query(`insert into users (id, business_id, full_name, role, account_type) values ($1, $2, 'Test Cashier', 'cashier', 'WORKER');`, [cashierId, bizId]);
+  await db.query(`insert into business_memberships (user_id, business_id, role, type, account_type) values ($1, $2, 'owner', 'owner', 'BUSINESS_OWNER'), ($3, $2, 'cashier', 'worker', 'WORKER');`, [ownerId, bizId, cashierId]);
 
   const branch = await db.query<{ id: string }>(`insert into branches (business_id, name) values ($1, 'Main') returning id;`, [bizId]);
   branchId = branch.rows[0].id;
