@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8787"}/api/:path*`,
+      },
+    ];
+  },
 };
 
 const withSerwist = withSerwistInit({
