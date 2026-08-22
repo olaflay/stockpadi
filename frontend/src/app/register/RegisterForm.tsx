@@ -13,12 +13,11 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { RegisterIllustration } from "@/components/illustrations/RegisterIllustration";
 import { TextInput } from "@/components/ui/TextInput";
-import type { Role } from "@/types/roles";
 import { callBackend } from "@/features/auth/backend-client";
 import { sendVerificationEmail } from "@/features/auth/verification-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
-import { setLocalBusinessId } from "@/lib/local-tenant";
+import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ElementType> = {
   grocery_supermarket: Store,
@@ -124,6 +123,7 @@ export default function RegisterForm() {
 
       const userId = signInData.user.id;
       const template = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === selectedBusinessTypeId)!;
+      if (registration.businessId) await setLocalBusinessId(registration.businessId);
 
       // 3. Seed local IndexedDB
       await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
@@ -135,21 +135,18 @@ export default function RegisterForm() {
           currency: "NGN",
         });
         await db.categories.bulkPut(
-          template.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName }))
+          await withLocalBusinessIds(template.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })))
         );
-        await db.branches.add({ id: crypto.randomUUID(), name: "Main branch", isActive: true });
+        await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
         await db.localUsers.put({
           id: userId,
           fullName: fullName.trim(),
-          role: "owner" as Role,
           accountType: "BUSINESS_OWNER",
           isActive: true,
           emailVerified: false,
           updatedAt: new Date().toISOString(),
         });
       });
-      if (registration.businessId) await setLocalBusinessId(registration.businessId);
-
       // 4. Start local session so Edge Functions can be called with a valid token
       await startSession(userId);
 

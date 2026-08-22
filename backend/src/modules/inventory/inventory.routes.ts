@@ -1,1 +1,1 @@
-export const inventoryRoutes = { product: "/api/products", stockAdjustment: "/api/inventory/adjust", stock: "/api/inventory" } as const;
+export const inventoryRoutes = { product: "/api/products", stockAdjustment: "/api/inventory/adjust", stockCount: "/api/inventory/stock-count", stock: "/api/inventory" } as const;

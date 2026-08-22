@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
+import { requireAssignedBranch } from "../authorization/capabilities.js";
 
 function dateRange(input: unknown) {
   const body = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
@@ -10,11 +11,12 @@ function dateRange(input: unknown) {
   return { from, to, branchId: typeof body.branchId === "string" ? body.branchId : null };
 }
 
-export async function reportSummary(db: SupabaseClient, actor: User, input: unknown) {
+export async function reportSummary(db: SupabaseClient, actor: User, input: unknown, options: { operational?: boolean } = {}) {
   const context = await resolveAccountContext(db, actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  if (context.accountType === "WORKER" && !options.operational) throw new HttpError(403, "FORBIDDEN", "Workers do not have access to full business reports");
   const range = dateRange(input);
-  if (context.accountType === "WORKER" && range.branchId && !context.branchIds.includes(range.branchId)) throw new HttpError(403, "FORBIDDEN", "Branch is outside this account's assigned branches");
+  if (range.branchId) requireAssignedBranch(context, range.branchId);
   const [sales, expenses, purchases] = await Promise.all([
     db.from("sales").select("id, branch_id, customer_id, subtotal, discount, total, created_at, created_by_user_id, voided_at").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to).is("voided_at", null),
     db.from("expenses").select("id, branch_id, category, amount, note, created_at, created_by_user_id").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to),
@@ -39,5 +41,9 @@ export async function reportSummary(db: SupabaseClient, actor: User, input: unkn
   ]) : [{ data: [], error: null }, { data: [], error: null }];
   if (paymentResult.error || itemResult.error) throw new HttpError(500, "REPORT_FAILED", paymentResult.error?.message ?? itemResult.error?.message ?? "Could not load report details");
   const detailedSales = salesRows.map((sale) => ({ ...sale, payments: (paymentResult.data ?? []).filter((payment) => payment.sale_id === sale.id), items: (itemResult.data ?? []).filter((item) => item.sale_id === sale.id) }));
-  return { from: range.from, to: range.to, branchId: range.branchId, salesTotal: salesRows.reduce((sum, row) => sum + Number(row.total), 0), expensesTotal: expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), salesCount: salesRows.length, purchaseCount: purchaseRows.length, sales: detailedSales, expenses: expenseRows, purchases: purchaseRows, products: products ?? [], stock: stockResult.data ?? [] };
+  const response = { from: range.from, to: range.to, branchId: range.branchId, salesTotal: salesRows.reduce((sum, row) => sum + Number(row.total), 0), expensesTotal: expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), salesCount: salesRows.length, purchaseCount: purchaseRows.length, sales: detailedSales, expenses: expenseRows, purchases: purchaseRows, products: products ?? [], stock: stockResult.data ?? [] };
+  if (context.accountType === "WORKER") {
+    return { ...response, expensesTotal: 0, expenses: [], purchases: [], products: [], stock: [] };
+  }
+  return response;
 }

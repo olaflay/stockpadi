@@ -29,7 +29,7 @@ export function useNewProductForm() {
   const user = useCurrentUser();
   const router = useRouter();
   const { showToast } = useToast();
-  const categories = useLiveQuery(() => db.categories.toArray(), [], []);
+  const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
   const [initialStock, setInitialStock] = useState("");
   const [initialStockBranchId, setInitialStockBranchId] = useState<string | null>(null);

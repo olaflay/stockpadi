@@ -60,6 +60,17 @@ export default function StaffDetailPage({ params }: PageProps) {
     finally { setBusy(false); }
   }
 
+  async function reactivate() {
+    setBusy(true);
+    try {
+      await callManageStaff({ action: "reactivate", userId: member.id });
+      await db.localUsers.update(member.id, { isActive: true, updatedAt: new Date().toISOString() });
+      showToast(`${member.fullName} reactivated`, "success");
+      router.push("/staff");
+    } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not reactivate worker."); }
+    finally { setBusy(false); }
+  }
+
   return <div className="flex flex-col gap-6">
     <ScreenHeader title={staffMember.fullName} onBack={() => router.push("/staff")} />
     {error && <div className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-on-danger-container">{error}</div>}
@@ -77,5 +88,6 @@ export default function StaffDetailPage({ params }: PageProps) {
       </div>
     </section>}
     {memberAccountType === "WORKER" && staffMember.isActive && <button type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-danger px-4 text-danger disabled:opacity-50">Deactivate</button>}
+    {memberAccountType === "WORKER" && !staffMember.isActive && <button type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-4 text-brand-accent disabled:opacity-50">Reactivate</button>}
   </div>;
 }

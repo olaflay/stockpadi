@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { withLocalBusinessIds } from "@/lib/local-tenant";
+import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
@@ -56,6 +57,19 @@ export async function importProducts(
         createdAt: now,
         createdByUserId: user.id,
       });
+    }
+  }
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    try {
+      for (const product of products) {
+        await serverPost("/api/products", product);
+        const movement = movements.find((item) => item.productId === product.id);
+        if (movement) await serverPost("/api/inventory/adjust", { id: movement.id, clientId: movement.clientId, branchId: movement.branchId, productId: movement.productId, quantityDelta: movement.quantityDelta, reasonCode: "initial_stock", note: null, createdAtLocal: now });
+      }
+      return;
+    } catch (error) {
+      if (!(error instanceof NetworkUnavailableError)) throw error;
     }
   }
 

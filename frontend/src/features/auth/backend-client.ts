@@ -1,6 +1,11 @@
 import { getSupabase } from "@/lib/supabase";
 
-export class BackendError extends Error {}
+export class BackendError extends Error {
+  constructor(message: string, readonly status?: number, readonly code?: string) {
+    super(message);
+    this.name = "BackendError";
+  }
+}
 
 export async function callBackend<T>(functionName: string, body: unknown): Promise<T> {
   const supabase = getSupabase();
@@ -12,6 +17,6 @@ export async function callBackend<T>(functionName: string, body: unknown): Promi
   const url = `${backendUrl}${backendPath}`;
   const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` }, body: JSON.stringify(body) });
   const result = await response.json();
-  if (!response.ok) throw new BackendError(result?.error?.message ?? "The server rejected the request.");
+  if (!response.ok) throw new BackendError(result?.error?.message ?? "The server rejected the request.", response.status, result?.error?.code);
   return result as T;
 }

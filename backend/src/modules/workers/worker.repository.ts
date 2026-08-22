@@ -99,6 +99,9 @@ export async function createWorkerRecords(db: SupabaseClient, input: { userId: s
     const branch = await db.from("user_branches").insert({ user_id: input.userId, branch_id: input.branchId, business_id: input.businessId });
     if (branch.error) throw new Error(`BRANCH_FAILED:${branch.error.message}`);
   }
+  const defaultPermissions = ["POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS", "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_CUSTOMERS", "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS"];
+  const grants = await db.from("worker_permissions").insert(defaultPermissions.map((permission) => ({ user_id: input.userId, business_id: input.businessId, permission, enabled: true })));
+  if (grants.error) throw new Error(`PERMISSIONS_FAILED:${grants.error.message}`);
 }
 
 export async function removeWorkerRecords(db: SupabaseClient, userId: string, businessId: string) {

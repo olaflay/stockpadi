@@ -4,6 +4,7 @@ import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
+import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
 
 export interface StockAdjustmentPayload {
   businessId?: string;
@@ -15,6 +16,7 @@ export interface StockAdjustmentPayload {
   reasonCode: AdjustmentReasonCode;
   note: string | null;
   createdAtLocal: string;
+  countedQuantity?: number;
 }
 
 /**
@@ -69,10 +71,23 @@ export async function writeStockAdjustment(params: {
       reasonCode: params.reasonCode,
       note: params.note,
       createdAtLocal: now,
+      ...(params.actor.accountType === "WORKER" ? { countedQuantity: params.countedQuantity } : {}),
     };
 
-    const tenantMovement = await withLocalBusinessId(movement);
     const tenantPayload = await withLocalBusinessId(payload);
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        await serverPost(params.actor.accountType === "WORKER" ? "/api/inventory/stock-count" : "/api/inventory/adjust", tenantPayload);
+        return params.actor.accountType === "WORKER" ? { ...movement, quantityDelta: 0 } : movement;
+      } catch (error) {
+        if (!(error instanceof NetworkUnavailableError)) throw error;
+      }
+    }
+    if (params.actor.accountType === "WORKER") {
+      await enqueueOutboxWrite(adjustmentId, "stock_count_submission", tenantPayload, now);
+      return { ...movement, quantityDelta: 0 };
+    }
+    const tenantMovement = await withLocalBusinessId(movement);
     await db.stockMovements.add(tenantMovement);
     await enqueueOutboxWrite(adjustmentId, "stock_adjustment", tenantPayload, now);
 

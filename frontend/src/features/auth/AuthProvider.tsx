@@ -39,9 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: {
         id: user.id,
         fullName: user.fullName,
-        role: user.role,
         emailVerified: user.emailVerified,
         accountType: user.accountType,
+        permissions: (user.permissions ?? []).filter((permission): permission is import("@/features/auth/authorization").WorkerCapability => permission in {
+          POS_SELL: true, VIEW_PRODUCTS: true, VIEW_BRANCH_STOCK: true, VIEW_STOCK_MOVEMENTS: true,
+          SUBMIT_STOCK_COUNT: true, SUBMIT_RECONCILIATION: true, VIEW_CUSTOMERS: true,
+          USE_CUSTOMER_CREDIT: true, VIEW_OWN_SALES: true, VIEW_RECEIPTS: true, VIEW_ALERTS: true,
+        }),
+        businessId: user.businessId,
+        branchIds: user.branchIds ?? [],
       },
     };
   }, []);

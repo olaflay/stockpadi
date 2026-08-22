@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
  * offline-first writes. See docs/RESEARCH-AND-PLAN.md Phase 2 item 15.
  */
 
-type ManageStaffAction = "create" | "reset_password" | "deactivate";
+type ManageStaffAction = "create" | "reset_password" | "deactivate" | "reactivate";
 
 interface ManageStaffPayload {
   action: ManageStaffAction;

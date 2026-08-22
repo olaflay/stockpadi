@@ -23,6 +23,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 type SyncEntityType =
   | "sale"
   | "stock_adjustment"
+  | "stock_count_submission"
   | "purchase_receipt"
   | "customer"
   | "product"
@@ -55,6 +56,7 @@ type Capability = "sales.create" | "inventory.adjust" | "inventory.receive" | "c
 const ENTITY_CAPABILITY: Record<SyncEntityType, Capability> = {
   sale: "sales.create",
   stock_adjustment: "inventory.adjust",
+  stock_count_submission: "inventory.adjust",
   purchase_receipt: "inventory.receive",
   customer: "customers.manage",
   product: "inventory.adjust",
@@ -63,13 +65,10 @@ const ENTITY_CAPABILITY: Record<SyncEntityType, Capability> = {
   supplier: "inventory.receive",
 };
 
-const WORKER_CAPABILITIES: Capability[] = [
-  "sales.create", "inventory.adjust", "inventory.receive", "customers.manage", "debts.manage", "expenses.create",
-];
-
 const RPC_NAME: Record<SyncEntityType, string> = {
   sale: "sync_apply_sale",
   stock_adjustment: "sync_apply_stock_adjustment",
+  stock_count_submission: "sync_apply_stock_count",
   purchase_receipt: "sync_apply_purchase_receipt",
   customer: "sync_apply_customer",
   product: "sync_apply_product",
@@ -160,9 +159,18 @@ Deno.serve(async (req: Request) => {
     return errorResponse(403, "FORBIDDEN", "Platform administrators cannot sync tenant operations");
   }
 
-  const capabilities = new Set<Capability>(
-    context.accountType === "BUSINESS_OWNER" ? Object.values(ENTITY_CAPABILITY) : WORKER_CAPABILITIES,
-  );
+  const workerCapabilityByEntity: Record<SyncEntityType, string> = {
+    sale: "POS_SELL",
+    stock_adjustment: "OWNER_ONLY_STOCK_ADJUSTMENT",
+    stock_count_submission: "SUBMIT_STOCK_COUNT",
+    purchase_receipt: "RECEIVE_STOCK",
+    customer: "MANAGE_CUSTOMERS",
+    product: "MANAGE_PRODUCTS",
+    credit_payment: "RECORD_REPAYMENT",
+    expense: "MANAGE_EXPENSES",
+    supplier: "MANAGE_SUPPLIERS",
+  };
+  const capabilities = new Set<Capability>(context.accountType === "BUSINESS_OWNER" ? Object.values(ENTITY_CAPABILITY) : []);
   const assignedBranchIds = context.accountType === "WORKER" ? context.branchIds : null;
 
   if (body.device_id) {
@@ -180,7 +188,7 @@ Deno.serve(async (req: Request) => {
   // validation must not block unrelated items later in the same batch from
   // syncing, since they may belong to a different sale entirely.
   for (const item of body.batch) {
-    if (!capabilities.has(ENTITY_CAPABILITY[item.type])) {
+    if (context.accountType === "WORKER" && !context.permissions.has(workerCapabilityByEntity[item.type])) {
       results.push({
         clientId: item.client_id,
         status: "error",

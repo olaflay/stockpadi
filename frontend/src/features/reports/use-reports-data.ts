@@ -8,7 +8,7 @@ import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
-import { serverGet } from "@/features/operations/server-client";
+import { serverGet, NetworkUnavailableError } from "@/features/operations/server-client";
 import { tenantArray } from "@/lib/local-tenant";
 
 export type Period = "today" | "week" | "month";
@@ -48,7 +48,7 @@ export function useReportsData() {
     try {
       const start = periodStartIso(period);
       try {
-        const remote = await serverGet<ReportResponse>(`/api/reports/summary`);
+        const remote = await serverGet<ReportResponse>(`/api/reports/summary?from=${encodeURIComponent(start)}&to=${encodeURIComponent(new Date().toISOString())}`);
         const sales: Sale[] = (remote.sales ?? []).map((sale) => ({ id: sale.id, clientId: sale.client_id ?? sale.id, branchId: sale.branch_id, customerId: sale.customer_id ?? null, subtotal: Number(sale.subtotal), discount: Number(sale.discount), total: Number(sale.total), createdAtLocal: sale.created_at, createdAt: sale.created_at, createdByUserId: sale.created_by_user_id, voidedAt: sale.voided_at ?? null, items: (sale.items ?? []).map((item) => ({ productId: item.product_id, quantity: Number(item.quantity), unitPrice: Number(item.unit_price), discount: Number(item.discount), unitLabel: item.unit_label, conversionFactor: Number(item.unit_conversion_factor), movementClientId: "server" })), payments: (sale.payments ?? []).map((payment) => ({ method: payment.method, amount: Number(payment.amount) })) }));
         const products: Product[] = (remote.products ?? []).map((product) => ({ id: product.id, name: product.name, sku: product.sku, barcode: null, categoryId: null, brandId: null, unitLabel: "piece", altUnitLabel: null, altUnitConversionFactor: null, altUnitSellPrice: null, costPrice: Number(product.cost_price), sellPrice: Number(product.sell_price), expiryTracking: "off", expiryDate: null, lowStockThreshold: product.low_stock_threshold, version: 1, updatedAt: new Date().toISOString() }));
         const expenses: Expense[] = (remote.expenses ?? []).map((expense) => ({ id: expense.id, branchId: expense.branch_id, category: expense.category, amount: Number(expense.amount), note: expense.note, createdAtLocal: expense.created_at, createdByUserId: expense.created_by_user_id }));
@@ -57,7 +57,10 @@ export function useReportsData() {
         for (const row of remote.stock ?? []) stockByProduct.set(row.product_id, (stockByProduct.get(row.product_id) ?? 0) + Number(row.quantity));
         const lowStockIds = new Set(products.filter((product) => product.lowStockThreshold !== null && (stockByProduct.get(product.id) ?? 0) <= product.lowStockThreshold).map((product) => product.id));
         return { sales, products, stockByProduct, profile: undefined, expenses, purchases, creditMovements: [], lowStockIds, serverSummary: remote, error: null as string | null };
-      } catch { /* offline uses the local snapshot below */ }
+      } catch (error) {
+        if (!(error instanceof NetworkUnavailableError) && typeof navigator !== "undefined" && navigator.onLine) throw error;
+        /* offline uses the local snapshot below */
+      }
       const [sales, products, profile, expenses, purchases, creditMovements] = await Promise.all([
         tenantArray<Sale>(db.sales
           .where("createdAtLocal")

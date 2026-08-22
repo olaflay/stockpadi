@@ -16,7 +16,7 @@ import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { BalancedIllustration } from "@/components/illustrations";
 import { computeGrossProfit, computeNetProfit } from "@/features/reports/compute-profit";
 import type { PaymentMethod } from "@/types/sale";
-import { serverGet } from "@/features/operations/server-client";
+import { serverGet, NetworkUnavailableError } from "@/features/operations/server-client";
 import { fetchReconciliationHistory, submitReconciliation, type ReconciliationRecord } from "@/features/reconciliation/reconciliation-client";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Expense } from "@/types/expense";
@@ -54,14 +54,17 @@ export default function CloseDayPage() {
         const products: Product[] = (remote.products ?? []).map((product) => ({ id: product.id, name: product.name, sku: product.id, barcode: null, categoryId: null, brandId: null, unitLabel: "piece", altUnitLabel: null, altUnitConversionFactor: null, altUnitSellPrice: null, costPrice: Number(product.cost_price), sellPrice: Number(product.sell_price), expiryTracking: "off", expiryDate: null, lowStockThreshold: null, version: 1, updatedAt: new Date().toISOString() }));
         const expenses: Expense[] = (remote.expenses ?? []).map((expense) => ({ id: expense.id, amount: Number(expense.amount), category: expense.category, branchId: expense.branch_id, note: expense.note, createdAtLocal: expense.created_at, createdByUserId: expense.created_by_user_id }));
         return { sales, products, expenses, profile: undefined, error: null as string | null };
-      } catch { /* offline fallback below */ }
+      } catch (error) {
+        if (!(error instanceof NetworkUnavailableError) && typeof navigator !== "undefined" && navigator.onLine) throw error;
+        /* offline fallback below */
+      }
       const [sales, products, expenses, profile] = await Promise.all([
         tenantArray<Sale>(db.sales),
         tenantArray<Product>(db.products),
         tenantArray<Expense>(db.expenses),
         db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
       ]);
-      return { sales, products, expenses, profile, error: null as string | null };
+      return { sales: user.accountType === "WORKER" ? sales.filter((sale) => sale.createdByUserId === user.id) : sales, products: user.accountType === "WORKER" ? [] : products, expenses: user.accountType === "WORKER" ? [] : expenses, profile, error: null as string | null };
     } catch (err) {
       return {
         sales: [],
@@ -133,7 +136,8 @@ export default function CloseDayPage() {
 
   async function submitCloseDay() {
     if (!hasCount || reconciliationBusy) return;
-    const branchId = (await tenantArray(db.branches))[0]?.id;
+    const localBranches = await tenantArray<{ id: string }>(db.branches);
+    const branchId = (user.accountType === "WORKER" ? localBranches.find((branch) => user.branchIds?.includes(branch.id)) : localBranches[0])?.id;
     if (!branchId) { setReconciliationMessage("No branch is assigned to this account."); return; }
     setReconciliationBusy(true);
     setReconciliationMessage(null);

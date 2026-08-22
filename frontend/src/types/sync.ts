@@ -6,6 +6,7 @@
 export const SYNC_ENTITY_TYPES = [
   "sale",
   "stock_adjustment",
+  "stock_count_submission",
   "purchase_receipt",
   "customer",
   "product",

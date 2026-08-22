@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
 import { startSession } from "@/features/auth/session";
-import type { Role } from "@/types/roles";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { callBackend } from "@/features/auth/backend-client";
 
@@ -35,7 +34,10 @@ export default function AuthCallbackPage() {
 
       type Profile = { id: string; full_name: string; role: string; is_active: boolean; account_type?: "ADMIN" | "BUSINESS_OWNER" | "WORKER" };
       let profile: Profile | null = null;
-      try { profile = (await callBackend<{ profile: Profile }>("account-context", {})).profile; } catch { profile = null; }
+      let permissions: string[] = [];
+      let branchIds: string[] = [];
+      let businessId: string | undefined;
+      try { const context = await callBackend<{ profile: Profile; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {}); profile = context.profile; permissions = context.permissions ?? []; branchIds = context.branchIds ?? []; businessId = context.businessId; } catch { profile = null; }
 
       if (!profile || !profile.is_active) {
         // Authenticated with Google but no StockPadi account exists for
@@ -48,8 +50,10 @@ export default function AuthCallbackPage() {
       await db.localUsers.put({
         id: profile.id,
         fullName: profile.full_name,
-        role: profile.role as Role,
         accountType: profile.account_type ?? "WORKER",
+        permissions,
+        businessId,
+        branchIds,
         isActive: profile.is_active,
         updatedAt: new Date().toISOString(),
       });

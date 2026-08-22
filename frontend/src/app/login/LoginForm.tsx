@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { db } from "@/lib/db";
-import type { Role } from "@/types/roles";
 import { startSession } from "@/features/auth/session";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { RippleButton } from "@/components/ui/Ripple";
@@ -14,7 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { TextInput } from "@/components/ui/TextInput";
 import Link from "next/link";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { callBackend } from "@/features/auth/backend-client";
+import { BackendError, callBackend } from "@/features/auth/backend-client";
 import { removeLegacyTestUser } from "@/features/auth/legacy-cleanup";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
@@ -63,17 +62,23 @@ export default function LoginForm() {
         setError("Incorrect email or password.");
         return;
       }
-      const context = await callBackend<{ accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; businessId?: string; profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions: string[] }>("account-context", {});
+      const context = await callBackend<{ accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; businessId?: string; branchIds?: string[]; profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions: string[] }>("account-context", {});
       const profile = context.profile;
-      await db.localUsers.put({ id: profile.id, businessId: context.businessId, fullName: profile.full_name, role: profile.role as Role, accountType: context.accountType, isActive: profile.is_active, updatedAt: new Date().toISOString() });
+      await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: context.accountType, permissions: context.permissions, isActive: profile.is_active, updatedAt: new Date().toISOString() });
       if (context.businessId) {
         await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId: context.businessId });
         await setLocalBusinessId(context.businessId);
       }
       await startSession(profile.id);
       router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
-    } catch {
-      setError("Could not sign in. Check your connection and try again.");
+    } catch (error) {
+      if (error instanceof BackendError && error.status === 403) {
+        setError(error.message || "This Worker account is not active for business operations.");
+      } else if (error instanceof BackendError && error.status === 401) {
+        setError("Your session expired. Please sign in again.");
+      } else {
+        setError("Could not sign in. Check your connection and try again.");
+      }
     } finally {
       setBusy(false);
     }

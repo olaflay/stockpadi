@@ -1,16 +1,20 @@
 "use client";
 
 import { useContext } from "react";
-import type { Role } from "@/types/roles";
 import type { AccountType } from "@/features/auth/authorization";
+import type { WorkerCapability } from "@/features/auth/authorization";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
 
 export interface CurrentUser {
   id: string;
   fullName: string;
-  role: Role;
+  /** Deprecated cache compatibility field. Never used for authorization. */
+  role?: string;
   emailVerified?: boolean;
   accountType?: AccountType;
+  permissions?: WorkerCapability[];
+  businessId?: string;
+  branchIds?: string[];
 }
 
 /**

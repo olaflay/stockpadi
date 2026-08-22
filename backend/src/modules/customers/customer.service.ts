@@ -2,10 +2,12 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { parseCreditPayment, parseCustomer } from "./customer.schema.js";
+import { requireCapability } from "../authorization/capabilities.js";
 
 export async function createCustomer(db: SupabaseClient, actor: User, input: unknown) {
   const context = await resolveAccountContext(db, actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  requireCapability(context, "CREATE_CUSTOMERS");
   const customer = parseCustomer(input);
   const { data, error } = await db.rpc("sync_apply_customer", { payload: customer, actor_id: actor.id });
   if (error) throw new HttpError(500, "CUSTOMER_CREATE_FAILED", error.message);
@@ -15,6 +17,7 @@ export async function createCustomer(db: SupabaseClient, actor: User, input: unk
 export async function listCustomers(db: SupabaseClient, actor: User) {
   const context = await resolveAccountContext(db, actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  requireCapability(context, "VIEW_CUSTOMERS");
   const { data: customers, error } = await db.from("customers").select("id, name, phone, updated_at").eq("business_id", context.businessId).order("name");
   if (error) throw new HttpError(500, "CUSTOMERS_LOAD_FAILED", error.message);
   const ids = (customers ?? []).map((customer) => customer.id as string);
@@ -28,6 +31,7 @@ export async function listCustomers(db: SupabaseClient, actor: User) {
 export async function recordCreditPayment(db: SupabaseClient, actor: User, input: unknown) {
   const context = await resolveAccountContext(db, actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  requireCapability(context, "RECORD_REPAYMENT");
   const payment = parseCreditPayment(input);
   const { data, error } = await db.rpc("sync_apply_credit_payment", { payload: payment, actor_id: actor.id });
   if (error) throw new HttpError(500, "CREDIT_PAYMENT_FAILED", error.message);
@@ -37,6 +41,7 @@ export async function recordCreditPayment(db: SupabaseClient, actor: User, input
 export async function getCustomerDetail(db: SupabaseClient, actor: User, customerId: string) {
   const context = await resolveAccountContext(db, actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  requireCapability(context, "VIEW_CUSTOMERS");
   const { data: customer, error } = await db.from("customers").select("id, name, phone, updated_at").eq("id", customerId).eq("business_id", context.businessId).maybeSingle();
   if (error) throw new HttpError(500, "CUSTOMER_LOAD_FAILED", error.message);
   if (!customer) throw new HttpError(404, "NOT_FOUND", "Customer not found");

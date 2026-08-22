@@ -3,7 +3,6 @@ import type { StockMovement } from "@/types/stock-movement";
 import type { Sale } from "@/types/sale";
 import type { SyncQueueItem } from "@/types/sync";
 import type { Product } from "@/types/product";
-import type { Role } from "@/types/roles";
 import type { Expense } from "@/types/expense";
 import type { Supplier, Purchase } from "@/types/purchase";
 
@@ -77,8 +76,11 @@ export interface LocalUser {
   id: string;
   businessId?: string;
   fullName: string;
-  role: Role;
+  /** Deprecated cache compatibility field. Never used for authorization or UI routing. */
+  role?: string;
   accountType?: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+  permissions?: string[];
+  branchIds?: string[];
   isActive: boolean;
   updatedAt: string;
   /**

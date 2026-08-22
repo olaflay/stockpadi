@@ -11,5 +11,5 @@ export async function handleAccountContext(request: globalThis.Request) {
   }
   const { data: profile, error } = await db.from("users").select("id, full_name, role, account_type, is_active, business_id").eq("id", auth.user.id).maybeSingle();
   if (error || !profile) throw new Error("Account profile was not found");
-  return { accountType: context.accountType, profile: { ...profile, account_type: context.accountType }, permissions: [], businessId: context.businessId, membershipStatus: context.membershipStatus, businessStatus: context.businessStatus, branchIds: context.branchIds };
+  return { accountType: context.accountType, profile: { ...profile, role: profile.role ?? (context.accountType === "WORKER" ? "WORKER" : "BUSINESS_OWNER"), account_type: context.accountType }, permissions: context.permissions, businessId: context.businessId, membershipStatus: context.membershipStatus, businessStatus: context.businessStatus, branchIds: context.branchIds };
 }

@@ -23,14 +23,25 @@ export async function setLocalBusinessId(businessId: string | null | undefined):
   if (!businessId) return;
   activeBusinessId = businessId;
   await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId });
+  // Repair only legacy unscoped reference data. This preserves the existing
+  // branch/category records created before tenant stamping was introduced;
+  // transactional business records are never guessed or reassigned here.
+  await db.transaction("rw", db.branches, db.categories, async () => {
+    await db.branches.toCollection().modify((row) => {
+      if (!row.businessId) row.businessId = businessId;
+    });
+    await db.categories.toCollection().modify((row) => {
+      if (!row.businessId) row.businessId = businessId;
+    });
+  });
 }
 
-export async function withLocalBusinessId<T extends { businessId?: string }>(row: T): Promise<T> {
+export async function withLocalBusinessId<T extends object>(row: T): Promise<T & { businessId?: string }> {
   const businessId = await getLocalBusinessId();
   return businessId ? { ...row, businessId } : row;
 }
 
-export async function withLocalBusinessIds<T extends { businessId?: string }>(rows: T[]): Promise<T[]> {
+export async function withLocalBusinessIds<T extends object>(rows: T[]): Promise<Array<T & { businessId?: string }>> {
   const businessId = await getLocalBusinessId();
   return businessId ? rows.map((row) => ({ ...row, businessId })) : rows;
 }

@@ -1,11 +1,5 @@
-export const ROLES = [
-  "owner",
-  "manager",
-  "cashier",
-  "inventory_staff",
-  "accountant",
-  "admin",
-  "super_admin",
-] as const;
-
-export type Role = (typeof ROLES)[number];
+/**
+ * Legacy IndexedDB compatibility type only. Active authorization uses
+ * accountType: ADMIN | BUSINESS_OWNER | WORKER.
+ */
+export type Role = string;

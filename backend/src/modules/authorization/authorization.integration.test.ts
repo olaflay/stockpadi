@@ -34,7 +34,7 @@ function withResolver(db: any) {
 describe("backend authorization integration", () => {
   it("allows a Worker only on an assigned branch", async () => {
     const db: any = withResolver(dbFor(contextFor("WORKER")));
-    await expect(adjustStock(db, actor, { id: "movement-1", branchId: "branch-a", productId: "product-a", quantityDelta: 1 })).resolves.toEqual({ ok: true });
+    await expect(adjustStock(db, actor, { id: "movement-1", branchId: "branch-a", productId: "product-a", quantityDelta: 1 })).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     await expect(adjustStock(db, actor, { id: "movement-2", branchId: "branch-b", productId: "product-a", quantityDelta: 1 })).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
   });
 

@@ -3,14 +3,16 @@ import { handleAdminRequest } from "./modules/admin/admin.controller.js";
 import { handleSalesList, handleVoidSale } from "./modules/sales/sales.controller.js";
 import { handleWorkerAudit, handleWorkerList, handleWorkerMember, handleWorkerRequest } from "./modules/workers/worker.controller.js";
 import { handleBusinessRegistration } from "./modules/businesses/business.controller.js";
+import { handleBranchCreate, handleBranchList } from "./modules/businesses/branch.controller.js";
 import { businessRoutes } from "./modules/businesses/business.routes.js";
+import { branchRoutes } from "./modules/businesses/branch.routes.js";
 import { handleCreditPaymentRequest, handleCustomerDetail, handleCustomerList, handleCustomerRequest } from "./modules/customers/customer.controller.js";
 import { customerRoutes } from "./modules/customers/customer.routes.js";
 import { handlePurchase, handlePurchaseList } from "./modules/purchases/purchase.controller.js";
 import { purchaseRoutes } from "./modules/purchases/purchase.routes.js";
 import { handleExpense, handleExpenseList } from "./modules/expenses/expense.controller.js";
 import { expenseRoutes } from "./modules/expenses/expense.routes.js";
-import { handleInventoryList, handleProduct, handleProductList, handleStockAdjustment } from "./modules/inventory/inventory.controller.js";
+import { handleInventoryList, handleProduct, handleProductList, handleStockAdjustment, handleStockCount } from "./modules/inventory/inventory.controller.js";
 import { inventoryRoutes } from "./modules/inventory/inventory.routes.js";
 import { handleReportSummary, handleReportSummaryGet } from "./modules/reports/report.controller.js";
 import { reportRoutes } from "./modules/reports/report.routes.js";
@@ -23,6 +25,9 @@ import { salesRoutes } from "./modules/sales/sales.routes.js";
 import { HttpError } from "./shared/errors/http-error.js";
 import { handleSendVerification, handleVerifyEmail } from "./modules/auth/email-verification.controller.js";
 import { emailVerificationRoutes } from "./modules/auth/email-verification.routes.js";
+import { logger } from "./shared/logging/logger.js";
+import { passwordRoutes } from "./modules/auth/password.routes.js";
+import { handlePasswordUpdate } from "./modules/auth/password.controller.js";
 
 async function readBody(request: import("node:http").IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -49,6 +54,9 @@ function requestFor(incoming: import("node:http").IncomingMessage, body?: unknow
 
 export function createApp() {
   return async (incoming: import("node:http").IncomingMessage, response: import("node:http").ServerResponse) => {
+    const startedAt = Date.now();
+    const requestPath = incoming.url ?? "/";
+    logger.info("request started", { method: incoming.method, path: requestPath });
     try {
       if (incoming.method === "OPTIONS") return send(response, 204, null);
       if (incoming.method === "GET" && incoming.url === "/health") return send(response, 200, { status: "ok", service: "stockpadi-backend" });
@@ -57,8 +65,9 @@ export function createApp() {
       if (incoming.method === "GET" && incoming.url === inventoryRoutes.stock) return send(response, 200, await handleInventoryList(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === salesRoutes.list) return send(response, 200, await handleSalesList(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === expenseRoutes.list) return send(response, 200, await handleExpenseList(requestFor(incoming)));
+      if (incoming.method === "GET" && incoming.url === branchRoutes.list) return send(response, 200, await handleBranchList(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === purchaseRoutes.list) return send(response, 200, await handlePurchaseList(requestFor(incoming)));
-      if (incoming.method === "GET" && incoming.url === reportRoutes.summary) return send(response, 200, await handleReportSummaryGet(requestFor(incoming)));
+      if (incoming.method === "GET" && incoming.url?.split("?")[0] === reportRoutes.summary) return send(response, 200, await handleReportSummaryGet(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === reconciliationRoutes.summary) return send(response, 200, await handleCloseDaySummaryGet(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === reconciliationRoutes.history) return send(response, 200, await handleReconciliationHistory(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url?.startsWith(customerRoutes.detailPrefix) && incoming.url !== customerRoutes.list) return send(response, 200, await handleCustomerDetail(requestFor(incoming), incoming.url.slice(customerRoutes.detailPrefix.length)));
@@ -68,11 +77,13 @@ export function createApp() {
       const body = await readBody(incoming);
       if (incoming.url === emailVerificationRoutes.send) return send(response, 200, await handleSendVerification(requestFor(incoming)));
       if (incoming.url === emailVerificationRoutes.verify) return send(response, 200, await handleVerifyEmail(requestFor(incoming, body), body));
+      if (incoming.url === passwordRoutes.update) return send(response, 200, await handlePasswordUpdate(requestFor(incoming, body), body));
       if (incoming.url === workerRoutes.create.path) return send(response, 200, await handleWorkerRequest(requestFor(incoming, body), body));
       if (incoming.url === adminRoutes.path) return send(response, 200, await handleAdminRequest(requestFor(incoming, body), body));
       if (incoming.url === salesRoutes.path) return send(response, 200, await handleVoidSale(requestFor(incoming, body), body));
       if (incoming.url === accountRoutes.path) return send(response, 200, await handleAccountContext(requestFor(incoming)));
       if (incoming.url === businessRoutes.path) return send(response, 200, await handleBusinessRegistration(requestFor(incoming, body), body));
+      if (incoming.url === branchRoutes.create) return send(response, 200, await handleBranchCreate(requestFor(incoming, body), body));
       if (incoming.method === "GET" && incoming.url === customerRoutes.list) return send(response, 200, await handleCustomerList(requestFor(incoming)));
       if (incoming.url === customerRoutes.create) return send(response, 200, await handleCustomerRequest(requestFor(incoming, body), body));
       if (incoming.url === customerRoutes.creditPayment) return send(response, 200, await handleCreditPaymentRequest(requestFor(incoming, body), body));
@@ -80,13 +91,17 @@ export function createApp() {
       if (incoming.url === expenseRoutes.create) return send(response, 200, await handleExpense(requestFor(incoming, body), body));
       if (incoming.url === inventoryRoutes.product) return send(response, 200, await handleProduct(requestFor(incoming, body), body));
       if (incoming.url === inventoryRoutes.stockAdjustment) return send(response, 200, await handleStockAdjustment(requestFor(incoming, body), body));
+      if (incoming.url === inventoryRoutes.stockCount) return send(response, 200, await handleStockCount(requestFor(incoming, body), body));
       if (incoming.url === reportRoutes.summary) return send(response, 200, await handleReportSummary(requestFor(incoming, body), body));
       if (incoming.url === reconciliationRoutes.summary) return send(response, 200, await handleCloseDaySummary(requestFor(incoming, body), body));
       if (incoming.url === reconciliationRoutes.submit) return send(response, 200, await handleReconciliationSubmit(requestFor(incoming, body), body));
       return send(response, 404, { error: { code: "NOT_FOUND", message: "Route not found" } });
     } catch (cause) {
-      if (cause instanceof HttpError) return send(response, cause.status, { error: { code: cause.code, message: cause.message } });
-      console.error("Unhandled backend request error", cause);
+      if (cause instanceof HttpError) {
+        logger.warn("request rejected", { method: incoming.method, path: requestPath, status: cause.status, code: cause.code, durationMs: Date.now() - startedAt });
+        return send(response, cause.status, { error: { code: cause.code, message: cause.message } });
+      }
+      logger.error("unhandled backend request error", { method: incoming.method, path: requestPath, status: 500, durationMs: Date.now() - startedAt }, cause);
       return send(response, 500, { error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
     }
   };

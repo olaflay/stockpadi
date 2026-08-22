@@ -9,6 +9,9 @@ import { sendInvite, sendPassword } from "./worker.email.js";
 export async function executeWorkerOperation(context: AccountContext, request: WorkerRequest): Promise<Record<string, unknown>> {
   if (context.accountType !== "BUSINESS_OWNER" || !context.businessId) throw new HttpError(403, "FORBIDDEN", "Only a business owner can manage workers");
   const db = supabaseAdmin();
+  if (context.businessStatus !== "verified" && context.businessStatus !== "active") {
+    throw new HttpError(403, "BUSINESS_NOT_READY", "Verify the business before adding Workers");
+  }
   const name = await businessName(db, context.businessId);
   if (request.action === "create") {
     await validateBranch(db, context.businessId, request.branchId);
@@ -40,11 +43,12 @@ export async function executeWorkerOperation(context: AccountContext, request: W
     await writeAudit(db, context.userId, context.businessId, "password_reset", target.id, { delivery: "email" });
     return { status: "ok" };
   }
-  const profile = await db.from("users").update({ is_active: false }).eq("id", target.id).eq("business_id", context.businessId);
+  const nextActive = request.action === "reactivate";
+  const profile = await db.from("users").update({ is_active: nextActive }).eq("id", target.id).eq("business_id", context.businessId);
   if (profile.error) throw new HttpError(500, "UPDATE_FAILED", profile.error.message);
-  const membership = await db.from("business_memberships").update({ status: "disabled" }).eq("user_id", target.id).eq("business_id", context.businessId);
+  const membership = await db.from("business_memberships").update({ status: nextActive ? "active" : "disabled" }).eq("user_id", target.id).eq("business_id", context.businessId);
   if (membership.error) throw new HttpError(500, "UPDATE_FAILED", membership.error.message);
-  await writeAudit(db, context.userId, context.businessId, "staff_deactivated", target.id, { status: "disabled" });
+  await writeAudit(db, context.userId, context.businessId, nextActive ? "staff_reactivated" : "staff_deactivated", target.id, { status: nextActive ? "active" : "disabled" });
   return { status: "ok" };
 }
 

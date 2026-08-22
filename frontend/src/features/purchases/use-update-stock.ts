@@ -6,6 +6,8 @@ import { writeStockAdjustment } from "@/features/inventory/write-stock-adjustmen
 import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
+import { tenantArray } from "@/lib/local-tenant";
+import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
 
 export interface RowState {
   name: string;
@@ -35,8 +37,8 @@ export function useUpdateStock() {
   const { showToast } = useToast();
   const [branchId, setBranchId] = useState<string | null>(null);
 
-  const branches = useLiveQuery(() => db.branches.toArray(), [], []);
-  const products = useLiveQuery(() => db.products.orderBy("name").toArray(), [], []);
+  const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
+  const products = useLiveQuery(async () => (await tenantArray<Product>(db.products)).sort((a, b) => a.name.localeCompare(b.name)), [], []);
 
   return { user, router, showToast, branchId, setBranchId, branches, products };
 }
@@ -59,7 +61,7 @@ export function useUpdateStockRows(
   const [isSaving, setIsSaving] = useState(false);
 
   const stockByProduct = useLiveQuery(async () => {
-    const movements = await db.stockMovements.where("branchId").equals(branchId).toArray();
+    const movements = await tenantArray(db.stockMovements.where("branchId").equals(branchId));
     const map = new Map<string, number>();
     for (const movement of movements) {
       map.set(movement.productId, (map.get(movement.productId) ?? 0) + movement.quantityDelta);
@@ -112,13 +114,17 @@ export function useUpdateStockRows(
           (row.expiryDate || null) !== product.expiryDate;
 
         if (fieldsChanged) {
-          await db.products.update(product.id, {
+          const update = {
             name: row.name.trim() || product.name,
             sku: row.sku.trim() || product.sku,
             sellPrice: Number.isFinite(newSellPrice) ? newSellPrice : product.sellPrice,
             expiryDate: row.expiryDate || null,
             updatedAt: new Date().toISOString(),
-          });
+          };
+          if (typeof navigator !== "undefined" && navigator.onLine) {
+            try { await serverPost("/api/products", { id: product.id, ...update }); }
+            catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; await db.products.update(product.id, update); }
+          } else await db.products.update(product.id, update);
         }
 
         if (Number.isFinite(newStock) && newStock !== currentStockFor(product.id)) {

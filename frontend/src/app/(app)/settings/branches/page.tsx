@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus } from "lucide-react";
 import { db } from "@/lib/db";
-import { tenantArray } from "@/lib/local-tenant";
+import { tenantArray, withLocalBusinessId } from "@/lib/local-tenant";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
@@ -13,6 +13,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { serverGet, serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
 
 export default function BranchesSettingsPage() {
   const router = useRouter();
@@ -22,6 +23,10 @@ export default function BranchesSettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const branches = useLiveQuery(async () => {
     try {
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        const remote = await serverGet<{ branches: Array<{ id: string; name: string; is_active: boolean; business_id: string }> }>("/api/businesses/branches");
+        return remote.branches.map((branch) => ({ id: branch.id, name: branch.name, isActive: branch.is_active, businessId: branch.business_id }));
+      }
       const result = await tenantArray(db.branches);
       setLoadError(null);
       return result;
@@ -60,7 +65,14 @@ export default function BranchesSettingsPage() {
 
   async function addBranch() {
     if (!newBranchName.trim() || branches!.length === 6) return;
-    await db.branches.add({ id: crypto.randomUUID(), name: newBranchName.trim(), isActive: true });
+    const branch = { id: crypto.randomUUID(), name: newBranchName.trim(), isActive: true };
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        const created = await serverPost<{ id: string; name: string; is_active: boolean; business_id: string }>("/api/businesses/branches", { name: branch.name });
+        await db.branches.put({ id: created.id, name: created.name, isActive: created.is_active, businessId: created.business_id });
+      }
+      catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; await db.branches.add(await withLocalBusinessId(branch)); }
+    } else await db.branches.add(await withLocalBusinessId(branch));
     showToast(`${newBranchName.trim()} added`, "success");
     setNewBranchName("");
   }

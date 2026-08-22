@@ -13,7 +13,7 @@ import { RegisterIllustration } from "@/components/illustrations/RegisterIllustr
 import { TextInput } from "@/components/ui/TextInput";
 import { callBackend } from "@/features/auth/backend-client";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { Role } from "@/types/roles";
+import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ElementType> = {
   grocery_supermarket: Store,
@@ -40,9 +40,9 @@ export default function RegisterCallbackPage() {
         return;
       }
       try {
-        const context = await callBackend<{ profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean } }>("account-context", {});
+        const context = await callBackend<{ profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {});
         const profile = context.profile;
-        await db.localUsers.put({ id: profile.id, fullName: profile.full_name, role: profile.role as Role, accountType: profile.account_type, isActive: profile.is_active, updatedAt: new Date().toISOString() });
+        await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: profile.account_type, permissions: context.permissions ?? [], isActive: profile.is_active, updatedAt: new Date().toISOString() });
         await startSession(profile.id);
         router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
         return;
@@ -64,13 +64,14 @@ export default function RegisterCallbackPage() {
       if (!supabase) throw new Error("Server is not configured.");
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData.user) throw new Error("Your sign-in session has expired.");
-      await callBackend("register-business", { action: "complete_oauth", businessName: businessName.trim(), businessTypeId });
+      const registration = await callBackend<{ businessId?: string }>("register-business", { action: "complete_oauth", businessName: businessName.trim(), businessTypeId });
+      if (registration.businessId) await setLocalBusinessId(registration.businessId);
       const template = BUSINESS_TYPE_TEMPLATES.find((item) => item.id === businessTypeId)!;
       await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
         await db.businessProfile.put({ id: BUSINESS_PROFILE_SINGLETON_ID, name: businessName.trim(), businessTypeId, currency: "NGN" });
-        await db.categories.bulkPut(template.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name })));
-        await db.branches.add({ id: crypto.randomUUID(), name: "Main branch", isActive: true });
-        await db.localUsers.put({ id: authData.user.id, fullName: authData.user.user_metadata?.full_name ?? authData.user.email?.split("@")[0] ?? "Owner", role: "owner" as Role, accountType: "BUSINESS_OWNER", isActive: true, emailVerified: true, updatedAt: new Date().toISOString() });
+        await db.categories.bulkPut(await withLocalBusinessIds(template.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name }))));
+        await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
+        await db.localUsers.put({ id: authData.user.id, fullName: authData.user.user_metadata?.full_name ?? authData.user.email?.split("@")[0] ?? "Owner", accountType: "BUSINESS_OWNER", isActive: true, emailVerified: true, updatedAt: new Date().toISOString() });
       });
       await startSession(authData.user.id);
       showToast("Business account created.", "success");

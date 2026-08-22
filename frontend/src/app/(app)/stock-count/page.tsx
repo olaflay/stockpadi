@@ -42,7 +42,10 @@ export default function StockCountPage() {
   const [note, setNote, clearNote] = useDraft("stockpadi-draft-stockcount-note", "");
   const [busy, setBusy] = useState(false);
 
-  const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
+  const branches = useLiveQuery(async () => {
+    const rows = await tenantArray<LocalBranch>(db.branches);
+    return user.accountType === "WORKER" ? rows.filter((branch) => user.branchIds?.includes(branch.id)) : rows;
+  }, [user.accountType, user.branchIds], []);
   const products = useLiveQuery(() => tenantArray<Product>(db.products.orderBy("name")), [], []);
   const currentStock = useLiveQuery(
     () => (activeProduct && branchId ? getCurrentStock(activeProduct.id, branchId) : undefined),
@@ -153,7 +156,7 @@ export default function StockCountPage() {
         createdByUserId: user.id,
         actor: user,
       });
-      showToast(`${activeProduct.name} updated`, "success");
+      showToast(user.accountType === "WORKER" ? `${activeProduct.name} count submitted for Owner review` : `${activeProduct.name} updated`, "success");
       setActiveProduct(null);
       clearCountedQuantity();
       clearNote();

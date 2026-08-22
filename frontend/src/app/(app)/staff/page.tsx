@@ -31,7 +31,6 @@ export default function StaffPage() {
         users = remote.map((member) => ({
           id: member.id,
           fullName: member.fullName,
-          role: (member.accountType === "BUSINESS_OWNER" ? "owner" : "cashier") as typeof cached[number]["role"],
           accountType: member.accountType,
           isActive: member.isActive,
           updatedAt: new Date().toISOString(),

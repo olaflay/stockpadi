@@ -24,7 +24,7 @@ export function useEditProductForm(id: string) {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const categories = useLiveQuery(() => db.categories.toArray(), [], []);
+  const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
   const product = useLiveQuery(() => tenantGet<Product>(db.products, id), [id]);
   const totalStock = useLiveQuery(
     async () => {
