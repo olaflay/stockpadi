@@ -16,7 +16,8 @@
     "check:auth": "node scripts/check-auth.mjs",
     "reset:password": "node scripts/reset-password.mjs",
     "confirm:users": "node scripts/confirm-users.mjs",
-    "check:confirmation": "node scripts/check-confirmation.mjs"
+    "check:confirmation": "node scripts/check-confirmation.mjs",
+    "db:migrate": "node --env-file=.env scripts/migrate.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
