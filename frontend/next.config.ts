@@ -4,7 +4,7 @@ import withSerwistInit from "@serwist/next";
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: path.join(__dirname),
+    root: path.resolve(__dirname, ".."),
   },
   allowedDevOrigins: ["192.168.1.179", "localhost:3000"],
   experimental: {

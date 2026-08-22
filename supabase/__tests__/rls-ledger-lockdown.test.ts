@@ -104,7 +104,7 @@ beforeAll(async () => {
   const owner = await db.query<{ id: string }>(`insert into auth.users default values returning id;`);
   ownerId = owner.rows[0].id;
 
-  const biz = await db.query<{ id: string }>(`insert into business_profile (name, business_type, currency) values ('Test', 'general_retail', 'NGN') returning id;`);
+  const biz = await db.query<{ id: string }>(`insert into business_profile (name, business_type, currency, status) values ('Test', 'general_retail', 'NGN', 'verified') returning id;`);
   bizId = biz.rows[0].id;
 
   await db.query(`insert into users (id, business_id, full_name, role, account_type) values ($1, $2, 'Test Owner', 'owner', 'BUSINESS_OWNER');`, [ownerId, bizId]);
@@ -116,6 +116,7 @@ beforeAll(async () => {
 
   const branch = await db.query<{ id: string }>(`insert into branches (business_id, name) values ($1, 'Main') returning id;`, [bizId]);
   branchId = branch.rows[0].id;
+  await db.query(`insert into user_branches (user_id, branch_id, business_id) values ($1, $2, $3);`, [cashierId, branchId, bizId]);
 
   const product = await db.query<{ id: string }>(
     `insert into products (business_id, sku, name, cost_price, sell_price) values ($1, 'SKU-1', 'Widget', 100, 150) returning id;`,
