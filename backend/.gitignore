@@ -1,5 +1,18 @@
 node_modules/
 dist/
+coverage/
+.vitest/
+test-results/
+*.log
+
+# Private backend configuration
 .env
 .env.*
 !.env.example
+
+# Local databases and generated files
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
