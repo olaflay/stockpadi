@@ -1,13 +1,13 @@
 ---
-name: pxxl-deploy-and-backup-check
-description: Use this for any deployment to Pxxl/Supabase Cloud, and periodically to verify backups and uptime monitoring are actually working, not just configured.
+name: vercel-deploy-and-backup-check
+description: Use this for any deployment to Vercel/Supabase Cloud, and periodically to verify backups and uptime monitoring are actually working, not just configured.
 ---
 
-# Pxxl Deployment and Backup Verification
+# Vercel Deployment and Backup Verification
 
 ## Routine deployment
 
-Push to the branch Pxxl watches (`main`), confirm the build succeeds in Pxxl's dashboard before considering a deploy complete, and check the app is actually reachable and functioning post-deploy, not just that the build step reported success. A green build is not the same as a working deployment.
+Push to the branch Vercel watches (`main`), confirm the build succeeds in Vercel's dashboard before considering a deploy complete, and check the app is actually reachable and functioning post-deploy, not just that the build step reported success. A green build is not the same as a working deployment.
 
 ## Database migrations on deploy
 
@@ -27,4 +27,4 @@ Confirm an alert reaches Olaflay directly (not just a dashboard that requires so
 
 ## Secrets rotation
 
-If any credential (database password, Supabase service key, SMTP password) is ever exposed, rotate it immediately through Pxxl's environment variable settings and/or Supabase's project API settings, then redeploy — don't wait for a convenient moment. Document what was rotated and when in a way Olaflay can find later if the incident needs to be explained to the client.
+If any credential (database password, Supabase service key, SMTP password) is ever exposed, rotate it immediately through Vercel's environment variable settings and/or Supabase's project API settings, then redeploy — don't wait for a convenient moment. Document what was rotated and when in a way Olaflay can find later if the incident needs to be explained to the client.

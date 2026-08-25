@@ -2,10 +2,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Points at the Supabase Cloud project (Postgres, Auth, Realtime, Storage,
- * Edge Functions) backing this deployment, hosted on Pxxl.
+ * Edge Functions) backing this deployment, hosted on Vercel.
  * See .agents/rules/hosting-and-deployment.md.
  *
- * Credentials come from environment variables managed through the Pxxl
+ * Credentials come from environment variables managed through the Vercel
  * dashboard, never hardcoded, never committed. See .agents/rules/reusability-and-multi-client.md.
  *
  * Lazily constructed rather than built at module load: every screen renders
