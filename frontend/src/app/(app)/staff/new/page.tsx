@@ -39,6 +39,7 @@ export default function NewStaffPage() {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   if (user.accountType !== "BUSINESS_OWNER") {
@@ -63,20 +64,45 @@ export default function NewStaffPage() {
     }
     setBusy(true);
     try {
-      await callManageStaff({
+      const result = await callManageStaff({
         action: "create",
         fullName: fullName.trim(),
         phone: phone.trim() || null,
         email: email.trim(),
         branchId,
       });
-      showToast(`${fullName.trim()} added. Login details were emailed.`, "success");
-      router.push("/staff");
+      setCreatedPassword(result.password ?? null);
+      showToast(`${fullName.trim()} added.`, "success");
     } catch (err) {
       setError(err instanceof ManageStaffError ? err.message : "Could not add this staff member. Try again.");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (createdPassword) {
+    return (
+      <div className="flex flex-col gap-4 pb-10">
+        <ScreenHeader title="Worker added" onBack={() => router.push("/staff")} />
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+          <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
+            {fullName.trim()} is ready to sign in
+          </p>
+          <p className="text-[length:var(--font-size-body)] text-on-surface">
+            Share this password with them yourself (WhatsApp or in person). It won&apos;t be shown again and is never sent by email.
+          </p>
+          <div className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-container p-3">
+            <code className="select-all font-mono text-[length:var(--font-size-body-lg)] text-on-surface">{createdPassword}</code>
+            <RippleButton type="button" onClick={() => navigator.clipboard?.writeText(createdPassword)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-4 font-semibold text-brand-accent">
+              Copy
+            </RippleButton>
+          </div>
+        </div>
+        <RippleButton type="button" onClick={() => router.push("/staff")} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent py-3 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast">
+          Done
+        </RippleButton>
+      </div>
+    );
   }
 
   return (
@@ -156,7 +182,7 @@ export default function NewStaffPage() {
             />
           </label>
 
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">StockPadi will generate a secure password and send it to this email. The worker uses the normal login screen.</p>
+          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">StockPadi generates a secure password that you&apos;ll share with the worker yourself (WhatsApp or in person). It&apos;s never sent by email.</p>
         </div>
 
         {/* Access card */}

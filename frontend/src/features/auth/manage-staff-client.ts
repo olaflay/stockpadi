@@ -63,7 +63,7 @@ export function fetchStaffAudit() {
   return authenticatedBackendGet<{ logs: StaffAuditItem[] }>("/api/workers/audit");
 }
 
-export async function callManageStaff(payload: ManageStaffPayload): Promise<{ userId?: string }> {
+export async function callManageStaff(payload: ManageStaffPayload): Promise<{ userId?: string; password?: string }> {
   const supabase = getSupabase();
   if (!supabase) throw new ManageStaffError("This device isn't connected to a server yet.");
 

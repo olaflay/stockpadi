@@ -1,9 +1,19 @@
 import { sendEmail } from "../../shared/email/mailer.js";
+import { renderWorkerInviteEmail, renderWorkerPasswordChangedEmail } from "../../shared/email/email-templates.js";
 
-export function sendInvite(email: string, name: string, password: string) {
-  return sendEmail({ to: email, subject: "Your StockPadi worker access", text: `Your StockPadi login email is ${email}. Password: ${password}.`, html: `<h2>StockPadi worker access</h2><p>Hi ${name},</p><p>Login email: <b>${email}</b><br>Password: <b>${password}</b></p><p>Keep these details private.</p>` });
+/**
+ * Worker notification emails deliberately omit the password.
+ * The generated password is returned to the owner in the API response and
+ * shared out-of-band (WhatsApp / in person), never over the insecure email
+ * channel. See worker.service.ts for the response shape.
+ */
+
+export function sendInvite(email: string, name: string) {
+  const rendered = renderWorkerInviteEmail(name, email);
+  return sendEmail({ to: email, ...rendered });
 }
 
-export function sendPassword(email: string, password: string) {
-  return sendEmail({ to: email, subject: "Your StockPadi password was changed", text: `Your new StockPadi password is ${password}.`, html: `<h2>Your StockPadi password was changed</h2><p>New password: <b>${password}</b></p><p>Keep it private.</p>` });
+export function sendPassword(email: string) {
+  const rendered = renderWorkerPasswordChangedEmail(email);
+  return sendEmail({ to: email, ...rendered });
 }

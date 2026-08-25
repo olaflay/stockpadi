@@ -1,26 +1,13 @@
 /**
- * Shared Nodemailer SMTP transport factory for StockPadi Edge Functions.
- * Both send-verification and verify-email import createTransport() from here.
+ * Shared Nodemailer SMTP & Brevo API transport factory for StockPadi Edge Functions.
  *
- * Credentials come from Deno environment variables (set in Supabase Edge
- * Function secrets, never committed to git):
- *   SMTP_HOST    e.g. smtp.resend.com | smtp.brevo.com | smtp.gmail.com
- *   SMTP_PORT    e.g. 587 (STARTTLS) or 465 (TLS)
- *   SMTP_SECURE  "true" for port 465, leave empty/false for 587 STARTTLS
- *   SMTP_USER    your SMTP login (often your email or "apikey" for Resend)
- *   SMTP_PASS    your SMTP password or API key
- *   SMTP_FROM    "StockPadi <noreply@yourdomain.com>"
+ * KEEP IN SYNC with backend/src/shared/email/mailer.ts (the Node backend copy).
+ * Same provider logic, different runtime globals (Deno.env here vs process.env there).
+ * Change the sender format or add a provider in BOTH copies.
  *
- * Works with any standard SMTP provider. Recommended:
- *   Resend       — host: smtp.resend.com, port: 465, user: "resend", secure: true
- *   Brevo        — host: smtp-relay.brevo.com, port: 587, secure: false
- *   Gmail        — host: smtp.gmail.com, port: 465, user: your email, secure: true
- *
- * See .agents/rules/hosting-and-deployment.md for the hosting context —
- * SMTP secrets live in Supabase's Edge Function secrets store.
+ * Supports both Brevo REST API v3 (BREVO_API_KEY) and SMTP (Brevo, Resend, Gmail, etc.)
  */
 
-// Nodemailer runs inside Deno via the npm: specifier.
 // @ts-expect-error: Deno npm import, types resolved at runtime.
 import nodemailer from "npm:nodemailer@6";
 
@@ -29,13 +16,29 @@ export interface MailOptions {
   subject: string;
   text: string;
   html: string;
+  from?: string;
+  replyTo?: string;
 }
 
-/** Returns a ready-to-use Nodemailer transporter configured from env vars. */
+export function parseSenderAddress(rawFrom?: string): { name: string; email: string } {
+  const fromStr = rawFrom || Deno.env.get("BREVO_SENDER_EMAIL") || Deno.env.get("SMTP_FROM") || "StockPadi <noreply@stockpadi.app>";
+  const match = fromStr.match(/^(?:"?([^"]*)"?\s)?<([^>]+)>$/);
+  if (match) {
+    return {
+      name: match[1]?.trim() || "StockPadi",
+      email: match[2]?.trim() || "noreply@stockpadi.app",
+    };
+  }
+  return {
+    name: "StockPadi",
+    email: fromStr.trim() || "noreply@stockpadi.app",
+  };
+}
+
 export function createTransport() {
   const host = Deno.env.get("SMTP_HOST");
   const port = parseInt(Deno.env.get("SMTP_PORT") ?? "587", 10);
-  const secure = Deno.env.get("SMTP_SECURE") === "true";
+  const secure = Deno.env.get("SMTP_SECURE") === "true" || port === 465;
   const user = Deno.env.get("SMTP_USER");
   const pass = Deno.env.get("SMTP_PASS");
 
@@ -55,11 +58,53 @@ export function getFromAddress(): string {
   return Deno.env.get("SMTP_FROM") ?? "StockPadi <noreply@stockpadi.app>";
 }
 
-/** Sends a single email. Throws on SMTP failure — callers decide how to surface it. */
+/** Sends a single email via Brevo API v3 or SMTP */
 export async function sendMail(options: MailOptions): Promise<void> {
+  const sender = parseSenderAddress(options.from);
+  const brevoApiKey = Deno.env.get("BREVO_API_KEY");
+
+  // 1. Brevo REST API v3 Priority
+  if (brevoApiKey) {
+    const payload = {
+      sender: { name: sender.name, email: sender.email },
+      to: [{ email: options.to }],
+      subject: options.subject,
+      htmlContent: options.html,
+      textContent: options.text,
+      ...(options.replyTo ? { replyTo: { email: options.replyTo } } : {}),
+    };
+
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": brevoApiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.message) detail = errJson.message;
+      } catch {
+        // Ignore JSON error
+      }
+      throw new Error(`Brevo API delivery error: ${detail}`);
+    }
+    return;
+  }
+
+  // 2. SMTP Transport Fallback
   const transport = createTransport();
   await transport.sendMail({
-    from: getFromAddress(),
-    ...options,
+    from: options.from || getFromAddress(),
+    to: options.to,
+    subject: options.subject,
+    text: options.text,
+    html: options.html,
+    ...(options.replyTo ? { replyTo: options.replyTo } : {}),
   });
 }

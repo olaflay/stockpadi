@@ -22,8 +22,8 @@ export async function executeWorkerOperation(context: AccountContext, request: W
     try {
       await createWorkerRecords(db, { userId: data.user.id, businessId: context.businessId, fullName: request.fullName!, branchId: request.branchId });
       await writeAudit(db, context.userId, context.businessId, "staff_created", data.user.id, { accountType: "WORKER", email: request.email });
-      await sendInvite(request.email!, request.fullName!, password);
-      return { status: "ok", userId: data.user.id, email: request.email };
+      await sendInvite(request.email!, request.fullName!);
+      return { status: "ok", userId: data.user.id, email: request.email, password };
     } catch (cause) {
       try { await removeWorkerRecords(db, data.user.id, context.businessId); } catch (cleanup) { console.error("Worker database compensation failed", cleanup); }
       await db.auth.admin.deleteUser(data.user.id);
@@ -39,9 +39,9 @@ export async function executeWorkerOperation(context: AccountContext, request: W
     const password = generatePassword(name);
     const updated = await db.auth.admin.updateUserById(target.id, { password });
     if (updated.error) throw new HttpError(500, "PASSWORD_UPDATE_FAILED", updated.error.message);
-    try { await sendPassword(authTarget.user.email, password); } catch (error) { throw new HttpError(502, "MAIL_FAILED", `Password changed but delivery failed: ${error instanceof Error ? error.message : "email error"}`); }
+    try { await sendPassword(authTarget.user.email); } catch (error) { throw new HttpError(502, "MAIL_FAILED", `Password changed but notification delivery failed: ${error instanceof Error ? error.message : "email error"}`); }
     await writeAudit(db, context.userId, context.businessId, "password_reset", target.id, { delivery: "email" });
-    return { status: "ok" };
+    return { status: "ok", password };
   }
   const nextActive = request.action === "reactivate";
   const profile = await db.from("users").update({ is_active: nextActive }).eq("id", target.id).eq("business_id", context.businessId);
