@@ -80,6 +80,8 @@ Put these private values in `backend/.env`:
 ```env
 PORT=8787
 FRONTEND_ORIGIN=http://localhost:3000
+# Multiple allowed frontend origins may be comma-separated.
+# FRONTEND_ORIGINS=http://localhost:3000,https://stockpadi-drab.vercel.app
 NODE_ENV=development
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY

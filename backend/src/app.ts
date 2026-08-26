@@ -37,13 +37,25 @@ async function readBody(request: import("node:http").IncomingMessage): Promise<u
   catch { throw new HttpError(400, "INVALID_BODY", "Request body must be valid JSON"); }
 }
 
-function send(response: import("node:http").ServerResponse, status: number, body: unknown) {
-  response.writeHead(status, {
+function allowedOrigins(): Set<string> {
+  const configured = process.env.FRONTEND_ORIGINS ?? process.env.FRONTEND_ORIGIN ?? "https://stockpadi-drab.vercel.app";
+  return new Set(configured.split(",").map((origin) => origin.trim().replace(/\/$/, "")).filter(Boolean));
+}
+
+function send(response: import("node:http").ServerResponse, status: number, body: unknown, requestOrigin?: string) {
+  const origin = requestOrigin?.replace(/\/$/, "");
+  const headers: Record<string, string> = {
     "content-type": "application/json",
-    "access-control-allow-origin": process.env.FRONTEND_ORIGIN ?? "http://localhost:3000",
     "access-control-allow-headers": "authorization, content-type",
-    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     vary: "Origin",
+  };
+  if (origin && allowedOrigins().has(origin)) {
+    headers["access-control-allow-origin"] = origin;
+    headers["access-control-allow-credentials"] = "true";
+  }
+  response.writeHead(status, {
+    ...headers,
   });
   response.end(JSON.stringify(body));
 }
@@ -56,10 +68,19 @@ export function createApp() {
   return async (incoming: import("node:http").IncomingMessage, response: import("node:http").ServerResponse) => {
     const startedAt = Date.now();
     const requestPath = incoming.url ?? "/";
+    const requestOrigin = typeof incoming.headers.origin === "string" ? incoming.headers.origin : undefined;
+    const normalizedOrigin = requestOrigin?.replace(/\/$/, "");
+    if (normalizedOrigin && allowedOrigins().has(normalizedOrigin)) {
+      response.setHeader("access-control-allow-origin", normalizedOrigin);
+      response.setHeader("access-control-allow-credentials", "true");
+    }
+    response.setHeader("access-control-allow-headers", "authorization, content-type");
+    response.setHeader("access-control-allow-methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.setHeader("vary", "Origin");
     logger.info("request started", { method: incoming.method, path: requestPath });
     try {
-      if (incoming.method === "OPTIONS") return send(response, 204, null);
-      if (incoming.method === "GET" && incoming.url === "/health") return send(response, 200, { status: "ok", service: "stockpadi-backend" });
+      if (incoming.method === "OPTIONS") return send(response, 204, null, requestOrigin);
+      if (incoming.method === "GET" && incoming.url === "/health") return send(response, 200, { status: "ok", service: "stockpadi-backend" }, requestOrigin);
       if (incoming.method === "GET" && incoming.url === workerRoutes.list.path) return send(response, 200, await handleWorkerList(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === inventoryRoutes.product) return send(response, 200, await handleProductList(requestFor(incoming)));
       if (incoming.method === "GET" && incoming.url === inventoryRoutes.stock) return send(response, 200, await handleInventoryList(requestFor(incoming)));
