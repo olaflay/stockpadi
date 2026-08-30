@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Wallet, Truck } from "lucide-react";
+import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
+import { PerformancePill } from "@/components/ui/PerformancePill";
 import { formatCurrency } from "@/lib/format";
 import { PERIOD_LABELS, type Period } from "@/features/reports/use-reports-data";
 import type { Sale } from "@/types/sale";
@@ -47,6 +48,7 @@ export function ReportsBody({
           <button
             key={key}
             type="button"
+            aria-pressed={period === key}
             onClick={() => onSelectPeriod(key)}
             className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)]"
             style={{
@@ -61,10 +63,17 @@ export function ReportsBody({
 
       <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <RippleLink href="/sales" className="block w-full text-left">
-          <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
-            Sales, {PERIOD_LABELS[period].toLowerCase()}
-          </p>
-          <p className="mt-1 truncate text-[length:var(--font-size-display)] font-semibold text-on-surface">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
+              Sales, {PERIOD_LABELS[period].toLowerCase()}
+            </p>
+            <PerformancePill
+              tone={periodSales.length > 0 ? "success" : "neutral"}
+              icon={TrendingUp}
+              label={periodSales.length > 0 ? "Sales Recorded" : "No Activity"}
+            />
+          </div>
+          <p className="mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums text-on-surface">
             {formatCurrency(periodSales.reduce((sum, s) => sum + s.total, 0))}
           </p>
           <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -83,20 +92,34 @@ export function ReportsBody({
       </section>
 
       <div className="grid grid-cols-2 gap-4">
-        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
-          <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
-            Est. net profit, {PERIOD_LABELS[period].toLowerCase()}
-          </p>
-          <p className={`mt-1 truncate text-[length:var(--font-size-display)] font-semibold ${periodNetProfit >= 0 ? "text-success" : "text-danger"}`}>
+        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
+              Est. net profit
+            </p>
+            <PerformancePill
+              tone={periodNetProfit >= 0 ? "success" : "danger"}
+              icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
+              label={periodNetProfit >= 0 ? "Profit" : "Loss"}
+            />
+          </div>
+          <p className={`mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums ${periodNetProfit >= 0 ? "text-success" : "text-danger"}`}>
             {formatCurrency(periodNetProfit)}
           </p>
         </section>
 
-        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
-          <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
-            Net cash flow, {PERIOD_LABELS[period].toLowerCase()}
-          </p>
-          <p className={`mt-1 truncate text-[length:var(--font-size-display)] font-semibold ${periodNetCashFlow >= 0 ? "text-success" : "text-danger"}`}>
+        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
+              Net cash flow
+            </p>
+            <PerformancePill
+              tone={periodNetCashFlow >= 0 ? "success" : "danger"}
+              icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
+              label={periodNetCashFlow >= 0 ? "Positive" : "Deficit"}
+            />
+          </div>
+          <p className={`mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums ${periodNetCashFlow >= 0 ? "text-success" : "text-danger"}`}>
             {formatCurrency(periodNetCashFlow)}
           </p>
         </section>
@@ -104,12 +127,13 @@ export function ReportsBody({
 
       {period !== "today" && (
         <p className="-mt-2 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
-          Profit uses today&apos;s cost price — may not reflect margins during {PERIOD_LABELS[period].toLowerCase()} if costs have changed. Cash flow is absolute.
+          Profit uses current cost price. Cash flow shows exact money received and spent.
         </p>
       )}
 
       <RippleLink
         href="/expenses"
+        aria-label={`View expenses: ${formatCurrency(periodExpensesTotal)}`}
         className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left hover:bg-surface-container transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -123,13 +147,14 @@ export function ReportsBody({
             </p>
           </div>
         </div>
-        <p className="shrink-0 text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">
+        <p className="shrink-0 font-number text-[length:var(--font-size-body-lg)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(periodExpensesTotal)}
         </p>
       </RippleLink>
 
       <RippleLink
         href="/purchases"
+        aria-label={`View restocks: ${formatCurrency(periodPurchasesTotal)}`}
         className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left hover:bg-surface-container transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -143,7 +168,7 @@ export function ReportsBody({
             </p>
           </div>
         </div>
-        <p className="shrink-0 text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">
+        <p className="shrink-0 font-number text-[length:var(--font-size-body-lg)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(periodPurchasesTotal)}
         </p>
       </RippleLink>
@@ -156,15 +181,22 @@ export function ReportsBody({
           <NoResultsState query={PERIOD_LABELS[period]} />
         ) : (
           <ul className="flex flex-col gap-2">
-            {bestSellers.map(({ product, quantity }) => (
+            {bestSellers.map(({ product, quantity }, idx) => (
               <li
                 key={product?.id ?? quantity}
                 className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3"
               >
-                <span className="min-w-0 flex-1 truncate text-[length:var(--font-size-body)] text-on-surface">
-                  {product?.name ?? "Unknown product"}
-                </span>
-                <span className="shrink-0 text-[length:var(--font-size-body)] text-on-surface-muted">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <PerformancePill
+                    tone={idx === 0 ? "brand" : "neutral"}
+                    icon={idx === 0 ? Sparkles : undefined}
+                    label={idx === 0 ? "Top Seller" : `#${idx + 1}`}
+                  />
+                  <span className="truncate text-[length:var(--font-size-body)] text-on-surface">
+                    {product?.name ?? "Unknown product"}
+                  </span>
+                </div>
+                <span className="shrink-0 font-number text-[length:var(--font-size-body)] font-semibold tabular-nums text-on-surface-muted">
                   {quantity} sold
                 </span>
               </li>

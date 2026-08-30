@@ -103,8 +103,11 @@
   --font-size-label: 0.8125rem;   /* 13px — form labels, chips */
   --font-size-caption: 0.75rem;   /* 12px — timestamps, meta */
 
-  --line-height-tight: 1.2;
-  --line-height-normal: 1.5;
+  --font-line-height-tight: 1.2;
+  --font-line-height-normal: 1.5;
+
+  /* Font Families: Neue Helvetica for major numbers, financial metrics & statistics */
+  --font-family-number: "Neue Helvetica", "Helvetica Neue", "Helvetica", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 
   /* Weight: named so components never hardcode a numeric weight. */
   --font-weight-regular: 400;

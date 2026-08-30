@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Receipt, Plus } from "lucide-react";
@@ -58,6 +59,24 @@ export default function SalesPage() {
   // sees the branch's full history.
   const visibleSales =
     result?.sales.filter((sale) => user.accountType !== "WORKER" || sale.createdByUserId === user.id) ?? [];
+
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (visibleSales.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleLimit((prev) => prev + 50);
+      }
+    }, { threshold: 0.1 });
+
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [visibleSales.length, visibleLimit]);
 
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
     return (
@@ -122,40 +141,47 @@ export default function SalesPage() {
   return (
     <div>
       <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
-      <ul className="flex flex-col gap-2">
-        {visibleSales.map((sale) => {
-          const methodSummary = sale.payments.length === 1
-            ? PAYMENT_LABELS[sale.payments[0].method]
-            : `${sale.payments.length} methods`;
-          const itemCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
-          return (
-            <li key={sale.id}>
-              <RippleLink
-                href={`/sales/${sale.id}`}
-                className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-[length:var(--font-size-body-lg)] font-medium tabular-nums text-on-surface">
-                    {formatCurrency(sale.total)}
-                    {sale.voidedAt && (
-                      <span className="ml-2 text-[length:var(--font-size-caption)] font-normal text-danger">
-                        Cancelled
-                      </span>
-                    )}
-                  </p>
-                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    {itemCount} {itemCount === 1 ? "item" : "items"} · {methodSummary} ·{" "}
-                    {new Date(sale.createdAtLocal).toLocaleTimeString("en-NG", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </RippleLink>
-            </li>
-          );
-        })}
-      </ul>
+      <div>
+        <ul className="flex flex-col gap-2">
+          {visibleSales.slice(0, visibleLimit).map((sale) => {
+            const methodSummary = sale.payments.length === 1
+              ? PAYMENT_LABELS[sale.payments[0].method]
+              : `${sale.payments.length} methods`;
+            const itemCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+            return (
+              <li key={sale.id}>
+                <RippleLink
+                  href={`/sales/${sale.id}`}
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-number text-[length:var(--font-size-body-lg)] font-medium tabular-nums text-on-surface">
+                      {formatCurrency(sale.total)}
+                      {sale.voidedAt && (
+                        <span className="ml-2 text-[length:var(--font-size-caption)] font-normal text-danger">
+                          Cancelled
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                      {itemCount} {itemCount === 1 ? "item" : "items"} · {methodSummary} ·{" "}
+                      {new Date(sale.createdAtLocal).toLocaleTimeString("en-NG", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                </RippleLink>
+              </li>
+            );
+          })}
+        </ul>
+        {visibleSales.length > visibleLimit && (
+          <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">
+            Loading more...
+          </div>
+        )}
+      </div>
       {hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES) && (
         <FAB href="/pos" label="New sale">
           <Plus size={26} aria-hidden />

@@ -12,16 +12,20 @@ describe("Onboarding Flow Logic & Storage", () => {
   });
 
   it("loads predefined business-type templates with starter products", () => {
-    expect(BUSINESS_TYPE_TEMPLATES.length).toBeGreaterThanOrEqual(4);
+    expect(BUSINESS_TYPE_TEMPLATES.length).toBe(6);
 
-    const grocery = getBusinessTypeTemplate("grocery_supermarket");
-    expect(grocery).toBeDefined();
-    expect(grocery?.defaultCategories).toContain("Food");
-    expect(grocery?.sampleProducts.length).toBeGreaterThan(0);
+    const retail = getBusinessTypeTemplate("retail");
+    expect(retail).toBeDefined();
+    expect(retail?.defaultCategories).toContain("Foodstuffs");
+    expect(retail?.sampleProducts.length).toBeGreaterThan(0);
 
-    const pharmacy = getBusinessTypeTemplate("pharmacy_fmcg");
-    expect(pharmacy).toBeDefined();
-    expect(pharmacy?.expiryTracking).toBe("mandatory");
+    const materials = getBusinessTypeTemplate("materials");
+    expect(materials).toBeDefined();
+    expect(materials?.defaultCategories).toContain("Building");
+
+    const health = getBusinessTypeTemplate("health");
+    expect(health).toBeDefined();
+    expect(health?.expiryTracking).toBe("mandatory");
   });
 
   it("calculates live margin and unit profit correctly", () => {
@@ -35,7 +39,7 @@ describe("Onboarding Flow Logic & Storage", () => {
   });
 
   it("persists business profile, categories, branches, and sample starter products into Dexie", async () => {
-    const template = getBusinessTypeTemplate("grocery_supermarket")!;
+    const template = getBusinessTypeTemplate("retail")!;
     const branchId = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -108,7 +112,7 @@ describe("Onboarding Flow Logic & Storage", () => {
 
     const savedProfile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
     expect(savedProfile?.name).toBe("Mama Tolu Provisions");
-    expect(savedProfile?.businessTypeId).toBe("grocery_supermarket");
+    expect(savedProfile?.businessTypeId).toBe("retail");
 
     const categories = await db.categories.toArray();
     expect(categories.length).toBe(template.defaultCategories.length);

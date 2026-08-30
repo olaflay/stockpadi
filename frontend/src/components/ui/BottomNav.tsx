@@ -27,7 +27,7 @@ export function BottomNav() {
   const allowedItems = NAV_ITEMS.filter((item) => item.accountTypes.includes(user.accountType ?? "WORKER"));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] gpu-layer">
+    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] gpu-layer">
       {allowedItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
         const Icon = item.icon;

@@ -1,0 +1,24 @@
+# StockPadi — Offline-First Retail Point of Sale & Inventory PWA
+
+> StockPadi is a free, offline-first point of sale (POS) and inventory management web application built for retail businesses (groceries, pharmacies, electronics, and general retail stores).
+
+## Key Features
+- 100% Offline Point of Sale: Record sales, handle split payments, and calculate change without internet connection.
+- Ledger-Based Inventory: Stock quantities and customer debt balances are calculated strictly from an append-only transaction ledger.
+- Multi-Unit Support: Sell products by base unit (e.g. single egg) or alt unit (e.g. crate of eggs) with automatic stock conversions.
+- Customer Credit & Debt Ledger: Keep track of customer debt balances, partial repayments, and credit limits.
+- Instant WhatsApp Receipts: Generate and share digital receipts with customers over WhatsApp with 1 tap.
+- Multi-Tenant & Branch Support: Multi-tenant shared database architecture supporting 1 to 6 branches per business profile.
+
+## Technology Stack
+- Next.js (App Router PWA) + TypeScript
+- Dexie.js (IndexedDB local offline storage)
+- Workbox Service Worker (Background Sync)
+- Supabase (PostgreSQL, Auth, Realtime, Row Level Security)
+- Vercel Hosting
+
+## Primary Target Audience
+Retail shop owners, supermarkets, neighborhood grocers, pharmacies, and merchants operating on low-end mobile devices or weak network conditions across Nigeria and West Africa.
+
+## Contact & Website
+- Website: https://stockpadi.com

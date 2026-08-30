@@ -41,9 +41,26 @@ const geistMono = Geist_Mono({
 const branding = getBrandingConfig();
 
 export const metadata: Metadata = {
-  ...(process.env.NEXT_PUBLIC_APP_URL ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) } : {}),
-  title: `${branding.businessName} — Offline-First POS & Inventory`,
-  description: "The offline-first POS, inventory and credit ledger for Nigerian retailers. Free, fast, and works with no network.",
+  metadataBase: new URL(branding.appUrl),
+  title: {
+    default: `${branding.businessName} | Free Offline POS & Inventory App`,
+    template: `%s | ${branding.businessName}`,
+  },
+  description:
+    "StockPadi is the free, offline-first point of sale and inventory management app for retail stores. Track sales, record customer debts, manage stock, and share WhatsApp receipts with zero internet required.",
+  keywords: [
+    "StockPadi",
+    "offline POS app",
+    "inventory management",
+    "point of sale software",
+    "retail POS Nigeria",
+    "customer credit book",
+    "shop ledger",
+    "free POS software",
+    "store inventory tracker",
+  ],
+  authors: [{ name: "StockPadi" }],
+  applicationName: branding.businessName,
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: branding.logoUrl ?? "/icon.svg", type: "image/svg+xml" }],
@@ -56,16 +73,18 @@ export const metadata: Metadata = {
     title: branding.businessName,
   },
   openGraph: {
-    title: `${branding.businessName} — Offline-First POS & Inventory`,
-    description: "Works with no network. Your records stay on this device. Export them any time.",
+    title: `${branding.businessName} | Free Offline POS & Inventory App`,
+    description:
+      "Run your retail shop with zero internet. Fast sales, accurate stock tracking, customer debt ledger, and instant WhatsApp receipts.",
     siteName: branding.businessName,
     images: [{ url: branding.logoUrl ?? "/icon.svg", width: 512, height: 512, alt: branding.businessName }],
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: `${branding.businessName} — Offline-First POS & Inventory`,
-    description: "Works with no network. Your records stay on this device.",
+    title: `${branding.businessName} | Free Offline POS & Inventory App`,
+    description:
+      "Run your retail shop with zero internet. Fast sales, accurate stock tracking, and instant WhatsApp receipts.",
     images: [branding.logoUrl ?? "/icon.svg"],
   },
 };
@@ -76,6 +95,28 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+};
+
+const JSON_LD_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: branding.businessName,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "All",
+  browserRequirements: "Requires JavaScript. Requires HTML5.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "NGN",
+  },
+  description: "Offline-first point of sale and inventory management software for retail businesses.",
+  featureList: [
+    "100% Offline Point of Sale",
+    "Multi-Unit Stock & Inventory Tracking",
+    "Customer Credit & Debt Book",
+    "Daily Cash Drawer & Transfer Balancing",
+    "1-Tap WhatsApp Receipts & Reminders",
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -89,6 +130,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: UUID_POLYFILL_SCRIPT }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD_SCHEMA) }}
+        />
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

@@ -57,7 +57,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
   }, [accountType, router, shell]);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden">
+    <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
       <SyncEngine />
       <OfflineBanner />
       <InstallBanner />
@@ -81,9 +81,43 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
             </Link>
           );
         })}
-        {shell === "work" && <button type="button" onClick={() => setMoreOpen((open) => !open)} className="flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] text-on-surface-muted" aria-expanded={moreOpen}><MoreHorizontal size={22} aria-hidden />More</button>}
+        {shell === "work" && (
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            className="flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] text-on-surface-muted"
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            aria-label="More navigation options"
+          >
+            <MoreHorizontal size={22} aria-hidden />
+            More
+          </button>
+        )}
       </nav>
-      {shell === "work" && moreOpen && <div className="fixed bottom-16 right-3 z-50 w-56 rounded-[var(--radius-card)] border border-border bg-surface p-2 shadow-[var(--shadow-elevation-3)]" role="menu">{WORKER_MORE.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className="flex min-h-[var(--touch-target-min)] items-center gap-3 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container" role="menuitem"><Icon size={18} aria-hidden />{item.label}</Link>; })}</div>}
+      {shell === "work" && moreOpen && (
+        <div
+          className="fixed bottom-16 right-3 z-50 w-56 rounded-[var(--radius-card)] border border-border bg-surface p-2 shadow-[var(--shadow-elevation-3)]"
+          role="menu"
+          aria-label="Additional worker navigation"
+        >
+          {WORKER_MORE.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMoreOpen(false)}
+                className="flex min-h-[var(--touch-target-min)] items-center gap-3 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container"
+                role="menuitem"
+              >
+                <Icon size={18} aria-hidden />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

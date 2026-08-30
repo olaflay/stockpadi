@@ -25,6 +25,7 @@ export function CountBadge({ count, className = "", tone = "neutral" }: BadgePro
 
   return (
     <span
+      aria-label={`${count} items`}
       className={`inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-bold border border-surface shadow-sm ${toneClass} ${className}`}
     >
       {displayCount}
@@ -39,8 +40,11 @@ export function AlertBadge({ count: propCount, className = "" }: { count?: numbe
   if (count === 0) return null;
 
   return (
-    <div className={`absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`}>
+    <span
+      aria-label={`${count} unread notifications`}
+      className={`absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`}
+    >
       {count > 99 ? "99+" : count}
-    </div>
+    </span>
   );
 }

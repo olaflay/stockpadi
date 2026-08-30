@@ -24,7 +24,7 @@ export function useCart() {
     {}
   );
 
-  function addToCart(productId: string, unitPrice: number, unitLabel: string, conversionFactor: number) {
+  function addToCart(productId: string, unitPrice: number, unitLabel: string, conversionFactor: number, qty = 1) {
     const key = cartLineKey(productId, unitLabel);
     setCart((current) => {
       const existing = current[key];
@@ -35,7 +35,7 @@ export function useCart() {
           unitPrice,
           unitLabel,
           conversionFactor,
-          quantity: (existing?.quantity ?? 0) + 1,
+          quantity: (existing?.quantity ?? 0) + qty,
         },
       };
     });

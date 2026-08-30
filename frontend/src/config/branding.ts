@@ -9,6 +9,26 @@ export interface BrandingConfig {
   businessName: string;
   accentColor: string;
   logoUrl: string | null;
+  appUrl: string;
+}
+
+/**
+ * Single source of truth for the application's base URL across the entire frontend.
+ * Priority:
+ *   1. NEXT_PUBLIC_APP_URL environment variable
+ *   2. NEXT_PUBLIC_SITE_URL environment variable
+ *   3. window.location.origin (if running in browser)
+ *   4. "https://stockpadi.com" (production default fallback)
+ */
+export function getAppUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, "");
+  }
+  return "https://stockpadi.com";
 }
 
 export function getBrandingConfig(): BrandingConfig {
@@ -22,5 +42,6 @@ export function getBrandingConfig(): BrandingConfig {
     businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "StockPadi",
     accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0a6e4d",
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
+    appUrl: getAppUrl(),
   };
 }

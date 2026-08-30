@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/components/ui/Toast";
-import { HelpCircle, FileText, MessageCircle, ChevronRight, ChevronDown, Mail } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { RippleButton } from "@/components/ui/Ripple";
+import { HelpCircle, FileText, MessageCircle, ChevronRight, ChevronDown, Mail, Star, HeartHandshake } from "lucide-react";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const USER_GUIDE_STEPS = [
   { title: "Add your products", body: "Products → the + button. Set a cost price and sell price; starting stock is optional." },
@@ -25,10 +28,48 @@ export default function HelpPage() {
   const { showToast } = useToast();
   const [userGuideOpen, setUserGuideOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [rating, setRating] = useState<number>(5);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  function handleSendReview() {
+    setSubmittingReview(true);
+    // WhatsApp feedback submission or local toast confirmation
+    const message = `*StockPadi Review & Merchant Feedback*\nRating: ${rating}/5 stars\nFeedback: ${feedbackText.trim() || "Loving the offline speed and simplicity!"}`;
+    window.open(buildWhatsAppUrl(undefined, message), "_blank");
+    showToast("Thank you for your feedback!", "success");
+    setSubmittingReview(false);
+    setReviewModalOpen(false);
+    setFeedbackText("");
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <ScreenHeader title="Help & Support" onBack={() => router.back()} />
+
+      {/* Review & Merchant Feedback Banner */}
+      <section className="flex flex-col gap-3 rounded-[var(--radius-focus-block)] border border-border bg-brand-accent/8 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-accent/20 text-brand-accent">
+            <HeartHandshake size={22} aria-hidden />
+          </div>
+          <div>
+            <h3 className="text-[length:var(--font-size-body)] font-semibold text-on-surface">Enjoying StockPadi?</h3>
+            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              Help us make it better for all retail shop owners.
+            </p>
+          </div>
+        </div>
+        <RippleButton
+          type="button"
+          onClick={() => setReviewModalOpen(true)}
+          className="mt-1 flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body-sm)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity"
+        >
+          <Star size={16} className="fill-current" />
+          <span>Leave a Review / Suggest Feature</span>
+        </RippleButton>
+      </section>
 
       <section>
         <h2 className="mb-3 px-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted uppercase tracking-wider">
@@ -106,9 +147,10 @@ export default function HelpPage() {
           Contact Us
         </h2>
         <div className="flex flex-col divide-y divide-border overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
-          <button
-            type="button"
-            onClick={() => showToast("WhatsApp support isn't set up yet — try Email Support below.", "neutral")}
+          <a
+            href={buildWhatsAppUrl(undefined, "Hi StockPadi Team, I have a question about my shop inventory...")}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex min-h-[var(--touch-target-min)] items-center gap-3 px-4 py-3 text-left hover:bg-surface-container transition-colors"
           >
             {/* #25D366 is WhatsApp's own brand color, not a design-system token — same exception as the Google "G" logo elsewhere in the app. */}
@@ -118,10 +160,11 @@ export default function HelpPage() {
                 WhatsApp Support
               </span>
               <span className="block text-[length:var(--font-size-caption)] text-on-surface-muted">
-                Available Mon-Fri, 9am-5pm
+                Direct chat with our team
               </span>
             </div>
-          </button>
+            <ChevronRight size={18} className="text-on-surface-muted" aria-hidden />
+          </a>
 
           <a
             href="mailto:support@stockpadi.com"
@@ -139,6 +182,63 @@ export default function HelpPage() {
           </a>
         </div>
       </section>
+
+      {/* Review Modal */}
+      <Modal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Share Your Review">
+        <div className="flex flex-col gap-4 py-2">
+          <p className="text-[length:var(--font-size-body)] text-on-surface-muted text-center">
+            How is your experience with StockPadi so far?
+          </p>
+
+          <div className="flex items-center justify-center gap-3 py-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                className="p-1 text-2xl transition-transform hover:scale-110 active:scale-95"
+                aria-label={`${star} star`}
+              >
+                <Star
+                  size={32}
+                  className={star <= rating ? "fill-warning text-warning" : "text-on-surface-muted/30"}
+                />
+              </button>
+            ))}
+          </div>
+
+          <label className="flex flex-col gap-1 text-left">
+            <span className="text-[length:var(--font-size-label)] font-medium text-on-surface">
+              What do you love or want improved? (Optional)
+            </span>
+            <textarea
+              rows={3}
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="e.g. Really love the WhatsApp receipts, would love to see..."
+              className="w-full rounded-[var(--radius-control)] border border-border bg-surface p-3 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted"
+            />
+          </label>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setReviewModalOpen(false)}
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+            >
+              Cancel
+            </button>
+            <RippleButton
+              type="button"
+              onClick={handleSendReview}
+              disabled={submittingReview}
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity"
+            >
+              Send Feedback
+            </RippleButton>
+          </div>
+        </div>
+      </Modal>
 
       <div className="mt-8 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
         StockPadi v1.0.0

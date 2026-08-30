@@ -106,11 +106,13 @@ export function useEditProductForm(id: string) {
   });
 
   async function handleDelete(prod: Product) {
-    if (confirm(`Are you sure you want to delete ${prod.name}? This cannot be undone.`)) {
-      await db.products.delete(id);
-      showToast(`${prod.name} deleted`, "success");
-      router.push("/products");
+    if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
+      showToast("Only the store owner can delete products.", "danger");
+      return;
     }
+    await db.products.delete(id);
+    showToast(`${prod.name} deleted`, "success");
+    router.push("/products");
   }
 
   return {

@@ -17,6 +17,7 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { completeSale } from "@/features/pos/complete-sale";
 import { useCart } from "@/features/pos/use-cart";
+import { parsePosQuery } from "@/lib/parse-pos-query";
 import { useSplitPayment, AMOUNT_EPSILON } from "@/features/pos/use-split-payment";
 import { BrowseStep } from "@/features/pos/components/BrowseStep";
 import { CartStep } from "@/features/pos/components/CartStep";
@@ -34,7 +35,7 @@ function PosPageContent() {
   const { showToast } = useToast();
   const [step, setStep] = useState<"browse" | "cart" | "payment">("browse");
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebounce(query, 120);
+  const debouncedQuery = useDebounce(query, 80);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,10 +114,15 @@ function PosPageContent() {
     );
   }
 
+  // Strip the optional quantity prefix (e.g. "5 sugar" → search "sugar")
+  // so the product list shows correct results regardless of how the cashier
+  // prefixes their quantity. parsePosQuery is zero-cost when no prefix.
+  const { term: filterTerm } = parsePosQuery(debouncedQuery);
+
   const filtered = result.products.filter((product) => {
     const matchesQuery = `${product.name} ${product.sku} ${product.barcode ?? ""}`
       .toLowerCase()
-      .includes(debouncedQuery.toLowerCase());
+      .includes(filterTerm.toLowerCase());
     const matchesCategory = selectedCategoryId === null || product.categoryId === selectedCategoryId;
     return matchesQuery && matchesCategory;
   });
@@ -217,7 +223,11 @@ function PosPageContent() {
       selectedCategoryId={selectedCategoryId}
       onSelectCategory={setSelectedCategoryId}
       filteredProducts={filtered}
+      allProducts={result.products}
+      cart={cart.cart}
       onAddToCart={cart.addToCart}
+      onIncrementLine={cart.incrementLine}
+      onDecrementLine={cart.decrementLine}
       itemCount={cart.itemCount}
       total={cart.total}
       onReviewCart={() => setStep("cart")}

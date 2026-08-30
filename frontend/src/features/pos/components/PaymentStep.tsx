@@ -81,7 +81,7 @@ export function PaymentStep(props: {
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
             {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>
-          <span className="font-mono text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">{formatCurrency(total)}</span>
+          <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">{formatCurrency(total)}</span>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -158,6 +158,7 @@ export function PaymentStep(props: {
                 <button
                   type="button"
                   onClick={() => onSelectCreditCustomer(null)}
+                  aria-label="Change credit customer"
                   className="min-h-[var(--touch-target-min)] px-2 text-[length:var(--font-size-caption)] font-medium text-brand-accent"
                 >
                   Change
@@ -230,6 +231,7 @@ export function PaymentStep(props: {
                   <button
                     type="button"
                     onClick={() => setShowNewCustomerForm(true)}
+                    aria-label="Add new customer for credit"
                     className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed border-border text-[length:var(--font-size-body)] font-medium text-brand-accent"
                   >
                     <UserPlus size={18} aria-hidden />

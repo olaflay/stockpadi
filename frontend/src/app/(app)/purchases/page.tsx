@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -109,6 +110,24 @@ export default function PurchasesPage() {
     );
   }
 
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (result.purchases.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleLimit((prev) => prev + 50);
+      }
+    }, { threshold: 0.1 });
+
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [result.purchases.length, visibleLimit]);
+
   return (
     <div>
       <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
@@ -122,34 +141,41 @@ export default function PurchasesPage() {
         </Link>
       )}
 
-      <ul className="flex flex-col gap-2 pb-20">
-        {result.purchases.map((purchase) => {
-          const supplier = result.suppliers.find((s) => s.id === purchase.supplierId);
-          const itemCount = purchase.items.reduce((sum, i) => sum + i.quantity, 0);
-          const total = purchase.items.reduce((sum, i) => sum + i.quantity * i.unitCost, 0);
-          return (
-            <li key={purchase.id}>
-              <RippleLink
-                href={`/purchases/${purchase.id}`}
-                className="block rounded-[var(--radius-card)] border border-border px-4 py-3 hover:bg-surface-container transition-colors"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    {supplier?.name ?? "Unknown supplier"}
+      <div>
+        <ul className="flex flex-col gap-2 pb-20">
+          {result.purchases.slice(0, visibleLimit).map((purchase) => {
+            const supplier = result.suppliers.find((s) => s.id === purchase.supplierId);
+            const itemCount = purchase.items.reduce((sum, i) => sum + i.quantity, 0);
+            const total = purchase.items.reduce((sum, i) => sum + i.quantity * i.unitCost, 0);
+            return (
+              <li key={purchase.id}>
+                <RippleLink
+                  href={`/purchases/${purchase.id}`}
+                  className="block rounded-[var(--radius-card)] border border-border px-4 py-3 hover:bg-surface-container transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                      {supplier?.name ?? "Unknown supplier"}
+                    </p>
+                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                      {formatCurrency(total)}
+                    </p>
+                  </div>
+                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    {itemCount} item{itemCount === 1 ? "" : "s"} ·{" "}
+                    {new Date(purchase.createdAtLocal).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
                   </p>
-                  <p className="shrink-0 font-mono text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                    {formatCurrency(total)}
-                  </p>
-                </div>
-                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                  {itemCount} item{itemCount === 1 ? "" : "s"} ·{" "}
-                  {new Date(purchase.createdAtLocal).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
-                </p>
-              </RippleLink>
-            </li>
-          );
-        })}
-      </ul>
+                </RippleLink>
+              </li>
+            );
+          })}
+        </ul>
+        {result.purchases.length > visibleLimit && (
+          <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">
+            Loading more...
+          </div>
+        )}
+      </div>
 
       {canAdd && (
         <FAB href="/purchases/new" label="Record a restock">

@@ -13,6 +13,7 @@ The production specification index for StockPadi. Features follow the engineerin
 | **Brand Identity & Vector Icon System** | 2h, Q1 | **SHIPPED** | Vector `<BrandLogo>`, 512×512 PWA squircle mark, automated App Router `/icon.svg`, and 7 lightweight inline illustrations. |
 | **Modal & Bottom-Sheet System** | Q8 | **SHIPPED** | `<Modal>` sheet for zero-latency expense creation (`AddExpenseSheet`), debt collection, and dialogs. |
 | **Centralized Date & Time Engine** | Q9 | **SHIPPED** | Local WAT midnight precision in `src/lib/date.ts`. 100% test coverage in `date.test.ts`. |
+| [marketing-discovery-and-landing-page.md](marketing-discovery-and-landing-page.md) | SEO & Growth | **SHIPPED / ACTIVE** | Dynamic sitemap.xml, robots.txt, Schema.org WebApplication JSON-LD, in-app review collector, and standalone landing page architecture plan. |
 
 ---
 

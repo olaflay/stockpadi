@@ -109,7 +109,7 @@ export default function NewStaffPage() {
     <div className="flex flex-col gap-0">
       <ScreenHeader title="Add staff" onBack={() => router.push("/staff")} />
 
-      <div className="flex flex-col gap-4 pb-10">
+      <div className="flex flex-col gap-4 pt-3 pb-10">
         {/* Offline banner */}
         {!isOnline && (
           <div

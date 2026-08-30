@@ -29,55 +29,87 @@ export interface BusinessTypeTemplate {
 
 export const BUSINESS_TYPE_TEMPLATES: BusinessTypeTemplate[] = [
   {
-    id: "grocery_supermarket",
-    label: "Grocery / Supermarket",
-    defaultCategories: ["Food", "Household", "Beverages"],
+    id: "retail",
+    label: "Retail",
+    defaultCategories: ["Foodstuffs", "Beverages", "Household", "Snacks"],
     sampleProducts: [
-      { name: "Rice (5kg)", sku: "GROC-001", categoryName: "Food", unitLabel: "bag", costPrice: 4000, sellPrice: 4500, lowStockThreshold: 5 },
-      { name: "Whole Milk (1L)", sku: "GROC-002", categoryName: "Beverages", unitLabel: "carton", costPrice: 1200, sellPrice: 1500, lowStockThreshold: 10 },
-      { name: "Detergent (1kg)", sku: "GROC-003", categoryName: "Household", unitLabel: "pack", costPrice: 800, sellPrice: 1000, lowStockThreshold: 15 },
+      { name: "Rice 5kg Bag", sku: "RET-001", categoryName: "Foodstuffs", unitLabel: "bag", costPrice: 4500, sellPrice: 5500, lowStockThreshold: 5 },
+      { name: "Indomie Super Pack", sku: "RET-002", categoryName: "Foodstuffs", unitLabel: "carton", costPrice: 10500, sellPrice: 12500, lowStockThreshold: 10 },
+      { name: "Whole Milk 1L", sku: "RET-003", categoryName: "Beverages", unitLabel: "pack", costPrice: 1400, sellPrice: 1800, lowStockThreshold: 15 },
     ],
     expiryTracking: "optional",
-    notes: "High SKU count expected.",
+    notes: "Provisions, supermarkets, drinks, and everyday store goods.",
   },
   {
-    id: "pharmacy_fmcg",
-    label: "Pharmacy / FMCG",
-    defaultCategories: ["Medicine", "Personal Care"],
+    id: "fashion",
+    label: "Fashion",
+    defaultCategories: ["Clothing", "Footwear", "Bags", "Accessories"],
     sampleProducts: [
-      { name: "Paracetamol 500mg", sku: "PHAR-001", categoryName: "Medicine", unitLabel: "pack", costPrice: 200, sellPrice: 300, lowStockThreshold: 20 },
-      { name: "Vitamin C 1000mg", sku: "PHAR-002", categoryName: "Medicine", unitLabel: "bottle", costPrice: 1500, sellPrice: 2000, lowStockThreshold: 10 },
-      { name: "Hand Sanitizer (500ml)", sku: "PHAR-003", categoryName: "Personal Care", unitLabel: "bottle", costPrice: 800, sellPrice: 1200, lowStockThreshold: 5 },
+      { name: "Cotton T-Shirt", sku: "FASH-001", categoryName: "Clothing", unitLabel: "piece", costPrice: 4500, sellPrice: 8000, lowStockThreshold: 5 },
+      { name: "Denim Jeans", sku: "FASH-002", categoryName: "Clothing", unitLabel: "piece", costPrice: 8000, sellPrice: 14000, lowStockThreshold: 5 },
+      { name: "Leather Sneakers", sku: "FASH-003", categoryName: "Footwear", unitLabel: "pair", costPrice: 12000, sellPrice: 20000, lowStockThreshold: 3 },
+    ],
+    expiryTracking: "off",
+    notes: "Clothes, bags, shoes, jewelry, fabrics, and accessories.",
+  },
+  {
+    id: "health",
+    label: "Health",
+    defaultCategories: ["Medicines", "Supplements", "First Aid", "Personal Care"],
+    sampleProducts: [
+      { name: "Paracetamol 500mg", sku: "HLTH-001", categoryName: "Medicines", unitLabel: "pack", costPrice: 200, sellPrice: 350, lowStockThreshold: 20 },
+      { name: "Vitamin C 1000mg", sku: "HLTH-002", categoryName: "Supplements", unitLabel: "bottle", costPrice: 1800, sellPrice: 2500, lowStockThreshold: 10 },
+      { name: "Hand Sanitizer 500ml", sku: "HLTH-003", categoryName: "First Aid", unitLabel: "bottle", costPrice: 800, sellPrice: 1200, lowStockThreshold: 5 },
     ],
     expiryTracking: "mandatory",
-    notes: "Regulatory pressure around expired stock; expiry date required per batch.",
+    notes: "Pharmacies, chemists, patent medicine, and first aid.",
   },
   {
-    id: "electronics_accessories",
-    label: "Electronics / Accessories",
-    defaultCategories: ["Devices", "Accessories", "Parts"],
+    id: "beauty",
+    label: "Beauty",
+    defaultCategories: ["Skincare", "Makeup", "Hair", "Fragrances"],
     sampleProducts: [
-      { name: "Wireless Earbuds", sku: "ELEC-001", categoryName: "Accessories", unitLabel: "piece", costPrice: 8000, sellPrice: 12000, lowStockThreshold: 5 },
-      { name: "USB-C Fast Charger", sku: "ELEC-002", categoryName: "Accessories", unitLabel: "piece", costPrice: 2500, sellPrice: 4000, lowStockThreshold: 15 },
-      { name: "Screen Protector", sku: "ELEC-003", categoryName: "Parts", unitLabel: "piece", costPrice: 500, sellPrice: 1500, lowStockThreshold: 30 },
+      { name: "Facial Cleanser", sku: "BEAU-001", categoryName: "Skincare", unitLabel: "bottle", costPrice: 4000, sellPrice: 6500, lowStockThreshold: 5 },
+      { name: "Matte Liquid Lipstick", sku: "BEAU-002", categoryName: "Makeup", unitLabel: "piece", costPrice: 2200, sellPrice: 4000, lowStockThreshold: 10 },
+      { name: "Body Mist 250ml", sku: "BEAU-003", categoryName: "Fragrances", unitLabel: "bottle", costPrice: 5000, sellPrice: 8000, lowStockThreshold: 5 },
     ],
-    expiryTracking: "off",
-    notes: "Serial number field is more relevant than batch/expiry.",
+    expiryTracking: "optional",
+    notes: "Skincare, makeup, cosmetics, wigs, hair, and perfumes.",
   },
   {
-    id: "general_retail",
-    label: "General Retail",
-    defaultCategories: ["General"],
+    id: "gadgets",
+    label: "Gadgets",
+    defaultCategories: ["Phones", "Audio", "Accessories", "Parts"],
     sampleProducts: [
-      { name: "Notebook A5", sku: "GEN-001", categoryName: "General", unitLabel: "piece", costPrice: 400, sellPrice: 600, lowStockThreshold: 20 },
-      { name: "Ballpoint Pen (Blue)", sku: "GEN-002", categoryName: "General", unitLabel: "piece", costPrice: 50, sellPrice: 100, lowStockThreshold: 50 },
-      { name: "Packing Tape", sku: "GEN-003", categoryName: "General", unitLabel: "roll", costPrice: 300, sellPrice: 500, lowStockThreshold: 10 },
+      { name: "20W Fast Charger", sku: "GDT-001", categoryName: "Accessories", unitLabel: "piece", costPrice: 3500, sellPrice: 6000, lowStockThreshold: 10 },
+      { name: "Wireless Earbuds", sku: "GDT-002", categoryName: "Audio", unitLabel: "piece", costPrice: 7000, sellPrice: 12000, lowStockThreshold: 5 },
+      { name: "Fast Type-C Cable", sku: "GDT-003", categoryName: "Accessories", unitLabel: "piece", costPrice: 1000, sellPrice: 2000, lowStockThreshold: 20 },
     ],
     expiryTracking: "off",
-    notes: "Fallback for anything not matching the other templates; owner defines categories.",
+    notes: "Phones, chargers, audio, electronics, and device accessories.",
+  },
+  {
+    id: "materials",
+    label: "Materials",
+    defaultCategories: ["Auto Parts", "Electricals", "Building", "Tools"],
+    sampleProducts: [
+      { name: "Brake Pads Set", sku: "MAT-001", categoryName: "Auto Parts", unitLabel: "set", costPrice: 8000, sellPrice: 12000, lowStockThreshold: 5 },
+      { name: "2.5mm Cable Coil", sku: "MAT-002", categoryName: "Electricals", unitLabel: "roll", costPrice: 22000, sellPrice: 28000, lowStockThreshold: 3 },
+      { name: "Portland Cement 50kg", sku: "MAT-003", categoryName: "Building", unitLabel: "bag", costPrice: 7500, sellPrice: 8500, lowStockThreshold: 20 },
+    ],
+    expiryTracking: "off",
+    notes: "Building supplies, auto spare parts, electricals, and tools.",
   },
 ];
 
+const LEGACY_ID_MAP: Record<string, string> = {
+  grocery_supermarket: "retail",
+  pharmacy_fmcg: "health",
+  electronics_accessories: "gadgets",
+  general_retail: "retail",
+};
+
 export function getBusinessTypeTemplate(id: string): BusinessTypeTemplate | undefined {
-  return BUSINESS_TYPE_TEMPLATES.find((template) => template.id === id);
+  const normalizedId = LEGACY_ID_MAP[id] || id;
+  return BUSINESS_TYPE_TEMPLATES.find((template) => template.id === normalizedId);
 }

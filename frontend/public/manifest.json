@@ -1,7 +1,7 @@
 {
   "name": "StockPadi",
   "short_name": "StockPadi",
-  "description": "Offline-first inventory and sales management",
+  "description": "Free offline-first point of sale, inventory tracking, and credit ledger for retail stores.",
   "start_url": "/",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],

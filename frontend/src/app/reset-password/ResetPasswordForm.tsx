@@ -102,7 +102,13 @@ export default function ResetPasswordForm() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 pb-10 shrink-0">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSubmit();
+        }}
+        className="flex flex-col gap-4 pb-10 shrink-0"
+      >
         <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
@@ -113,7 +119,6 @@ export default function ResetPasswordForm() {
                 id="reset-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 className="pr-12"
                 type={showPassword ? "text" : "password"}
                 placeholder="At least 8 characters"
@@ -132,14 +137,13 @@ export default function ResetPasswordForm() {
         </div>
 
         <RippleButton
-          type="button"
-          onClick={handleSubmit}
+          type="submit"
           disabled={busy || !password.trim()}
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
         >
           {busy ? "Updating…" : "Reset Password"}
         </RippleButton>
-      </div>
+      </form>
     </div>
   );
 }

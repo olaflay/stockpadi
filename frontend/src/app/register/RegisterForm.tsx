@@ -18,6 +18,7 @@ import { sendVerificationEmail } from "@/features/auth/verification-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
+import { sanitizeString } from "@/lib/sanitize";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -84,11 +85,15 @@ export default function RegisterForm() {
     try {
       const defaultTemplate = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") || BUSINESS_TYPE_TEMPLATES[0];
 
+      const cleanFullName = sanitizeString(fullName);
+      const cleanBusinessName = sanitizeString(businessName);
+      const cleanEmail = email.trim().toLowerCase();
+
       const registration = await callBackend<{ userId: string; businessId?: string }>("register-business", {
-        email: email.trim(),
+        email: cleanEmail,
         password,
-        fullName: fullName.trim(),
-        businessName: businessName.trim(),
+        fullName: cleanFullName,
+        businessName: cleanBusinessName,
         businessTypeId: defaultTemplate.id,
       });
 
@@ -112,7 +117,7 @@ export default function RegisterForm() {
         await db.businessProfile.put({
           id: BUSINESS_PROFILE_SINGLETON_ID,
           businessId: registration.businessId,
-          name: businessName.trim(),
+          name: cleanBusinessName,
           businessTypeId: defaultTemplate.id,
           currency: "NGN",
         });
@@ -122,7 +127,7 @@ export default function RegisterForm() {
         await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
         await db.localUsers.put({
           id: userId,
-          fullName: fullName.trim(),
+          fullName: cleanFullName,
           accountType: "BUSINESS_OWNER",
           isActive: true,
           emailVerified: false,
@@ -149,9 +154,9 @@ export default function RegisterForm() {
 
   return (
     <div className="flex h-screen w-full flex-col max-w-md mx-auto overflow-hidden">
-      <div className="flex flex-col items-center gap-2 px-6 pt-10 text-center shrink-0">
+      <div className="flex flex-col items-center gap-2 px-6 pt-12 sm:pt-14 text-center shrink-0">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent"
+          className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent mb-1"
           aria-hidden
         >
           <RegisterIllustration className="h-10 w-10" />
@@ -164,7 +169,7 @@ export default function RegisterForm() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-4">
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
         {!isOnline && (
           <div
             role="status"
@@ -190,7 +195,7 @@ export default function RegisterForm() {
             e.preventDefault();
             void handleSubmit();
           }}
-          className="flex flex-col gap-4 mt-4"
+          className="flex flex-col gap-4 mt-6"
         >
           {GOOGLE_AUTH_ENABLED && (
             <>

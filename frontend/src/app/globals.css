@@ -36,6 +36,18 @@
   --font-size-label: var(--font-size-label);
   --font-size-caption: var(--font-size-caption);
 
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-8: var(--space-8);
+  --spacing-10: var(--space-10);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+  --spacing-touch-target: var(--touch-target-min);
+
   --radius-inline: var(--radius-inline);
   --radius-control: var(--radius-control);
   --radius-card: var(--radius-card);
@@ -54,6 +66,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-number: var(--font-family-number);
 }
 
 /* ==========================================================
@@ -65,7 +78,10 @@ a, button, input, select, textarea, [role="button"] {
   touch-action: manipulation;
 }
 
+html,
 body {
+  max-width: 100vw;
+  overflow-x: hidden;
   background: var(--color-surface);
   color: var(--color-on-surface);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
@@ -73,6 +89,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Typography & Numerals: Neue Helvetica for major number displays, prices, and stats */
+.font-number,
+.tabular-nums,
+[data-font-number="true"] {
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 /* 2. Fast layout compositing layer for animations & transitions */

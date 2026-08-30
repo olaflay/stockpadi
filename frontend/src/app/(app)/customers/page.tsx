@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Search, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
@@ -19,6 +20,10 @@ import type { LocalCustomer } from "@/lib/db";
 export default function CustomersPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 120);
+
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const customersWithBalance = useLiveQuery(async () => {
     let customers;
@@ -34,6 +39,31 @@ export default function CustomersPage() {
     withBalances.sort((a, b) => b.balance - a.balance);
     return withBalances;
   }, []);
+
+  const [prevQuery, setPrevQuery] = useState("");
+  if (debouncedQuery !== prevQuery) {
+    setPrevQuery(debouncedQuery);
+    setVisibleLimit(50);
+  }
+
+  const filtered = (customersWithBalance ?? []).filter(({ customer }) =>
+    `${customer.name} ${customer.phone ?? ""}`.toLowerCase().includes(debouncedQuery.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (filtered.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleLimit((prev) => prev + 50);
+      }
+    }, { threshold: 0.1 });
+
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [filtered.length, visibleLimit]);
 
   if (customersWithBalance === undefined) {
     return (
@@ -67,9 +97,6 @@ export default function CustomersPage() {
   }
 
   const totalOwed = customersWithBalance.reduce((sum, c) => sum + Math.max(c.balance, 0), 0);
-  const filtered = customersWithBalance.filter(({ customer }) =>
-    `${customer.name} ${customer.phone ?? ""}`.toLowerCase().includes(query.toLowerCase())
-  );
 
   return (
     <div>
@@ -86,6 +113,7 @@ export default function CustomersPage() {
         <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted" aria-hidden />
         <input
           type="search"
+          aria-label="Search customers by name or phone"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or phone"
@@ -94,33 +122,41 @@ export default function CustomersPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <NoResultsState query={query} />
+        <NoResultsState query={debouncedQuery} />
       ) : (
-        <ul className="flex flex-col gap-2">
-          {filtered.map(({ customer, balance }) => (
-            <li key={customer.id}>
-              <button
-                type="button"
-                onClick={() => router.push(`/customers/${customer.id}`)}
-                className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{customer.name}</p>
-                  {customer.phone && (
-                    <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
-                  )}
-                </div>
-                <p
-                  className={`shrink-0 text-[length:var(--font-size-body)] font-medium ${
-                    balance > 0 ? "text-on-surface" : "text-on-surface-muted"
-                  }`}
+        <div>
+          <ul className="flex flex-col gap-2">
+            {filtered.slice(0, visibleLimit).map(({ customer, balance }) => (
+              <li key={customer.id}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/customers/${customer.id}`)}
+                  aria-label={`View customer ${customer.name}, owing ${formatCurrency(Math.max(balance, 0))}`}
+                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
                 >
-                  {formatCurrency(Math.max(balance, 0))}
-                </p>
-              </button>
-            </li>
-          ))}
-        </ul>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{customer.name}</p>
+                    {customer.phone && (
+                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
+                    )}
+                  </div>
+                  <p
+                    className={`shrink-0 text-[length:var(--font-size-body)] font-medium ${
+                      balance > 0 ? "text-on-surface" : "text-on-surface-muted"
+                    }`}
+                  >
+                    {formatCurrency(Math.max(balance, 0))}
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {filtered.length > visibleLimit && (
+            <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">
+              Loading more...
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

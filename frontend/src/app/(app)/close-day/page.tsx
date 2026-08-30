@@ -281,7 +281,7 @@ export default function CloseDayPage() {
       `• Expenses: ${formatCurrency(todayExpensesTotal)}\n` +
       `------------------------\n` +
       `Est. Net Profit: ${formatCurrency(netProfit)}\n` +
-      `Status: ${isFullyBalanced ? "Fully Balanced ✅" : Math.abs(totalNetVariance) > 0 ? `Variance ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} ⚠️` : "Pending Count"}`;
+      `Status: ${isFullyBalanced ? "Fully Balanced" : Math.abs(totalNetVariance) > 0 ? `Variance ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} (Discrepancy)` : "Pending Count"}`;
 
     window.open(buildWhatsAppUrl(whatsappNumber, shareMessage), "_blank");
   }
@@ -331,6 +331,7 @@ export default function CloseDayPage() {
         <div className="flex gap-2 mt-1">
           <input
             type="number"
+            aria-label="Physical cash counted in drawer"
             min="0"
             step="0.01"
             inputMode="decimal"
@@ -342,6 +343,7 @@ export default function CloseDayPage() {
           <button
             type="button"
             onClick={() => setCountedCashInput(expectedNetCash.toString())}
+            aria-label="Set physical cash matching expected total"
             className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
           >
             Matches
@@ -380,6 +382,7 @@ export default function CloseDayPage() {
         <div className="flex gap-2 mt-1">
           <input
             type="number"
+            aria-label="Verified bank transfer alerts total"
             min="0"
             step="0.01"
             inputMode="decimal"
@@ -391,6 +394,7 @@ export default function CloseDayPage() {
           <button
             type="button"
             onClick={() => setVerifiedTransferInput(expectedTransfer.toString())}
+            aria-label="Set bank transfers matching expected total"
             className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
           >
             Matches
@@ -430,6 +434,7 @@ export default function CloseDayPage() {
           <div className="flex gap-2 mt-1">
             <input
               type="number"
+              aria-label="Counted POS terminal slip total"
               min="0"
               step="0.01"
               inputMode="decimal"
@@ -441,6 +446,7 @@ export default function CloseDayPage() {
             <button
               type="button"
               onClick={() => setCountedPosInput(expectedPos.toString())}
+              aria-label="Set POS card slip matching expected total"
               className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
             >
               Matches

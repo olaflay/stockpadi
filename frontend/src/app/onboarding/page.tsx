@@ -283,7 +283,14 @@ export default function OnboardingPage() {
         )}
 
         {/* Discreet Progress Dots */}
-        <div className="flex items-center gap-1.5" aria-label={`Step ${currentStepIndex + 1} of ${STEPS.length}`}>
+        <div
+          role="progressbar"
+          aria-valuenow={currentStepIndex + 1}
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-label={`Step ${currentStepIndex + 1} of ${STEPS.length}`}
+          className="flex items-center gap-1.5"
+        >
           {STEPS.map((s, idx) => (
             <div
               key={s}

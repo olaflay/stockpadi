@@ -1,6 +1,8 @@
+import { useState, type BaseSyntheticEvent } from "react";
 import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
-import type { BaseSyntheticEvent } from "react";
 import { RippleButton } from "@/components/ui/Ripple";
+import { Modal } from "@/components/ui/Modal";
+import { AlertTriangle } from "lucide-react";
 import { LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import {
   ProductCoreFields,
@@ -48,8 +50,21 @@ export function EditProductForm({
   altUnitLabel: string;
   expiryTracking: ProductFormInput["expiryTracking"];
   isSubmitting: boolean;
-  onDelete: () => void;
+  onDelete: () => Promise<void> | void;
 }) {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleConfirmDelete() {
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  }
+
   return (
     <div className="pb-24">
       <div className="mb-4 rounded-[var(--radius-card)] bg-surface-container px-4 py-3">
@@ -83,13 +98,51 @@ export function EditProductForm({
         <div className="mt-4">
           <button
             type="button"
-            onClick={onDelete}
+            onClick={() => setIsDeleteModalOpen(true)}
             className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger/30 bg-surface px-5 py-2.5 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-all"
           >
             Delete Product
           </button>
         </div>
       </form>
+
+      {/* Confirmation Warning Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+        title="Delete Product"
+      >
+        <div className="flex flex-col items-center gap-3 text-center py-2">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger mb-1">
+            <AlertTriangle size={28} aria-hidden />
+          </div>
+          <p className="text-[length:var(--font-size-title)] font-semibold text-on-surface">
+            Are you sure you want to delete this product?
+          </p>
+          <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed max-w-sm">
+            This will permanently remove the product from your shop catalog. Previous sales records will remain preserved in your ledger.
+          </p>
+
+          <div className="mt-4 flex w-full gap-3">
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <RippleButton
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-semibold text-white hover:opacity-95 transition-opacity disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting…" : "Yes, delete"}
+            </RippleButton>
+          </div>
+        </div>
+      </Modal>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
         <RippleButton

@@ -204,6 +204,7 @@ export default function ProductsPage() {
             />
             <input
               type="search"
+              aria-label="Search by name, SKU, or barcode"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, SKU, or barcode"
@@ -213,6 +214,7 @@ export default function ProductsPage() {
           <button
             type="button"
             onClick={() => setScanning(true)}
+            aria-label="Scan barcode to search"
             className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface text-on-surface hover:bg-surface-container transition-colors"
           >
             <Camera size={18} aria-hidden />
@@ -327,7 +329,7 @@ export default function ProductsPage() {
                       {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                     </p>
                   </div>
-                  <p className="shrink-0 font-mono text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                  <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(product.sellPrice)}
                   </p>
                 </RippleLink>

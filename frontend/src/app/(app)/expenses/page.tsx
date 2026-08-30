@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Wallet, Trash2 } from "lucide-react";
@@ -102,7 +102,7 @@ export default function ExpensesPage() {
         <EmptyState
           icon={Wallet}
           title="No expenses recorded"
-          description="Rent, transport, supplies — log what goes out so your profit number is real."
+          description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
           action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
           fullScreen
         />
@@ -124,6 +124,30 @@ export default function ExpensesPage() {
     await deleteExpense(id);
     showToast("Expense deleted", "success");
   }
+
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const [prevPeriod, setPrevPeriod] = useState(period);
+  if (period !== prevPeriod) {
+    setPrevPeriod(period);
+    setVisibleLimit(50);
+  }
+
+  useEffect(() => {
+    if (periodExpenses.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleLimit((prev) => prev + 50);
+      }
+    }, { threshold: 0.1 });
+
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [periodExpenses.length, visibleLimit]);
 
   return (
     <div>
@@ -151,7 +175,7 @@ export default function ExpensesPage() {
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
           Spent, {PERIOD_LABELS[period].toLowerCase()}
         </p>
-        <p className="mt-1 truncate font-mono text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
+        <p className="mt-1 truncate font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(periodTotal)}
         </p>
       </section>
@@ -161,70 +185,79 @@ export default function ExpensesPage() {
           No expenses recorded {PERIOD_LABELS[period].toLowerCase()}.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2 pb-24">
-          {periodExpenses.map((expense) => {
-            const isExpanded = expandedId === expense.id;
-            const branchName = result.branches.find((b) => b.id === expense.branchId)?.name ?? "Business-wide";
-            const userName = result.users.find((u) => u.id === expense.createdByUserId)?.fullName ?? "You";
+        <div>
+          <ul className="flex flex-col gap-2 pb-24">
+            {periodExpenses.slice(0, visibleLimit).map((expense) => {
+              const isExpanded = expandedId === expense.id;
+              const branchName = result.branches.find((b) => b.id === expense.branchId)?.name ?? "Business-wide";
+              const userName = result.users.find((u) => u.id === expense.createdByUserId)?.fullName ?? "You";
 
-            return (
-              <li
-                key={expense.id}
-                className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : expense.id)}
-                    className="flex min-w-0 flex-1 items-center justify-between text-left"
-                  >
-                    <div>
-                      <p className="text-[length:var(--font-size-body-lg)] font-medium text-on-surface">
-                        {expense.category}
-                      </p>
-                      <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                        {new Date(expense.createdAtLocal).toLocaleDateString("en-NG", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </p>
-                    </div>
-                    <p className="text-[length:var(--font-size-body)] font-semibold tabular-nums text-on-surface">
-                      {formatCurrency(expense.amount)}
-                    </p>
-                  </button>
-
-                  {canDelete && (
+              return (
+                <li
+                  key={expense.id}
+                  className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => handleDelete(expense.id, expense.category)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-on-surface-muted hover:bg-danger-container hover:text-on-danger-container transition-colors"
-                      aria-label="Delete expense"
+                      aria-expanded={isExpanded}
+                      aria-label={`View details for ${expense.category} expense of ${formatCurrency(expense.amount)}`}
+                      onClick={() => setExpandedId(isExpanded ? null : expense.id)}
+                      className="flex min-w-0 flex-1 items-center justify-between text-left"
                     >
-                      <Trash2 size={16} aria-hidden />
-                    </button>
-                  )}
-                </div>
-
-                {isExpanded && (
-                  <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-[length:var(--font-size-caption)] text-on-surface-muted animate-fade-in">
-                    <p>
-                      <span className="font-medium text-on-surface">Branch:</span> {branchName}
-                    </p>
-                    <p>
-                      <span className="font-medium text-on-surface">Recorded by:</span> {userName}
-                    </p>
-                    {expense.note && (
-                      <p className="whitespace-pre-wrap">
-                        <span className="font-medium text-on-surface">Note:</span> {expense.note}
+                      <div>
+                        <p className="text-[length:var(--font-size-body-lg)] font-medium text-on-surface">
+                          {expense.category}
+                        </p>
+                        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                          {new Date(expense.createdAtLocal).toLocaleDateString("en-NG", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
+                      </div>
+                      <p className="text-[length:var(--font-size-body)] font-semibold tabular-nums text-on-surface">
+                        {formatCurrency(expense.amount)}
                       </p>
+                    </button>
+
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(expense.id, expense.category)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-on-surface-muted hover:bg-danger-container hover:text-on-danger-container transition-colors"
+                        aria-label={`Delete ${expense.category} expense of ${formatCurrency(expense.amount)}`}
+                      >
+                        <Trash2 size={16} aria-hidden />
+                      </button>
                     )}
                   </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+
+                  {isExpanded && (
+                    <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-[length:var(--font-size-caption)] text-on-surface-muted animate-fade-in">
+                      <p>
+                        <span className="font-medium text-on-surface">Branch:</span> {branchName}
+                      </p>
+                      <p>
+                        <span className="font-medium text-on-surface">Recorded by:</span> {userName}
+                      </p>
+                      {expense.note && (
+                        <p className="whitespace-pre-wrap">
+                          <span className="font-medium text-on-surface">Note:</span> {expense.note}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {periodExpenses.length > visibleLimit && (
+            <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">
+              Loading more...
+            </div>
+          )}
+        </div>
       )}
 
       <FAB onClick={() => setIsAddSheetOpen(true)} label="Add expense">

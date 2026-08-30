@@ -159,6 +159,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
             type="button"
             onClick={handleRemind}
             disabled={!customer.phone}
+            aria-label={`Send WhatsApp payment reminder to ${customer.name}`}
             className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] text-on-surface disabled:opacity-50 hover:bg-surface-container transition-colors"
           >
             <MessageCircle size={18} aria-hidden />
@@ -168,6 +169,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
         <button
           type="button"
           onClick={() => window.print()}
+          aria-label={`Print credit statement for ${customer.name}`}
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container transition-colors"
         >
           <Printer size={18} aria-hidden />

@@ -36,8 +36,8 @@ export default function AlertsPage() {
         ) : alerts.length === 0 ? (
           <EmptyState
             icon={Bell}
-            title="You're all caught up"
-            description="There are no new alerts to review at this time."
+            title="All clear"
+            description="No low stock or expiry warnings right now."
             action={{ label: "Go to Dashboard", onClick: () => router.push("/dashboard") }}
           />
         ) : (

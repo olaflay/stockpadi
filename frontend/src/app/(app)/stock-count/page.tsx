@@ -242,6 +242,7 @@ export default function StockCountPage() {
         <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted" aria-hidden />
         <input
           type="search"
+          aria-label="Search by name, SKU, or barcode"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, SKU, or barcode"
@@ -259,6 +260,7 @@ export default function StockCountPage() {
                 <button
                   type="button"
                   onClick={() => setActiveProduct(product)}
+                  aria-label={`Count stock for ${product.name}`}
                   className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
                 >
                   <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{product.name}</p>

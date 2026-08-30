@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <LegacyShellGuard>
-        <div className="flex h-screen w-screen flex-col overflow-hidden">
+        <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
           <SyncEngine />
           <GuidedTour />
           <OfflineBanner />

@@ -170,6 +170,8 @@ export function ProductUnitConversionFields({
         <button
           type="button"
           onClick={onToggleUnitConversion}
+          aria-expanded={showUnitConversion}
+          aria-controls="unit-conversion-panel"
           className="flex items-center gap-1.5 text-[length:var(--font-size-body)] font-medium text-brand-accent"
         >
           <Layers size={16} aria-hidden />
@@ -178,7 +180,7 @@ export function ProductUnitConversionFields({
       </div>
 
       {showUnitConversion && (
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
+        <div id="unit-conversion-panel" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
           <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
             For when you sell the same stock two ways — e.g. by the piece, but also by the carton. Leave the
             second unit blank if that&apos;s not you.

@@ -2,7 +2,7 @@
 
 import { BUSINESS_TYPE_TEMPLATES, BusinessTypeTemplate } from "@/config/business-types";
 import { RippleButton } from "@/components/ui/Ripple";
-import { CheckCircle2, Sparkles, Package } from "lucide-react";
+import { CheckCircle2, Sparkles, Package, ShoppingBag, Shirt, HeartPulse, Smartphone, Hammer } from "lucide-react";
 
 interface StepBusinessTypeProps {
   selectedId: string;
@@ -11,6 +11,15 @@ interface StepBusinessTypeProps {
   onToggleStarterPack: (val: boolean) => void;
   onNext: () => void;
 }
+
+const TEMPLATE_ICONS: Record<string, typeof ShoppingBag> = {
+  retail: ShoppingBag,
+  fashion: Shirt,
+  health: HeartPulse,
+  beauty: Sparkles,
+  gadgets: Smartphone,
+  materials: Hammer,
+};
 
 export function StepBusinessType({
   selectedId,
@@ -39,15 +48,17 @@ export function StepBusinessType({
 
       {/* Vertical Chips / Cards */}
       <div className="my-auto flex flex-col gap-4 py-3">
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Business types">
           {BUSINESS_TYPE_TEMPLATES.map((template: BusinessTypeTemplate) => {
             const isSelected = selectedId === template.id;
+            const Icon = TEMPLATE_ICONS[template.id] || ShoppingBag;
             return (
               <button
                 key={template.id}
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => onSelectId(template.id)}
-                aria-pressed={isSelected}
                 className={`flex min-h-[var(--touch-target-min)] flex-col justify-between rounded-[var(--radius-card)] border-2 p-3 text-left transition-all ${
                   isSelected
                     ? "border-brand-accent bg-brand-accent/8 shadow-sm"
@@ -55,15 +66,18 @@ export function StepBusinessType({
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[length:var(--font-size-body)] font-semibold text-on-surface">
-                      {template.label}
-                    </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Icon className={`h-4 w-4 shrink-0 ${isSelected ? "text-brand-accent" : "text-on-surface-muted"}`} aria-hidden />
+                      <span className="truncate text-[length:var(--font-size-body)] font-semibold text-on-surface">
+                        {template.label}
+                      </span>
+                    </div>
                     {isSelected && (
                       <CheckCircle2 className="h-4 w-4 text-brand-accent shrink-0" />
                     )}
                   </div>
-                  <span className="mt-1 line-clamp-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
+                  <span className="mt-1.5 line-clamp-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
                     {template.notes}
                   </span>
                 </div>
