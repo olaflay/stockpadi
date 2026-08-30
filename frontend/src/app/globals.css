@@ -23,6 +23,10 @@
   --color-on-danger-container: var(--color-on-danger-container);
   --color-inverse-surface: var(--color-inverse-surface);
   --color-inverse-on-surface: var(--color-inverse-on-surface);
+  --color-badge-bg: var(--color-badge-bg);
+  --color-badge-fg: var(--color-badge-fg);
+  --color-badge-alert-bg: var(--color-badge-alert-bg);
+  --color-badge-alert-fg: var(--color-badge-alert-fg);
 
   --font-size-display: var(--font-size-display);
   --font-size-title-lg: var(--font-size-title-lg);

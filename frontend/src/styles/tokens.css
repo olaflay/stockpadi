@@ -73,6 +73,14 @@
   --color-inverse-surface: #2d3132;
   --color-inverse-on-surface: #eef1f1;
 
+  /* Badges & Notification counters:
+     Light mode: darker background, light number.
+     Dark mode: lighter background, dark number. */
+  --color-badge-bg: #14181a;
+  --color-badge-fg: #ffffff;
+  --color-badge-alert-bg: #b91c1c;
+  --color-badge-alert-fg: #ffffff;
+
   /* Scrim: modal/sheet backdrop. Same value in both themes, per M3. */
   --color-scrim: rgba(0, 0, 0, 0.4);
 
@@ -200,6 +208,11 @@
     --color-inverse-surface: #e7ebec;
     --color-inverse-on-surface: #262b2c;
 
+    --color-badge-bg: #e7ebec;
+    --color-badge-fg: #14181a;
+    --color-badge-alert-bg: #fca5a5;
+    --color-badge-alert-fg: #7f1d1d;
+
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
     --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6);
@@ -238,6 +251,11 @@
 
   --color-inverse-surface: #e7ebec;
   --color-inverse-on-surface: #262b2c;
+
+  --color-badge-bg: #e7ebec;
+  --color-badge-fg: #14181a;
+  --color-badge-alert-bg: #fca5a5;
+  --color-badge-alert-fg: #7f1d1d;
 
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
