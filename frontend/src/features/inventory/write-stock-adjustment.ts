@@ -4,7 +4,7 @@ import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverPost, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
 
 export interface StockAdjustmentPayload {
   businessId?: string;
@@ -80,7 +80,12 @@ export async function writeStockAdjustment(params: {
         await serverPost(params.actor.accountType === "WORKER" ? "/api/inventory/stock-count" : "/api/inventory/adjust", tenantPayload);
         return params.actor.accountType === "WORKER" ? { ...movement, quantityDelta: 0 } : movement;
       } catch (error) {
-        if (!(error instanceof NetworkUnavailableError)) throw error;
+        if (
+          !(error instanceof NetworkUnavailableError) &&
+          !(error instanceof BackendConfigurationError)
+        ) {
+          throw error;
+        }
       }
     }
     if (params.actor.accountType === "WORKER") {

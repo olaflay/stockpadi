@@ -41,14 +41,32 @@ const geistMono = Geist_Mono({
 const branding = getBrandingConfig();
 
 export const metadata: Metadata = {
-  title: branding.businessName,
-  description: `${branding.businessName}: offline-first inventory and sales`,
+  ...(process.env.NEXT_PUBLIC_APP_URL ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) } : {}),
+  title: `${branding.businessName} — Offline-First POS & Inventory`,
+  description: "The offline-first POS, inventory and credit ledger for Nigerian retailers. Free, fast, and works with no network.",
   manifest: "/manifest.json",
-  icons: [{ rel: "icon", url: branding.logoUrl ?? "/icon.svg" }],
+  icons: {
+    icon: [{ url: branding.logoUrl ?? "/icon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: branding.logoUrl ?? "/icon.svg" }],
+    apple: [{ url: branding.logoUrl ?? "/icon.svg" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: branding.businessName,
+  },
+  openGraph: {
+    title: `${branding.businessName} — Offline-First POS & Inventory`,
+    description: "Works with no network. Your records stay on this device. Export them any time.",
+    siteName: branding.businessName,
+    images: [{ url: branding.logoUrl ?? "/icon.svg", width: 512, height: 512, alt: branding.businessName }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: `${branding.businessName} — Offline-First POS & Inventory`,
+    description: "Works with no network. Your records stay on this device.",
+    images: [branding.logoUrl ?? "/icon.svg"],
   },
 };
 

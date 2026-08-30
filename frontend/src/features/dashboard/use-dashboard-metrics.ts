@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { getLowStockProductIds, getExpiringProductIds } from "@/features/inventory/product-insights";
 import { tenantArray } from "@/lib/local-tenant";
+import { getStartOfTodayIso } from "@/lib/date";
 import type { Purchase } from "@/types/purchase";
 
 export interface DashboardMetrics {
@@ -19,11 +20,6 @@ export interface DashboardMetrics {
   unsyncedCount: number;
   topProducts: Array<{ id: string; name: string; sellPrice: number; currentStock: number }>;
   error: string | null;
-}
-
-function startOfTodayIso(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 }
 
 /**
@@ -45,6 +41,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      const todayStart = getStartOfTodayIso();
+
       const [products, recentSales, outboxPending, expenses, purchases, creditMovements] = await Promise.all([
         tenantArray(db.products),
         tenantArray(db.sales
@@ -52,12 +50,10 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
           .aboveOrEqual(thirtyDaysAgo.toISOString())
           ),
         tenantArray(db.outbox.where("status").anyOf("pending", "syncing")),
-        tenantArray(db.expenses.where("createdAtLocal").aboveOrEqual(startOfTodayIso())),
-        tenantArray(db.purchases.where("createdAtLocal").aboveOrEqual(startOfTodayIso())),
-        tenantArray(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(startOfTodayIso())),
+        tenantArray(db.expenses.where("createdAtLocal").aboveOrEqual(todayStart)),
+        tenantArray(db.purchases.where("createdAtLocal").aboveOrEqual(todayStart)),
+        tenantArray(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(todayStart)),
       ]);
-
-      const todayStart = startOfTodayIso();
       const relevantSales = recentSales.filter(
         (sale) =>
           !sale.voidedAt &&

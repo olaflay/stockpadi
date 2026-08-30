@@ -38,6 +38,7 @@ export default function AlertsPage() {
             icon={Bell}
             title="You're all caught up"
             description="There are no new alerts to review at this time."
+            action={{ label: "Go to Dashboard", onClick: () => router.push("/dashboard") }}
           />
         ) : (
           <ul className="flex flex-col gap-3">

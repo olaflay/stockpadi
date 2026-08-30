@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverPost, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
 
 export interface RowState {
   name: string;
@@ -122,9 +122,20 @@ export function useUpdateStockRows(
             updatedAt: new Date().toISOString(),
           };
           if (typeof navigator !== "undefined" && navigator.onLine) {
-            try { await serverPost("/api/products", { id: product.id, ...update }); }
-            catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; await db.products.update(product.id, update); }
-          } else await db.products.update(product.id, update);
+            try {
+              await serverPost("/api/products", { id: product.id, ...update });
+            } catch (error) {
+              if (
+                !(error instanceof NetworkUnavailableError) &&
+                !(error instanceof BackendConfigurationError)
+              ) {
+                throw error;
+              }
+              await db.products.update(product.id, update);
+            }
+          } else {
+            await db.products.update(product.id, update);
+          }
         }
 
         if (Number.isFinite(newStock) && newStock !== currentStockFor(product.id)) {

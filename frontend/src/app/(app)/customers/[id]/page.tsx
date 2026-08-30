@@ -10,6 +10,7 @@ import { recordCreditPayment } from "@/features/customers/record-payment";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -174,13 +175,26 @@ export default function CustomerDetailPage({ params }: PageProps) {
         </button>
       </div>
 
-      {recording && (
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border p-4">
+      <Modal
+        isOpen={recording}
+        onClose={() => setRecording(false)}
+        title={`Record payment: ${customer.name}`}
+        variant="sheet"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[var(--radius-card)] bg-surface-container p-3.5 text-center">
+            <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Current balance owed</span>
+            <p className="text-[length:var(--font-size-title)] font-bold text-on-surface">
+              {formatCurrency(Math.max(balance, 0))}
+            </p>
+          </div>
+
           <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Amount received</span>
+            <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Amount received (₦) *</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
+              placeholder={`e.g. ${Math.max(balance, 0)}`}
               className={inputClass}
               inputMode="decimal"
               autoFocus
@@ -188,18 +202,25 @@ export default function CustomerDetailPage({ params }: PageProps) {
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Note (optional)</span>
-            <input value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Cash collected in shop"
+              className={inputClass}
+            />
           </label>
-          <RippleButton
-            type="button"
-            onClick={handleRecordPayment}
-            disabled={busy || !amount}
-            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50"
-          >
-            {busy ? "Saving…" : "Save payment"}
-          </RippleButton>
+          <div className="pt-2">
+            <RippleButton
+              type="button"
+              onClick={handleRecordPayment}
+              disabled={busy || !amount || Number(amount) <= 0}
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+            >
+              {busy ? "Saving…" : "Save Payment"}
+            </RippleButton>
+          </div>
         </div>
-      )}
+      </Modal>
 
       <section>
         <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">History</h2>

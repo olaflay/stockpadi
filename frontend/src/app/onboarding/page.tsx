@@ -5,72 +5,255 @@ import { useRouter } from "next/navigation";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
 import { useToast } from "@/components/ui/Toast";
-import { WelcomeIllustration } from "@/components/illustrations";
-import { RippleButton } from "@/components/ui/Ripple";
-import { TextInput } from "@/components/ui/TextInput";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ArrowLeft } from "lucide-react";
+import {
+  OnboardingStep,
+  OnboardingState,
+  FirstProductDraft,
+} from "@/features/onboarding/types";
+import {
+  StepTrustMarketing,
+  StepBusinessType,
+  StepFirstProduct,
+  StepEducationSuperpowers,
+} from "@/features/onboarding/components";
 
-/**
- * Business-type selection — step 1 of the onboarding flow.
- * Fits entirely on one screen with no scrolling needed.
- */
+const STEPS: OnboardingStep[] = [
+  "marketing",
+  "business_type",
+  "first_product",
+  "education",
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [checking, setChecking] = useState(true);
-  const [businessName, setBusinessName] = useState("");
-  const [selectedId, setSelectedId] = useState(BUSINESS_TYPE_TEMPLATES[0].id);
+  const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState<OnboardingStep>("marketing");
+
+  const [state, setState] = useState<OnboardingState>({
+    businessName: "",
+    businessTypeId: BUSINESS_TYPE_TEMPLATES[0].id,
+    loadStarterPack: true,
+    firstProduct: {
+      name: "",
+      costPrice: "",
+      sellPrice: "",
+      unitLabel: "piece",
+      lowStockThreshold: 5,
+    },
+  });
 
   useEffect(() => {
-    db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID).then((profile) => {
-      if (profile) {
-        router.replace("/sales");
+    async function init() {
+      const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
+      const productCount = await db.products.count();
+      const saleCount = await db.sales.count();
+
+      // Only skip onboarding if user already configured inventory or started selling
+      if (profile && (productCount > 0 || saleCount > 0)) {
+        router.replace("/dashboard");
       } else {
+        if (profile?.name) {
+          setState((prev) => ({
+            ...prev,
+            businessName: profile.name,
+            businessTypeId: profile.businessTypeId || prev.businessTypeId,
+          }));
+        }
         setChecking(false);
       }
-    });
+    }
+    void init();
   }, [router]);
 
-  async function handleContinue() {
-    if (!businessName.trim()) return;
-    const template = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === selectedId)!;
+  const currentStepIndex = STEPS.indexOf(step);
 
-    await db.transaction("rw", db.businessProfile, db.categories, db.branches, async () => {
-      await db.businessProfile.put({
-        id: BUSINESS_PROFILE_SINGLETON_ID,
-        name: businessName.trim(),
-        businessTypeId: template.id,
-        currency: "NGN",
-      });
-      await db.categories.bulkPut(
-        template.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name }))
+  function handleBack() {
+    if (currentStepIndex > 0) {
+      setStep(STEPS[currentStepIndex - 1]);
+    }
+  }
+
+  async function handleFinish(destination: "/pos" | "/dashboard" = "/pos") {
+    setIsSaving(true);
+    const template =
+      BUSINESS_TYPE_TEMPLATES.find((t) => t.id === state.businessTypeId) ||
+      BUSINESS_TYPE_TEMPLATES[0];
+
+    const branchId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    try {
+      await db.transaction(
+        "rw",
+        db.businessProfile,
+        db.categories,
+        db.branches,
+        db.products,
+        db.stockMovements,
+        async () => {
+          // 1. Business Profile
+          await db.businessProfile.put({
+            id: BUSINESS_PROFILE_SINGLETON_ID,
+            name: state.businessName.trim() || "My Retail Shop",
+            businessTypeId: template.id,
+            currency: "NGN",
+          });
+
+          // 2. Categories
+          const categoryRecords = template.defaultCategories.map((name) => ({
+            id: crypto.randomUUID(),
+            name,
+          }));
+          await db.categories.bulkPut(categoryRecords);
+          const defaultCategoryId = categoryRecords[0]?.id || null;
+
+          // 3. Main Branch
+          await db.branches.add({
+            id: branchId,
+            name: "Main branch",
+            isActive: true,
+          });
+
+          // 4. Starter Pack Products (if enabled)
+          if (state.loadStarterPack && template.sampleProducts.length > 0) {
+            for (const sample of template.sampleProducts) {
+              const productId = crypto.randomUUID();
+              await db.products.put({
+                id: productId,
+                sku: sample.sku,
+                barcode: null,
+                name: sample.name,
+                categoryId: defaultCategoryId,
+                brandId: null,
+                unitLabel: sample.unitLabel,
+                altUnitLabel: null,
+                altUnitConversionFactor: null,
+                altUnitSellPrice: null,
+                costPrice: sample.costPrice,
+                sellPrice: sample.sellPrice,
+                expiryTracking: template.expiryTracking,
+                expiryDate: null,
+                lowStockThreshold: sample.lowStockThreshold,
+                version: 1,
+                updatedAt: now,
+              });
+
+              // Initial stock movement
+              await db.stockMovements.put({
+                id: crypto.randomUUID(),
+                clientId: crypto.randomUUID(),
+                branchId,
+                productId,
+                quantityDelta: 20,
+                source: "initial_stock",
+                sourceReferenceId: null,
+                reasonCode: null,
+                createdAtLocal: now,
+                createdAt: now,
+                createdByUserId: "owner",
+              });
+            }
+          }
+
+          // 5. Custom First Product (if added)
+          if (
+            state.firstProduct.name.trim() &&
+            typeof state.firstProduct.sellPrice === "number" &&
+            state.firstProduct.sellPrice > 0
+          ) {
+            const firstProdId = crypto.randomUUID();
+            await db.products.put({
+              id: firstProdId,
+              sku: "PROD-001",
+              barcode: null,
+              name: state.firstProduct.name.trim(),
+              categoryId: defaultCategoryId,
+              brandId: null,
+              unitLabel: state.firstProduct.unitLabel || "piece",
+              altUnitLabel: null,
+              altUnitConversionFactor: null,
+              altUnitSellPrice: null,
+              costPrice:
+                typeof state.firstProduct.costPrice === "number"
+                  ? state.firstProduct.costPrice
+                  : 0,
+              sellPrice: state.firstProduct.sellPrice,
+              expiryTracking: "off",
+              expiryDate: null,
+              lowStockThreshold: state.firstProduct.lowStockThreshold || 5,
+              version: 1,
+              updatedAt: now,
+            });
+
+            await db.stockMovements.put({
+              id: crypto.randomUUID(),
+              clientId: crypto.randomUUID(),
+              branchId,
+              productId: firstProdId,
+              quantityDelta: 10,
+              source: "initial_stock",
+              sourceReferenceId: null,
+              reasonCode: null,
+              createdAtLocal: now,
+              createdAt: now,
+              createdByUserId: "owner",
+            });
+          }
+        }
       );
-      await db.branches.add({ id: crypto.randomUUID(), name: "Main branch", isActive: true });
-    });
 
-    showToast(`${businessName.trim()} is set up`, "success");
-    router.push("/dashboard");
+      showToast("Shop setup complete. Ready to sell offline.", "success");
+      router.push(destination);
+    } catch (err) {
+      console.error("Failed to complete onboarding:", err);
+      showToast("Failed to save settings. Please try again.", "danger");
+      setIsSaving(false);
+    }
   }
 
   async function handleSkip() {
+    setIsSaving(true);
     const template =
-      BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") || BUSINESS_TYPE_TEMPLATES[0];
+      BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") ||
+      BUSINESS_TYPE_TEMPLATES[0];
 
-    await db.transaction("rw", db.businessProfile, db.categories, db.branches, async () => {
-      await db.businessProfile.put({
-        id: BUSINESS_PROFILE_SINGLETON_ID,
-        name: "My Retail Shop",
-        businessTypeId: template.id,
-        currency: "NGN",
-      });
-      await db.categories.bulkPut(
-        template.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name }))
+    try {
+      await db.transaction(
+        "rw",
+        db.businessProfile,
+        db.categories,
+        db.branches,
+        async () => {
+          await db.businessProfile.put({
+            id: BUSINESS_PROFILE_SINGLETON_ID,
+            name: state.businessName.trim() || "My Retail Shop",
+            businessTypeId: template.id,
+            currency: "NGN",
+          });
+          await db.categories.bulkPut(
+            template.defaultCategories.map((name) => ({
+              id: crypto.randomUUID(),
+              name,
+            }))
+          );
+          await db.branches.add({
+            id: crypto.randomUUID(),
+            name: "Main branch",
+            isActive: true,
+          });
+        }
       );
-      await db.branches.add({ id: crypto.randomUUID(), name: "Main branch", isActive: true });
-    });
 
-    showToast("Setup skipped. You can customize settings later.", "success");
-    router.push("/dashboard");
+      showToast("Setup skipped. You can configure products anytime.", "success");
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Failed to skip onboarding:", err);
+      setIsSaving(false);
+    }
   }
 
   if (checking) {
@@ -83,84 +266,91 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col px-6 relative">
-      {/* Skip Button */}
-      <div className="absolute right-6 top-6 z-10">
+    <div className="flex h-screen w-full max-w-md mx-auto flex-col px-6 relative bg-surface">
+      {/* Top Header Chrome (One UI / Minimalist M3) */}
+      <div className="flex items-center justify-between pt-6 pb-2 min-h-[48px]">
+        {currentStepIndex > 0 ? (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center justify-center h-9 w-9 rounded-full text-on-surface hover:bg-surface-container transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        ) : (
+          <div className="w-9" />
+        )}
+
+        {/* Discreet Progress Dots */}
+        <div className="flex items-center gap-1.5" aria-label={`Step ${currentStepIndex + 1} of ${STEPS.length}`}>
+          {STEPS.map((s, idx) => (
+            <div
+              key={s}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                idx === currentStepIndex
+                  ? "w-6 bg-brand-accent"
+                  : idx < currentStepIndex
+                  ? "w-2 bg-brand-accent/40"
+                  : "w-2 bg-surface-container-highest"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Skip Action */}
         <button
           type="button"
           onClick={handleSkip}
-          className="text-[length:var(--font-size-body)] font-semibold text-brand-accent hover:underline min-h-[var(--touch-target-min)] px-2"
+          disabled={isSaving}
+          className="text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:underline px-2 py-1"
         >
           Skip
         </button>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col items-center gap-2 pt-16 text-center">
-        <WelcomeIllustration className="h-16 w-16 text-brand-accent" />
-        <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Business setup</p>
-        <h1 className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
-          Tell us about your business
-        </h1>
-        <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
-          Works offline. Your records stay on this device.
-        </p>
-      </div>
+      {/* Step Views */}
+      {step === "marketing" && (
+        <StepTrustMarketing
+          businessName={state.businessName}
+          onChangeBusinessName={(val) =>
+            setState((prev) => ({ ...prev, businessName: val }))
+          }
+          onNext={() => setStep("business_type")}
+        />
+      )}
 
-      {/* Form fields — grow to fill space between header and button */}
-      <div className="flex flex-1 flex-col justify-center gap-5">
-        {/* Business name */}
-        <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Business name
-          </span>
-          <TextInput
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="e.g. Adaeze General Store"
-          />
-        </label>
+      {step === "business_type" && (
+        <StepBusinessType
+          selectedId={state.businessTypeId}
+          onSelectId={(id) =>
+            setState((prev) => ({ ...prev, businessTypeId: id }))
+          }
+          loadStarterPack={state.loadStarterPack}
+          onToggleStarterPack={(val) =>
+            setState((prev) => ({ ...prev, loadStarterPack: val }))
+          }
+          onNext={() => setStep("first_product")}
+        />
+      )}
 
-        {/* Business type */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Business type
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {BUSINESS_TYPE_TEMPLATES.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => setSelectedId(template.id)}
-                className={`flex min-h-[var(--touch-target-min)] flex-col rounded-[var(--radius-card)] border-2 px-3 py-2.5 text-left transition-colors ${
-                  selectedId === template.id
-                    ? "border-brand-accent bg-brand-accent/8"
-                    : "border-transparent bg-surface-container hover:bg-surface-container-high"
-                }`}
-              >
-                <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
-                  {template.label}
-                </span>
-                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
-                  {template.notes}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      {step === "first_product" && (
+        <StepFirstProduct
+          firstProduct={state.firstProduct}
+          onChangeFirstProduct={(prod: FirstProductDraft) =>
+            setState((prev) => ({ ...prev, firstProduct: prod }))
+          }
+          businessTypeId={state.businessTypeId}
+          onNext={() => setStep("education")}
+        />
+      )}
 
-      {/* CTA pinned to bottom */}
-      <div className="pb-10 pt-4">
-        <RippleButton
-          type="button"
-          onClick={handleContinue}
-          disabled={!businessName.trim()}
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
-        >
-          Continue
-        </RippleButton>
-      </div>
+      {step === "education" && (
+        <StepEducationSuperpowers
+          onComplete={handleFinish}
+          isSaving={isSaving}
+        />
+      )}
     </div>
   );
 }

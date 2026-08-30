@@ -95,7 +95,7 @@ export default function DashboardPage() {
           description="Add your first product and this screen fills in with your sales and stock numbers."
           action={{
             label: "Add a product",
-            onClick: () => router.push(hasAccountType(user, CAN_EDIT_PRODUCTS) ? "/welcome" : "/products"),
+            onClick: () => router.push(hasAccountType(user, CAN_EDIT_PRODUCTS) ? "/products/new" : "/products"),
           }}
           fullScreen
         />

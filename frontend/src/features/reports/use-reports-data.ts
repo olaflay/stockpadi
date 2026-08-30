@@ -8,10 +8,11 @@ import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
-import { serverGet, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
 import { tenantArray } from "@/lib/local-tenant";
+import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
 
-export type Period = "today" | "week" | "month";
+export type Period = ReportPeriod;
 
 export const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
 
@@ -25,17 +26,6 @@ type ReportPurchase = { id: string; client_id?: string; branch_id: string; suppl
 type ReportStock = { product_id: string; quantity: number };
 type ReportResponse = { sales?: ReportSale[]; products?: ReportProduct[]; expenses?: ReportExpense[]; purchases?: ReportPurchase[]; stock?: ReportStock[] };
 
-function periodStartIso(period: Period): string {
-  const now = new Date();
-  if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
-    return new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString();
-  }
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-}
-
 /**
  * Period selection plus the sales/expenses/purchases/stock data behind the
  * Reports screen, and the derived totals and lists (best sellers, low
@@ -46,7 +36,7 @@ export function useReportsData() {
 
   const result = useLiveQuery(async () => {
     try {
-      const start = periodStartIso(period);
+      const start = getPeriodStartIso(period);
       try {
         const remote = await serverGet<ReportResponse>(`/api/reports/summary?from=${encodeURIComponent(start)}&to=${encodeURIComponent(new Date().toISOString())}`);
         const sales: Sale[] = (remote.sales ?? []).map((sale) => ({ id: sale.id, clientId: sale.client_id ?? sale.id, branchId: sale.branch_id, customerId: sale.customer_id ?? null, subtotal: Number(sale.subtotal), discount: Number(sale.discount), total: Number(sale.total), createdAtLocal: sale.created_at, createdAt: sale.created_at, createdByUserId: sale.created_by_user_id, voidedAt: sale.voided_at ?? null, items: (sale.items ?? []).map((item) => ({ productId: item.product_id, quantity: Number(item.quantity), unitPrice: Number(item.unit_price), discount: Number(item.discount), unitLabel: item.unit_label, conversionFactor: Number(item.unit_conversion_factor), movementClientId: "server" })), payments: (sale.payments ?? []).map((payment) => ({ method: payment.method, amount: Number(payment.amount) })) }));
@@ -58,8 +48,15 @@ export function useReportsData() {
         const lowStockIds = new Set(products.filter((product) => product.lowStockThreshold !== null && (stockByProduct.get(product.id) ?? 0) <= product.lowStockThreshold).map((product) => product.id));
         return { sales, products, stockByProduct, profile: undefined, expenses, purchases, creditMovements: [], lowStockIds, serverSummary: remote, error: null as string | null };
       } catch (error) {
-        if (!(error instanceof NetworkUnavailableError) && typeof navigator !== "undefined" && navigator.onLine) throw error;
-        /* offline uses the local snapshot below */
+        if (
+          !(error instanceof NetworkUnavailableError) &&
+          !(error instanceof BackendConfigurationError) &&
+          typeof navigator !== "undefined" &&
+          navigator.onLine
+        ) {
+          throw error;
+        }
+        /* offline / unconfigured uses the local snapshot below */
       }
       const [sales, products, profile, expenses, purchases, creditMovements] = await Promise.all([
         tenantArray<Sale>(db.sales

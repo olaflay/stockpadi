@@ -67,7 +67,10 @@ export function tenantArray(table: { toArray: (...args: never[]) => PromiseLike<
 export function tenantArray<T>(table: { toArray: (...args: never[]) => PromiseLike<T[]> }): Promise<T[]>;
 export async function tenantArray<T>(table: { toArray: (...args: never[]) => PromiseLike<T[]> }): Promise<T[]> {
   const rows = await table.toArray();
-  return activeBusinessId ? rows.filter((row) => matchesActiveTenant(row as T & { businessId?: string })) : [];
+  const businessId = await getLocalBusinessId();
+  return businessId
+    ? rows.filter((row) => isLocalTenantRow(row as T & { businessId?: string }, businessId))
+    : (allowLegacyRowsForTests ? rows : []);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,5 +78,9 @@ export function tenantGet(table: { get: (id: string) => PromiseLike<unknown> }, 
 export function tenantGet<T>(table: { get: (id: string) => PromiseLike<T | undefined> }, id: string): Promise<T | undefined>;
 export async function tenantGet<T>(table: { get: (id: string) => PromiseLike<T | undefined> }, id: string): Promise<T | undefined> {
   const row = await table.get(id);
-  return row && matchesActiveTenant(row as T & { businessId?: string }) ? row : undefined;
+  const businessId = await getLocalBusinessId();
+  if (!row) return undefined;
+  return businessId
+    ? (isLocalTenantRow(row as T & { businessId?: string }, businessId) ? row : undefined)
+    : (allowLegacyRowsForTests ? row : undefined);
 }

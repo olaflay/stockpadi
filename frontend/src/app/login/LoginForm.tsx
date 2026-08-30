@@ -30,7 +30,6 @@ export default function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Error ref for scrolling
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   useEffect(() => {
@@ -57,7 +56,7 @@ export default function LoginForm() {
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("Supabase is not configured.");
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (signInError || !signInData.user) {
         setError("Incorrect email or password.");
         return;
@@ -131,12 +130,11 @@ export default function LoginForm() {
 
   return (
     <div className="flex h-screen w-full flex-col px-6 max-w-md mx-auto overflow-y-auto">
-      {/* Error Message - Scroll target at the top */}
       {error && (
         <div
           ref={errorRef}
           role="alert"
-          className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-[length:var(--font-size-body)] text-on-danger-container font-medium mt-4 text-center shadow-[var(--shadow-elevation-1)] mx-auto w-full max-w-xs"
+          className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-[length:var(--font-size-body)] text-on-danger-container font-medium mt-4 text-center shadow-[var(--shadow-elevation-1)] mx-auto w-full"
         >
           {error}
         </div>
@@ -152,24 +150,30 @@ export default function LoginForm() {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center py-8">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center py-6">
         <div
-          className="flex h-20 w-20 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent"
+          className="flex h-18 w-18 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent"
           aria-hidden
         >
-          <WelcomeIllustration className="h-14 w-14" />
+          <WelcomeIllustration className="h-12 w-12" />
         </div>
         <div className="flex flex-col gap-1">
           <h1 className="text-[length:var(--font-size-title-lg)] font-bold tracking-tight text-on-surface">
             Welcome back
           </h1>
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
-            Sign in to continue managing your store
+            Sign in to manage your shop
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 pb-10 shrink-0">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSignIn();
+        }}
+        className="flex flex-col gap-4 pb-8 shrink-0"
+      >
         {GOOGLE_AUTH_ENABLED && (
           <>
             <RippleButton
@@ -224,7 +228,6 @@ export default function LoginForm() {
                 id="login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
                 className="pr-12"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
@@ -255,11 +258,11 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => router.push("/register")}
-          className="text-center text-[length:var(--font-size-body)] text-brand-accent font-semibold hover:underline py-1"
+          className="text-center text-[length:var(--font-size-body)] text-brand-accent font-semibold hover:underline py-1 min-h-[var(--touch-target-min)] flex items-center justify-center"
         >
           Create a business account
         </button>
-      </div>
+      </form>
     </div>
   );
 }

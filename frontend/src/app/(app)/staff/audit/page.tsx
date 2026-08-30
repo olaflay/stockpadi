@@ -51,7 +51,12 @@ export default function StaffAuditPage() {
       <div className="flex min-h-[calc(100vh-140px)] flex-col">
         <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
         <div className="flex flex-1 items-center justify-center">
-          <EmptyState icon={ScrollText} title="Nothing logged yet" description="Staff and role changes will show up here." />
+          <EmptyState
+            icon={ScrollText}
+            title="Nothing logged yet"
+            description="Staff and role changes will show up here."
+            action={{ label: "Manage Staff", onClick: () => router.push("/staff") }}
+          />
         </div>
       </div>
     );

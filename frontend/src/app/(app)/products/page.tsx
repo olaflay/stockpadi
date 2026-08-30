@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
 import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical } from "lucide-react";
@@ -41,6 +41,7 @@ const FILTER_LABELS: Record<ProductFilter, string> = {
 };
 
 export default function ProductsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const filterParam = searchParams.get("filter");
@@ -171,6 +172,11 @@ export default function ProductsPage() {
           illustration={EmptyShelfIllustration}
           title="Your shelf is empty"
           description="Add your first product to start selling and tracking stock."
+          action={
+            hasAccountType(user, CAN_EDIT_PRODUCTS)
+              ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
+              : undefined
+          }
           fullScreen
         />
         {hasAccountType(user, CAN_EDIT_PRODUCTS) && (

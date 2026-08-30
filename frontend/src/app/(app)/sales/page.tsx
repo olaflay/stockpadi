@@ -103,6 +103,11 @@ export default function SalesPage() {
           icon={Receipt}
           title="No sales yet today"
           description="Completed sales show up here, tap any one to see its full receipt."
+          action={
+            hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)
+              ? { label: "Make a sale", onClick: () => router.push("/pos") }
+              : undefined
+          }
           fullScreen
         />
         {hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES) && (

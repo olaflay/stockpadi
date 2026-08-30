@@ -89,23 +89,17 @@ export default function PurchasesPage() {
     return (
       <div className="flex flex-col h-screen">
         <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
-        <div className="flex flex-1 flex-col justify-center px-6">
-          <EmptyState
-            icon={Truck}
-            title="No restocks recorded"
-            description="Record stock coming in from a supplier so what's on the shelf matches the app."
-          />
-          {canAdd && (
-            <div className="flex flex-col gap-3 pb-10">
-              <Link
-                href="/purchases/update-stock"
-                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center rounded-[var(--radius-control)] border border-border text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-              >
-                Update stock in bulk
-              </Link>
-            </div>
-          )}
-        </div>
+        <EmptyState
+          icon={Truck}
+          title="No restocks recorded"
+          description="Record stock coming in from a supplier so what's on the shelf matches the app."
+          action={
+            canAdd
+              ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
+              : undefined
+          }
+          fullScreen
+        />
         {canAdd && (
           <FAB href="/purchases/new" label="Record a restock">
             <Plus size={26} aria-hidden />

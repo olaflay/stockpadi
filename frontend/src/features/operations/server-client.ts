@@ -11,7 +11,7 @@ export class BackendRequestError extends Error {
   constructor(status: number, code: string, message: string) { super(message); this.status = status; this.code = code; }
 }
 
-class BackendConfigurationError extends Error {
+export class BackendConfigurationError extends Error {
   readonly code = "BACKEND_CONFIGURATION";
 }
 
