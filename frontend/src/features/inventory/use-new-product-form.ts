@@ -9,14 +9,16 @@ import { getLastCategoryId, markCategoryUsed } from "@/lib/last-used-category";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Product } from "@/types/product";
-import type { StockMovement } from "@/types/stock-movement";
 import {
   PRODUCT_FORM_DEFAULTS,
   productFormSchema,
   type ProductFormInput,
   type ProductFormValues,
 } from "@/features/inventory/product-schema";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { writeNewProductOffline } from "@/features/inventory/product-offline-write";
+import { findProductReferenceConflict } from "@/features/inventory/product-references";
+import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
+import { PRODUCT_CAP } from "@/config/limits";
 
 /**
  * All state and the create-product write path for the Add Product screen:
@@ -60,6 +62,15 @@ export function useNewProductForm() {
       return;
     }
 
+    const capStatus = productCapStatusFor((await countActiveProducts()) + 1);
+    if (capStatus === "blocked") {
+      showToast(`This store is at its ${PRODUCT_CAP}-product cap. Remove some to free space.`, "danger");
+      return;
+    }
+    if (capStatus === "warn") {
+      showToast(`Getting close to the ${PRODUCT_CAP}-product cap.`, "warning");
+    }
+
     // The autocomplete already resolved to an existing id if the typed name
     // matched one; an empty id with a non-empty name means "create this
     // category," the same way typing a new value into a password-manager
@@ -92,40 +103,26 @@ export function useNewProductForm() {
       updatedAt: new Date().toISOString(),
     };
 
-
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      try {
-        await serverPost("/api/products", product);
-        if (hasInitialStock && effectiveStockBranchId) await serverPost("/api/inventory/adjust", { id: crypto.randomUUID(), branchId: effectiveStockBranchId, productId: product.id, quantityDelta: initialStockQty, reasonCode: "initial_stock" });
-        if (product.categoryId) markCategoryUsed(product.categoryId);
-        showToast(`${product.name} added`, "success");
-        router.push("/products");
-        return;
-      } catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; }
+    const conflict = await findProductReferenceConflict(product);
+    if (conflict) {
+      showToast(`A product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
+      return;
     }
 
-    if (hasInitialStock && effectiveStockBranchId) {
-      const now = new Date().toISOString();
-      const movement: StockMovement = {
-        id: crypto.randomUUID(),
-        clientId: crypto.randomUUID(),
-        branchId: effectiveStockBranchId,
-        productId: product.id,
-        quantityDelta: initialStockQty,
-        source: "initial_stock",
-        sourceReferenceId: null,
-        reasonCode: null,
-        createdAtLocal: now,
-        createdAt: now,
-        createdByUserId: user.id,
-      };
-      await db.transaction("rw", db.products, db.stockMovements, async () => {
-        await db.products.add(product);
-        await db.stockMovements.add(movement);
-      });
-    } else {
-      await db.products.add(product);
-    }
+    // The product (and optional starting-stock movement) are always written
+    // through the single offline-first path: data + outbox in one Dexie
+    // transaction. This replaces the earlier "POST directly then return"
+    // fast path, which left the local ledger stale on success and — worse —
+    // minted a fresh, clientId-less adjustment id for the opening stock that
+    // a fallback would re-apply, double-counting it. Threading one id through
+    // data + outbox here is atomic, idempotent on sync, and never diverges
+    // from the server. See .agents/rules/offline-sync-and-ledger.md.
+    await writeNewProductOffline(
+      product,
+      hasInitialStock && effectiveStockBranchId
+        ? { branchId: effectiveStockBranchId, quantity: initialStockQty, createdByUserId: user.id }
+        : null
+    );
 
     if (product.categoryId) markCategoryUsed(product.categoryId);
     showToast(`${product.name} added`, "success");

@@ -28,6 +28,7 @@ import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { tenantArray } from "@/lib/local-tenant";
+import { PRODUCT_CAP } from "@/config/limits";
 
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
@@ -231,6 +232,10 @@ export default function ProductsPage() {
           onCancel={() => setScanning(false)}
         />
       )}
+
+      <p className="mb-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
+        {result.products.length.toLocaleString()} of {PRODUCT_CAP.toLocaleString()} products used
+      </p>
 
       <div className="mb-3 flex items-center gap-2">
         <div className="flex flex-1 gap-2 overflow-x-auto pb-0.5 no-scrollbar">

@@ -20,6 +20,15 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Cap the number of outbox items drained in a single sync-push call. A device
+// drains its outbox in small increments (one sale + its movements, etc.), so
+// 500 items is far beyond a realistic batch while bounding per-call work.
+const MAX_BATCH_SIZE = 500;
+// Bound the total request body size read off the wire. Supabase's Edge
+// Runtime also enforces its own platform cap, but this keeps a single
+// sync-push call from buffering an unbounded JSON body in memory.
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
+
 type SyncEntityType =
   | "sale"
   | "stock_adjustment"
@@ -98,6 +107,29 @@ function errorResponse(status: number, code: string, message: string): Response 
   });
 }
 
+async function readBodyText(req: Request): Promise<string> {
+  const length = Number(req.headers.get("content-length") ?? 0);
+  if (length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const reader = req.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      received += value.byteLength;
+      if (received > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+      chunks.push(value);
+    }
+  }
+  const total = chunks.reduce((n, c) => n + c.byteLength, 0);
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) { merged.set(c, offset); offset += c.byteLength; }
+  return new TextDecoder().decode(merged);
+}
+
 function payloadBranchId(payload: unknown): string | null {
   if (typeof payload === "object" && payload !== null && "branchId" in payload) {
     const value = (payload as Record<string, unknown>).branchId;
@@ -134,13 +166,21 @@ Deno.serve(async (req: Request) => {
 
   let body: SyncPushRequest;
   try {
-    body = await req.json();
-  } catch {
+    const raw = await readBodyText(req);
+    body = JSON.parse(raw) as SyncPushRequest;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (message === "PAYLOAD_TOO_LARGE") {
+      return errorResponse(413, "PAYLOAD_TOO_LARGE", "request body too large");
+    }
     return errorResponse(400, "INVALID_BODY", "Request body must be valid JSON");
   }
 
   if (!Array.isArray(body?.batch)) {
     return errorResponse(400, "INVALID_BODY", "batch must be an array");
+  }
+  if (body.batch.length > MAX_BATCH_SIZE) {
+    return errorResponse(413, "BATCH_TOO_LARGE", `batch must not exceed ${MAX_BATCH_SIZE} items`);
   }
 
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

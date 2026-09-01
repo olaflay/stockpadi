@@ -3,11 +3,11 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { writeStockAdjustment } from "@/features/inventory/write-stock-adjustment";
+import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
-import { serverPost, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
 
 export interface RowState {
   name: string;
@@ -121,21 +121,10 @@ export function useUpdateStockRows(
             expiryDate: row.expiryDate || null,
             updatedAt: new Date().toISOString(),
           };
-          if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-              await serverPost("/api/products", { id: product.id, ...update });
-            } catch (error) {
-              if (
-                !(error instanceof NetworkUnavailableError) &&
-                !(error instanceof BackendConfigurationError)
-              ) {
-                throw error;
-              }
-              await db.products.update(product.id, update);
-            }
-          } else {
-            await db.products.update(product.id, update);
-          }
+          // Same offline-first path as the Edit Product screen: upsert local +
+          // outbox in one transaction so this device's cache is never stale on
+          // a successful online save. See .agents/rules/offline-sync-and-ledger.md.
+          await writeProductEditOffline(product.id, update);
         }
 
         if (Number.isFinite(newStock) && newStock !== currentStockFor(product.id)) {

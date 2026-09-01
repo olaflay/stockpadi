@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import type { Expense } from "@/types/expense";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverPost } from "@/features/operations/server-client";
 import { withLocalBusinessId } from "@/lib/local-tenant";
 
 /**
@@ -33,7 +33,18 @@ export async function addExpense(params: {
   };
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    try { await serverPost("/api/expenses", expense); return expense; } catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; }
+    try {
+      await serverPost("/api/expenses", expense);
+      // The server already has this expense, but every screen renders from
+      // IndexedDB, so mirror it locally too (no outbox entry — re-queuing
+      // would only re-apply a row the server already committed). See
+      // .agents/rules/offline-sync-and-ledger.md: the local store is the
+      // display source of truth and must not diverge from what was written.
+      await db.transaction("rw", db.expenses, async () => {
+        await db.expenses.add(await withLocalBusinessId(expense));
+      });
+      return expense;
+    } catch { /* fall through to the durable local+outbox write below */ }
   }
   await db.transaction("rw", db.expenses, db.outbox, async () => {
     const tenantExpense = await withLocalBusinessId(expense);

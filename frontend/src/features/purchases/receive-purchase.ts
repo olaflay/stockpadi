@@ -3,7 +3,7 @@ import type { Purchase, PurchaseItem } from "@/types/purchase";
 import type { StockMovement } from "@/types/stock-movement";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverPost } from "@/features/operations/server-client";
 import { withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 
 export interface PurchaseLine {
@@ -69,7 +69,18 @@ export async function receivePurchase(params: {
   }));
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    try { await serverPost("/api/purchases/receive", purchase); return purchase; } catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; }
+    try {
+      await serverPost("/api/purchases/receive", purchase);
+      // Server already recorded it; mirror into the local ledger so this
+      // device's computed stock matches (no outbox entry — re-queuing would
+      // re-apply an already-committed receipt).
+      await db.transaction("rw", db.purchases, db.stockMovements, async () => {
+        const tenantPurchase = await withLocalBusinessId(purchase);
+        await db.purchases.add(tenantPurchase);
+        await db.stockMovements.bulkAdd(await withLocalBusinessIds(movements));
+      });
+      return purchase;
+    } catch { /* fall through to the durable local+outbox write below */ }
   }
   await db.transaction("rw", db.purchases, db.stockMovements, db.outbox, async () => {
     const tenantPurchase = await withLocalBusinessId(purchase);

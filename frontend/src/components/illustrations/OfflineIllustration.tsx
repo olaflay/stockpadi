@@ -1,4 +1,4 @@
-import { ILLUSTRATION_VIEWBOX, STROKE_PROPS } from "./shared";
+import { ILLUSTRATION_VIEWBOX } from "./shared";
 
 /** "Works without network" — A phone running smoothly offline with local ledger security. */
 export function OfflineIllustration({ className }: { className?: string }) {

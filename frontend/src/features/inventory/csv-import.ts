@@ -30,7 +30,8 @@ export const CSV_TEMPLATE_HEADERS = [
 export function buildSampleCsv(): string {
   return Papa.unparse([
     CSV_TEMPLATE_HEADERS,
-    ["Sample Product", "SMP-001", "123456789", "100", "150", "piece", "5", "off", "10"],
+    ["Tomato paste", "TOMATO-001", "6900001234567", "120", "180", "tin", "12", "off", "40"],
+    ["5kg Rice", "RICE-5", "", "3800", "4500", "bag", "10", "off", "25"],
   ]);
 }
 

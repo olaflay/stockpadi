@@ -11,7 +11,8 @@ import { markCategoryUsed } from "@/lib/last-used-category";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
 import { productFormSchema, type ProductFormInput, type ProductFormValues } from "@/features/inventory/product-schema";
-import { serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
+import { findProductReferenceConflict } from "@/features/inventory/product-references";
 
 /**
  * All state and write-path logic for the Edit Product screen: loading the
@@ -96,10 +97,18 @@ export function useEditProductForm(id: string) {
       lowStockThreshold: values.lowStockThreshold ?? null,
       updatedAt: new Date().toISOString(),
     };
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      try { await serverPost("/api/products", { id, ...update }); if (resolvedCategoryId) markCategoryUsed(resolvedCategoryId); showToast(`${values.name} updated`, "success"); router.push("/products"); return; } catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; }
+    const conflict = await findProductReferenceConflict(update, id);
+    if (conflict) {
+      showToast(`Another product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
+      return;
     }
-    await db.products.update(id, update);
+    // Always written through the single offline-first path (upsert local +
+    // outbox in one transaction, idempotent on sync). The earlier direct-POST
+    // fast path returned without updating the local store, leaving this
+    // device's cached copy stale until a pull that didn't exist; routing every
+    // edit through the outbox also gives the last-write-wins merge its version
+    // handling. See .agents/rules/offline-sync-and-ledger.md.
+    await writeProductEditOffline(id, update);
     if (resolvedCategoryId) markCategoryUsed(resolvedCategoryId);
     showToast(`${values.name} updated`, "success");
     router.push("/products");

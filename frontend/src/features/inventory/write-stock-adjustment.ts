@@ -4,7 +4,7 @@ import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
-import { serverPost, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
+import { serverPost } from "@/features/operations/server-client";
 
 export interface StockAdjustmentPayload {
   businessId?: string;
@@ -75,24 +75,25 @@ export async function writeStockAdjustment(params: {
     };
 
     const tenantPayload = await withLocalBusinessId(payload);
+    const tenantMovement = await withLocalBusinessId(movement);
     if (typeof navigator !== "undefined" && navigator.onLine) {
       try {
         await serverPost(params.actor.accountType === "WORKER" ? "/api/inventory/stock-count" : "/api/inventory/adjust", tenantPayload);
-        return params.actor.accountType === "WORKER" ? { ...movement, quantityDelta: 0 } : movement;
-      } catch (error) {
-        if (
-          !(error instanceof NetworkUnavailableError) &&
-          !(error instanceof BackendConfigurationError)
-        ) {
-          throw error;
-        }
+        if (params.actor.accountType === "WORKER") return { ...movement, quantityDelta: 0 };
+        // The server already applied this adjustment; mirror it into the
+        // local ledger so this device's computed stock matches the server
+        // (no outbox entry — that would re-apply an already-committed row).
+        await db.stockMovements.add(tenantMovement);
+        return tenantMovement;
+      } catch {
+        // fall through to the durable local+outbox write below on any
+        // network or server failure rather than dropping the adjustment.
       }
     }
     if (params.actor.accountType === "WORKER") {
       await enqueueOutboxWrite(adjustmentId, "stock_count_submission", tenantPayload, now);
       return { ...movement, quantityDelta: 0 };
     }
-    const tenantMovement = await withLocalBusinessId(movement);
     await db.stockMovements.add(tenantMovement);
     await enqueueOutboxWrite(adjustmentId, "stock_adjustment", tenantPayload, now);
 

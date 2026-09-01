@@ -84,9 +84,20 @@ export async function recordCreditPayment(params: {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
     const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
     if (session && backendUrl) {
-      const response = await fetch(`${backendUrl}/api/customers/credit-payment`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(payload) });
-      if (!response.ok) { const result = await response.json(); throw new Error(result?.error?.message ?? "Could not record repayment."); }
-      return movement;
+      try {
+        const response = await fetch(`${backendUrl}/api/customers/credit-payment`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(payload) });
+        if (response.ok) {
+          // Server already committed the repayment; mirror it into the local
+          // credit ledger so this device's running balance matches (no
+          // outbox entry — that would re-apply an already-committed row).
+          const tenantMovement = await withLocalBusinessId(movement);
+          await db.customerCreditMovements.add(tenantMovement);
+          return movement;
+        }
+      } catch {
+        // fall through to the durable local+outbox write below on any
+        // network or server failure rather than dropping the repayment.
+      }
     }
   }
 

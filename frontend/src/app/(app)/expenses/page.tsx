@@ -37,6 +37,19 @@ export default function ExpensesPage() {
   const [period, setPeriod] = useState<Period>("today");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const [prevPeriod, setPrevPeriod] = useState(period);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset the pagination limit whenever the selected period changes. This is
+  // the sanctioned render-time "adjust state when a prop changes" pattern —
+  // stopping short of an effect keeps it out of the set-state-in-effect lint
+  // and avoids a cascading render. All hooks stay above the early returns so
+  // their call order is stable across every render path.
+  if (period !== prevPeriod) {
+    setPrevPeriod(period);
+    setVisibleLimit(50);
+  }
 
   const result = useLiveQuery(async () => {
     try {
@@ -61,6 +74,27 @@ export default function ExpensesPage() {
       return { expenses: [] as Expense[], branches: [] as LocalBranch[], users: [] as LocalUser[], error: true };
     }
   }, []);
+
+  // Hooks stay above every early return so their call order is stable across
+  // renders — previously they were declared below the permission/loading/error/
+  // empty branches, which breaks the Rules of Hooks and can crash React when a
+  // re-render flows through a different branch.
+  useEffect(() => {
+    const start = result ? getPeriodStartIso(period) : null;
+    const periodExpenses = result?.expenses.filter((e) => start !== null && e.createdAtLocal >= start) ?? [];
+    if (result === undefined || periodExpenses.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleLimit((prev) => prev + 50);
+      }
+    }, { threshold: 0.1 });
+
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [result, period, visibleLimit]);
 
   if (!hasAccountType(user, CAN_VIEW_EXPENSES)) {
     return (
@@ -124,30 +158,6 @@ export default function ExpensesPage() {
     await deleteExpense(id);
     showToast("Expense deleted", "success");
   }
-
-  const [visibleLimit, setVisibleLimit] = useState(50);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const [prevPeriod, setPrevPeriod] = useState(period);
-  if (period !== prevPeriod) {
-    setPrevPeriod(period);
-    setVisibleLimit(50);
-  }
-
-  useEffect(() => {
-    if (periodExpenses.length <= visibleLimit) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
-    }, { threshold: 0.1 });
-
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    };
-  }, [periodExpenses.length, visibleLimit]);
 
   return (
     <div>

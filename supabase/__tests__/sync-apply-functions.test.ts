@@ -320,6 +320,158 @@ describe("sync_apply_product: last-write-wins with a conflict flag", () => {
   });
 });
 
+describe("tenant-ownership isolation across sync_apply_*", () => {
+  let foreignActorId: string;
+  let foreignBranchId: string;
+  let foreignProductId: string;
+  let foreignCustomerId: string;
+  let foreignSupplierId: string;
+
+  beforeAll(async () => {
+    const actor = await db.query<{ id: string }>(`insert into auth.users default values returning id;`);
+    foreignActorId = actor.rows[0].id;
+    const biz = await db.query<{ id: string }>(`insert into business_profile (name, business_type, currency) values ('Foreign', 'general_retail', 'NGN') returning id;`);
+    const bizId = biz.rows[0].id;
+    await db.query(`insert into users (id, business_id, full_name, role) values ($1, $2, 'Foreign Owner', 'owner');`, [foreignActorId, bizId]);
+    const branch = await db.query<{ id: string }>(`insert into branches (business_id, name) values ($1, 'Foreign Branch') returning id;`, [bizId]);
+    foreignBranchId = branch.rows[0].id;
+    const product = await db.query<{ id: string }>(`insert into products (business_id, sku, name, cost_price, sell_price) values ($1, 'FOREIGN-SKU', 'Foreign Widget', 100, 150) returning id;`, [bizId]);
+    foreignProductId = product.rows[0].id;
+    const customer = await db.query<{ id: string }>(`insert into customers (business_id, name) values ($1, 'Foreign Customer') returning id;`, [bizId]);
+    foreignCustomerId = customer.rows[0].id;
+    const supplier = await db.query<{ id: string }>(`insert into suppliers (business_id, name) values ($1, 'Foreign Supplier') returning id;`, [bizId]);
+    foreignSupplierId = supplier.rows[0].id;
+  });
+
+  async function expectRejected(fn: () => Promise<unknown>, errcode: string) {
+    try {
+      await fn();
+      throw new Error("expected the statement to be rejected");
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      expect(code).toBe(errcode);
+    }
+  }
+
+  it("rejects a sale that references another business's branch", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_sale($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          ...salePayload({
+            id: crypto.randomUUID(),
+            clientId: crypto.randomUUID(),
+            movementClientId: crypto.randomUUID(),
+          }),
+          branchId: foreignBranchId,
+        }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a sale that references another business's product", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_sale($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          id: crypto.randomUUID(),
+          clientId: crypto.randomUUID(),
+          branchId,
+          customerId: null,
+          payments: [{ method: "cash", amount: 150 }],
+          subtotal: 150,
+          discount: 0,
+          total: 150,
+          createdAtLocal: new Date().toISOString(),
+          items: [{ productId: foreignProductId, quantity: 1, unitPrice: 150, discount: 0, movementClientId: crypto.randomUUID() }],
+        }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a stock adjustment against another business's branch or product", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_stock_adjustment($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          id: crypto.randomUUID(), clientId: crypto.randomUUID(), branchId: foreignBranchId,
+          productId, quantityDelta: -1, reasonCode: "recount", note: null, createdAtLocal: new Date().toISOString(),
+        }),
+        actorId,
+      ]);
+    }, "42501");
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_stock_adjustment($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          id: crypto.randomUUID(), clientId: crypto.randomUUID(), branchId,
+          productId: foreignProductId, quantityDelta: -1, reasonCode: "recount", note: null, createdAtLocal: new Date().toISOString(),
+        }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a credit payment against another business's customer", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_credit_payment($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          id: crypto.randomUUID(), clientId: crypto.randomUUID(), customerId: foreignCustomerId,
+          amount: 50, note: null, createdAtLocal: new Date().toISOString(),
+        }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a purchase receipt against another business's supplier", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_purchase_receipt($1::jsonb, $2::uuid);`, [
+        JSON.stringify({
+          id: crypto.randomUUID(), clientId: crypto.randomUUID(), branchId, supplierId: foreignSupplierId,
+          createdAtLocal: new Date().toISOString(),
+          items: [{ productId, quantity: 1, unitCost: 100, movementClientId: crypto.randomUUID() }],
+        }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects an upsert that would overwrite another business's customer", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_customer($1::jsonb, $2::uuid);`, [
+        JSON.stringify({ id: foreignCustomerId, name: "Hijacked", phone: null, updatedAt: new Date().toISOString() }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a product upsert that would overwrite another business's product", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_product(($1::jsonb), $2::uuid);`, [
+        JSON.stringify({ id: foreignProductId, sku: "FOREIGN-SKU", barcode: null, name: "Hijacked", categoryId: null, brandId: null, unitLabel: "piece", costPrice: 100, sellPrice: 150, expiryTracking: "off", version: 1 }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects a supplier upsert that would overwrite another business's supplier", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_supplier($1::jsonb, $2::uuid);`, [
+        JSON.stringify({ id: foreignSupplierId, name: "Hijacked", phone: null }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+
+  it("rejects an expense against another business's branch", async () => {
+    await expectRejected(async () => {
+      await db.query(`select sync_apply_expense($1::jsonb, $2::uuid);`, [
+        JSON.stringify({ id: crypto.randomUUID(), branchId: foreignBranchId, category: "Gen", amount: 10, note: null }),
+        actorId,
+      ]);
+    }, "42501");
+  });
+});
+
 describe("inventory_stock_rollup: trigger-maintained aggregate stays exact", () => {
   it("matches a raw SUM(quantity_delta) over the ledger after concurrent sales, including a retried duplicate", async () => {
     // A fresh product so this test doesn't depend on cleanup done by earlier

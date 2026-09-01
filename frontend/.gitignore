@@ -21,6 +21,10 @@ next-env.d.ts
 .cache/
 .playwright-mcp/
 
+# Transient supabase test config (recreated for the supabase suite, then deleted)
+vitest.supabase.tmp.mts
+vitest.*.tmp.mts
+
 # OS files and certificates
 .DS_Store
 Thumbs.db

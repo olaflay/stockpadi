@@ -37,6 +37,21 @@ export async function completeSale(params: {
   const now = new Date().toISOString();
   const saleId = crypto.randomUUID();
 
+  // Reject locally anything the server will reject on sync, so a sale is
+  // never accepted on this device and then permanently failed in the outbox
+  // ("accept locally, reject on sync" trap). Payments must be positive —
+  // sale_payments enforces amount > 0 server-side — and no line may have a
+  // zero/negative quantity or a negative unit price.
+  if (params.payments.some((p) => !Number.isFinite(p.amount) || p.amount <= 0)) {
+    throw new Error("Every payment line must have a positive amount.");
+  }
+  if (params.lines.some((l) => l.quantity <= 0 || !Number.isFinite(l.quantity))) {
+    throw new Error("Every line needs a quantity greater than zero.");
+  }
+  if (params.lines.some((l) => l.unitPrice < 0 || !Number.isFinite(l.unitPrice))) {
+    throw new Error("A line cannot have a negative price.");
+  }
+
   const items: SaleItem[] = params.lines.map((line) => ({
     productId: line.productId,
     quantity: line.quantity,

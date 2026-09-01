@@ -260,3 +260,29 @@ describe("ledger tables: reads and the sync RPC path are unaffected", () => {
     ).rejects.toThrow(/permission denied/i);
   });
 });
+
+describe("users_write: account_type must agree with the authoritative membership", () => {
+  it("an owner can rename a worker (account_type unchanged matches membership)", async () => {
+    await actAs("authenticated", ownerId);
+    await db.query(`update users set full_name = 'Renamed' where id = $1;`, [cashierId]);
+    await resetToSuperuser();
+    const row = await db.query<{ full_name: string }>(`select full_name from users where id = $1;`, [cashierId]);
+    expect(row.rows[0].full_name).toBe("Renamed");
+    // restore
+    await db.query(`update users set full_name = 'Test Cashier' where id = $1;`, [cashierId]);
+  });
+
+  it("an owner cannot write a users.account_type that contradicts the membership", async () => {
+    await actAs("authenticated", ownerId);
+    await expect(
+      db.query(`update users set account_type = 'BUSINESS_OWNER' where id = $1;`, [cashierId])
+    ).rejects.toThrow(/violates row-level security policy/i);
+  });
+
+  it("an owner cannot write a users.account_type onto a worker row to escalate", async () => {
+    await actAs("authenticated", ownerId);
+    await expect(
+      db.query(`update users set role = 'owner', account_type = 'BUSINESS_OWNER' where id = $1;`, [cashierId])
+    ).rejects.toThrow(/violates row-level security policy/i);
+  });
+});

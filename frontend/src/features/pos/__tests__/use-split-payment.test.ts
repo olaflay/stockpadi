@@ -160,6 +160,14 @@ describe("useSplitPayment", () => {
     expect(result.current.creditCustomerId).toBeNull();
   });
 
+  it("updatePaymentAmount clamps negative input to 0 (validation gate for the POS form)", () => {
+    const { result } = renderHook(() => useSplitPayment(1000));
+    act(() => {
+      result.current.updatePaymentAmount(0, -50);
+    });
+    expect(result.current.effectivePayments[0].amount).toBe(0);
+  });
+
   it("AMOUNT_EPSILON is a small tolerance suitable for float comparisons", () => {
     expect(AMOUNT_EPSILON).toBeGreaterThan(0);
     expect(AMOUNT_EPSILON).toBeLessThan(1);

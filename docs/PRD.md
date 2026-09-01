@@ -139,8 +139,9 @@ Considered and rejected: Vercel plus Supabase Cloud (the original default) was s
 2. **Local-first writes.** Every action writes to IndexedDB immediately and updates the UI optimistically, while simultaneously appending to a local sync queue (outbox pattern).
 3. **Background sync.** A Workbox-managed Background Sync registration fires on reconnect, even if the app isn't in the foreground, draining the queue in FIFO order with client-generated idempotency keys so a retried upload never double-counts a sale.
 4. **Server-side merge.** An Edge Function receives each batch, applies the entity-specific conflict rule below, and commits inside a Postgres transaction.
-5. **Downstream propagation.** Supabase Realtime pushes the resulting state to other online devices on the same branch or business.
-6. **Failure handling.** Failed items retry with exponential backoff, capped at 5 minutes, surfacing in a "needs attention" queue after 24 hours of failure rather than retrying silently forever.
+5. **Downstream propagation.** Supabase Realtime pushes the resulting state to other online devices on the same branch or business. Realtime is the live layer and only reaches devices with an open socket.
+6. **Catch-up pull.** Realtime alone cannot reach a device that was offline during the change, nor populate a freshly provisioned or cleared device's local store; step 1's snapshot is one-time only. On every reconnect the device therefore issues a delta pull (session-authenticated reads of its own business's rows changed since the last synced cursor), merged idempotently by `client_id` into IndexedDB. Realtime handles live updates; the delta pull guarantees every device eventually converges to server truth regardless of how much it missed.
+7. **Failure handling.** Failed items retry with exponential backoff, capped at 5 minutes, surfacing in a "needs attention" queue after 24 hours of failure rather than retrying silently forever.
 
 ### 10.2 Conflict resolution rules
 
@@ -154,6 +155,8 @@ Considered and rejected: Vercel plus Supabase Cloud (the original default) was s
 | Refunds/voids | Online-only, disabled in the UI while offline | Directly adopted from Loyverse's approach of disabling refunds offline,  reinforced by Square's identical restriction on pending offline payments |
 
 ### 10.3 Offline authentication
+
+> **Open decision (Olaflay).** The offline PIN login specified here is not yet implemented. The code deliberately routes to the normal online email/password flow whenever the local session is missing or expired (see `frontend/src/features/auth/AuthProvider.tsx`), trading offline convenience for a simpler, stricter auth story. Decide whether offline PIN unlock is in scope or whether online-first auth is the chosen direction — then delete or implement this section accordingly. Until decided, treat this section as aspirational, not shipped behavior.
 
 First login (account creation or signing into a new device) requires connectivity, supporting both Email+OTP and Google OAuth. Once the device has at least one local user cached in IndexedDB, the app routes to a user picker screen instead of the email/password form. The user selects their profile and enters their 4-digit PIN, which is validated against a locally cached, salted hash with no network round trip.
 

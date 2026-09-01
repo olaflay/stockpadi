@@ -4,8 +4,9 @@ import type { SyncQueueItem } from "@/types/sync";
 import { matchesActiveTenant } from "@/lib/local-tenant";
 
 /**
- * Pushes every pending outbox item to the sync-push Edge Function in one
- * batch, FIFO order, and reconciles the result back into IndexedDB. See
+ * Pushes every pending outbox item to the sync-push Edge Function in
+ * FIFO order, in batches of at most DRAIN_BATCH_SIZE, and reconciles each
+ * batch's result back into IndexedDB. See
  * .agents/skills/write-edge-function.md and PRD 10.1.
  *
  * No-ops if there is no signed-in Supabase session: auth screens haven't
@@ -23,6 +24,13 @@ interface SyncPushItemResult {
   conflict?: boolean;
   error?: { code: string; message: string };
 }
+
+// Keep a single sync-push call under the server's MAX_BATCH_SIZE
+// (sync-push/index.ts). A device that goes offline for a long stretch can
+// queue far more than one drain's worth; sending it all in one call would
+// 413. The last slice is always a partial, so a drain that is already under
+// the cap stays a single call.
+const DRAIN_BATCH_SIZE = 500;
 
 let isDraining = false;
 
@@ -58,17 +66,26 @@ async function drainOnce(): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
 
+  const pending = (await db.outbox.where("status").equals("pending").sortBy("createdAtLocal"))
+    .filter(matchesActiveTenant);
+  if (pending.length === 0) return;
+
+  for (let offset = 0; offset < pending.length; offset += DRAIN_BATCH_SIZE) {
+    const slice = pending.slice(offset, offset + DRAIN_BATCH_SIZE);
+    await drainSlice(slice, supabase);
+  }
+}
+
+async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof getSupabase>): Promise<void> {
+  if (!supabase) return;
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) return;
 
-  const pending = (await db.outbox.where("status").equals("pending").sortBy("createdAtLocal"))
-    .filter(matchesActiveTenant);
-  if (pending.length === 0) return;
-
   await db.outbox.bulkUpdate(
-    pending.map((item) => ({ key: item.clientId, changes: { status: "syncing" as const } }))
+    slice.map((item) => ({ key: item.clientId, changes: { status: "syncing" as const } }))
   );
 
   let results: SyncPushItemResult[];
@@ -81,7 +98,7 @@ async function drainOnce(): Promise<void> {
       },
       body: JSON.stringify({
         device_id: null,
-        batch: pending.map((item) => ({
+        batch: slice.map((item) => ({
           client_id: item.clientId,
           type: item.type,
           payload: item.payload,
@@ -91,7 +108,7 @@ async function drainOnce(): Promise<void> {
     });
 
     if (!response.ok) {
-      await revertToPending(pending, `sync-push responded ${response.status}`);
+      await revertToPending(slice, `sync-push responded ${response.status}`);
       return;
     }
 
@@ -101,18 +118,35 @@ async function drainOnce(): Promise<void> {
     // underlying fetch itself, see src/app/sw.ts): leave these items
     // retryable rather than marking them failed, a dropped connection is
     // not a rejection.
-    await revertToPending(pending, err instanceof Error ? err.message : "Network error during sync");
+    await revertToPending(slice, err instanceof Error ? err.message : "Network error during sync");
     return;
   }
 
   const resultByClientId = new Map(results.map((result) => [result.clientId, result]));
   const toDelete: string[] = [];
   const toMarkFailed: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
+  const toRequeue: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
 
-  for (const item of pending) {
+  for (const item of slice) {
     const result = resultByClientId.get(item.clientId);
-    if (!result || result.status === "applied" || result.status === "skipped") {
+    if (result?.status === "applied" || result?.status === "skipped") {
       toDelete.push(item.clientId);
+      continue;
+    }
+    if (!result) {
+      // The server gave us a valid response but no entry for this item — we
+      // genuinely don't know whether it applied. Treating that as "done" and
+      // deleting the row would be at-most-once, silently dropping a sale or
+      // movement the server may never have recorded. Keep it retryable and
+      // let the next drain confirm, rather than assume success.
+      toRequeue.push({
+        key: item.clientId,
+        changes: {
+          status: "pending" as const,
+          attemptCount: item.attemptCount + 1,
+          lastError: "No per-item result returned by sync-push; will retry to confirm",
+        },
+      });
       continue;
     }
     toMarkFailed.push({
@@ -127,6 +161,23 @@ async function drainOnce(): Promise<void> {
 
   if (toDelete.length > 0) await db.outbox.bulkDelete(toDelete);
   if (toMarkFailed.length > 0) await db.outbox.bulkUpdate(toMarkFailed);
+  if (toRequeue.length > 0) await db.outbox.bulkUpdate(toRequeue);
+}
+
+/**
+ * Recovers outbox rows left in the "syncing" state by a crash or a tab killed
+ * mid-drain. "syncing" is transient — marking a slice syncing before the
+ * network call and reverting on failure means any interruption between the two
+ * parks the row there forever, invisible to the pending filter and never
+ * retried. This sweeper returns those rows to pending so the next drain picks
+ * them up. Safe to call on every connect and on boot.
+ */
+export async function recoverStuckSyncingItems(): Promise<void> {
+  const stuck = (await db.outbox.where("status").equals("syncing").toArray()).filter(matchesActiveTenant);
+  if (stuck.length === 0) return;
+  await db.outbox.bulkUpdate(
+    stuck.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
+  );
 }
 
 async function revertToPending(items: SyncQueueItem[], message: string): Promise<void> {

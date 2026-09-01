@@ -29,9 +29,23 @@ import { logger } from "./shared/logging/logger.js";
 import { passwordRoutes } from "./modules/auth/password.routes.js";
 import { handlePasswordUpdate } from "./modules/auth/password.controller.js";
 
+// Cap request bodies to bound memory use on a raw http server with no
+// framework-level body size guard. 1 MiB is ample for every endpoint here
+// (the largest payloads are sync batches / close-day submissions, which the
+// sync-push Edge Function additionally caps per-batch).
+const MAX_BODY_BYTES = 1024 * 1024;
+
 async function readBody(request: import("node:http").IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  let received = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    received += buffer.length;
+    if (received > MAX_BODY_BYTES) {
+      throw new HttpError(413, "PAYLOAD_TOO_LARGE", `Request body must not exceed ${MAX_BODY_BYTES} bytes`);
+    }
+    chunks.push(buffer);
+  }
   if (!chunks.length) return {};
   try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
   catch { throw new HttpError(400, "INVALID_BODY", "Request body must be valid JSON"); }

@@ -144,4 +144,35 @@ describe("completeSale", () => {
     expect(await db.sales.count()).toBe(1);
     expect(await db.outbox.count()).toBe(1);
   });
+
+  it("rejects a zero or negative payment line locally, before it could strand the sale in the outbox forever", async () => {
+    const cases: SalePayment[][] = [
+      [{ method: "cash", amount: 0 }],
+      [{ method: "cash", amount: -500 }],
+      [{ method: "cash", amount: 1000 }, { method: "transfer", amount: 0 }],
+    ];
+    for (const payments of cases) {
+      await expect(
+        completeSale({ branchId: BRANCH_ID, customerId: null, payments, lines: [line()], createdByUserId: CASHIER.id, actor: CASHIER })
+      ).rejects.toThrow("Every payment line must have a positive amount.");
+    }
+    expect(await db.sales.count()).toBe(0);
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it("rejects a zero or negative line quantity and a negative unit price, writing nothing", async () => {
+    await expect(
+      completeSale({ branchId: BRANCH_ID, customerId: null, payments: [{ method: "cash", amount: 1000 }], lines: [line({ quantity: 0 })], createdByUserId: CASHIER.id, actor: CASHIER })
+    ).rejects.toThrow("Every line needs a quantity greater than zero.");
+    await expect(
+      completeSale({ branchId: BRANCH_ID, customerId: null, payments: [{ method: "cash", amount: 1000 }], lines: [line({ quantity: -2 })], createdByUserId: CASHIER.id, actor: CASHIER })
+    ).rejects.toThrow("Every line needs a quantity greater than zero.");
+    await expect(
+      completeSale({ branchId: BRANCH_ID, customerId: null, payments: [{ method: "cash", amount: 1000 }], lines: [line({ unitPrice: -10 })], createdByUserId: CASHIER.id, actor: CASHIER })
+    ).rejects.toThrow("A line cannot have a negative price.");
+
+    expect(await db.sales.count()).toBe(0);
+    expect(await db.stockMovements.count()).toBe(1);
+    expect(await db.outbox.count()).toBe(0);
+  });
 });

@@ -34,7 +34,11 @@ export function useSplitPayment(total: number) {
 
   function updatePaymentAmount(index: number, amount: number) {
     const next = [...effectivePayments];
-    next[index] = { ...next[index], amount: Number.isFinite(amount) ? amount : 0 };
+    // Non-finite → 0, and never let a negative slip through (a negative or
+    // zero-then-over-total payment line would pass the local balance check
+    // but be rejected server-side, stranding the sale in the outbox forever).
+    const clamped = Number.isFinite(amount) && amount > 0 ? amount : 0;
+    next[index] = { ...next[index], amount: clamped };
     setPayments(next);
   }
 
