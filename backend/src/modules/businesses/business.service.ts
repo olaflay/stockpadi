@@ -32,6 +32,15 @@ export function registrationCreationError(error: { code?: string; message: strin
   if (error.code === "email_exists" || error.code === "user_already_exists") {
     return new HttpError(409, "EMAIL_ALREADY_REGISTERED", "An account with this email already exists. Sign in instead.");
   }
+  if (error.code === "weak_password" || error.code === "validation_failed") {
+    return new HttpError(400, "AUTH_VALIDATION_FAILED", "Check the email and use a stronger password, then try again.");
+  }
+  if (error.code === "email_provider_disabled") {
+    return new HttpError(503, "EMAIL_SIGNUP_DISABLED", "Email signup is disabled in the authentication service.");
+  }
+  if (error.code === "unexpected_failure") {
+    return new HttpError(502, "AUTH_DATABASE_ERROR", "The authentication database rejected account creation. Ask the project owner to apply pending migrations and inspect Supabase Auth logs.");
+  }
   return new HttpError(502, "AUTH_CREATE_FAILED", "The authentication service could not create the account");
 }
 
