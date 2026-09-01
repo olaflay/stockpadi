@@ -18,4 +18,11 @@ describe("Vercel backend adapter", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok", service: "stockpadi-backend" });
   });
+
+  it("loads the application router for non-health routes", async () => {
+    const response = await vercelHandler.fetch(new Request("https://backend.example.com/api?__path=missing"));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: { code: "NOT_FOUND", message: "Route not found" } });
+  });
 });
