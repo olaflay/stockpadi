@@ -1,4 +1,4 @@
-import { ILLUSTRATION_VIEWBOX, STROKE_PROPS } from "./shared";
+import { ILLUSTRATION_VIEWBOX } from "./shared";
 
 /** "No sales yet today" — A minimalist, elegant sales ledger adhering strictly to the design token color system. */
 export function EmptySalesIllustration({ className }: { className?: string }) {

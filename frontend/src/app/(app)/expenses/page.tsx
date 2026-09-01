@@ -37,6 +37,8 @@ export default function ExpensesPage() {
   const [period, setPeriod] = useState<Period>("today");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const result = useLiveQuery(async () => {
     try {
@@ -61,6 +63,22 @@ export default function ExpensesPage() {
       return { expenses: [] as Expense[], branches: [] as LocalBranch[], users: [] as LocalUser[], error: true };
     }
   }, []);
+
+  const periodStart = getPeriodStartIso(period);
+  const periodExpenses = result?.expenses.filter((expense) => expense.createdAtLocal >= periodStart) ?? [];
+
+  useEffect(() => {
+    if (periodExpenses.length <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
+    }, { threshold: 0.1 });
+
+    const element = loadMoreRef.current;
+    if (element) observer.observe(element);
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [periodExpenses.length, visibleLimit]);
 
   if (!hasAccountType(user, CAN_VIEW_EXPENSES)) {
     return (
@@ -114,8 +132,6 @@ export default function ExpensesPage() {
     );
   }
 
-  const periodStart = getPeriodStartIso(period);
-  const periodExpenses = result.expenses.filter((e) => e.createdAtLocal >= periodStart);
   const periodTotal = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
   const canDelete = hasAccountType(user, CAN_DELETE_EXPENSES);
 
@@ -124,30 +140,6 @@ export default function ExpensesPage() {
     await deleteExpense(id);
     showToast("Expense deleted", "success");
   }
-
-  const [visibleLimit, setVisibleLimit] = useState(50);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const [prevPeriod, setPrevPeriod] = useState(period);
-  if (period !== prevPeriod) {
-    setPrevPeriod(period);
-    setVisibleLimit(50);
-  }
-
-  useEffect(() => {
-    if (periodExpenses.length <= visibleLimit) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
-    }, { threshold: 0.1 });
-
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    };
-  }, [periodExpenses.length, visibleLimit]);
 
   return (
     <div>
@@ -159,7 +151,10 @@ export default function ExpensesPage() {
             key={key}
             type="button"
             aria-pressed={period === key}
-            onClick={() => setPeriod(key)}
+            onClick={() => {
+              setPeriod(key);
+              setVisibleLimit(50);
+            }}
             className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] transition-colors ${
               period === key
                 ? "bg-brand-accent text-brand-accent-contrast"

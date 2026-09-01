@@ -31,6 +31,8 @@ const CAN_ADD_PURCHASES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 export default function PurchasesPage() {
   const user = useCurrentUser();
   const router = useRouter();
+  const [visibleLimit, setVisibleLimit] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const result = useLiveQuery(async () => {
     try {
@@ -52,6 +54,21 @@ export default function PurchasesPage() {
       };
     }
   }, []);
+
+  const purchaseCount = result?.purchases.length ?? 0;
+
+  useEffect(() => {
+    if (purchaseCount <= visibleLimit) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
+    }, { threshold: 0.1 });
+
+    const element = loadMoreRef.current;
+    if (element) observer.observe(element);
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [purchaseCount, visibleLimit]);
 
   if (!hasAccountType(user, CAN_VIEW_PURCHASES)) {
     return (
@@ -109,24 +126,6 @@ export default function PurchasesPage() {
       </div>
     );
   }
-
-  const [visibleLimit, setVisibleLimit] = useState(50);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (result.purchases.length <= visibleLimit) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
-    }, { threshold: 0.1 });
-
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    };
-  }, [result.purchases.length, visibleLimit]);
 
   return (
     <div>
