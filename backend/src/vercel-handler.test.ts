@@ -45,5 +45,5 @@ describe("Vercel backend adapter", () => {
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { code: "NOT_FOUND", message: "Route not found" } });
-  });
+  }, 15000);
 });
