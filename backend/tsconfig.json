@@ -10,6 +10,6 @@
     "skipLibCheck": true,
     "allowJs": false
   },
-  "include": ["src/**/*.ts", "scripts/**/*.mjs"],
+  "include": ["src/**/*.ts", "api/**/*.ts", "scripts/**/*.mjs"],
   "exclude": ["node_modules", "supabase"]
 }
