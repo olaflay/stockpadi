@@ -35,4 +35,16 @@ describe("backend service routes", () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { code: "NOT_FOUND", message: "Route not found" } });
   });
+
+  it("routes worker actions through authentication", async () => {
+    const backendUrl = await startBackend();
+    const response = await fetch(`${backendUrl}/api/workers/00000000-0000-0000-0000-000000000000/action`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "deactivate" }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: { code: "UNAUTHENTICATED", message: "Missing bearer token" } });
+  });
 });

@@ -59,6 +59,7 @@ function jsonResponse(status: number, body: unknown, requestOrigin?: string) {
 export async function handleRequest(request: Request, pathnameOverride?: string): Promise<Response> {
   const startedAt = Date.now();
   const pathname = pathnameOverride ?? new URL(request.url).pathname;
+  const workerActionMatch = pathname.match(/^\/api\/workers\/([^/]+)\/action$/);
   const requestOrigin = request.headers.get("origin") ?? undefined;
   logger.info("request started", { method: request.method, path: pathname });
 
@@ -84,6 +85,10 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (pathname === emailVerificationRoutes.send) return jsonResponse(200, await handleSendVerification(request), requestOrigin);
     if (pathname === emailVerificationRoutes.verify) return jsonResponse(200, await handleVerifyEmail(request, body), requestOrigin);
     if (pathname === passwordRoutes.update) return jsonResponse(200, await handlePasswordUpdate(request, body), requestOrigin);
+    if (request.method === "POST" && workerActionMatch) {
+      const actionBody = body && typeof body === "object" ? body as Record<string, unknown> : {};
+      return jsonResponse(200, await handleWorkerRequest(request, { ...actionBody, userId: decodeURIComponent(workerActionMatch[1]) }), requestOrigin);
+    }
     if (pathname === workerRoutes.create.path) return jsonResponse(200, await handleWorkerRequest(request, body), requestOrigin);
     if (pathname === adminRoutes.path) return jsonResponse(200, await handleAdminRequest(request, body), requestOrigin);
     if (pathname === salesRoutes.path) return jsonResponse(200, await handleVoidSale(request, body), requestOrigin);
