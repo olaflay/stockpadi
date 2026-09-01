@@ -15,7 +15,9 @@ export async function callBackend<T>(functionName: string, body: unknown): Promi
   const backendPath = functionName === "platform-api" ? "/api/admin" : functionName === "account-context" ? "/api/account-context" : functionName === "register-business" ? "/api/businesses/register" : null;
   if (!backendUrl || !backendPath) throw new BackendError("The application backend is not configured.");
   const url = `${backendUrl}${backendPath}`;
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` }, body: JSON.stringify(body) });
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+  const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
   const result = await response.json();
   if (!response.ok) throw new BackendError(result?.error?.message ?? "The server rejected the request.", response.status, result?.error?.code);
   return result as T;

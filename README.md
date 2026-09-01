@@ -320,27 +320,31 @@ changing environment variables, redeploy so the Next.js build receives them.
 
 ### Backend
 
-Deploy `backend/` as a separate long-running Node application on the approved
-backend host. Vercel is configured here for the Next.js frontend; the Node API
-must have its own backend service/host unless you deliberately adapt the API
-to a serverless deployment model.
+Deploy `backend/` as a separate Vercel project. Its `api/index.ts` entry point
+adapts the Node API to the explicitly configured `@vercel/node` Function;
+`src/server.ts` remains the local long-running server and must not be selected
+as the deployed function.
 
 Use:
 
 ```text
 Root Directory: backend
-Build command: npm run build
-Start command: npm run start
+Framework preset: Other
+Build command: leave empty
+Output directory: leave empty
 ```
 
-Add the private variables from `backend/.env.example`. After deployment, verify `https://YOUR_BACKEND_DOMAIN/health`, then set the frontend `NEXT_PUBLIC_BACKEND_URL` to that URL and redeploy the frontend.
+Do not set a Start command. Add the private variables from
+`backend/.env.example`. After deployment, verify both
+`https://YOUR_BACKEND_DOMAIN/` and `https://YOUR_BACKEND_DOMAIN/health`, then
+set the frontend `NEXT_PUBLIC_BACKEND_URL` to that URL and redeploy the
+frontend.
 
 For production backend variables, use:
 
 ```env
 NODE_ENV=production
 FRONTEND_ORIGIN=https://YOUR_FRONTEND_DOMAIN
-PORT=8787
 ```
 
 Then add the production Supabase and SMTP secrets through the backend host's

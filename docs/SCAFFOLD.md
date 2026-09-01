@@ -23,7 +23,7 @@ frontend/               The PWA (Next.js 16 App Router, React 19, Tailwind v4, D
     lib/                Cross-feature infra only: db.ts (Dexie), supabase.ts, format.ts, whatsapp.ts, local-tenant.ts, sync.
     styles/tokens.css   Design tokens (see "Design system" below).
     types/              Shared types crossing the client/server boundary (Sale, StockMovement, sync payloads, roles).
-backend/                The Node API (Fastify) — email verification, Brevo mailer, worker auth, admin endpoints. Deployed to Vercel as stockpadi-fpuo; root = dist/src/server.js.
+backend/                The Node API — email verification, Brevo mailer, worker auth, admin endpoints. Deployed to Vercel as stockpadi-fpuo through api/index.ts; src/server.ts is local-only.
   src/
     modules/            auth, workers, businesses (routes + services).
     shared/email/       Mailer + email templates — KEEP IN SYNC with supabase/functions/_shared/.

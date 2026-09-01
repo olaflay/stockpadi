@@ -17,7 +17,8 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
   }
   validateRegistration(request);
   const created = await db.auth.admin.createUser({ email: request.email!, password: request.password!, email_confirm: true, user_metadata: { full_name: request.fullName, business_name: request.businessName, business_type_id: request.businessTypeId, account_type: "BUSINESS_OWNER" } });
-  if (created.error || !created.data.user) throw new HttpError(409, "CREATE_FAILED", created.error?.message ?? "Could not create business account");
+  if (created.error) throw registrationCreationError(created.error);
+  if (!created.data.user) throw new HttpError(502, "AUTH_CREATE_FAILED", "The authentication service did not create the account");
   const result = await provision(db, created.data.user.id, request.fullName!, request.businessName!, request.businessTypeId!);
   if (result.error) {
     const cleanup = await db.auth.admin.deleteUser(created.data.user.id);
@@ -25,6 +26,22 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
   }
   return { userId: created.data.user.id, businessId: await findBusinessId(db, created.data.user.id) };
+}
+
+export function registrationCreationError(error: { code?: string; message: string }) {
+  if (error.code === "email_exists" || error.code === "user_already_exists") {
+    return new HttpError(409, "EMAIL_ALREADY_REGISTERED", "An account with this email already exists. Sign in instead.");
+  }
+  if (error.code === "weak_password" || error.code === "validation_failed") {
+    return new HttpError(400, "AUTH_VALIDATION_FAILED", "Check the email and use a stronger password, then try again.");
+  }
+  if (error.code === "email_provider_disabled") {
+    return new HttpError(503, "EMAIL_SIGNUP_DISABLED", "Email signup is disabled in the authentication service.");
+  }
+  if (error.code === "unexpected_failure") {
+    return new HttpError(502, "AUTH_DATABASE_ERROR", "The authentication database rejected account creation. Ask the project owner to apply pending migrations and inspect Supabase Auth logs.");
+  }
+  return new HttpError(502, "AUTH_CREATE_FAILED", "The authentication service could not create the account");
 }
 
 async function findBusinessId(db: ReturnType<typeof supabaseAdmin>, userId: string): Promise<string | undefined> {

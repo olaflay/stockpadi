@@ -57,21 +57,28 @@ through the normal frontend `/login` page; the Admin is routed to `/admin`.
 The script intentionally refuses to create a second Admin when one already
 exists. Never run it with a real password in a shared terminal recording.
 
-## Deploy separately
+## Deploy separately on Vercel
 
-Deploy this directory as a Node service with:
+Create a separate Vercel project for this API with:
 
 ```text
 Root Directory: backend
 Install command: npm install
-Build command: npm run build
-Start command: npm run start
-Health check: /health
+Framework preset: Other
+Build command: leave empty
+Output directory: leave empty
 ```
 
-Set `NODE_ENV=production`, set `FRONTEND_ORIGIN` to the exact deployed
-frontend URL, and set the frontend `NEXT_PUBLIC_BACKEND_URL` to the resulting
-HTTPS API URL.
+The `api/index.ts` Vercel Function handles all routes through `vercel.json`,
+which explicitly selects the `@vercel/node` runtime.
+Do not configure `dist/src/server.js` as the function entry point and do not
+set a Start command; `src/server.ts` is only the long-running local entry point.
+
+Set `NODE_ENV=production`, set `FRONTEND_ORIGIN` (or `FRONTEND_ORIGINS`) to the
+exact deployed frontend URL, and add the Supabase and SMTP secrets from
+`.env.example` in the Vercel project settings. Then verify both `/` and
+`/health`, set the frontend `NEXT_PUBLIC_BACKEND_URL` to the resulting HTTPS
+API URL, and redeploy the frontend.
 
 ## Database boundary
 
