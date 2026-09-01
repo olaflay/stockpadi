@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { restorePublicUrl } from "../api/index.js";
+import vercelHandler, { publicPathFor } from "../api/index.js";
 
 describe("Vercel backend adapter", () => {
   it.each([
     ["/api?__path=health", "/health"],
-    ["/api?__path=api%2Freports%2Fsummary&from=2026-09-01", "/api/reports/summary?from=2026-09-01"],
+    ["/api?__path=api%2Freports%2Fsummary&from=2026-09-01", "/api/reports/summary"],
     ["/api?__path=", "/"],
-  ])("restores the public URL from %s", (rewrittenUrl, publicUrl) => {
-    const request = { headers: { host: "backend.example.com" }, url: rewrittenUrl };
+  ])("restores the public path from %s", (rewrittenUrl, publicUrl) => {
+    const request = new Request(`https://backend.example.com${rewrittenUrl}`);
 
-    restorePublicUrl(request);
+    expect(publicPathFor(request)).toBe(publicUrl);
+  });
 
-    expect(request.url).toBe(publicUrl);
+  it("serves health through the deployed Web handler", async () => {
+    const response = await vercelHandler.fetch(new Request("https://backend.example.com/api?__path=health"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok", service: "stockpadi-backend" });
   });
 });

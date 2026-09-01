@@ -29,11 +29,10 @@ import { logger } from "./shared/logging/logger.js";
 import { passwordRoutes } from "./modules/auth/password.routes.js";
 import { handlePasswordUpdate } from "./modules/auth/password.controller.js";
 
-async function readBody(request: import("node:http").IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  if (!chunks.length) return {};
-  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+async function readBody(request: Request): Promise<unknown> {
+  const text = await request.text();
+  if (!text) return {};
+  try { return JSON.parse(text); }
   catch { throw new HttpError(400, "INVALID_BODY", "Request body must be valid JSON"); }
 }
 
@@ -42,89 +41,93 @@ function allowedOrigins(): Set<string> {
   return new Set(configured.split(",").map((origin) => origin.trim().replace(/\/$/, "")).filter(Boolean));
 }
 
-function send(response: import("node:http").ServerResponse, status: number, body: unknown, requestOrigin?: string) {
+function jsonResponse(status: number, body: unknown, requestOrigin?: string) {
   const origin = requestOrigin?.replace(/\/$/, "");
-  const headers: Record<string, string> = {
+  const headers = new Headers({
     "content-type": "application/json",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     vary: "Origin",
-  };
-  if (origin && allowedOrigins().has(origin)) {
-    headers["access-control-allow-origin"] = origin;
-    headers["access-control-allow-credentials"] = "true";
-  }
-  response.writeHead(status, {
-    ...headers,
   });
-  response.end(JSON.stringify(body));
+  if (origin && allowedOrigins().has(origin)) {
+    headers.set("access-control-allow-origin", origin);
+    headers.set("access-control-allow-credentials", "true");
+  }
+  return new Response(status === 204 ? null : JSON.stringify(body), { status, headers });
 }
 
-function requestFor(incoming: import("node:http").IncomingMessage, body?: unknown) {
-  return new Request(`http://${incoming.headers.host ?? "localhost"}${incoming.url ?? "/"}`, { method: incoming.method, headers: incoming.headers as HeadersInit, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+export async function handleRequest(request: Request, pathnameOverride?: string): Promise<Response> {
+  const startedAt = Date.now();
+  const pathname = pathnameOverride ?? new URL(request.url).pathname;
+  const requestOrigin = request.headers.get("origin") ?? undefined;
+  logger.info("request started", { method: request.method, path: pathname });
+
+  try {
+    if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
+    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: "stockpadi-backend" }, requestOrigin);
+    if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
+    if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
+    if (request.method === "GET" && pathname === inventoryRoutes.stock) return jsonResponse(200, await handleInventoryList(request), requestOrigin);
+    if (request.method === "GET" && pathname === salesRoutes.list) return jsonResponse(200, await handleSalesList(request), requestOrigin);
+    if (request.method === "GET" && pathname === expenseRoutes.list) return jsonResponse(200, await handleExpenseList(request), requestOrigin);
+    if (request.method === "GET" && pathname === branchRoutes.list) return jsonResponse(200, await handleBranchList(request), requestOrigin);
+    if (request.method === "GET" && pathname === purchaseRoutes.list) return jsonResponse(200, await handlePurchaseList(request), requestOrigin);
+    if (request.method === "GET" && pathname === reportRoutes.summary) return jsonResponse(200, await handleReportSummaryGet(request), requestOrigin);
+    if (request.method === "GET" && pathname === reconciliationRoutes.summary) return jsonResponse(200, await handleCloseDaySummaryGet(request), requestOrigin);
+    if (request.method === "GET" && pathname === reconciliationRoutes.history) return jsonResponse(200, await handleReconciliationHistory(request), requestOrigin);
+    if (request.method === "GET" && pathname.startsWith(customerRoutes.detailPrefix) && pathname !== customerRoutes.list) return jsonResponse(200, await handleCustomerDetail(request, pathname.slice(customerRoutes.detailPrefix.length)), requestOrigin);
+    if (request.method === "GET" && pathname === workerRoutes.audit.path) return jsonResponse(200, await handleWorkerAudit(request), requestOrigin);
+    if (request.method === "GET" && pathname.startsWith("/api/workers/") && pathname !== workerRoutes.audit.path) return jsonResponse(200, await handleWorkerMember(request, pathname.split("/").pop()!), requestOrigin);
+    if (request.method !== "POST" && request.method !== "GET") return jsonResponse(404, { error: { code: "NOT_FOUND", message: "Route not found" } }, requestOrigin);
+
+    const body = await readBody(request);
+    if (pathname === emailVerificationRoutes.send) return jsonResponse(200, await handleSendVerification(request), requestOrigin);
+    if (pathname === emailVerificationRoutes.verify) return jsonResponse(200, await handleVerifyEmail(request, body), requestOrigin);
+    if (pathname === passwordRoutes.update) return jsonResponse(200, await handlePasswordUpdate(request, body), requestOrigin);
+    if (pathname === workerRoutes.create.path) return jsonResponse(200, await handleWorkerRequest(request, body), requestOrigin);
+    if (pathname === adminRoutes.path) return jsonResponse(200, await handleAdminRequest(request, body), requestOrigin);
+    if (pathname === salesRoutes.path) return jsonResponse(200, await handleVoidSale(request, body), requestOrigin);
+    if (pathname === accountRoutes.path) return jsonResponse(200, await handleAccountContext(request), requestOrigin);
+    if (pathname === businessRoutes.path) return jsonResponse(200, await handleBusinessRegistration(request, body), requestOrigin);
+    if (pathname === branchRoutes.create) return jsonResponse(200, await handleBranchCreate(request, body), requestOrigin);
+    if (request.method === "GET" && pathname === customerRoutes.list) return jsonResponse(200, await handleCustomerList(request), requestOrigin);
+    if (pathname === customerRoutes.create) return jsonResponse(200, await handleCustomerRequest(request, body), requestOrigin);
+    if (pathname === customerRoutes.creditPayment) return jsonResponse(200, await handleCreditPaymentRequest(request, body), requestOrigin);
+    if (pathname === purchaseRoutes.receive) return jsonResponse(200, await handlePurchase(request, body), requestOrigin);
+    if (pathname === expenseRoutes.create) return jsonResponse(200, await handleExpense(request, body), requestOrigin);
+    if (pathname === inventoryRoutes.product) return jsonResponse(200, await handleProduct(request, body), requestOrigin);
+    if (pathname === inventoryRoutes.stockAdjustment) return jsonResponse(200, await handleStockAdjustment(request, body), requestOrigin);
+    if (pathname === inventoryRoutes.stockCount) return jsonResponse(200, await handleStockCount(request, body), requestOrigin);
+    if (pathname === reportRoutes.summary) return jsonResponse(200, await handleReportSummary(request, body), requestOrigin);
+    if (pathname === reconciliationRoutes.summary) return jsonResponse(200, await handleCloseDaySummary(request, body), requestOrigin);
+    if (pathname === reconciliationRoutes.submit) return jsonResponse(200, await handleReconciliationSubmit(request, body), requestOrigin);
+    return jsonResponse(404, { error: { code: "NOT_FOUND", message: "Route not found" } }, requestOrigin);
+  } catch (cause) {
+    if (cause instanceof HttpError) {
+      logger.warn("request rejected", { method: request.method, path: pathname, status: cause.status, code: cause.code, durationMs: Date.now() - startedAt });
+      return jsonResponse(cause.status, { error: { code: cause.code, message: cause.message } }, requestOrigin);
+    }
+    logger.error("unhandled backend request error", { method: request.method, path: pathname, status: 500, durationMs: Date.now() - startedAt }, cause);
+    return jsonResponse(500, { error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, requestOrigin);
+  }
+}
+
+async function nodeRequest(incoming: import("node:http").IncomingMessage) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of incoming) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  const body = chunks.length ? Buffer.concat(chunks).toString("utf8") : undefined;
+  return new Request(`http://${incoming.headers.host ?? "localhost"}${incoming.url ?? "/"}`, {
+    method: incoming.method,
+    headers: incoming.headers as HeadersInit,
+    ...(body === undefined ? {} : { body }),
+  });
 }
 
 export function createApp() {
   return async (incoming: import("node:http").IncomingMessage, response: import("node:http").ServerResponse) => {
-    const startedAt = Date.now();
-    const requestPath = incoming.url ?? "/";
-    const pathname = new URL(requestPath, `http://${incoming.headers.host ?? "localhost"}`).pathname;
-    const requestOrigin = typeof incoming.headers.origin === "string" ? incoming.headers.origin : undefined;
-    const normalizedOrigin = requestOrigin?.replace(/\/$/, "");
-    if (normalizedOrigin && allowedOrigins().has(normalizedOrigin)) {
-      response.setHeader("access-control-allow-origin", normalizedOrigin);
-      response.setHeader("access-control-allow-credentials", "true");
-    }
-    response.setHeader("access-control-allow-headers", "authorization, content-type");
-    response.setHeader("access-control-allow-methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    response.setHeader("vary", "Origin");
-    logger.info("request started", { method: incoming.method, path: requestPath });
-    try {
-      if (incoming.method === "OPTIONS") return send(response, 204, null, requestOrigin);
-      if (incoming.method === "GET" && (pathname === "/" || pathname === "/health")) return send(response, 200, { status: "ok", service: "stockpadi-backend" }, requestOrigin);
-      if (incoming.method === "GET" && pathname === workerRoutes.list.path) return send(response, 200, await handleWorkerList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === inventoryRoutes.product) return send(response, 200, await handleProductList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === inventoryRoutes.stock) return send(response, 200, await handleInventoryList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === salesRoutes.list) return send(response, 200, await handleSalesList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === expenseRoutes.list) return send(response, 200, await handleExpenseList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === branchRoutes.list) return send(response, 200, await handleBranchList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === purchaseRoutes.list) return send(response, 200, await handlePurchaseList(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === reportRoutes.summary) return send(response, 200, await handleReportSummaryGet(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === reconciliationRoutes.summary) return send(response, 200, await handleCloseDaySummaryGet(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname === reconciliationRoutes.history) return send(response, 200, await handleReconciliationHistory(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname.startsWith(customerRoutes.detailPrefix) && pathname !== customerRoutes.list) return send(response, 200, await handleCustomerDetail(requestFor(incoming), pathname.slice(customerRoutes.detailPrefix.length)));
-      if (incoming.method === "GET" && pathname === workerRoutes.audit.path) return send(response, 200, await handleWorkerAudit(requestFor(incoming)));
-      if (incoming.method === "GET" && pathname.startsWith("/api/workers/") && pathname !== workerRoutes.audit.path) return send(response, 200, await handleWorkerMember(requestFor(incoming), pathname.split("/").pop()!));
-      if (incoming.method !== "POST" && incoming.method !== "GET") return send(response, 404, { error: { code: "NOT_FOUND", message: "Route not found" } });
-      const body = await readBody(incoming);
-      if (pathname === emailVerificationRoutes.send) return send(response, 200, await handleSendVerification(requestFor(incoming)));
-      if (pathname === emailVerificationRoutes.verify) return send(response, 200, await handleVerifyEmail(requestFor(incoming, body), body));
-      if (pathname === passwordRoutes.update) return send(response, 200, await handlePasswordUpdate(requestFor(incoming, body), body));
-      if (pathname === workerRoutes.create.path) return send(response, 200, await handleWorkerRequest(requestFor(incoming, body), body));
-      if (pathname === adminRoutes.path) return send(response, 200, await handleAdminRequest(requestFor(incoming, body), body));
-      if (pathname === salesRoutes.path) return send(response, 200, await handleVoidSale(requestFor(incoming, body), body));
-      if (pathname === accountRoutes.path) return send(response, 200, await handleAccountContext(requestFor(incoming)));
-      if (pathname === businessRoutes.path) return send(response, 200, await handleBusinessRegistration(requestFor(incoming, body), body));
-      if (pathname === branchRoutes.create) return send(response, 200, await handleBranchCreate(requestFor(incoming, body), body));
-      if (incoming.method === "GET" && pathname === customerRoutes.list) return send(response, 200, await handleCustomerList(requestFor(incoming)));
-      if (pathname === customerRoutes.create) return send(response, 200, await handleCustomerRequest(requestFor(incoming, body), body));
-      if (pathname === customerRoutes.creditPayment) return send(response, 200, await handleCreditPaymentRequest(requestFor(incoming, body), body));
-      if (pathname === purchaseRoutes.receive) return send(response, 200, await handlePurchase(requestFor(incoming, body), body));
-      if (pathname === expenseRoutes.create) return send(response, 200, await handleExpense(requestFor(incoming, body), body));
-      if (pathname === inventoryRoutes.product) return send(response, 200, await handleProduct(requestFor(incoming, body), body));
-      if (pathname === inventoryRoutes.stockAdjustment) return send(response, 200, await handleStockAdjustment(requestFor(incoming, body), body));
-      if (pathname === inventoryRoutes.stockCount) return send(response, 200, await handleStockCount(requestFor(incoming, body), body));
-      if (pathname === reportRoutes.summary) return send(response, 200, await handleReportSummary(requestFor(incoming, body), body));
-      if (pathname === reconciliationRoutes.summary) return send(response, 200, await handleCloseDaySummary(requestFor(incoming, body), body));
-      if (pathname === reconciliationRoutes.submit) return send(response, 200, await handleReconciliationSubmit(requestFor(incoming, body), body));
-      return send(response, 404, { error: { code: "NOT_FOUND", message: "Route not found" } });
-    } catch (cause) {
-      if (cause instanceof HttpError) {
-        logger.warn("request rejected", { method: incoming.method, path: requestPath, status: cause.status, code: cause.code, durationMs: Date.now() - startedAt });
-        return send(response, cause.status, { error: { code: cause.code, message: cause.message } });
-      }
-      logger.error("unhandled backend request error", { method: incoming.method, path: requestPath, status: 500, durationMs: Date.now() - startedAt }, cause);
-      return send(response, 500, { error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
-    }
+    const result = await handleRequest(await nodeRequest(incoming));
+    result.headers.forEach((value, key) => response.setHeader(key, value));
+    response.writeHead(result.status);
+    response.end(Buffer.from(await result.arrayBuffer()));
   };
 }
