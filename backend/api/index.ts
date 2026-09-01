@@ -1,29 +1,34 @@
-export function publicPathFor(request: Request) {
-  const url = new URL(request.url);
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export function restorePublicUrl(request: Pick<IncomingMessage, "headers" | "url">) {
+  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   const rewrittenPath = url.searchParams.get("__path");
-  return rewrittenPath === null ? url.pathname : `/${rewrittenPath}`;
+  if (rewrittenPath === null) return url.pathname;
+
+  url.searchParams.delete("__path");
+  const search = url.searchParams.toString();
+  const pathname = `/${rewrittenPath}`;
+  request.url = `${pathname}${search ? `?${search}` : ""}`;
+  return pathname;
 }
 
-/** Vercel Web Handler. The rewrite keeps the original route in __path. */
-export default {
-  async fetch(request: Request) {
-    const pathname = publicPathFor(request);
+/** Vercel Node handler. Health stays independent of the application bundle. */
+export default async function handler(request: IncomingMessage, response: ServerResponse) {
+  const pathname = restorePublicUrl(request);
 
-    // Keep liveness independent of Supabase, SMTP, and the application bundle.
-    // A missing secret or dependency must not crash the process health check.
-    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) {
-      return Response.json({ status: "ok", service: "stockpadi-backend" });
-    }
+  if (request.method === "GET" && (pathname === "/" || pathname === "/health")) {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ status: "ok", service: "stockpadi-backend" }));
+    return;
+  }
 
-    try {
-      const { handleRequest } = await import("../src/app.js");
-      return await handleRequest(request, pathname);
-    } catch (cause) {
-      console.error("backend function bootstrap failed", cause);
-      return Response.json(
-        { error: { code: "FUNCTION_BOOT_FAILED", message: "Backend function could not start" } },
-        { status: 500 },
-      );
-    }
-  },
-};
+  try {
+    const { createApp } = await import("../src/app.js");
+    await createApp()(request, response);
+  } catch (cause) {
+    console.error("backend function bootstrap failed", cause);
+    if (response.headersSent) return response.end();
+    response.writeHead(500, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: { code: "FUNCTION_BOOT_FAILED", message: "Backend function could not start" } }));
+  }
+}
