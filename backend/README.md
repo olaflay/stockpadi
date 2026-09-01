@@ -69,7 +69,8 @@ Build command: leave empty
 Output directory: leave empty
 ```
 
-The `api/index.ts` Vercel Function handles all routes through `vercel.json`.
+The `api/index.ts` Vercel Function handles all routes through `vercel.json`,
+which explicitly selects the `@vercel/node` runtime.
 Do not configure `dist/src/server.js` as the function entry point and do not
 set a Start command; `src/server.ts` is only the long-running local entry point.
 
