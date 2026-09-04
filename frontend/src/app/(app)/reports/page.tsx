@@ -39,7 +39,7 @@ export default function ReportsPage() {
     );
   }
 
-  if (result === undefined) {
+  if (result == null) {
     return (
       <div>
         <ScreenHeader title="Reports" hideBack={true} />

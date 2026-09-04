@@ -5,6 +5,8 @@
 > **Audience:** Product Engineering, Founder/Executive Leadership (Olaflay)  
 > **Author:** Antigravity Engineering Architecture  
 
+> **Implementation status (2026-09-04):** All Phase 1–3 features and Section 9 micro-details (9.1–9.8) are implemented in `frontend/`. See the per-feature ✓ marks under each section and the Phase Roadmap in §5. Phase 9.9 QA gate and end-to-end verification still open.
+
 ---
 
 ## 1. Executive Summary & Industry Titan Research: Building a Future-Proof Retail OS
@@ -359,7 +361,7 @@ graph TD
     H[WhatsApp Modal & Debt Link] -->|Affects| H1[Customer Ledger Balance Query]
 ```
 
-### 3.1 Reports SWR & Indexing Optimization
+### 3.1 Reports SWR & Indexing Optimization — ✅ Implemented (`use-reports-data.ts` local-first SWR)
 - **Affected Subsystems**: [`use-reports-data.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/reports/use-reports-data.ts), [`compute-profit.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/reports/compute-profit.ts), [`ReportsBody.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/reports/components/ReportsBody.tsx), branch filters, and date picker navigation.
 - **Potential Risk**: Discrepancy between local data (which might contain offline pending sales) and remote server data if the server summary returns a different set of aggregated figures.
 - **Safeguard**: 
@@ -367,7 +369,7 @@ graph TD
   2. If local outbox has pending sales within the period, the UI displays a subtle informative badge: *"Includes [N] sales waiting to backup"*.
   3. When remote fetch completes, it reconciles idempotently without replacing or wiping offline transactions.
 
-### 3.2 Dashboard Micro-Pills, Compact Layout & Numeric Scaling
+### 3.2 Dashboard Micro-Pills, Compact Layout & Numeric Scaling — ✅ Implemented (`dashboard/page.tsx` compact cards, `PerformancePill` `compact` prop)
 - **Affected Subsystems**: [`dashboard/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/dashboard/page.tsx), [`PerformancePill.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/components/ui/PerformancePill.tsx), authorization checks (`canSeeMoney`).
 - **Potential Risk**: Large figures (e.g. `₦15,800,000.00`) breaking out of card containers on narrow screens (e.g. Tecno Spark / 360px viewports); unauthorized staff seeing revenue.
 - **Safeguard**:
@@ -375,7 +377,7 @@ graph TD
   2. **Responsive Typography**: Font sizes use `text-lg sm:text-xl font-bold font-number tracking-tight truncate` with `title={formatCurrency(amount)}` tooltips, ensuring numbers never overflow card containers.
   3. **Backward Compatible Pills**: `PerformancePill` accepts an optional `compact?: boolean` prop so existing screens outside the dashboard are not abruptly altered.
 
-### 3.3 Sync Engine Outbox Trigger & Manual "Sync Now" Control
+### 3.3 Sync Engine Outbox Trigger & Manual "Sync Now" Control — ✅ Implemented (`drain-outbox.ts` stale recovery, `enqueue-outbox-write.ts` debounced trigger, `SyncIndicator.tsx` force-sync button)
 - **Affected Subsystems**: [`drain-outbox.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/sync/drain-outbox.ts), [`SyncEngine.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/sync/SyncEngine.tsx), Service Worker (`src/app/sw.ts`), Dexie `db.outbox`.
 - **Potential Risk**: Race conditions if the user taps "Sync Now" while an automatic background drain is already executing; high battery or data consumption on poor 3G connections if polling too aggressively.
 - **Safeguard**:
@@ -383,7 +385,7 @@ graph TD
   2. **Debounced Trigger**: Outbox writes trigger `drainOutbox()` debounced by 1,000ms. If multiple writes occur rapidly (e.g. rapid sales or bulk updates), only one network sync batch is dispatched.
   3. **Auto-Recovery Timeout**: Any outbox row stuck in `"syncing"` status for over 30 seconds is automatically reverted to `"pending"`, preventing permanent lockout.
 
-### 3.4 Price Input Field UX (No Pre-Filled Zeroes)
+### 3.4 Price Input Field UX (No Pre-Filled Zeroes) — ✅ Implemented (`product-schema.ts` empty defaults, `ProductFormFields.tsx` ₦0.00 placeholders)
 - **Affected Subsystems**: [`product-schema.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/inventory/product-schema.ts), [`ProductFormFields.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/inventory/components/ProductFormFields.tsx), [`NewProductForm.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/inventory/components/NewProductForm.tsx), [`EditProductForm.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/inventory/components/EditProductForm.tsx), CSV import (`csv-import.ts`), Bulk stock update (`use-update-stock.ts`).
 - **Potential Risk**: An empty string `""` submitted to Zod causing validation failures or `NaN` when parsing numeric fields.
 - **Safeguard**:
@@ -391,7 +393,7 @@ graph TD
   2. When submitting, empty strings are validated with clear error messages rather than causing crashes.
   3. Edit Product forms continue to pre-fill existing prices while New Product forms display the clean `placeholder="₦0.00"` without pre-populating a `0` digit.
 
-### 3.5 Product Catalog Deletion: Kebab Menus & Multi-Select Batch Delete
+### 3.5 Product Catalog Deletion: Kebab Menus & Multi-Select Batch Delete — ✅ Implemented (`products/page.tsx` delete mode, `product.ts` `archived` field, POS archive filter)
 - **Affected Subsystems**: [`products/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/products/page.tsx), [`db.products`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/lib/db.ts), historical sales reports, stock movements.
 - **Potential Risk**: Deleting a product that is referenced in historical sales could orphan references or crash reports; cashiers accidentally deleting products.
 - **Safeguard**:
@@ -399,7 +401,7 @@ graph TD
   2. **Frozen Historical Snapshots**: Per StockPadi's core design rules, every `SaleItem` in `db.sales` stores an immutable snapshot of `productId`, `name`, `unitPrice`, and `unitLabel`. Deleting a product from the active catalog never alters past receipts or historical revenue reports.
   3. **Destructive Confirmation Modals**: Every single deletion (individual or batch) requires explicit confirmation stating the exact count of products to be removed.
 
-### 3.6 Typo-Tolerant Fuzzy Product Search
+### 3.6 Typo-Tolerant Fuzzy Product Search — ✅ Implemented (`lib/fuzzy-search.ts` Levenshtein + substring two-tier search)
 - **Affected Subsystems**: [`BrowseStep.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/pos/components/BrowseStep.tsx), [`products/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/products/page.tsx), barcode scanning (`BarcodeScanner.tsx`).
 - **Potential Risk**: Hardware barcode scanners typing numeric strings might match irrelevant products if fuzzy search is too aggressive; search latency on large catalogs (5,000+ products).
 - **Safeguard**:
@@ -409,14 +411,14 @@ graph TD
      - *Tier 2 (Fuzzy Suggestion)*: Only triggered if exact matches are below threshold. Max Levenshtein edit distance is strictly capped at `2` for words > 4 characters.
   3. **Zero Network Overhead**: Runs entirely in local JavaScript memory, evaluated in <4ms over 2,000 items.
 
-### 3.7 Nigerian Standard Thermal Receipt Printing (58mm / 80mm)
+### 3.7 Nigerian Standard Thermal Receipt Printing (58mm / 80mm) — ✅ Implemented (`components/pos/ThermalReceipt.tsx` with tear-off margins, print window)
 - **Affected Subsystems**: [`sales/[id]/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/sales/[id]/page.tsx), [`customers/[id]/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/customers/[id]/page.tsx), global CSS stylesheets.
 - **Potential Risk**: Thermal print CSS conflicting with desktop A4 office printing.
 - **Safeguard**:
   1. CSS print stylesheet isolates `#printable-thermal-receipt` with `body * { visibility: hidden; }` and `#printable-thermal-receipt, #printable-thermal-receipt * { visibility: visible; }`.
   2. The layout is fluid: works natively on 58mm roll paper, 80mm roll paper, and centers neatly if printed on standard A4 desktop printers.
 
-### 3.8 WhatsApp Receipt Sharing Modal & Customer Debt Linking
+### 3.8 WhatsApp Receipt Sharing Modal & Customer Debt Linking — ✅ Implemented (`components/pos/WhatsAppReceiptModal.tsx`, sales detail page wired up)
 - **Affected Subsystems**: [`sales/[id]/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/sales/[id]/page.tsx), [`customers/credit.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/customers/credit.ts), [`whatsapp.ts`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/lib/whatsapp.ts).
 - **Potential Risk**: Malformed phone numbers leading to broken `wa.me` links; privacy leaks of customer debt to wrong recipients.
 - **Safeguard**:
@@ -424,7 +426,7 @@ graph TD
   2. The modal displays a live, readable preview before sending, allowing the cashier to verify the phone and message content.
   3. Debt reminders are included conditionally via a clearly designated toggle (*"Include outstanding balance of ₦X,XXX"*), giving the cashier full control.
 
-### 3.9 Interactive Net Flow & Profit Drill-Down Views
+### 3.9 Interactive Net Flow & Profit Drill-Down Views — ✅ Implemented (`ReportsBody.tsx` expandable profit/cashflow cards with COGS/expense/revenue breakdown)
 - **Affected Subsystems**: [`ReportsBody.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/reports/components/ReportsBody.tsx), [`dashboard/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/dashboard/page.tsx).
 - **Potential Risk**: Confusion between "Net Cash Drawer Flow" (actual cash in register) vs. "Estimated Net Profit" (sales revenue minus product cost and expenses).
 - **Safeguard**:
@@ -471,18 +473,20 @@ gantt
     title StockPadi Phased Execution Roadmap
     dateFormat  YYYY-MM-DD
     section Phase 1: Core Performance & Form Polish
-    Reports SWR & Index Optimization        :p1_1, 2026-09-05, 2d
-    Price Input Placeholder Fix (No Zero)   :p1_2, after p1_1, 1d
-    Dashboard Compact Cards & Responsive Font :p1_3, after p1_1, 2d
+    Reports SWR & Index Optimization        :done, p1_1, 2026-09-05, 2d
+    Price Input Placeholder Fix (No Zero)   :done, p1_2, after p1_1, 1d
+    Dashboard Compact Cards & Responsive Font :done, p1_3, after p1_1, 2d
     section Phase 2: Sync Engine & Catalog Safety
-    Sync Engine Outbox Trigger & Manual CTA :p2_1, after p1_3, 2d
-    Product Kebab & Batch Deletion Mode     :p2_2, after p2_1, 3d
-    Typo-Tolerant Fuzzy Search (POS & List) :p2_3, after p2_2, 2d
+    Sync Engine Outbox Trigger & Manual CTA :done, p2_1, after p1_3, 2d
+    Product Kebab & Batch Deletion Mode     :done, p2_2, after p2_1, 3d
+    Typo-Tolerant Fuzzy Search (POS & List) :done, p2_3, after p2_2, 2d
     section Phase 3: Receipts, Communication & Drill-Downs
-    Nigerian Thermal Receipt Print CSS      :p3_1, after p2_3, 2d
-    WhatsApp Receipt Modal & Debt Linking   :p3_2, after p3_1, 2d
-    Net Flow & Profit Drill-Down Views      :p3_3, after p3_2, 2d
+    Nigerian Thermal Receipt Print CSS      :done, p3_1, after p2_3, 2d
+    WhatsApp Receipt Modal & Debt Linking   :done, p3_2, after p3_1, 2d
+    Net Flow & Profit Drill-Down Views      :done, p3_3, after p3_2, 2d
 ```
+
+**Phase completion status (updated):** All Phase 1, 2 and 3 items are implemented. Section 9 micro-details: 9.1–9.8 implemented (9.9 verification gate pending full QA).
 
 ---
 
@@ -517,7 +521,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.1 Feature 1: Reports Page Zero-Latency SWR Engine
+### 7.1 Feature 1: Reports Page Zero-Latency SWR Engine — ✅
 
 #### Specialist Consensus
 - **Principal Frontend Architect**: "Never await `serverGet` on mount. Mount must return the local Dexie live query immediately. The remote fetch belongs in a non-blocking `useEffect` that dispatches a background delta merge."
@@ -557,7 +561,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.2 Feature 2: Compact Dashboard Cards & Micro-Pills
+### 7.2 Feature 2: Compact Dashboard Cards & Micro-Pills — ✅
 
 #### Specialist Consensus
 - **Lead UX Designer**: "On a 360px mobile screen (e.g. Tecno Spark), `p-6` consumes 48px of width just in padding. Shrink to `p-3.5 sm:p-4`. Replace text badges ('Optimal', 'Restock') with icon-and-count micro-pills (`[⚠ 3]`)."
@@ -584,7 +588,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.3 Feature 3: Self-Healing Sync Engine & Manual "Sync Now" Control
+### 7.3 Feature 3: Self-Healing Sync Engine & Manual "Sync Now" Control — ✅
 
 #### Specialist Consensus
 - **Distributed Systems Engineer**: "The persistent 'Syncing' indicator is caused by outbox items parked in `syncing` status when a session was killed or when an edge-function returned a 5xx. We need an automated expiry that returns rows older than 30s to `pending`."
@@ -618,7 +622,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.4 Feature 4: Price Input Field UX (Zero-Free Placeholders)
+### 7.4 Feature 4: Price Input Field UX (Zero-Free Placeholders) — ✅
 
 #### Specialist Consensus
 - **Lead UX Designer**: "Having `0` pre-populated in input fields forces mobile cashiers to tap, position the cursor, and press backspace. It is a known mobile friction point. Inputs should default to empty string with `placeholder="₦0.00"`."
@@ -651,7 +655,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.5 Feature 5: Product Catalog Safety (Kebab Menu & Multi-Select Batch Delete)
+### 7.5 Feature 5: Product Catalog Safety (Kebab Menu & Multi-Select Batch Delete) — ✅
 
 #### Specialist Consensus
 - **Emerging Markets Retail Strategist**: "Never put an open delete button directly on a product card. Cashiers scrolling quickly will accidentally delete inventory. Require a 3-dot kebab menu or a dedicated 'Select Mode'."
@@ -678,7 +682,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.6 Feature 6: Typo-Tolerant Offline Fuzzy Search Engine
+### 7.6 Feature 6: Typo-Tolerant Offline Fuzzy Search Engine — ✅
 
 #### Specialist Consensus
 - **Principal Frontend Architect**: "A pure JavaScript Damerau-Levenshtein distance calculation over 2,000 product names takes less than 3ms on a mobile phone. There is zero need for an external server or heavy library."
@@ -724,7 +728,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.7 Feature 7: Nigerian Standard Thermal Receipt Printing (58mm/80mm)
+### 7.7 Feature 7: Nigerian Standard Thermal Receipt Printing (58mm/80mm) — ✅
 
 #### Specialist Consensus
 - **Hardware & POS Systems Engineer**: "Thermal printers use continuous paper rolls. Setting fixed page heights in CSS will cause the printer to spit out blank paper. Use `@page { size: 58mm auto; margin: 0; }` with pure monospace font."
@@ -774,7 +778,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.8 Feature 8: WhatsApp Receipt Sharing Modal & Customer Debt Linking
+### 7.8 Feature 8: WhatsApp Receipt Sharing Modal & Customer Debt Linking — ✅
 
 #### Specialist Consensus
 - **Emerging Markets Retail Strategist**: "Debt recovery on WhatsApp is the #1 retention driver in African micro-retail. The WhatsApp modal must link the customer's total outstanding debt and offer a live preview before launching `wa.me`."
@@ -818,7 +822,7 @@ To ensure implementation meets enterprise-grade standards, each feature has been
 
 ---
 
-### 7.9 Feature 9: Dual Financial Pathways: Net Cash Drawer Flow vs. Estimated Net Profit
+### 7.9 Feature 9: Dual Financial Pathways: Net Cash Drawer Flow vs. Estimated Net Profit — ✅
 
 #### Specialist Consensus
 - **Principal Frontend Architect**: "Retailers confuse cash flow with profit. Cash Flow represents physical drawer cash liquidity (Cash In minus Cash Out). Profit represents economic earnings (Revenue minus Cost of Goods Sold minus Operating Expenses)."
@@ -868,7 +872,7 @@ graph TD
 
 ---
 
-### 9.1 Critical POS Micro-Bug Fix: Cash Tendered & Change Due Calculation
+### 9.1 Critical POS Micro-Bug Fix: Cash Tendered & Change Due Calculation — ✅ Implemented (`PaymentStep.tsx` cash-tendered input, change due, insufficient-cash guard)
 
 #### The Current Hidden Flaw
 In [`PaymentStep.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/features/pos/components/PaymentStep.tsx) line 252:
@@ -906,7 +910,7 @@ When a customer buys items totaling **₦3,700** and hands the cashier a **₦5,
 
 ---
 
-### 9.2 Audio & Haptic Feedback on Add-to-Cart & Barcode Scan
+### 9.2 Audio & Haptic Feedback on Add-to-Cart & Barcode Scan — ✅ Implemented (`lib/feedback.ts` Web Audio API + navigator.vibrate)
 
 #### The Micro-Problem
 In a loud, bustling open-air market or neighborhood supermarket with ambient street noise, cashiers scanning barcodes or rapidly tapping products cannot constantly verify the screen visually to see if a product registered.
@@ -921,7 +925,7 @@ In a loud, bustling open-air market or neighborhood supermarket with ambient str
 
 ---
 
-### 9.3 Bank Transfer Audit Metadata (Preventing "Fake Alert" Fraud)
+### 9.3 Bank Transfer Audit Metadata (Preventing "Fake Alert" Fraud) — ✅ Implemented (`PaymentStep.tsx` transfer note input for bank name/reference/time)
 
 #### The Nigerian Context
 In Nigeria, over 50% of shop transactions occur via bank transfer (OPay, Moniepoint, PalmPay, Kuda, GTBank). A common fraud vector is customers showing a fake transfer screenshot or generating an unconfirmed alert.
@@ -935,7 +939,7 @@ When `Bank Transfer` is selected in `PaymentStep.tsx`:
 
 ---
 
-### 9.4 Thermal Printer Tear-Off Feed Margins (No Cut-Off Receipts)
+### 9.4 Thermal Printer Tear-Off Feed Margins (No Cut-Off Receipts) — ✅ Implemented (`ThermalReceipt.tsx` 15mm tear-off div at footer)
 
 #### The Micro-Problem
 Standard thermal POS receipt printers (Bluetooth 58mm / USB 80mm) have a physical tear bar or an automated cutter located 10mm to 15mm above the print head. If a receipt ends immediately after the last line of text, tearing off the receipt slices through the store's bank details or thank you message!
@@ -947,7 +951,7 @@ In `ThermalReceipt.tsx`:
 
 ---
 
-### 9.5 Top Banners Consolidated Strip (Recovering 250px of Screen Real Estate)
+### 9.5 Top Banners Consolidated Strip (Recovering 250px of Screen Real Estate) — ✅ Implemented (`BannerStrip.tsx` unified compact strip replacing 3 separate banners)
 
 #### The Micro-Problem
 In [`(app)/layout.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/app/(app)/layout.tsx), three independent full-width banner components are mounted sequentially:
@@ -964,7 +968,7 @@ Consolidate into a single **Smart Top Status Bar**:
 
 ---
 
-### 9.6 Zero-Search 1-Tap Product Creation Shortcut
+### 9.6 Zero-Search 1-Tap Product Creation Shortcut — ✅ Implemented (`NoResultsState.tsx` "Create [query]" button with prefill param)
 
 #### The Micro-Problem
 A customer walks up to the counter requesting an item (e.g. *"Indomie Relish 120g"*). The cashier types `"Relish"` in the POS search bar. If the item is new and returns `0 results`, the cashier currently has to:
@@ -994,7 +998,7 @@ In `BrowseStep.tsx` and `NoResultsState.tsx`:
 
 ---
 
-### 9.7 Bulletproof Naira ₦ Typography Fallbacks
+### 9.7 Bulletproof Naira ₦ Typography Fallbacks — ✅ Implemented (`tokens.css` "Noto Sans" added to font-family-number stack)
 
 #### The Micro-Problem
 On older Android devices (Android 8–10, common on low-cost second-hand Transsion phones in Nigeria), the Unicode character for Naira (`₦` / U+20A6) frequently renders as a broken rectangular "tofu" glyph (`[?]`) if the default system font lacks the currency symbol.
@@ -1010,7 +1014,7 @@ In `tokens.css` and `globals.css`:
 
 ---
 
-### 9.8 Customer Debt Aging Chips (Smart Debt Prioritization)
+### 9.8 Customer Debt Aging Chips (Smart Debt Prioritization) — ✅ Implemented (`credit.ts` `getCustomerDebtAges`/`getAgingBucket`, customer list aging chips)
 
 #### The Micro-Problem
 A neighborhood store owner looking at their "Customers Owing" list sees 15 customers with varying debts. The owner has limited time to make phone calls and needs to know: *Who bought items yesterday vs. who has been owing money for 2 months?*
@@ -1025,7 +1029,7 @@ In [`customers/page.tsx`](file:///c:/Users/ADMIN/Music/stockpadi/frontend/src/ap
 
 ---
 
-### 9.9 Verification & Quality Gate for Micro-Details
+### 9.9 Verification & Quality Gate for Micro-Details — ⏳ Pending manual QA pass
 
 Every micro-detail specified in Section 9 must satisfy:
 1. **Zero Layout Shift (CLS = 0)**: Banners and indicators must never cause the POS layout to jump vertically during checkout.
