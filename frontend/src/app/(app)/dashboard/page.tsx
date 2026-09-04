@@ -3,7 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Store, Bell, TrendingUp, TrendingDown, Activity, CheckCircle2, AlertTriangle, ChevronRight } from "lucide-react";
+import {
+  Store,
+  Bell,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronRight,
+  Wallet,
+  PackagePlus,
+  Plus,
+  CalendarCheck,
+} from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -16,18 +29,23 @@ import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
+import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
+import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
 const CAN_CLOSE_DAY = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
+const CAN_RECORD_EXPENSES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
+const CAN_RESTOCK = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 export default function DashboardPage() {
   const router = useRouter();
   const user = useCurrentUser();
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [isExpenseSheetOpen, setIsExpenseSheetOpen] = useState(false);
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
   // Revenue, cash flow, and customer debt follow the same view_sales
   // permission as /sales and /reports: inventory_staff sees none of it,
@@ -228,6 +246,99 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Quick Actions Hub — Clean, accessible 2x2 grid for high-frequency operations */}
+      {(hasAccountType(user, CAN_RECORD_EXPENSES) ||
+        hasAccountType(user, CAN_RESTOCK) ||
+        hasAccountType(user, CAN_EDIT_PRODUCTS) ||
+        hasAccountType(user, CAN_CLOSE_DAY)) && (
+        <section className="mt-5">
+          <h2 className="mb-2.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            {hasAccountType(user, CAN_RECORD_EXPENSES) && (
+              <RippleButton
+                type="button"
+                onClick={() => setIsExpenseSheetOpen(true)}
+                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+              >
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.warning}`}>
+                  <Wallet size={20} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    Record Expense
+                  </p>
+                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    Log shop payout
+                  </p>
+                </div>
+              </RippleButton>
+            )}
+
+            {hasAccountType(user, CAN_RESTOCK) && (
+              <RippleButton
+                type="button"
+                onClick={() => router.push("/purchases/new")}
+                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+              >
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.brand}`}>
+                  <PackagePlus size={20} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    Restock
+                  </p>
+                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    Receive inventory
+                  </p>
+                </div>
+              </RippleButton>
+            )}
+
+            {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
+              <RippleButton
+                type="button"
+                onClick={() => router.push("/products/new")}
+                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+              >
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.success}`}>
+                  <Plus size={20} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    Add Product
+                  </p>
+                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    New catalog item
+                  </p>
+                </div>
+              </RippleButton>
+            )}
+
+            {hasAccountType(user, CAN_CLOSE_DAY) && (
+              <RippleButton
+                type="button"
+                onClick={() => router.push("/close-day")}
+                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+              >
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.neutral}`}>
+                  <CalendarCheck size={20} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    Close Day
+                  </p>
+                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    Reconcile register
+                  </p>
+                </div>
+              </RippleButton>
+            )}
+          </div>
+        </section>
+      )}
+
       {metrics.expiringCount > 0 && (
         <button
           type="button"
@@ -238,26 +349,6 @@ export default function DashboardPage() {
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
           </span>
         </button>
-      )}
-
-      {(hasAccountType(user, CAN_CLOSE_DAY) || metrics.unsyncedCount > 0) && (
-        <div className="mt-4 flex flex-col gap-3">
-          {hasAccountType(user, CAN_CLOSE_DAY) && (
-            <RippleButton
-              type="button"
-              onClick={() => router.push("/close-day")}
-              className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
-            >
-              Close day (guided)
-            </RippleButton>
-          )}
-
-          {metrics.unsyncedCount > 0 && (
-            <div className="rounded-[var(--radius-card)] border border-warning/20 bg-warning/10 px-4 py-3 text-[length:var(--font-size-body)] text-warning">
-              {metrics.unsyncedCount} {metrics.unsyncedCount === 1 ? "change" : "changes"} waiting to sync
-            </div>
-          )}
-        </div>
       )}
 
       {metrics.topProducts && metrics.topProducts.length > 0 && (
@@ -286,6 +377,13 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {hasAccountType(user, CAN_RECORD_EXPENSES) && (
+        <AddExpenseSheet
+          isOpen={isExpenseSheetOpen}
+          onClose={() => setIsExpenseSheetOpen(false)}
+        />
       )}
     </div>
   );

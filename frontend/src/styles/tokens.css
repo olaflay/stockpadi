@@ -30,10 +30,13 @@
   --color-brand-accent-contrast: #ffffff;
   --color-brand-accent-active: var(--color-brand-accent);
 
-  /* Surface / text, light mode. Checked for WCAG AA contrast, not eyeballed. */
+  /* Surface / text, light mode. M3 5-tier Surface Container scale. Checked for WCAG AA contrast. */
   --color-surface: #ffffff;
-  --color-surface-container: #f4f5f4;
-  --color-surface-container-high: #e9ebe9;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8faf8;
+  --color-surface-container: #f2f4f2;
+  --color-surface-container-high: #eaecea;
+  --color-surface-container-highest: #e0e4e1;
   --color-on-surface: #14181a;
   --color-on-surface-muted: #565f61;
   --color-border: #d9dcda;
@@ -128,24 +131,26 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Shape: graduated by role, not applied uniformly. Focus blocks (the one
-     thing on a screen that matters) get the largest radius. */
-  --radius-inline: 0.375rem;  /* chips, badges */
-  --radius-control: 0.625rem; /* buttons, inputs */
-  --radius-card: 0.875rem;    /* standard cards */
-  --radius-focus-block: 1.5rem; /* the current-sale-total block, low-stock count */
-  --radius-full: 9999px; /* pills, avatars — the fully-rounded end of the M3 shape scale */
+  /* Shape: M3 graduated scale by role. */
+  --radius-xs: 0.25rem;       /* 4px — tiny tags */
+  --radius-inline: 0.375rem;  /* 6px — chips, badges */
+  --radius-sm: 0.5rem;        /* 8px */
+  --radius-control: 0.625rem; /* 10px — buttons, inputs */
+  --radius-md: 0.75rem;       /* 12px */
+  --radius-card: 0.875rem;    /* 14px — standard cards */
+  --radius-lg: 1rem;          /* 16px — large cards */
+  --radius-focus-block: 1.5rem; /* 24px — hero blocks, sale total */
+  --radius-sheet: 1.75rem;    /* 28px — M3 bottom sheets, dialogs (Extra Large) */
+  --radius-full: 9999px;      /* pills, avatars, active nav indicators */
 
-  /* Elevation: named scale, never a stacked box-shadow improvised per component */
+  /* Elevation: budget-Android optimized single-pass shadows (tonal surfaces handle visual depth) */
   --elevation-0: none;
-  --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.06), 0 1px 1px rgba(20, 24, 26, 0.04);
-  --elevation-2: 0 2px 8px rgba(20, 24, 26, 0.10), 0 1px 2px rgba(20, 24, 26, 0.06);
-  --elevation-3: 0 8px 24px rgba(20, 24, 26, 0.14), 0 2px 4px rgba(20, 24, 26, 0.08);
-  --elevation-4: 0 12px 32px rgba(20, 24, 26, 0.16), 0 4px 8px rgba(20, 24, 26, 0.10);
-  --elevation-5: 0 16px 40px rgba(20, 24, 26, 0.18), 0 6px 12px rgba(20, 24, 26, 0.12);
-  /* Same weight as elevation-2, flipped upward — for a sticky bottom bar
-     lifting off the content behind it (negative Y offset). */
-  --elevation-sticky-top: 0 -2px 8px rgba(20, 24, 26, 0.10), 0 -1px 2px rgba(20, 24, 26, 0.06);
+  --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.05);
+  --elevation-2: 0 2px 4px rgba(20, 24, 26, 0.08);
+  --elevation-3: 0 4px 8px rgba(20, 24, 26, 0.10);
+  --elevation-4: 0 6px 12px rgba(20, 24, 26, 0.12);
+  --elevation-5: 0 8px 16px rgba(20, 24, 26, 0.14);
+  --elevation-sticky-top: 0 -2px 4px rgba(20, 24, 26, 0.06);
 
   /* Touch target floor, non-negotiable per PRD Section 8 */
   --touch-target-min: 2.75rem; /* 44px */
@@ -159,15 +164,14 @@
   --state-opacity-disabled-container: 0.12;
   --state-opacity-disabled-content: 0.38;
 
-  /* Motion: every duration/easing here must map to a real state change
-     (toast, skeleton, offline banner, sync indicator, sheet/dialog) — see
-     the screen-state checklist in .agents/rules/design-system.md. Kept to
-     three steps, not M3's full 16-token duration scale, to stay light. */
-  --motion-duration-short: 60ms;  /* state-layer/color changes */
-  --motion-duration-medium: 120ms; /* toast, skeleton shimmer cycle */
-  --motion-duration-long: 180ms;   /* larger movement: sheet/dialog enter */
-  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
-  --easing-emphasized: cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* Motion: M3 authentic easing and duration standards */
+  --motion-duration-short: 100ms;  /* state-layer/color changes */
+  --motion-duration-medium: 200ms; /* toast, chip toggle, shimmer */
+  --motion-duration-long: 300ms;   /* sheets, dialogs, full page steps */
+  --easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -185,8 +189,11 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-surface: #121516;
-    --color-surface-container: #1b1f20;
-    --color-surface-container-high: #262b2c;
+    --color-surface-container-lowest: #0d1011;
+    --color-surface-container-low: #171b1c;
+    --color-surface-container: #1c2022;
+    --color-surface-container-high: #272c2e;
+    --color-surface-container-highest: #32383a;
     --color-on-surface: #e7ebec;
     --color-on-surface-muted: #a4adaf;
     --color-border: #33393a;
@@ -218,19 +225,22 @@
     --color-badge-alert-bg: #fca5a5;
     --color-badge-alert-fg: #7f1d1d;
 
-    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
-    --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6);
-    --elevation-4: 0 12px 32px rgba(0, 0, 0, 0.65);
-    --elevation-5: 0 16px 40px rgba(0, 0, 0, 0.7);
-    --elevation-sticky-top: 0 -2px 8px rgba(0, 0, 0, 0.5);
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
+    --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
+    --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
+    --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
+    --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
   }
 }
 
 :root[data-theme="dark"] {
   --color-surface: #121516;
-  --color-surface-container: #1b1f20;
-  --color-surface-container-high: #262b2c;
+  --color-surface-container-lowest: #0d1011;
+  --color-surface-container-low: #171b1c;
+  --color-surface-container: #1c2022;
+  --color-surface-container-high: #272c2e;
+  --color-surface-container-highest: #32383a;
   --color-on-surface: #e7ebec;
   --color-on-surface-muted: #a4adaf;
   --color-border: #33393a;
@@ -262,10 +272,10 @@
   --color-badge-alert-bg: #fca5a5;
   --color-badge-alert-fg: #7f1d1d;
 
-  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.5);
-  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --elevation-4: 0 12px 32px rgba(0, 0, 0, 0.65);
-  --elevation-5: 0 16px 40px rgba(0, 0, 0, 0.7);
-  --elevation-sticky-top: 0 -2px 8px rgba(0, 0, 0, 0.5);
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
+  --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
+  --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
+  --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
+  --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
 }

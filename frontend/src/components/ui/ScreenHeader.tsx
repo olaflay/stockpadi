@@ -49,7 +49,7 @@ export function ScreenHeader({ title, onBack, hideBack = false, action }: Screen
       </h1>
       {action && <div className="shrink-0">{action}</div>}
       <div className="shrink-0">
-        <SyncIndicator />
+        <SyncIndicator compact />
       </div>
     </div>
   );

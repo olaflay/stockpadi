@@ -26,6 +26,11 @@ No purple-to-blue gradient hero. No glassmorphism as decoration. No emoji standi
 
 Every primary screen (Dashboard, Products, POS, Reports) must explicitly handle: empty, loading (skeleton, not a spinner, for anything over 300ms), offline (a persistent, non-blocking banner, never a modal), sync-in-progress, error (plain language plus a retry action, never a raw error code), success (a brief dismissible toast, never a modal that blocks the next action on a high-frequency screen like POS), permission-denied (states which role is required), and no-data-matching-filter as distinct from no-data-exists.
 
+### Zero Dead Ends & Standardized State Cards (Strict Rule)
+- **Never trap a user in an empty, error, offline, or zero-inventory state**: Every non-ideal state MUST provide an immediate, unambiguous go-to CTA button (e.g. "Add a product", "Adjust to available stock", "Restock", "Go to Dashboard", or "Resume Selling").
+- **State Card Standardization**: All state views (`EmptyState`, `NoResultsState`, `ErrorState`, `PermissionDenied`, and offline pages) share a consistent layout: `max-w-sm` container, 56px tonal icon circle, `title-lg` bold heading, `body` muted description, and standardized primary/secondary action buttons. No ad-hoc disjointed card styles across screens.
+- **Cart & Inventory Dead-End Prevention**: If a product has zero stock or requested quantity exceeds available inventory, the POS cart must never crash or throw an unhandled error at checkout. The system must proactively clamp steppers, highlight affected rows, provide 1-tap "Adjust to available" / "Remove" CTAs, and disable checkout with an explanatory alert until resolved.
+
 ## Selection states: two intentional idioms, not drift
 
 Two different visual treatments for "this one is selected" both exist on purpose:

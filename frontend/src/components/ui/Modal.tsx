@@ -54,7 +54,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs transition-opacity animate-step-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--color-scrim)] transition-opacity animate-step-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -64,27 +64,27 @@ export function Modal({
     >
       <div
         ref={modalRef}
-        className={`w-full ${maxWidth} flex flex-col max-h-[90vh] bg-surface rounded-t-[var(--radius-sheet)] sm:rounded-[var(--radius-focus-block)] border-t sm:border border-border shadow-[var(--shadow-elevation-2)] overflow-hidden animate-sheet-up`}
+        className={`w-full ${maxWidth} flex flex-col max-h-[90vh] bg-surface rounded-t-[var(--radius-sheet)] sm:rounded-[var(--radius-focus-block)] border-t sm:border border-border/80 shadow-[var(--shadow-elevation-3)] overflow-hidden animate-sheet-up`}
       >
-        {/* Mobile Drag Handle Pill */}
+        {/* M3 Mobile Drag Handle */}
         {variant === "sheet" && (
-          <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
-            <div className="h-1.5 w-10 rounded-full bg-border" />
+          <div className="flex justify-center pt-3 pb-1 sm:hidden" aria-hidden>
+            <div className="h-1 w-8 rounded-full bg-on-surface-muted/30" />
           </div>
         )}
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-          <h2 id="modal-title" className="text-[length:var(--font-size-title)] font-bold text-on-surface">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-surface-container-low">
+          <h2 id="modal-title" className="text-[length:var(--font-size-title)] font-semibold text-on-surface">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container-high hover:text-on-surface active:scale-95 transition-all"
             aria-label="Close modal"
           >
-            <X size={20} aria-hidden />
+            <X size={18} aria-hidden />
           </button>
         </div>
 

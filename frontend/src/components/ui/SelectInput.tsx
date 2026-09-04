@@ -15,7 +15,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, React.SelectHTMLAttribu
         <select
           ref={ref}
           {...props}
-          className={`min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] border border-border/60 bg-surface/80 backdrop-blur-sm pl-3 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface shadow-sm focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/30 outline-none transition-all duration-[var(--motion-duration-short)] ${className}`}
+          className={`min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] border border-border/80 bg-surface pl-3.5 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 outline-none transition-all duration-[var(--motion-duration-short)] ${className}`}
         />
         <ChevronDown
           size={18}

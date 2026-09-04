@@ -34,101 +34,162 @@ export function escapeHtml(value: string): string {
 /** Base layout container wrapping email content cards */
 function baseTemplate(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <meta name="x-apple-disable-message-reformatting">
   <title>${escapeHtml(title)}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #f8fafc;
+    *, *:before, *:after {
+      box-sizing: border-box !important;
+      -webkit-box-sizing: border-box !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      min-width: 100% !important;
+      background-color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
       color: #0f172a;
+      overflow-x: hidden !important;
     }
-    table { border-collapse: collapse; }
-    .container {
-      width: 100%;
-      max-width: 560px;
+    table {
+      border-collapse: collapse !important;
+      mso-table-lspace: 0pt !important;
+      mso-table-rspace: 0pt !important;
+      table-layout: fixed !important;
+      width: 100% !important;
+    }
+    img {
+      border: 0;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+    p, a, li, td, body {
+      mso-line-height-rule: exactly;
+    }
+    .wrapper-table {
+      width: 100% !important;
+      max-width: 100% !important;
+      background-color: #f1f5f9;
       margin: 0 auto;
-      padding: 32px 16px;
+      padding: 24px 8px;
     }
-    .card {
+    .card-table {
+      width: 100% !important;
+      max-width: 520px !important;
       background-color: #ffffff;
-      border-radius: 12px;
+      border-radius: 16px;
       border: 1px solid #e2e8f0;
-      padding: 32px 28px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      margin: 0 auto;
+      box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
     }
-    .header {
-      text-align: center;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #f1f5f9;
-      margin-bottom: 24px;
+    .top-accent-bar {
+      height: 4px;
+      background-color: #0a6e4d;
+      width: 100%;
+      font-size: 1px;
+      line-height: 1px;
+    }
+    .card-inner {
+      padding: 32px 24px;
+      width: 100%;
     }
     .brand-badge {
       display: inline-block;
       background-color: #0a6e4d;
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 18px;
-      padding: 8px 18px;
+      color: #ffffff !important;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 6px 14px;
       border-radius: 8px;
       letter-spacing: 0.5px;
+      text-decoration: none;
     }
     .subhead {
       margin-top: 6px;
-      font-size: 13px;
+      font-size: 11px;
       color: #64748b;
-      font-weight: 500;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .content {
       font-size: 15px;
       line-height: 1.6;
       color: #334155;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .code-box {
-      background-color: #f1f5f9;
+      background-color: #f8fafc;
       border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 20px 16px;
       text-align: center;
-      margin: 24px 0;
+      margin: 22px 0;
+      width: 100%;
+      max-width: 100%;
     }
     .code-text {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 36px;
-      font-weight: 700;
-      letter-spacing: 10px;
-      color: #0f172a;
+      font-family: 'SF Mono', Consolas, Monaco, 'Courier New', monospace;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: #0a6e4d;
+      line-height: 1.2;
+      display: block;
+      margin-bottom: 8px;
     }
     .badge {
       display: inline-block;
-      background-color: #fef3c7;
-      color: #92400e;
+      background-color: #ecfdf5;
+      color: #065f46;
       font-size: 12px;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 3px 12px;
       border-radius: 9999px;
-      margin-top: 8px;
+      border: 1px solid #a7f3d0;
     }
     .credential-box {
       background-color: #f8fafc;
       border: 1px solid #e2e8f0;
       border-left: 4px solid #0a6e4d;
-      border-radius: 6px;
-      padding: 16px;
+      border-radius: 8px;
+      padding: 14px 16px;
       margin: 20px 0;
+      word-break: break-word;
     }
     .credential-row {
-      margin-bottom: 8px;
       font-size: 14px;
+      color: #334155;
     }
-    .credential-row:last-child {
-      margin-bottom: 0;
+    .btn-table {
+      margin: 24px auto 8px auto;
+      width: auto !important;
+    }
+    .btn-cell {
+      border-radius: 8px;
+      background-color: #0a6e4d;
+      text-align: center;
     }
     .btn {
       display: inline-block;
@@ -139,42 +200,74 @@ function baseTemplate(title: string, bodyHtml: string): string {
       text-decoration: none;
       padding: 12px 24px;
       border-radius: 8px;
-      margin-top: 16px;
+      border: 1px solid #0a6e4d;
       text-align: center;
     }
     .security-note {
       background-color: #f8fafc;
-      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
       padding: 12px 14px;
       font-size: 13px;
       color: #64748b;
-      margin-top: 24px;
+      margin-top: 22px;
+      line-height: 1.5;
     }
     .footer {
       text-align: center;
-      margin-top: 24px;
+      padding: 24px 16px 0 16px;
       font-size: 12px;
       color: #94a3b8;
       line-height: 1.5;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    @media only screen and (max-width: 480px) {
+      .card-inner {
+        padding: 24px 16px !important;
+      }
+      .code-text {
+        font-size: 24px !important;
+        letter-spacing: 4px !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="brand-badge">StockPadi</div>
-        <div class="subhead">Smart Retail & Point of Sale</div>
-      </div>
-      <div class="content">
-        ${bodyHtml}
-      </div>
-    </div>
-    <div class="footer">
-      &copy; ${new Date().getFullYear()} StockPadi. All rights reserved.<br>
-      This is an automated system email. Please do not reply directly.
-    </div>
-  </div>
+  <table role="presentation" class="wrapper-table" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding: 0;">
+        <table role="presentation" class="card-table" border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="top-accent-bar">&nbsp;</td>
+          </tr>
+          <tr>
+            <td class="card-inner">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 18px;">
+                <tr>
+                  <td align="center">
+                    <div class="brand-badge">StockPadi</div>
+                    <div class="subhead">Smart Retail & Point of Sale</div>
+                  </td>
+                </tr>
+              </table>
+              <div class="content">
+                ${bodyHtml}
+              </div>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" class="footer" border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center">
+              &copy; ${new Date().getFullYear()} StockPadi. All rights reserved.<br>
+              This is an automated security email. Please do not reply directly.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }

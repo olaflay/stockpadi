@@ -298,8 +298,14 @@ export function BrowseStep(props: {
             const altKey = product.altUnitLabel ? cartLineKey(product.id, product.altUnitLabel) : null;
             const altQty = altKey ? (cart[altKey]?.quantity ?? 0) : 0;
             const stock = stockByProduct?.[product.id] ?? 0;
-            const isOutOfStock = stockByProduct !== undefined && stock <= 0;
-            const isLowStock = !isOutOfStock && stockByProduct !== undefined && stock <= (product.lowStockThreshold ?? 5);
+            const isStockTracked = stockByProduct !== undefined;
+            const isOutOfStock = isStockTracked && stock <= 0;
+            const isLowStock = !isOutOfStock && isStockTracked && stock <= (product.lowStockThreshold ?? 5);
+
+            const altFactor = product.altUnitConversionFactor ?? 1;
+            const currentTotalBaseUnits = baseQty * 1 + altQty * altFactor;
+            const canAddBase = !isStockTracked || currentTotalBaseUnits + 1 <= stock;
+            const canAddAlt = !isStockTracked || currentTotalBaseUnits + altFactor <= stock;
 
             return (
             <li key={product.id}>
@@ -332,6 +338,17 @@ export function BrowseStep(props: {
                       onDecrement={() => onDecrementLine(baseKey)}
                       onIncrement={() => onIncrementLine(baseKey)}
                       disabled={hasNoBranches}
+                      incrementDisabled={!canAddBase}
+                      onIncrementBlocked={() =>
+                        showToast(
+                          `Only ${stock} of "${product.name}" available in stock.`,
+                          "warning",
+                          {
+                            label: "Restock",
+                            onClick: () => router.push("/purchases/new"),
+                          }
+                        )
+                      }
                     />
                   ) : (
                     <RippleButton
@@ -361,6 +378,17 @@ export function BrowseStep(props: {
                       onDecrement={() => onDecrementLine(altKey!)}
                       onIncrement={() => onIncrementLine(altKey!)}
                       disabled={hasNoBranches}
+                      incrementDisabled={!canAddAlt}
+                      onIncrementBlocked={() =>
+                        showToast(
+                          `Only ${stock} left. Needs ${altFactor} for another ${product.altUnitLabel}.`,
+                          "warning",
+                          {
+                            label: "Restock",
+                            onClick: () => router.push("/purchases/new"),
+                          }
+                        )
+                      }
                     />
                   ) : (
                     <RippleButton
@@ -406,6 +434,17 @@ export function BrowseStep(props: {
                       onDecrement={() => onDecrementLine(baseKey)}
                       onIncrement={() => onIncrementLine(baseKey)}
                       disabled={hasNoBranches}
+                      incrementDisabled={!canAddBase}
+                      onIncrementBlocked={() =>
+                        showToast(
+                          `Cannot add more: only ${stock} of "${product.name}" in stock.`,
+                          "warning",
+                          {
+                            label: "Restock",
+                            onClick: () => router.push("/purchases/new"),
+                          }
+                        )
+                      }
                     />
                   </div>
                 ) : (
@@ -485,12 +524,16 @@ function InlineStepper({
   onDecrement,
   onIncrement,
   disabled,
+  incrementDisabled = false,
+  onIncrementBlocked,
 }: {
   qty: number;
   label: string;
   onDecrement: () => void;
   onIncrement: () => void;
   disabled: boolean;
+  incrementDisabled?: boolean;
+  onIncrementBlocked?: () => void;
 }) {
   return (
     <div className="flex items-center gap-1 shrink-0">
@@ -512,10 +555,20 @@ function InlineStepper({
       </span>
       <button
         type="button"
-        onClick={onIncrement}
+        onClick={() => {
+          if (incrementDisabled) {
+            onIncrementBlocked?.();
+          } else {
+            onIncrement();
+          }
+        }}
         disabled={disabled}
         aria-label={`Increase ${label} quantity`}
-        className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full bg-brand-accent text-brand-accent-contrast font-semibold text-[length:var(--font-size-title)] hover:opacity-90 transition-opacity disabled:opacity-50"
+        className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-all ${
+          incrementDisabled
+            ? "border border-border bg-surface-container text-on-surface-muted opacity-60 cursor-not-allowed"
+            : "bg-brand-accent text-brand-accent-contrast hover:opacity-90 active:scale-95"
+        }`}
       >
         +
       </button>

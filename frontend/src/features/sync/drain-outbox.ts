@@ -44,22 +44,32 @@ let isDraining = false;
  * retry, but confusing). Falls back to the in-memory-only guard on browsers
  * without navigator.locks (Safari < 15.4).
  */
-export async function drainOutbox(): Promise<void> {
+export async function drainOutbox(): Promise<{ drained: number; pendingRemaining: number }> {
+  const getPendingCount = async () =>
+    (await db.outbox.where("status").anyOf("pending", "syncing").toArray()).filter(matchesActiveTenant).length;
+
+  const initialCount = await getPendingCount();
+  if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
+
   if (typeof navigator !== "undefined" && navigator.locks) {
     await navigator.locks.request("stockpadi-outbox-drain", { ifAvailable: true }, async (lock) => {
       if (!lock) return; // another tab already holds the lock
       await drainOnce();
     });
-    return;
+    const finalCount = await getPendingCount();
+    return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
   }
 
-  if (isDraining) return;
+  if (isDraining) return { drained: 0, pendingRemaining: initialCount };
   isDraining = true;
   try {
     await drainOnce();
   } finally {
     isDraining = false;
   }
+
+  const finalCount = await getPendingCount();
+  return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
 }
 
 async function drainOnce(): Promise<void> {
@@ -79,9 +89,27 @@ async function drainOnce(): Promise<void> {
 async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof getSupabase>): Promise<void> {
   if (!supabase) return;
 
-  const {
+  let {
     data: { session },
   } = await supabase.auth.getSession();
+
+  // If token is near expiration or missing, attempt refresh if client supports it
+  if (
+    session &&
+    session.expires_at &&
+    session.expires_at * 1000 < Date.now() + 60000 &&
+    typeof supabase.auth.refreshSession === "function"
+  ) {
+    try {
+      const refreshed = await supabase.auth.refreshSession();
+      if (refreshed.data.session) {
+        session = refreshed.data.session;
+      }
+    } catch {
+      // Continue with existing session or let network call authenticate
+    }
+  }
+
   if (!session) return;
 
   await db.outbox.bulkUpdate(

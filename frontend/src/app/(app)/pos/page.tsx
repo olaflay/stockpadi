@@ -243,6 +243,8 @@ function PosPageContent() {
         }}
         onIncrement={cart.incrementLine}
         onDecrement={cart.decrementLine}
+        onSetQuantity={cart.setLineQuantity}
+        onRemoveLine={cart.removeLine}
         onContinueToPayment={() => setStep("payment")}
         stockByProduct={stockByProduct}
       />

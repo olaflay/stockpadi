@@ -1,4 +1,5 @@
 import { useDraft } from "@/hooks/use-draft";
+import { toKobo, fromKobo } from "@/lib/kobo";
 import type { CartLine } from "@/features/pos/complete-sale";
 
 const CART_DRAFT_KEY = "stockpadi-cart";
@@ -62,13 +63,36 @@ export function useCart() {
     });
   }
 
+  function setLineQuantity(key: string, qty: number) {
+    setCart((current) => {
+      const existing = current[key];
+      if (!existing) return current;
+      if (qty <= 0) {
+        const copy = { ...current };
+        delete copy[key];
+        return copy;
+      }
+      return { ...current, [key]: { ...existing, quantity: Math.floor(qty) } };
+    });
+  }
+
+  function removeLine(key: string) {
+    setCart((current) => {
+      const copy = { ...current };
+      delete copy[key];
+      return copy;
+    });
+  }
+
   function clearCart() {
     clearCartDraft();
   }
 
   const cartLines = Object.values(cart);
-  const total = cartLines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+  const total = fromKobo(
+    cartLines.reduce((sumKobo, line) => sumKobo + toKobo(line.unitPrice) * line.quantity, 0)
+  );
   const itemCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
 
-  return { cart, cartLines, total, itemCount, addToCart, incrementLine, decrementLine, clearCart };
+  return { cart, cartLines, total, itemCount, addToCart, incrementLine, decrementLine, setLineQuantity, removeLine, clearCart };
 }

@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Search, Users } from "lucide-react";
-import { db } from "@/lib/db";
+import { Search, Users, MessageCircle } from "lucide-react";
+import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getAllCustomerCreditBalances, getCustomerDebtAges, getAgingBucket } from "@/features/customers/credit";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,6 +22,11 @@ export default function CustomersPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 120);
+
+  const businessProfile = useLiveQuery(
+    () => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
+    []
+  );
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -108,6 +114,14 @@ export default function CustomersPage() {
 
   const totalOwed = customersWithBalance.reduce((sum, c) => sum + Math.max(c.balance, 0), 0);
 
+  const handleQuickRemind = (e: React.MouseEvent, customer: LocalCustomer, balance: number) => {
+    e.stopPropagation();
+    if (!customer.phone) return;
+    const shopName = businessProfile?.name ?? "StockPadi";
+    const message = `Hi ${customer.name}, this is a friendly reminder from ${shopName} — your outstanding balance is ${formatCurrency(Math.max(balance, 0))}. Please pay at your convenience. Thank you!`;
+    window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div>
       <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
@@ -139,34 +153,48 @@ export default function CustomersPage() {
             {filtered.slice(0, visibleLimit).map(({ customer, balance, debtAgeDays }) => {
               const aging = balance > 0 && debtAgeDays >= 0 ? getAgingBucket(debtAgeDays) : null;
               return (
-                <li key={customer.id}>
-                  <button
-                    type="button"
+                <li
+                  key={customer.id}
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container transition-colors"
+                >
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => router.push(`/customers/${customer.id}`)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/customers/${customer.id}`); }}
                     aria-label={`View customer ${customer.name}, owing ${formatCurrency(Math.max(balance, 0))}`}
-                    className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
+                    className="min-w-0 flex-1 cursor-pointer"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{customer.name}</p>
-                      {customer.phone && (
-                        <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {aging && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}>
-                          {aging.label}
-                        </span>
-                      )}
-                      <p
-                        className={`text-[length:var(--font-size-body)] font-medium ${
-                          balance > 0 ? "text-on-surface" : "text-on-surface-muted"
-                        }`}
+                    <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{customer.name}</p>
+                    {customer.phone && (
+                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {aging && (
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}>
+                        {aging.label}
+                      </span>
+                    )}
+                    <p
+                      className={`text-[length:var(--font-size-body)] font-medium ${
+                        balance > 0 ? "text-on-surface" : "text-on-surface-muted"
+                      }`}
+                    >
+                      {formatCurrency(Math.max(balance, 0))}
+                    </p>
+                    {balance > 0 && customer.phone && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleQuickRemind(e, customer, balance)}
+                        aria-label={`Send WhatsApp payment reminder to ${customer.name}`}
+                        title={`Send WhatsApp reminder to ${customer.name}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#25D366] hover:bg-[#25D366]/15 active:scale-90 transition-all"
                       >
-                        {formatCurrency(Math.max(balance, 0))}
-                      </p>
-                    </div>
-                  </button>
+                        <MessageCircle size={18} />
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}

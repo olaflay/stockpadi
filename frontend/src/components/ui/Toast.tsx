@@ -122,60 +122,131 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         aria-atomic="true"
       >
         {toasts.map((toast) => (
-          <div
+          <ToastItem
             key={toast.id}
-            role="status"
-            className={`pointer-events-auto animate-toast-slide-down flex items-center justify-between gap-2.5 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] ${TONE_CLASSES[toast.tone].container}`}
-          >
-            {toast.onClick ? (
-              <button
-                type="button"
-                onClick={toast.onClick}
-                className="flex-1 text-left font-medium underline decoration-dotted underline-offset-4 hover:opacity-90 active:opacity-75 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
-              >
-                {toast.text}
-              </button>
-            ) : (
-              <span className="flex-1 font-medium leading-snug">{toast.text}</span>
-            )}
-
-            {toast.action && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toast.action?.onClick();
-                  dismissToast(toast.id);
-                }}
-                className={`shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${TONE_CLASSES[toast.tone].actionBtn}`}
-              >
-                {toast.action.label}
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dismissToast(toast.id);
-              }}
-              aria-label="Cancel notification"
-              title="Cancel notification"
-              className={`shrink-0 inline-flex items-center justify-center rounded-full p-1.5 -mr-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${TONE_CLASSES[toast.tone].close}`}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
+            toast={toast}
+            onDismiss={() => dismissToast(toast.id)}
+          />
         ))}
       </div>
     </ToastContext.Provider>
   );
 }
 
+const DISMISS_THRESHOLD_PX = 75;
+
+function ToastItem({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastMessage;
+  onDismiss: () => void;
+}) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const touchStartXRef = useRef(0);
+  const currentDeltaXRef = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    currentDeltaXRef.current = 0;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === 0) return;
+    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    currentDeltaXRef.current = deltaX;
+    setOffsetX(deltaX);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    const deltaX = currentDeltaXRef.current;
+    if (Math.abs(deltaX) > DISMISS_THRESHOLD_PX) {
+      // Swiped far enough in either direction -> dismiss with flyout
+      setIsExiting(true);
+      setOffsetX(deltaX > 0 ? 360 : -360);
+      setTimeout(() => {
+        onDismiss();
+      }, 180);
+    } else {
+      // Snap back
+      setOffsetX(0);
+    }
+    touchStartXRef.current = 0;
+    currentDeltaXRef.current = 0;
+  };
+
+  const opacity = isExiting ? 0 : Math.max(0.2, 1 - Math.abs(offsetX) / 260);
+
+  return (
+    <div
+      role="status"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      style={{
+        transform: `translateX(${offsetX}px)`,
+        opacity,
+        transition: isDragging
+          ? "none"
+          : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out",
+        touchAction: "pan-y",
+      }}
+      className={`pointer-events-auto animate-toast-slide-down flex items-center justify-between gap-2.5 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] select-none cursor-grab active:cursor-grabbing ${TONE_CLASSES[toast.tone].container}`}
+    >
+      {toast.onClick ? (
+        <button
+          type="button"
+          onClick={toast.onClick}
+          className="flex-1 text-left font-medium underline decoration-dotted underline-offset-4 hover:opacity-90 active:opacity-75 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
+        >
+          {toast.text}
+        </button>
+      ) : (
+        <span className="flex-1 font-medium leading-snug">{toast.text}</span>
+      )}
+
+      {toast.action && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toast.action?.onClick();
+            onDismiss();
+          }}
+          className={`shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${TONE_CLASSES[toast.tone].actionBtn}`}
+        >
+          {toast.action.label}
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss();
+        }}
+        aria-label="Cancel notification"
+        title="Cancel notification"
+        className={`shrink-0 inline-flex items-center justify-center rounded-full p-1.5 -mr-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${TONE_CLASSES[toast.tone].close}`}
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast must be used within a ToastProvider");
+    return {
+      showToast: () => {},
+      dismissToast: () => {},
+    };
   }
   return context;
 }
