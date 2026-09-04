@@ -18,11 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || github.event.comment.body == '/review' }}
     steps:
-      - uses: abby-ma2/ai-pr-reviewer@latest
+      - uses: Codium-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        with:
-          debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
