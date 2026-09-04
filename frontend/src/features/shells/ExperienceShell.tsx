@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, Receipt, Users, Settings, BarChart3, ClipboardCheck, MoreHorizontal, Bell, UserCircle, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, Package, Receipt, Users, Settings, BarChart3, ClipboardCheck, MoreHorizontal, Bell, UserCircle, CalendarCheck, ReceiptText, Wallet, Layers } from "lucide-react";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
@@ -16,16 +16,27 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
 type Shell = "business" | "work";
 
 // The bar renders Home + slice(1, 5): item index 0 is never shown, so the
-// first entry is a slot placeholder. Sell must be inside the visible slice
-// for workers (their most frequent action), Settings for owners (reachable
-// on the bar; Staff lives behind Settings & Access).
+// first entry is a slot placeholder. Reports stays on the owner bar (it is
+// the daily check-in screen); Sell must be inside the visible slice for
+// workers. Anything that does not fit goes in the per-shell More menu,
+// mirroring the same five-slot + More layout for both roles.
 const BUSINESS_NAV = [
   { label: "Dashboard", href: "/business", icon: LayoutDashboard },
   { label: "Sell", href: "/business/pos", icon: Receipt },
   { label: "Products", href: "/business/products", icon: Package },
-  { label: "Sales", href: "/business/sales", icon: BarChart3 },
+  { label: "Reports", href: "/business/reports", icon: BarChart3 },
+  { label: "Sales", href: "/business/sales", icon: ReceiptText },
+] as const;
+
+const BUSINESS_MORE = [
   { label: "Settings", href: "/business/settings", icon: Settings },
-  { label: "Staff", href: "/business/staff", icon: Users },
+  { label: "Staff & Access", href: "/business/staff", icon: Users },
+  { label: "Customers", href: "/business/customers", icon: UserCircle },
+  { label: "Stock count", href: "/business/stock-count", icon: ClipboardCheck },
+  { label: "Close day", href: "/business/reconciliation", icon: CalendarCheck },
+  { label: "Expenses", href: "/business/expenses", icon: Wallet },
+  { label: "Inventory", href: "/business/inventory", icon: Layers },
+  { label: "Alerts", href: "/business/alerts", icon: Bell },
 ] as const;
 
 const WORKER_NAV = [
@@ -37,6 +48,7 @@ const WORKER_NAV = [
 ] as const;
 
 const WORKER_MORE = [
+  { label: "Sales", href: "/work/sales", icon: BarChart3 },
   { label: "Products", href: "/work/products", icon: Package },
   { label: "Customers", href: "/work/customers", icon: Users },
   { label: "Inventory", href: "/work/inventory", icon: ClipboardCheck },
@@ -53,6 +65,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
   const user = useCurrentUser();
   const accountType = user.accountType ?? "WORKER";
   const visibleItems = shell === "business" ? BUSINESS_NAV : WORKER_NAV;
+  const moreItems = shell === "business" ? BUSINESS_MORE : WORKER_MORE;
 
   useEffect(() => {
     if (shell === "business" && accountType === "WORKER") router.replace("/work");
@@ -85,27 +98,25 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
             </Link>
           );
         })}
-        {shell === "work" && (
-          <button
-            type="button"
-            onClick={() => setMoreOpen((open) => !open)}
-            className="flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] text-on-surface-muted"
-            aria-expanded={moreOpen}
-            aria-haspopup="menu"
-            aria-label="More navigation options"
-          >
-            <MoreHorizontal size={22} aria-hidden />
-            More
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setMoreOpen((open) => !open)}
+          className="flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] text-on-surface-muted"
+          aria-expanded={moreOpen}
+          aria-haspopup="menu"
+          aria-label="More navigation options"
+        >
+          <MoreHorizontal size={22} aria-hidden />
+          More
+        </button>
       </nav>
-      {shell === "work" && moreOpen && (
+      {moreOpen && (
         <div
           className="fixed bottom-16 right-3 z-50 w-56 rounded-[var(--radius-card)] border border-border bg-surface p-2 shadow-[var(--shadow-elevation-3)]"
           role="menu"
-          aria-label="Additional worker navigation"
+          aria-label={`Additional ${shell} navigation`}
         >
-          {WORKER_MORE.map((item) => {
+          {moreItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
