@@ -27,7 +27,8 @@ import { PRODUCT_CAP } from "@/config/limits";
  * see product-schema.ts), and the product + stock-movement transaction on
  * submit.
  */
-export function useNewProductForm() {
+export function useNewProductForm(options?: { prefill?: string }) {
+  const prefill = options?.prefill;
   const user = useCurrentUser();
   const router = useRouter();
   const { showToast } = useToast();
@@ -45,7 +46,10 @@ export function useNewProductForm() {
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: PRODUCT_FORM_DEFAULTS,
+    defaultValues: {
+      ...PRODUCT_FORM_DEFAULTS,
+      name: prefill ?? "",
+    },
   });
   const { register, handleSubmit, watch, control, formState } = form;
   const expiryTracking = watch("expiryTracking");

@@ -27,6 +27,8 @@ import { useOnlineStatus } from "@/lib/use-online-status";
 import { tenantArray } from "@/lib/local-tenant";
 import type { StockMovement } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
+import { searchProductsFuzzy } from "@/lib/fuzzy-search";
+import { feedbackSaleComplete } from "@/lib/feedback";
 
 function PosPageContent() {
   const user = useCurrentUser();
@@ -134,14 +136,14 @@ function PosPageContent() {
   // prefixes their quantity. parsePosQuery is zero-cost when no prefix.
   const { term: filterTerm } = parsePosQuery(debouncedQuery);
 
-  const filtered = result.products.filter((product) => {
+  const availableProducts = result.products.filter((product) => {
     if (product.archived) return false;
-    const matchesQuery = `${product.name} ${product.sku} ${product.barcode ?? ""}`
-      .toLowerCase()
-      .includes(filterTerm.toLowerCase());
-    const matchesCategory = selectedCategoryId === null || product.categoryId === selectedCategoryId;
-    return matchesQuery && matchesCategory;
+    if (selectedCategoryId !== null && product.categoryId !== selectedCategoryId) return false;
+    return true;
   });
+
+  const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
+  const filtered = [...exact, ...suggestions];
 
   const hasNoBranches = branches !== undefined && branches.length === 0;
 
@@ -172,6 +174,8 @@ function PosPageContent() {
         createdByUserId: user.id,
         actor: user,
       });
+
+      feedbackSaleComplete();
       // Tappable but non-blocking: a cashier mid-queue keeps selling, but the
       // receipt this sale produced is never just a toast that vanishes in 3
       // seconds. See finding 3.1/#4 in docs/RESEARCH-AND-PLAN.md.

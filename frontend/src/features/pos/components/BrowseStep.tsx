@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, Camera } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
 // Loaded on demand — @zxing/library is a non-trivial decode library only
 // actually needed once the camera icon is tapped, but was previously
@@ -64,6 +65,7 @@ export function BrowseStep(props: {
   const { showToast } = useToast();
 
   function handleOutOfStockAttempt(product: Product) {
+    feedbackError();
     showToast(`Out of stock: "${product.name}" has 0 on shelf.`, "danger", {
       label: "Restock",
       onClick: () => router.push("/purchases/new"),
@@ -121,6 +123,7 @@ export function BrowseStep(props: {
     conversionFactor: number,
     qty = 1
   ) {
+    feedbackAddToCart();
     onAddToCart(productId, unitPrice, unitLabel, conversionFactor, qty);
     // Clear query only when there was one — avoids a no-op state update
     // and the associated re-render when browsing without a search term.
@@ -222,6 +225,7 @@ export function BrowseStep(props: {
               (p) => p.barcode === res && !p.altUnitLabel
             );
             if (exactMatch.length === 1) {
+              feedbackScanSuccess();
               const p = exactMatch[0];
               handleFreshAdd(p.id, p.sellPrice, p.unitLabel, 1);
               setScanning(false);

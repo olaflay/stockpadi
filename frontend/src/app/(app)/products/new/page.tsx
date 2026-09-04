@@ -1,7 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
@@ -10,8 +12,10 @@ import { NewProductForm } from "@/features/inventory/components/NewProductForm";
 
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
-export default function NewProductPage() {
+function NewProductContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefill = searchParams.get("prefill") || undefined;
   const {
     user,
     categories,
@@ -36,7 +40,7 @@ export default function NewProductPage() {
     hasInitialStock,
     onSubmit,
     setValue,
-  } = useNewProductForm();
+  } = useNewProductForm({ prefill });
 
   if (!hasAccountType(user, CAN_EDIT_PRODUCTS)) {
     return (
@@ -90,5 +94,13 @@ export default function NewProductPage() {
         onInitialStockBranchChange={setInitialStockBranchId}
       />
     </div>
+  );
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-40" />}>
+      <NewProductContent />
+    </Suspense>
   );
 }

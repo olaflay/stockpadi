@@ -39,7 +39,7 @@ export async function getCustomerDebtAges(): Promise<Map<string, number>> {
   const oldestDebt = new Map<string, number>(); // customerId → oldest timestamp
 
   for (const m of movements) {
-    if (m.amountDelta >= 0) continue; // Only negative movements = debt
+    if (m.amountDelta <= 0) continue; // Only positive movements = credit purchases / debt incurred
     const ts = new Date(m.createdAtLocal).getTime();
     const current = oldestDebt.get(m.customerId);
     if (current === undefined || ts < current) {

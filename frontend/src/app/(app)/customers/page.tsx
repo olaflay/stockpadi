@@ -137,7 +137,7 @@ export default function CustomersPage() {
         <div>
           <ul className="flex flex-col gap-2">
             {filtered.slice(0, visibleLimit).map(({ customer, balance, debtAgeDays }) => {
-              const aging = balance > 0 && debtAgeDays > 0 ? getAgingBucket(debtAgeDays) : null;
+              const aging = balance > 0 && debtAgeDays >= 0 ? getAgingBucket(debtAgeDays) : null;
               return (
                 <li key={customer.id}>
                   <button

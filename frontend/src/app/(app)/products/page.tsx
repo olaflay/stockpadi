@@ -30,6 +30,7 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { tenantArray } from "@/lib/local-tenant";
 import { PRODUCT_CAP } from "@/config/limits";
+import { searchProductsFuzzy } from "@/lib/fuzzy-search";
 
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
@@ -142,9 +143,8 @@ export default function ProductsPage() {
       })
     : [];
 
-  const filtered = byFilter.filter((product) =>
-    `${product.name} ${product.sku} ${product.barcode ?? ""}`.toLowerCase().includes(debouncedQuery.toLowerCase())
-  );
+  const { exact, suggestions } = searchProductsFuzzy(byFilter, debouncedQuery);
+  const filtered = [...exact, ...suggestions];
 
   useEffect(() => {
     if (filtered.length <= visibleLimit) return;

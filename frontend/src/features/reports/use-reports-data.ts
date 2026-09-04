@@ -50,7 +50,7 @@ interface LocalReportData {
  */
 export function useReportsData() {
   const [period, setPeriod] = useState<Period>("today");
-  const [remoteData, setRemoteData] = useState<LocalReportData | null>(null);
+  const [remoteData, setRemoteData] = useState<LocalReportData | undefined>(undefined);
   const cancelledRef = useRef(false);
 
   /* ---- Local Dexie live queries (instant render, <16ms) ---- */
