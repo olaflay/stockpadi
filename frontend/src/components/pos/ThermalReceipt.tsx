@@ -8,7 +8,7 @@
  */
 
 import { formatCurrency } from "@/lib/format";
-import type { Sale, SalePayment, SaleItem } from "@/types/sale";
+import type { Sale, SalePayment } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { LocalBusinessProfile, LocalCustomer } from "@/lib/db";
 

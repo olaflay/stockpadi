@@ -6,11 +6,6 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Store,
   Bell,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  CheckCircle2,
-  AlertTriangle,
   ChevronRight,
   Wallet,
   PackagePlus,
@@ -28,7 +23,6 @@ import { useDashboardMetrics } from "@/features/dashboard/use-dashboard-metrics"
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
-import { PerformancePill } from "@/components/ui/PerformancePill";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
