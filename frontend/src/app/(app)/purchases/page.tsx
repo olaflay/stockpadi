@@ -55,24 +55,20 @@ export default function PurchasesPage() {
     }
   }, []);
 
-  // Hooks stay above every early return so their call order is stable across
-  // renders — a previously-shipped layout declared these below the permission,
-  // loading, error and empty branches, which breaks the Rules of Hooks and can
-  // crash React when the component re-renders through a different branch.
+  const purchaseCount = result?.purchases.length ?? 0;
+
   useEffect(() => {
-    if (result === undefined || result.purchases.length <= visibleLimit) return;
+    if (purchaseCount <= visibleLimit) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
+      if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
     }, { threshold: 0.1 });
 
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
+    const element = loadMoreRef.current;
+    if (element) observer.observe(element);
     return () => {
-      if (el) observer.unobserve(el);
+      if (element) observer.unobserve(element);
     };
-  }, [result, visibleLimit]);
+  }, [purchaseCount, visibleLimit]);
 
   if (!hasAccountType(user, CAN_VIEW_PURCHASES)) {
     return (

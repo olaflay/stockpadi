@@ -38,6 +38,7 @@ export default function ExpensesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(50);
+<<<<<<< HEAD
   const [prevPeriod, setPrevPeriod] = useState(period);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -50,6 +51,9 @@ export default function ExpensesPage() {
     setPrevPeriod(period);
     setVisibleLimit(50);
   }
+=======
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+>>>>>>> 6211528971e29fc98f6d19d6362efdf639ea1355
 
   const result = useLiveQuery(async () => {
     try {
@@ -75,26 +79,21 @@ export default function ExpensesPage() {
     }
   }, []);
 
-  // Hooks stay above every early return so their call order is stable across
-  // renders — previously they were declared below the permission/loading/error/
-  // empty branches, which breaks the Rules of Hooks and can crash React when a
-  // re-render flows through a different branch.
+  const periodStart = getPeriodStartIso(period);
+  const periodExpenses = result?.expenses.filter((expense) => expense.createdAtLocal >= periodStart) ?? [];
+
   useEffect(() => {
-    const start = result ? getPeriodStartIso(period) : null;
-    const periodExpenses = result?.expenses.filter((e) => start !== null && e.createdAtLocal >= start) ?? [];
-    if (result === undefined || periodExpenses.length <= visibleLimit) return;
+    if (periodExpenses.length <= visibleLimit) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
+      if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
     }, { threshold: 0.1 });
 
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
+    const element = loadMoreRef.current;
+    if (element) observer.observe(element);
     return () => {
-      if (el) observer.unobserve(el);
+      if (element) observer.unobserve(element);
     };
-  }, [result, period, visibleLimit]);
+  }, [periodExpenses.length, visibleLimit]);
 
   if (!hasAccountType(user, CAN_VIEW_EXPENSES)) {
     return (
@@ -146,8 +145,6 @@ export default function ExpensesPage() {
     );
   }
 
-  const periodStart = getPeriodStartIso(period);
-  const periodExpenses = result.expenses.filter((e) => e.createdAtLocal >= periodStart);
   const periodTotal = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
   const canDelete = hasAccountType(user, CAN_DELETE_EXPENSES);
 
@@ -167,7 +164,10 @@ export default function ExpensesPage() {
             key={key}
             type="button"
             aria-pressed={period === key}
-            onClick={() => setPeriod(key)}
+            onClick={() => {
+              setPeriod(key);
+              setVisibleLimit(50);
+            }}
             className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] transition-colors ${
               period === key
                 ? "bg-brand-accent text-brand-accent-contrast"

@@ -38,9 +38,28 @@ export async function sendVerificationCode(db: SupabaseClient, actor: User) {
     await sendEmail({ to: actor.email ?? "", ...rendered });
   } catch (error) {
     console.error("Verification email delivery failed", error instanceof Error ? error.message : "unknown error");
-    throw new HttpError(502, "MAIL_FAILED", "Could not send the verification email");
+    const cleanup = await db.from("users").update({ email_verification_code_hash: null, email_verification_expires_at: null, email_verification_attempts: 0 }).eq("id", actor.id);
+    if (cleanup.error) console.error("Verification-code cleanup failed", cleanup.error.message);
+    throw emailDeliveryHttpError(error);
   }
   return { status: "sent" };
+}
+
+export function emailDeliveryHttpError(error: unknown) {
+  const detail = error instanceof Error ? error.message.toLowerCase() : "";
+  if (detail.includes("no email provider configured") || detail.includes("email is not configured")) {
+    return new HttpError(503, "MAIL_NOT_CONFIGURED", "Verification email is not configured. Ask the project owner to add the Brevo API key and verified sender in the backend environment.");
+  }
+  if (detail.includes("sender") || detail.includes("550")) {
+    return new HttpError(502, "MAIL_SENDER_REJECTED", "The email provider rejected the sender address. Ask the project owner to verify the sender in Brevo.");
+  }
+  if (detail.includes("401") || detail.includes("403") || detail.includes("unauthorized") || detail.includes("api key") || detail.includes("authentication")) {
+    return new HttpError(502, "MAIL_PROVIDER_AUTH_FAILED", "The email provider credentials were rejected. Ask the project owner to update the backend Brevo credentials.");
+  }
+  if (detail.includes("429") || detail.includes("rate limit")) {
+    return new HttpError(429, "MAIL_PROVIDER_RATE_LIMITED", "The email provider is temporarily rate-limiting messages. Wait and try again.");
+  }
+  return new HttpError(502, "MAIL_FAILED", "Could not send the verification email. Ask the project owner to inspect the backend email-delivery logs.");
 }
 
 export async function verifyEmailCode(db: SupabaseClient, actor: User, submittedCode: string) {
