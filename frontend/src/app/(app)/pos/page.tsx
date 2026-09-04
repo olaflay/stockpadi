@@ -164,8 +164,13 @@ function PosPageContent() {
       cart.clearCart();
       payment.reset();
       setStep("browse");
-    } catch {
-      showToast("Couldn't save the sale. It's still in your cart, try again.", "danger");
+    } catch (err) {
+      console.error("Failed to complete sale:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Couldn't save the sale. It's still in your cart, try again.";
+      showToast(message, "danger");
     } finally {
       setIsSubmitting(false);
     }
