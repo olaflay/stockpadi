@@ -27,15 +27,20 @@ export async function resolveAccountContext(db: SupabaseClient, user: User): Pro
   if (error) return { context: null, error: error.message };
   const data = rawData as { user_id: string; account_type: string; business_id: string | null; business_status: string | null; membership_status: string | null; branch_ids: string[] | null } | null;
   if (!data || data.user_id !== user.id) return { context: null, error: "No active account context found" };
-  let permissions = new Set<string>([
-    "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS",
-    "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_CUSTOMERS",
-    "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS",
-  ]);
+  // A Worker is granted exactly the permissions an owner enabled for them —
+  // never a full fallback set, so "disable everything" is honest. Owners and
+  // admins carry the full worker capability surface.
+  let permissions = new Set<string>();
   if (data.account_type === "WORKER") {
     const { data: grants, error: grantsError } = await db.from("worker_permissions").select("permission").eq("user_id", user.id).eq("business_id", data.business_id).eq("enabled", true);
     if (grantsError) return { context: null, error: grantsError.message };
-    if ((grants ?? []).length > 0) permissions = new Set((grants as Array<{ permission: string }>).map((grant) => grant.permission));
+    permissions = new Set((grants as Array<{ permission: string }>).map((grant) => grant.permission));
+  } else {
+    permissions = new Set([
+      "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS",
+      "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_CUSTOMERS",
+      "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS",
+    ]);
   }
   return {
     context: {

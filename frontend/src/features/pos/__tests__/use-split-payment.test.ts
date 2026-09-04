@@ -168,6 +168,55 @@ describe("useSplitPayment", () => {
     expect(result.current.effectivePayments[0].amount).toBe(0);
   });
 
+  it("updatePaymentTendered records register cash without touching the sale-total amount (§9.1)", () => {
+    const { result } = renderHook(() => useSplitPayment(1000));
+    act(() => {
+      result.current.updatePaymentTendered(0, 5000);
+    });
+    expect(result.current.effectivePayments).toEqual([
+      { method: "cash", amount: 1000, tenderedAmount: 5000 },
+    ]);
+    // The sale-total portion is untouched — tenderedAmount is drawer/register
+    // metadata only, so remaining is still 0.
+    expect(result.current.remaining).toBe(0);
+  });
+
+  it("updatePaymentTendered of 0 or non-finite drops the field back to undefined", () => {
+    const { result } = renderHook(() => useSplitPayment(1000));
+    act(() => {
+      result.current.updatePaymentTendered(0, 0);
+    });
+    expect(result.current.effectivePayments[0].tenderedAmount).toBeUndefined();
+
+    act(() => {
+      result.current.updatePaymentTendered(0, 400);
+    });
+    act(() => {
+      result.current.updatePaymentTendered(0, Number.NaN);
+    });
+    expect(result.current.effectivePayments[0].tenderedAmount).toBeUndefined();
+  });
+
+  it("updatePaymentNote stores transfer audit metadata and drops empty strings (§9.3)", () => {
+    const { result } = renderHook(() => useSplitPayment(1000));
+    act(() => {
+      result.current.updatePaymentMethod(0, "transfer");
+    });
+    act(() => {
+      result.current.updatePaymentNote(0, "OPay · Emeka (4821)");
+    });
+    expect(result.current.effectivePayments[0]).toMatchObject({
+      method: "transfer",
+      amount: 1000,
+      note: "OPay · Emeka (4821)",
+    });
+
+    act(() => {
+      result.current.updatePaymentNote(0, "   ");
+    });
+    expect(result.current.effectivePayments[0].note).toBeUndefined();
+  });
+
   it("AMOUNT_EPSILON is a small tolerance suitable for float comparisons", () => {
     expect(AMOUNT_EPSILON).toBeGreaterThan(0);
     expect(AMOUNT_EPSILON).toBeLessThan(1);

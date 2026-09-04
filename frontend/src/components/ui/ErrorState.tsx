@@ -14,21 +14,23 @@ export function ErrorState({ title = "Something went wrong", message, onRetry, c
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center text-center animate-step-in w-full max-w-sm mx-auto px-6 py-8 rounded-[var(--radius-focus-block)] border border-danger/20 bg-danger/5 my-auto ${className ?? ""}`}
+      className={`flex h-full min-h-full w-full max-w-sm mx-auto flex-col rounded-[var(--radius-focus-block)] border border-danger/20 bg-danger/5 animate-step-in ${className ?? ""}`}
     >
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger shrink-0">
-        <AlertCircle size={28} aria-hidden />
+      <div className="flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger shrink-0">
+          <AlertCircle size={28} aria-hidden />
+        </div>
+
+        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+          {title}
+        </p>
+
+        <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+          {message}
+        </p>
       </div>
 
-      <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
-        {title}
-      </p>
-
-      <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
-        {message}
-      </p>
-
-      <div className="mt-5 flex flex-col items-center gap-2 w-full max-w-xs">
+      <div className="flex w-full flex-col items-center gap-2 px-6 pb-6 pt-2">
         <RippleButton
           type="button"
           onClick={onRetry}

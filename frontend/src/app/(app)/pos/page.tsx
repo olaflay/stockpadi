@@ -27,6 +27,7 @@ import { useOnlineStatus } from "@/lib/use-online-status";
 import { tenantArray } from "@/lib/local-tenant";
 import type { StockMovement } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
+import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
 import { feedbackSaleComplete } from "@/lib/feedback";
 
@@ -51,7 +52,7 @@ function PosPageContent() {
   const customers = useLiveQuery(() => tenantArray<LocalCustomer>(db.customers), [], []);
 
   const stockByProduct = useLiveQuery(async () => {
-    const branchId = branches?.[0]?.id;
+    const branchId = resolveDefaultBranch(branches, user);
     if (!branchId) return {};
     const movements = await tenantArray<StockMovement>(
       db.stockMovements.where("branchId").equals(branchId)
@@ -149,9 +150,14 @@ function PosPageContent() {
 
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;
-    const branchId = branches?.[0]?.id;
+    const branchId = resolveDefaultBranch(branches, user);
     if (!branchId) {
-      showToast("Set up a branch in Settings before selling.", "warning");
+      showToast(
+        user.accountType === "WORKER"
+          ? "No branch is assigned to this account — ask your owner to assign one."
+          : "Set up a branch in Settings before selling.",
+        "warning"
+      );
       return;
     }
     if (Math.abs(payment.remaining) > AMOUNT_EPSILON) {
@@ -265,6 +271,8 @@ function PosPageContent() {
         onSelectCreditCustomer={payment.setCreditCustomerId}
         onUpdatePaymentMethod={payment.updatePaymentMethod}
         onUpdatePaymentAmount={payment.updatePaymentAmount}
+        onUpdatePaymentTendered={payment.updatePaymentTendered}
+        onUpdatePaymentNote={payment.updatePaymentNote}
         onAddPaymentLine={payment.addPaymentLine}
         onRemovePaymentLine={payment.removePaymentLine}
         isSubmitting={isSubmitting}

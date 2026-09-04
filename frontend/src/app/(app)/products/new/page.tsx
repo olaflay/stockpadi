@@ -22,8 +22,12 @@ function NewProductContent() {
     branches,
     initialStock,
     setInitialStock,
+    initialStockError,
     initialStockBranchId,
     setInitialStockBranchId,
+    initialStockBranchError,
+    onNameChange,
+    onSkuChange,
     categoryId,
     setCategoryId,
     categoryInputName,
@@ -88,10 +92,14 @@ function NewProductContent() {
         isSubmitting={isSubmitting}
         initialStock={initialStock}
         onInitialStockChange={setInitialStock}
+        initialStockError={initialStockError}
         hasInitialStock={hasInitialStock}
         branches={branches}
         initialStockBranchId={initialStockBranchId}
+        initialStockBranchError={initialStockBranchError}
         onInitialStockBranchChange={setInitialStockBranchId}
+        onNameChange={onNameChange}
+        onSkuChange={onSkuChange}
       />
     </div>
   );

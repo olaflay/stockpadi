@@ -27,21 +27,23 @@ export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: 
   return (
     <div
       role="status"
-      className="flex flex-col items-center justify-center text-center animate-step-in w-full max-w-sm mx-auto px-6 py-8 rounded-[var(--radius-focus-block)] bg-surface-container my-auto"
+      className="flex h-full min-h-full w-full max-w-sm mx-auto flex-col rounded-[var(--radius-focus-block)] bg-surface-container animate-step-in"
     >
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/15 text-warning shrink-0">
-        <ShieldAlert size={28} aria-hidden />
+      <div className="flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/15 text-warning shrink-0">
+          <ShieldAlert size={28} aria-hidden />
+        </div>
+
+        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+          You don&apos;t have access to this screen
+        </p>
+
+        <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+          Ask someone with the <strong className="text-on-surface">{roleList}</strong> account type to make this change.
+        </p>
       </div>
 
-      <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
-        You don&apos;t have access to this screen
-      </p>
-
-      <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
-        Ask someone with the <strong className="text-on-surface">{roleList}</strong> account type to make this change.
-      </p>
-
-      <div className="mt-5 flex flex-col items-center gap-2 w-full max-w-xs">
+      <div className="flex w-full flex-col items-center gap-2 px-6 pb-6 pt-2">
         <RippleButton
           type="button"
           onClick={() => router.push("/dashboard")}

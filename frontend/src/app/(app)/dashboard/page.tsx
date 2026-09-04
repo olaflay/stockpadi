@@ -8,14 +8,15 @@ import {
   Bell,
   TrendingUp,
   TrendingDown,
-  Activity,
-  CheckCircle2,
   AlertTriangle,
-  ChevronRight,
   Wallet,
   PackagePlus,
   Plus,
   CalendarCheck,
+  ShoppingBag,
+  Users,
+  Boxes,
+  type LucideIcon,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -28,13 +29,54 @@ import { useDashboardMetrics } from "@/features/dashboard/use-dashboard-metrics"
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
-import { PerformancePill } from "@/components/ui/PerformancePill";
-import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
+import { ICON_TONE_CLASSES, type IconTone } from "@/components/ui/icon-tone";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
+
+/**
+ * One KPI tile: tone-tinted icon chip + label up top, big number + caption
+ * below. Every tile is a button linking to the screen that owns the number
+ * (research: KPI cards read as glanceable metrics, not dead end labels).
+ */
+function KpiCard({
+  label,
+  value,
+  sub,
+  tone,
+  icon: Icon,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  tone: IconTone;
+  icon: LucideIcon;
+  onClick: () => void;
+}) {
+  return (
+    <RippleButton
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-[var(--radius-card)] bg-surface-container p-3.5 text-left transition-all hover:bg-surface-container-high active:scale-[0.99] sm:p-4"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">{label}</p>
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES[tone]}`}>
+          <Icon size={16} aria-hidden />
+        </div>
+      </div>
+      <div className="mt-1 min-w-0">
+        <p className="truncate font-number text-lg font-bold tracking-tight tabular-nums text-on-surface sm:text-xl">
+          {value}
+        </p>
+        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted">{sub}</p>
+      </div>
+    </RippleButton>
+  );
+}
 
 const CAN_CLOSE_DAY = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
@@ -74,12 +116,14 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col gap-4">
         <ScreenHeader title="Dashboard" hideBack={true} />
+        <Skeleton className="h-28 w-full" />
         <div className="grid grid-cols-2 gap-3">
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
-          <Skeleton className="col-span-2 h-16" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
         </div>
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-1 flex flex-col gap-3">
           <Skeleton className="h-5 w-32" />
           <div className="flex flex-col gap-2">
             <Skeleton className="h-16" />
@@ -164,87 +208,84 @@ export default function DashboardPage() {
         </RippleButton>
       )}
 
+      {canSeeMoney && (
+        <RippleButton
+          type="button"
+          onClick={() => router.push("/products")}
+          className="mb-3 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-accent p-4 text-left transition-all hover:opacity-95 active:scale-[0.99]"
+        >
+          <div className="min-w-0">
+            <p className="text-[length:var(--font-size-label)] font-medium text-brand-accent-contrast/80">
+              Inventory value
+            </p>
+            <p className="mt-1 truncate font-number text-2xl font-bold tracking-tight tabular-nums text-brand-accent-contrast">
+              {formatCurrency(metrics.inventoryValue)}
+            </p>
+            <p className="mt-0.5 text-[length:var(--font-size-caption)] text-brand-accent-contrast/70">
+              Stock at cost · {metrics.stockedProductCount} {metrics.stockedProductCount === 1 ? "product" : "products"} on hand
+            </p>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-accent-contrast/15 text-brand-accent-contrast">
+            <Boxes size={22} aria-hidden />
+          </div>
+        </RippleButton>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         {canSeeMoney && (
-          <RippleButton
-            type="button"
+          <KpiCard
+            label={user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
+            value={formatCurrency(metrics.todaysSalesTotal)}
+            sub={`${metrics.todaysSalesCount} ${metrics.todaysSalesCount === 1 ? "sale" : "sales"} · ${formatCurrency(metrics.todaysCashSalesTotal)} cash · ${formatCurrency(Math.max(metrics.todaysSalesTotal - metrics.todaysCashSalesTotal, 0))} credit`}
+            tone="brand"
+            icon={ShoppingBag}
             onClick={() => router.push("/sales")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                {user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
-              </p>
-              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
-            </div>
-            <div>
-              <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
-                {formatCurrency(metrics.todaysSalesTotal)}
-              </p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"}
-              </p>
-            </div>
-          </RippleButton>
+          />
         )}
 
         {canSeeMoney && user.accountType !== "WORKER" && (
-          <RippleButton
-            type="button"
+          <KpiCard
+            label="Net cash flow"
+            value={formatCurrency(netCashFlow)}
+            sub="After expenses & purchases"
+            tone={netCashFlow < 0 ? "danger" : "success"}
+            icon={netCashFlow < 0 ? TrendingDown : TrendingUp}
             onClick={() => router.push("/reports")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Net cash flow</p>
-              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
-            </div>
-            <div>
-              <p className={`mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums ${netCashFlow < 0 ? 'text-danger' : 'text-success'}`}>
-                {formatCurrency(netCashFlow)}
-              </p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                After expenses & purchases
-              </p>
-            </div>
-          </RippleButton>
+          />
         )}
 
-        <RippleButton
-          type="button"
+        <KpiCard
+          label="Low stock"
+          value={String(metrics.lowStockCount)}
+          sub="products below threshold"
+          tone="warning"
+          icon={AlertTriangle}
           onClick={() => router.push("/products?filter=low-stock")}
-          className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Low stock</p>
-            <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
-          </div>
-          <div>
-            <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
-              {metrics.lowStockCount}
-            </p>
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">products below threshold</p>
-          </div>
-        </RippleButton>
+        />
 
         {canSeeMoney && (
-          <RippleButton
-            type="button"
+          <KpiCard
+            label="Customers owing"
+            value={totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
+            sub="total debt"
+            tone="neutral"
+            icon={Users}
             onClick={() => router.push("/customers")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Customers Owing</p>
-              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
-            </div>
-            <div>
-              <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
-                {totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
-              </p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">total debt</p>
-            </div>
-          </RippleButton>
+          />
         )}
       </div>
+
+      {metrics.expiringCount > 0 && (
+        <button
+          type="button"
+          onClick={() => router.push("/products?filter=expiring")}
+          className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-stock-alert/20 bg-stock-alert/10 px-4 py-3 text-left transition-colors hover:bg-stock-alert/15"
+        >
+          <span className="text-[length:var(--font-size-body)] text-stock-alert">
+            {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
+          </span>
+        </button>
+      )}
 
       {/* Quick Actions Hub — Clean, accessible 2x2 grid for high-frequency operations */}
       {(hasAccountType(user, CAN_RECORD_EXPENSES) ||
@@ -337,18 +378,6 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
-      )}
-
-      {metrics.expiringCount > 0 && (
-        <button
-          type="button"
-          onClick={() => router.push("/products?filter=expiring")}
-          className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-stock-alert/20 bg-stock-alert/10 px-4 py-3 text-left hover:bg-stock-alert/15 transition-colors"
-        >
-          <span className="text-[length:var(--font-size-body)] text-stock-alert">
-            {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
-          </span>
-        </button>
       )}
 
       {metrics.topProducts && metrics.topProducts.length > 0 && (

@@ -13,6 +13,20 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export interface SalePayment {
   method: PaymentMethod;
   amount: number;
+  /**
+   * Physical cash the customer handed over for a cash payment, when it
+   * differs from `amount`. `amount` always stays the exact sale-total
+   * portion — the receipt prints `Tendered`/`Change` from this field so the
+   * register matches the drawer. See SUSTAINABILITY-AND-EXPERIENCE-BLUEPRINT
+   * §9.1. Undefined when the cashier tendered exactly the sale amount.
+   */
+  tenderedAmount?: number;
+  /**
+   * Bank transfer audit metadata: provider plus sender name / session
+   * reference, attached to the sale record and printed on the receipt for
+   * end-of-day cross-check with the bank app. See §9.3.
+   */
+  note?: string;
 }
 
 export interface SaleItem {

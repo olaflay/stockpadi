@@ -145,6 +145,39 @@ describe("completeSale", () => {
     expect(await db.outbox.count()).toBe(1);
   });
 
+  it("persists cash tendered and transfer note as audit metadata on the sale and its outbox payload (§9.1, §9.3)", async () => {
+    const sale = await completeSale({
+      branchId: BRANCH_ID,
+      customerId: null,
+      payments: [
+        { method: "cash", amount: 400, tenderedAmount: 5000 },
+        { method: "transfer", amount: 600, note: "OPay · Emeka (4821)" },
+      ],
+      lines: [line()],
+      createdByUserId: CASHIER.id,
+      actor: CASHIER,
+    });
+
+    // The recorded amounts still sum to the sale total; tenderedAmount/note
+    // are drawer/register metadata only, untouched by the ledger.
+    expect(sale.total).toBe(1000);
+    const stored = await db.sales.get(sale.id);
+    expect(stored?.payments).toEqual([
+      { method: "cash", amount: 400, tenderedAmount: 5000 },
+      { method: "transfer", amount: 600, note: "OPay · Emeka (4821)" },
+    ]);
+
+    // The outbox payload carries the same metadata so the server's
+    // sync_apply_sale persists it (supabase/migrations/20260904100000).
+    const outboxEntries = await db.outbox.where("clientId").equals(sale.id).toArray();
+    expect(outboxEntries).toHaveLength(1);
+    const payload = outboxEntries[0].payload as { payments?: SalePayment[] };
+    expect(payload?.payments).toEqual([
+      { method: "cash", amount: 400, tenderedAmount: 5000 },
+      { method: "transfer", amount: 600, note: "OPay · Emeka (4821)" },
+    ]);
+  });
+
   it("rejects a zero or negative payment line locally, before it could strand the sale in the outbox forever", async () => {
     const cases: SalePayment[][] = [
       [{ method: "cash", amount: 0 }],

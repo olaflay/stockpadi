@@ -15,6 +15,23 @@ import { getRecentCategoryIds } from "@/lib/last-used-category";
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
 import { TextInput } from "@/components/ui/TextInput";
 
+/**
+ * Shared red caption under a control, wired to that control's aria-describedby
+ * (a TextInput/SelectInput errorId) so screen readers announce it together
+ * with the invalid field.
+ */
+function FieldError({ id, error }: { id: string; error?: string }) {
+  if (!error) return null;
+  return (
+    <span id={id} role="alert" className="text-[length:var(--font-size-caption)] text-danger">
+      {error}
+    </span>
+  );
+}
+
+/** Shared by the Add Product screen's own Starting stock / branch fields. */
+export { FieldError };
+
 /** Name, category, SKU/barcode, and cost/sell price — identical in Add and Edit Product. */
 export function ProductCoreFields({
   register,
@@ -25,6 +42,8 @@ export function ProductCoreFields({
   categoryInputName,
   onCategorySelect,
   autoFocusName,
+  onNameChange,
+  onSkuChange,
 }: {
   register: UseFormRegister<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
@@ -33,22 +52,32 @@ export function ProductCoreFields({
   categoryInputName: string;
   onCategorySelect: (id: string, name: string) => void;
   autoFocusName?: boolean;
+  /** Called on each name keystroke so the form can live-auto-fill the SKU. */
+  onNameChange?: (value: string) => void;
+  /** Called when the user edits the SKU so auto-fill can step aside. */
+  onSkuChange?: (value: string) => void;
   setValue: UseFormSetValue<ProductFormInput>;
 }) {
   const [scanning, setScanning] = useState(false);
+  const nameRegister = register("name");
+  const skuRegister = register("sku");
 
   return (
     <>
       <label className="flex flex-col gap-1">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Name *</span>
         <TextInput
-          {...register("name")}
+          {...nameRegister}
+          onChange={(e) => {
+            nameRegister.onChange(e);
+            onNameChange?.(e.target.value);
+          }}
           placeholder="e.g. Indomie Instant Noodles"
           autoFocus={autoFocusName}
+          hasError={Boolean(errors.name)}
+          errorId="field-error-name"
         />
-        {errors.name && (
-          <span className="text-[length:var(--font-size-caption)] text-danger">{errors.name.message}</span>
-        )}
+        <FieldError id="field-error-name" error={errors.name?.message} />
       </label>
 
       <label className="flex flex-col gap-1">
@@ -65,16 +94,29 @@ export function ProductCoreFields({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">SKU (optional)</span>
-          <TextInput {...register("sku")} placeholder="e.g. IND-70G (auto-fills)" />
-          {errors.sku && (
-            <span className="text-[length:var(--font-size-caption)] text-danger">{errors.sku.message}</span>
-          )}
+          <TextInput
+            {...skuRegister}
+            onChange={(e) => {
+              skuRegister.onChange(e);
+              onSkuChange?.(e.target.value);
+            }}
+            placeholder="e.g. IND-70G (auto-fills)"
+            hasError={Boolean(errors.sku)}
+            errorId="field-error-sku"
+          />
+          <FieldError id="field-error-sku" error={errors.sku?.message} />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Barcode</span>
           <div className="flex gap-2">
-            <TextInput {...register("barcode")} placeholder="optional" className="flex-1 min-w-0" />
+            <TextInput
+              {...register("barcode")}
+              placeholder="optional"
+              className="flex-1 min-w-0"
+              hasError={Boolean(errors.barcode)}
+              errorId="field-error-barcode"
+            />
             <button
               type="button"
               onClick={() => setScanning(true)}
@@ -84,6 +126,7 @@ export function ProductCoreFields({
               <Camera size={18} aria-hidden />
             </button>
           </div>
+          <FieldError id="field-error-barcode" error={errors.barcode?.message} />
         </label>
       </div>
       
@@ -100,18 +143,32 @@ export function ProductCoreFields({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Cost price *</span>
-          <TextInput type="number" min="0" step="0.01" inputMode="decimal" {...register("costPrice")} placeholder="₦0.00" />
-          {errors.costPrice && (
-            <span className="text-[length:var(--font-size-caption)] text-danger">{errors.costPrice.message}</span>
-          )}
+          <TextInput
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            {...register("costPrice")}
+            placeholder="₦0.00"
+            hasError={Boolean(errors.costPrice)}
+            errorId="field-error-cost-price"
+          />
+          <FieldError id="field-error-cost-price" error={errors.costPrice?.message} />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Sell price *</span>
-          <TextInput type="number" min="0" step="0.01" inputMode="decimal" {...register("sellPrice")} placeholder="₦0.00" />
-          {errors.sellPrice && (
-            <span className="text-[length:var(--font-size-caption)] text-danger">{errors.sellPrice.message}</span>
-          )}
+          <TextInput
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            {...register("sellPrice")}
+            placeholder="₦0.00"
+            hasError={Boolean(errors.sellPrice)}
+            errorId="field-error-sell-price"
+          />
+          <FieldError id="field-error-sell-price" error={errors.sellPrice?.message} />
         </label>
       </div>
     </>
@@ -137,10 +194,10 @@ export function ProductStockAlertField({
         inputMode="numeric"
         {...register("lowStockThreshold")}
         placeholder={placeholder}
+        hasError={Boolean(errors.lowStockThreshold)}
+        errorId="field-error-low-stock-threshold"
       />
-      {errors.lowStockThreshold && (
-        <span className="text-[length:var(--font-size-caption)] text-danger">{errors.lowStockThreshold.message}</span>
-      )}
+      <FieldError id="field-error-low-stock-threshold" error={errors.lowStockThreshold?.message} />
     </label>
   );
 }
@@ -190,10 +247,13 @@ export function ProductUnitConversionFields({
             <span className="text-[length:var(--font-size-label)] text-on-surface-muted">
               What unit is the price above for? *
             </span>
-            <TextInput {...register("unitLabel")} placeholder="e.g. piece, kg, bag" />
-            {errors.unitLabel && (
-              <span className="text-[length:var(--font-size-caption)] text-danger">{errors.unitLabel.message}</span>
-            )}
+            <TextInput
+              {...register("unitLabel")}
+              placeholder="e.g. piece, kg, bag"
+              hasError={Boolean(errors.unitLabel)}
+              errorId="field-error-unit-label"
+            />
+            <FieldError id="field-error-unit-label" error={errors.unitLabel?.message} />
           </label>
 
           <label className="flex flex-col gap-1">
@@ -215,12 +275,10 @@ export function ProductUnitConversionFields({
                   step="0.01"
                   {...register("altUnitConversionFactor")}
                   placeholder="e.g. 24"
+                  hasError={Boolean(errors.altUnitConversionFactor)}
+                  errorId="field-error-alt-unit-factor"
                 />
-                {errors.altUnitConversionFactor && (
-                  <span className="text-[length:var(--font-size-caption)] text-danger">
-                    {errors.altUnitConversionFactor.message}
-                  </span>
-                )}
+                <FieldError id="field-error-alt-unit-factor" error={errors.altUnitConversionFactor?.message} />
               </label>
 
               <label className="flex flex-col gap-1">
@@ -233,12 +291,10 @@ export function ProductUnitConversionFields({
                   step="0.01"
                   {...register("altUnitSellPrice")}
                   placeholder="0.00"
+                  hasError={Boolean(errors.altUnitSellPrice)}
+                  errorId="field-error-alt-unit-price"
                 />
-                {errors.altUnitSellPrice && (
-                  <span className="text-[length:var(--font-size-caption)] text-danger">
-                    {errors.altUnitSellPrice.message}
-                  </span>
-                )}
+                <FieldError id="field-error-alt-unit-price" error={errors.altUnitSellPrice?.message} />
               </label>
             </>
           )}

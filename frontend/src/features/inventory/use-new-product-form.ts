@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +16,7 @@ import {
   type ProductFormValues,
 } from "@/features/inventory/product-schema";
 import { writeNewProductOffline } from "@/features/inventory/product-offline-write";
+import { validateStartingStock } from "@/features/inventory/starting-stock";
 import { findProductReferenceConflict } from "@/features/inventory/product-references";
 import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP } from "@/config/limits";
@@ -43,6 +44,17 @@ export function useNewProductForm(options?: { prefill?: string }) {
   // when someone actually needs to sell the same stock two ways (e.g.
   // pieces and cartons); nothing changes on screen until they ask for it.
   const [showUnitConversion, setShowUnitConversion] = useState(false);
+  // Compulsory Starting stock + (multi-branch) branch: validated inside
+  // onSubmit, kept outside react-hook-form like the category picker, and
+  // surfaced as a red control via TextInput/SelectInput hasError.
+  const [initialStockError, setInitialStockError] = useState<string | null>(null);
+  const [initialStockBranchError, setInitialStockBranchError] = useState<string | null>(null);
+  // Live SKU auto-fill: the SKU field mirrors the name as it's typed; the
+  // first manual edit to the SKU turns auto-fill off for this form.
+  const [autoSkuEnabled, setAutoSkuEnabled] = useState(true);
+  const lastAutoSku = useRef("");
+  const lastSkuPrefix = useRef<string | null>(null);
+  const pendingSkuTail = useRef(0);
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -57,8 +69,8 @@ export function useNewProductForm(options?: { prefill?: string }) {
   const altUnitLabel = watch("altUnitLabel") || "";
 
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
-  const initialStockQty = Number(initialStock);
-  const hasInitialStock = initialStock !== "" && Number.isFinite(initialStockQty) && initialStockQty > 0;
+  const earlyInitialStockQty = Number(initialStock);
+  const hasInitialStock = initialStock !== "" && Number.isFinite(earlyInitialStockQty) && earlyInitialStockQty > 0;
 
   function generateFallbackSku(name: string): string {
     const prefix = name
@@ -70,16 +82,55 @@ export function useNewProductForm(options?: { prefill?: string }) {
     return `${prefix}-${rand}`;
   }
 
+  // The live SKU-fill keeps its random tail stable while the user keeps
+  // typing within the same name stem, so the field doesn't visibly jitter
+  // on every keystroke.
+  function skuSuggestionFor(name: string): string {
+    const trimmed = name.trim();
+    const prefix = trimmed
+      ? trimmed.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase() || "ITEM"
+      : "";
+    if (!prefix) return "";
+    if (prefix !== lastSkuPrefix.current) {
+      lastSkuPrefix.current = prefix;
+      pendingSkuTail.current = Math.floor(1000 + Math.random() * 9000);
+    }
+    return `${prefix}-${pendingSkuTail.current}`;
+  }
+
+  function handleNameChange(value: string) {
+    if (!autoSkuEnabled) return;
+    const suggestion = skuSuggestionFor(value);
+    form.setValue("sku", suggestion, { shouldDirty: false, shouldValidate: true });
+    lastAutoSku.current = suggestion;
+  }
+
+  function handleSkuChange(value: string) {
+    if (value !== lastAutoSku.current) setAutoSkuEnabled(false);
+  }
+
+  function updateInitialStock(value: string) {
+    setInitialStock(value);
+    if (initialStockError && value.trim() !== "") setInitialStockError(null);
+  }
+
+  function updateInitialStockBranch(branchId: string | null) {
+    setInitialStockBranchId(branchId);
+    if (branchId) setInitialStockBranchError(null);
+  }
+
   const onSubmit = handleSubmit(
     async (values) => {
       try {
-        if (initialStock !== "" && (!Number.isFinite(initialStockQty) || initialStockQty < 0)) {
-          showToast("Starting stock cannot be negative.", "warning");
-          return;
-        }
-
-        if (hasInitialStock && !effectiveStockBranchId) {
-          showToast("Choose which branch this stock is at.", "warning");
+        const stockResult = validateStartingStock(initialStock, effectiveStockBranchId, branches?.length ?? 0);
+        if (!stockResult.ok) {
+          const stockError = stockResult.error ?? "Check the highlighted fields.";
+          if (stockResult.reason === "branch") {
+            setInitialStockBranchError(stockError);
+          } else {
+            setInitialStockError(stockError);
+          }
+          showToast(stockError, "warning");
           return;
         }
 
@@ -127,12 +178,11 @@ export function useNewProductForm(options?: { prefill?: string }) {
           return;
         }
 
-        await writeNewProductOffline(
-          product,
-          hasInitialStock && effectiveStockBranchId
-            ? { branchId: effectiveStockBranchId, quantity: initialStockQty, createdByUserId: user.id }
-            : null
-        );
+        await writeNewProductOffline(product, {
+          branchId: effectiveStockBranchId!,
+          quantity: stockResult.quantity!,
+          createdByUserId: user.id,
+        });
 
         if (product.categoryId) markCategoryUsed(product.categoryId);
         showToast(`${product.name} added`, "success");
@@ -154,9 +204,13 @@ export function useNewProductForm(options?: { prefill?: string }) {
     categories,
     branches,
     initialStock,
-    setInitialStock,
+    setInitialStock: updateInitialStock,
+    initialStockError,
     initialStockBranchId,
-    setInitialStockBranchId,
+    setInitialStockBranchId: updateInitialStockBranch,
+    initialStockBranchError,
+    onNameChange: handleNameChange,
+    onSkuChange: handleSkuChange,
     categoryId,
     setCategoryId,
     categoryInputName,

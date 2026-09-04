@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
+import { NairaIcon } from "@/components/ui/NairaIcon";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
@@ -180,8 +181,9 @@ export default function SaleDetailPage({ params }: PageProps) {
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
-              {formatCurrency(sale.total)}
+            <p className="flex items-center justify-end gap-1 text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
+              <NairaIcon size={18} />
+              {formatCurrency(sale.total).replace(/[₦\s]/g, "")}
             </p>
             {sale.voidedAt && <p className="text-[length:var(--font-size-caption)] font-medium text-danger">Cancelled</p>}
           </div>

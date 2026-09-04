@@ -15,18 +15,22 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
 
 type Shell = "business" | "work";
 
+// The bar renders Home + slice(1, 5): item index 0 is never shown, so the
+// first entry is a slot placeholder. Sell must be inside the visible slice
+// for workers (their most frequent action), Settings for owners (reachable
+// on the bar; Staff lives behind Settings & Access).
 const BUSINESS_NAV = [
   { label: "Dashboard", href: "/business", icon: LayoutDashboard },
   { label: "Sell", href: "/business/pos", icon: Receipt },
   { label: "Products", href: "/business/products", icon: Package },
   { label: "Sales", href: "/business/sales", icon: BarChart3 },
-  { label: "Staff", href: "/business/staff", icon: Users },
   { label: "Settings", href: "/business/settings", icon: Settings },
+  { label: "Staff", href: "/business/staff", icon: Users },
 ] as const;
 
 const WORKER_NAV = [
-  { label: "Sell", href: "/work/pos", icon: Receipt },
   { label: "Sales", href: "/work/sales", icon: BarChart3 },
+  { label: "Sell", href: "/work/pos", icon: Receipt },
   { label: "Products", href: "/work/products", icon: Package },
   { label: "Stock", href: "/work/stock-count", icon: ClipboardCheck },
   { label: "Customers", href: "/work/customers", icon: Users },

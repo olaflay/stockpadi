@@ -57,7 +57,26 @@ export function WhatsAppReceiptModal({
   });
 
   const paymentLine = sale.payments
-    .map((p) => `  ${p.method === "cash" ? "💵 Cash" : p.method === "transfer" ? "🏦 Transfer" : p.method === "pos_terminal" ? "📱 POS" : "📋 Credit"}: ${formatCurrency(p.amount)}`)
+    .map((p) => {
+      const method =
+        p.method === "cash"
+          ? "💵 Cash"
+          : p.method === "transfer"
+            ? "🏦 Transfer"
+            : p.method === "pos_terminal"
+              ? "📱 POS"
+              : "📋 Credit";
+      let line = `  ${method}: ${formatCurrency(p.amount)}`;
+      // Register drawer line + transfer audit note, matching the thermal
+      // receipt (§9.1, §9.3).
+      if (p.method === "cash" && p.tenderedAmount !== undefined) {
+        line += `\n  Tendered: ${formatCurrency(p.tenderedAmount)} | Change: ${formatCurrency(p.tenderedAmount - p.amount)}`;
+      }
+      if (p.method === "transfer" && p.note) {
+        line += `\n  ${p.note}`;
+      }
+      return line;
+    })
     .join("\n");
 
   const debtSummarySection =
@@ -78,8 +97,10 @@ export function WhatsAppReceiptModal({
 
   function handleSend() {
     const trimmed = phone.trim();
-    if (!trimmed) return;
-    window.open(buildWhatsAppUrl(trimmed, previewText), "_blank");
+    // No number saved/typed? buildWhatsAppUrl falls back to WhatsApp's own
+    // contact picker with the text prefilled, so Send is never a dead end
+    // (same intentional fallback documented in src/lib/whatsapp.ts).
+    window.open(buildWhatsAppUrl(trimmed || null, previewText), "_blank");
   }
 
   async function handleCopy() {
@@ -168,11 +189,10 @@ export function WhatsAppReceiptModal({
             <span>{copied ? "Copied!" : "Copy text"}</span>
           </button>
 
-          <RippleButton
+<RippleButton
             type="button"
             onClick={handleSend}
-            disabled={!phone.trim()}
-            className="flex min-h-[var(--touch-target-min)] flex-[2] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#25D366] px-4 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-50 transition-opacity"
+            className="flex min-h-[var(--touch-target-min)] flex-[2] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#25D366] px-4 text-xs font-semibold text-white hover:opacity-95 transition-opacity"
           >
             <MessageCircle size={16} aria-hidden />
             Send on WhatsApp

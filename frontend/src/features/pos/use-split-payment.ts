@@ -42,6 +42,30 @@ export function useSplitPayment(total: number) {
     setPayments(next);
   }
 
+  /**
+   * Cash-tender register metadata (§9.1): how much the customer actually
+   * handed over. `amount` stays the sale-total portion; `tenderedAmount`
+   * only feeds the receipt's Tendered/Change line and the register drawer.
+   */
+  function updatePaymentTendered(index: number, tendered: number) {
+    const next = [...effectivePayments];
+    const clamped = Number.isFinite(tendered) && tendered >= 0 ? tendered : 0;
+    next[index] = { ...next[index], tenderedAmount: clamped > 0 ? clamped : undefined };
+    setPayments(next);
+  }
+
+  /**
+   * Bank transfer audit metadata (§9.3): provider + sender/session reference.
+   * Stored on the payment line so completeSale persists it to the sale record
+   * and receipts can print it for end-of-day cross-check.
+   */
+  function updatePaymentNote(index: number, note: string) {
+    const next = [...effectivePayments];
+    const trimmed = note.trim();
+    next[index] = { ...next[index], note: trimmed ? trimmed : undefined };
+    setPayments(next);
+  }
+
   function addPaymentLine() {
     const remainingNow = Math.max(total - allocated, 0);
     const unusedMethod = PAYMENT_METHODS.find((m) => !effectivePayments.some((p) => p.method === m)) ?? "transfer";
@@ -70,6 +94,8 @@ export function useSplitPayment(total: number) {
     setCreditCustomerId,
     updatePaymentMethod,
     updatePaymentAmount,
+    updatePaymentTendered,
+    updatePaymentNote,
     addPaymentLine,
     removePaymentLine,
     reset,

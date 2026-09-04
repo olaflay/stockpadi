@@ -14,7 +14,14 @@ export async function submitReconciliation(db: SupabaseClient, actor: User, inpu
   requireAssignedBranch(context, body.branchId);
   const row = { business_id: context.businessId, branch_id: body.branchId, actor_user_id: actor.id, business_date: typeof body.businessDate === "string" ? body.businessDate : new Date().toISOString().slice(0, 10), expected_cash: Number(body.expectedCash ?? 0), expected_transfer: Number(body.expectedTransfer ?? 0), expected_pos: Number(body.expectedPos ?? 0), expected_credit: Number(body.expectedCredit ?? 0), actual_cash: body.actualCash, discrepancy: Number(body.discrepancy ?? 0), note: typeof body.note === "string" ? body.note : null };
   const { data, error } = await db.from("reconciliation_records").insert(row).select().single();
-  if (error) throw new HttpError(500, "RECONCILIATION_FAILED", error.message);
+  if (error) {
+    const dbError = error as { code?: string; message?: string };
+    const isDuplicate = dbError.code === "23505" && String(dbError.message ?? "").includes("reconciliation_records_branch_day_unique");
+    if (isDuplicate) {
+      throw new HttpError(409, "CLOSE_DAY_ALREADY_SUBMITTED", "This branch's close-day is already saved for today.");
+    }
+    throw new HttpError(500, "RECONCILIATION_FAILED", "Could not save the close-day record.");
+  }
   return data;
 }
 

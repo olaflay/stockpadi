@@ -18,6 +18,8 @@ export interface DashboardMetrics {
   lowStockCount: number;
   expiringCount: number;
   unsyncedCount: number;
+  inventoryValue: number;
+  stockedProductCount: number;
   topProducts: Array<{ id: string; name: string; sellPrice: number; currentStock: number }>;
   error: string | null;
 }
@@ -80,6 +82,19 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
             movement.productId,
             (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
           );
+        }
+      }
+
+      // Hero figure: cost value of all stock on hand, plus how many products
+      // actually carry stock. Counted only from the ledger-derived stock map,
+      // never from a mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
+      let inventoryValue = 0;
+      let stockedProductCount = 0;
+      for (const product of products) {
+        const qty = stockByProduct.get(product.id) ?? 0;
+        if (qty > 0) {
+          stockedProductCount += 1;
+          inventoryValue += qty * (product.costPrice ?? 0);
         }
       }
 
@@ -157,6 +172,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         lowStockCount,
         expiringCount,
         unsyncedCount: outboxPending.length,
+        inventoryValue,
+        stockedProductCount,
         topProducts,
         error: null,
       } satisfies DashboardMetrics;
@@ -172,6 +189,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         lowStockCount: 0,
         expiringCount: 0,
         unsyncedCount: 0,
+        inventoryValue: 0,
+        stockedProductCount: 0,
         topProducts: [],
         error: err instanceof Error ? err.message : "Could not read local data.",
       } satisfies DashboardMetrics;

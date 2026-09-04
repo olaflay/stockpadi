@@ -9,6 +9,7 @@ import {
   ProductStockAlertField,
   ProductUnitConversionFields,
   ProductExpiryFields,
+  FieldError,
 } from "@/features/inventory/components/ProductFormFields";
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
 import { TextInput } from "@/components/ui/TextInput";
@@ -32,10 +33,14 @@ export function NewProductForm({
   isSubmitting,
   initialStock,
   onInitialStockChange,
+  initialStockError,
   hasInitialStock,
   branches,
   initialStockBranchId,
+  initialStockBranchError,
   onInitialStockBranchChange,
+  onNameChange,
+  onSkuChange,
 }: {
   onSubmit: (event?: BaseSyntheticEvent) => Promise<void>;
   onCancel?: () => void;
@@ -55,10 +60,14 @@ export function NewProductForm({
   isSubmitting: boolean;
   initialStock: string;
   onInitialStockChange: (value: string) => void;
+  initialStockError: string | null;
   hasInitialStock: boolean;
   branches: LocalBranch[] | undefined;
   initialStockBranchId: string | null;
+  initialStockBranchError: string | null;
   onInitialStockBranchChange: (branchId: string | null) => void;
+  onNameChange?: (value: string) => void;
+  onSkuChange?: (value: string) => void;
 }) {
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 pb-24">
@@ -71,11 +80,13 @@ export function NewProductForm({
         categoryInputName={categoryInputName}
         onCategorySelect={onCategorySelect}
         autoFocusName
+        onNameChange={onNameChange}
+        onSkuChange={onSkuChange}
       />
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Starting stock</span>
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Starting stock *</span>
           <TextInput
             type="number"
             min="0"
@@ -83,7 +94,10 @@ export function NewProductForm({
             value={initialStock}
             onChange={(e) => onInitialStockChange(e.target.value)}
             placeholder="0"
+            hasError={Boolean(initialStockError)}
+            errorId="starting-stock-error"
           />
+          <FieldError id="starting-stock-error" error={initialStockError ?? undefined} />
         </label>
 
         <ProductStockAlertField register={register} errors={errors} placeholder="e.g. 5" />
@@ -95,6 +109,8 @@ export function NewProductForm({
           <SelectInput
             value={initialStockBranchId ?? ""}
             onChange={(e) => onInitialStockBranchChange(e.target.value || null)}
+            hasError={Boolean(initialStockBranchError)}
+            aria-describedby={initialStockBranchError ? "starting-stock-branch-error" : undefined}
           >
             <option value="">-- Select branch --</option>
             {branches.map((branch) => (
@@ -103,6 +119,7 @@ export function NewProductForm({
               </option>
             ))}
           </SelectInput>
+          <FieldError id="starting-stock-branch-error" error={initialStockBranchError ?? undefined} />
         </label>
       )}
 

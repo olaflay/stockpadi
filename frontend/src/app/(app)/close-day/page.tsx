@@ -17,9 +17,10 @@ import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { BalancedIllustration } from "@/components/illustrations";
 import { computeGrossProfit, computeNetProfit } from "@/features/reports/compute-profit";
 import type { PaymentMethod } from "@/types/sale";
-import { serverGet, NetworkUnavailableError } from "@/features/operations/server-client";
+import { serverGet, NetworkUnavailableError, BackendRequestError } from "@/features/operations/server-client";
 import { fetchReconciliationHistory, submitReconciliation, type ReconciliationRecord } from "@/features/reconciliation/reconciliation-client";
 import { tenantArray } from "@/lib/local-tenant";
+import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import type { Expense } from "@/types/expense";
 import type { Product } from "@/types/product";
 import type { Sale } from "@/types/sale";
@@ -64,6 +65,7 @@ export default function CloseDayPage() {
 
   const [reconciliationBusy, setReconciliationBusy] = useState(false);
   const [reconciliationMessage, setReconciliationMessage] = useState<string | null>(null);
+  const [reconciliationOk, setReconciliationOk] = useState(false);
   const [history, setHistory] = useState<ReconciliationRecord[]>([]);
 
   useEffect(() => {
@@ -235,10 +237,7 @@ export default function CloseDayPage() {
   async function submitCloseDay() {
     if (!hasAnyCount || reconciliationBusy) return;
     const localBranches = await tenantArray<{ id: string }>(db.branches);
-    const branchId =
-      (user.accountType === "WORKER"
-        ? localBranches.find((branch) => user.branchIds?.includes(branch.id))
-        : localBranches[0])?.id;
+    const branchId = resolveDefaultBranch(localBranches, user);
 
     if (!branchId) {
       setReconciliationMessage("No branch is assigned to this account.");
@@ -246,6 +245,7 @@ export default function CloseDayPage() {
     }
     setReconciliationBusy(true);
     setReconciliationMessage(null);
+    setReconciliationOk(false);
     try {
       const record = await submitReconciliation({
         branchId,
@@ -259,8 +259,14 @@ export default function CloseDayPage() {
       });
       setHistory((current) => [record, ...current]);
       setReconciliationMessage("Close day saved.");
+      setReconciliationOk(true);
     } catch (error) {
-      setReconciliationMessage(error instanceof Error ? error.message : "Could not save close day.");
+      if (error instanceof BackendRequestError && error.code === "CLOSE_DAY_ALREADY_SUBMITTED") {
+        setReconciliationMessage("Today's close-day for this branch is already saved. See recent close days below.");
+        fetchReconciliationHistory().then((result) => setHistory(result.records)).catch(() => undefined);
+      } else {
+        setReconciliationMessage("Could not save close day. Check the backend connection and try again.");
+      }
     } finally {
       setReconciliationBusy(false);
     }
@@ -508,7 +514,7 @@ export default function CloseDayPage() {
         </RippleButton>
 
         {reconciliationMessage && (
-          <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted font-medium">
+          <p className={`text-center text-[length:var(--font-size-caption)] font-medium ${reconciliationOk ? "text-success" : "text-danger"}`}>
             {reconciliationMessage}
           </p>
         )}

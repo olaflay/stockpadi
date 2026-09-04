@@ -2,6 +2,7 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
+import { NairaIcon } from "@/components/ui/NairaIcon";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
 import { addCreditCustomer } from "@/features/pos/add-credit-customer";
@@ -16,6 +17,9 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   credit: "Credit (Owing)",
 };
 
+/** Quick bank-provider chips for transfer audit metadata (§9.3). */
+const TRANSFER_PROVIDERS = ["OPay", "Moniepoint", "PalmPay", "Kuda", "Commercial Bank"];
+
 export function PaymentStep(props: {
   itemCount: number;
   total: number;
@@ -28,6 +32,8 @@ export function PaymentStep(props: {
   onSelectCreditCustomer: (id: string | null) => void;
   onUpdatePaymentMethod: (index: number, method: PaymentMethod) => void;
   onUpdatePaymentAmount: (index: number, amount: number) => void;
+  onUpdatePaymentTendered: (index: number, tendered: number) => void;
+  onUpdatePaymentNote: (index: number, note: string) => void;
   onAddPaymentLine: () => void;
   onRemovePaymentLine: (index: number) => void;
   isSubmitting: boolean;
@@ -47,6 +53,8 @@ export function PaymentStep(props: {
     onSelectCreditCustomer,
     onUpdatePaymentMethod,
     onUpdatePaymentAmount,
+    onUpdatePaymentTendered,
+    onUpdatePaymentNote,
     onAddPaymentLine,
     onRemovePaymentLine,
     isSubmitting,
@@ -60,14 +68,71 @@ export function PaymentStep(props: {
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [cashTendered, setCashTendered] = useState("");
-  const [transferNotes, setTransferNotes] = useState<Record<number, string>>({});
+  // Seeded from the payment line so returning to Payment after a cart trip
+  // keeps the tendered/note the cashier already entered (§9.1, §9.3).
+  const [cashTendered, setCashTendered] = useState(() =>
+    effectivePayments[0]?.tenderedAmount ? String(effectivePayments[0].tenderedAmount) : ""
+  );
+  const [transferMeta, setTransferMeta] = useState<Record<number, { provider?: string; sender?: string }>>(
+    () => {
+      const seed: Record<number, { provider?: string; sender?: string }> = {};
+      effectivePayments.forEach((p, i) => {
+        if (p.note) {
+          const [provider, ...rest] = p.note.split(" · ");
+          seed[i] = { provider: provider || undefined, sender: rest.join(" · ") || undefined };
+        }
+      });
+      return seed;
+    }
+  );
 
   /** First payment is cash and it's the only line (no split). */
   const isCashOnly = effectivePayments.length === 1 && effectivePayments[0].method === "cash";
   const tenderedAmount = parseFloat(cashTendered) || 0;
   const changeDue = tenderedAmount - total;
   const insufficientCash = isCashOnly && tenderedAmount > 0 && tenderedAmount < total - AMOUNT_EPSILON;
+
+  /** Quick-tender cash chips (§9.1 / §10.7): exact, nearest ₦1,000, and the
+      highest hand-tendered note bundles above the total. */
+  const quickTenderChips = (() => {
+    const roundUpThousand = Math.ceil(total / 1000) * 1000;
+    return [
+      { label: `Exact ${formatCurrency(total)}`, value: total },
+      ...(roundUpThousand > total ? [{ label: formatCurrency(roundUpThousand), value: roundUpThousand }] : []),
+      ...[5000, 10000]
+        .filter((d) => d > total)
+        .map((d) => ({ label: formatCurrency(d), value: d })),
+    ];
+  })();
+
+  function applyTendered(value: number) {
+    setCashTendered(String(value));
+    onUpdatePaymentTendered(0, value);
+  }
+
+  function handleTenderedTyped(raw: string) {
+    setCashTendered(raw);
+    const numeric = parseFloat(raw);
+    onUpdatePaymentTendered(0, Number.isFinite(numeric) && numeric > 0 ? numeric : 0);
+  }
+
+  function commitTransferNote(index: number, meta: { provider?: string; sender?: string }) {
+    const parts = [meta.provider, meta.sender].filter(Boolean);
+    onUpdatePaymentNote(index, parts.join(" · "));
+  }
+
+  function toggleTransferProvider(index: number, provider: string) {
+    const current = transferMeta[index] ?? {};
+    const meta = { ...current, provider: current.provider === provider ? "" : provider };
+    setTransferMeta((prev) => ({ ...prev, [index]: meta }));
+    commitTransferNote(index, meta);
+  }
+
+  function setTransferSender(index: number, sender: string) {
+    const meta = { ...(transferMeta[index] ?? {}), sender };
+    setTransferMeta((prev) => ({ ...prev, [index]: meta }));
+    commitTransferNote(index, meta);
+  }
 
   async function handleAddCreditCustomer() {
     const name = newCustomerName.trim();
@@ -89,7 +154,10 @@ export function PaymentStep(props: {
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
             {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>
-          <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">{formatCurrency(total)}</span>
+          <span className="flex items-center gap-1 font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
+            <NairaIcon size={16} />
+            {formatCurrency(total).replace(/[₦\s]/g, "")}
+          </span>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -129,16 +197,39 @@ export function PaymentStep(props: {
                   </button>
                 )}
               </div>
-              {/* Bank transfer audit note */}
+              {/* Bank transfer audit metadata: provider chips + sender/session ID,
+                  composed into the payment's note and printed on the receipt (§9.3) */}
               {payment.method === "transfer" && (
-                <input
-                  type="text"
-                  aria-label={`Bank transfer note for payment ${index + 1}`}
-                  placeholder="Bank name, reference, time…"
-                  value={transferNotes[index] ?? ""}
-                  onChange={(e) => setTransferNotes((prev) => ({ ...prev, [index]: e.target.value }))}
-                  className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface-muted"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {TRANSFER_PROVIDERS.map((provider) => {
+                      const active = transferMeta[index]?.provider === provider;
+                      return (
+                        <button
+                          key={provider}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => toggleTransferProvider(index, provider)}
+                          className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border px-3 text-[length:var(--font-size-caption)] font-medium transition-colors ${
+                            active
+                              ? "border-brand-accent bg-brand-accent text-brand-accent-contrast"
+                              : "border-border bg-surface-container text-on-surface"
+                          }`}
+                        >
+                          {provider}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="text"
+                    aria-label={`Sender name / session ID for payment ${index + 1}`}
+                    placeholder="Sender name / session ID"
+                    value={transferMeta[index]?.sender ?? ""}
+                    onChange={(e) => setTransferSender(index, e.target.value)}
+                    className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface-muted"
+                  />
+                </div>
               )}
             </div>
           ))}
@@ -165,12 +256,54 @@ export function PaymentStep(props: {
           </div>
         </div>
 
-        {/* Cash tendered & change due — only when the sole payment is cash */}
+        {/* Cash tendered & change due — only when the sole payment is cash. Quick
+            tender chips for one-tap denominations; the CHANGE TO RETURN block
+            is a prominent success container so the cashier never misses it (§9.1) */}
         {isCashOnly && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-3">
             <label className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Cash tendered
             </label>
+
+            <div className="flex flex-wrap gap-1.5">
+              {quickTenderChips.map((chip) => {
+                const active = tenderedAmount === chip.value;
+                return (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => applyTendered(chip.value)}
+                    className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border px-3 font-number text-[length:var(--font-size-caption)] font-medium tabular-nums transition-colors ${
+                      active
+                        ? "border-brand-accent bg-brand-accent text-brand-accent-contrast"
+                        : "border-border bg-surface-container-high text-on-surface"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+              {tenderedAmount > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => applyTendered(tenderedAmount + 500)}
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums"
+                  >
+                    +₦500
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTendered(tenderedAmount + 1000)}
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums"
+                  >
+                    +₦1,000
+                  </button>
+                </>
+              )}
+            </div>
+
             <input
               type="number"
               inputMode="decimal"
@@ -178,7 +311,7 @@ export function PaymentStep(props: {
               step="0.01"
               placeholder="How much did the customer give you?"
               value={cashTendered}
-              onChange={(e) => setCashTendered(e.target.value)}
+              onChange={(e) => handleTenderedTyped(e.target.value)}
               className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums"
             />
             {tenderedAmount > 0 && (
@@ -188,9 +321,14 @@ export function PaymentStep(props: {
                     Not enough — need {formatCurrency(total - tenderedAmount)} more
                   </span>
                 ) : changeDue > 0 ? (
-                  <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    Change due: <span className="font-number tabular-nums">{formatCurrency(changeDue)}</span>
-                  </span>
+                  <div className="flex w-full flex-col items-center gap-0.5 rounded-[var(--radius-control)] bg-success-container px-3 py-3">
+                    <span className="text-[length:var(--font-size-caption)] font-medium uppercase tracking-wide text-on-success-container">
+                      Change to return
+                    </span>
+                    <span className="font-number text-[length:var(--font-size-title-lg)] font-bold tabular-nums text-on-success-container">
+                      {formatCurrency(changeDue)}
+                    </span>
+                  </div>
                 ) : (
                   <span className="text-[length:var(--font-size-body)] font-medium text-on-surface-muted">
                     Exact amount

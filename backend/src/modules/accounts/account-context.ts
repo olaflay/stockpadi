@@ -33,22 +33,30 @@ export async function resolveAccountContext(db: SupabaseClient, user: User, opti
   if (!["ADMIN", "BUSINESS_OWNER", "WORKER"].includes(data.account_type)) {
     throw new HttpError(403, "FORBIDDEN", "Unsupported account type");
   }
-  let permissions: WorkerCapability[] = [...WORKER_CAPABILITIES];
-  if (data.account_type === "WORKER" && typeof (db as { from?: unknown }).from === "function") {
-    const permissionsQuery = db.from("worker_permissions");
-    if (!permissionsQuery || typeof (permissionsQuery as { select?: unknown }).select !== "function") return { userId: data.user_id, accountType: data.account_type as AccountType, businessId: data.business_id, businessStatus: data.business_status, membershipStatus: data.membership_status, branchIds: data.branch_ids ?? [], permissions };
-    const { data: grants, error: grantsError } = await permissionsQuery
-      .select("permission")
-      .eq("user_id", user.id)
-      .eq("business_id", data.business_id)
-      .eq("enabled", true);
-    if (grantsError) {
-      logger.error("worker capability lookup failed", { userId: user.id, businessId: data.business_id }, grantsError);
-      throw new HttpError(500, "ACCOUNT_CAPABILITIES_FAILED", grantsError.message);
+  // A Worker is granted exactly the capabilities an owner enabled for them —
+  // never a full fallback set, so "disable everything" is honest. Owners and
+  // admins carry the full worker capability surface.
+  let permissions: WorkerCapability[] = [];
+  if (data.account_type === "WORKER") {
+    if (typeof (db as { from?: unknown }).from === "function") {
+      const permissionsQuery = db.from?.("worker_permissions") as { select?: unknown } | undefined;
+      if (typeof permissionsQuery?.select === "function") {
+        const { data: grants, error: grantsError } = await permissionsQuery
+          .select("permission")
+          .eq("user_id", user.id)
+          .eq("business_id", data.business_id)
+          .eq("enabled", true);
+        if (grantsError) {
+          logger.error("worker capability lookup failed", { userId: user.id, businessId: data.business_id }, grantsError);
+          throw new HttpError(500, "ACCOUNT_CAPABILITIES_FAILED", grantsError.message);
+        }
+        permissions = (grants as Array<{ permission: string }>)
+          .map((grant) => grant.permission)
+          .filter((permission): permission is WorkerCapability => (WORKER_CAPABILITIES as readonly string[]).includes(permission));
+      }
     }
-    if ((grants ?? []).length > 0) {
-      permissions = (grants as Array<{ permission: string }>).map((grant) => grant.permission).filter((permission): permission is WorkerCapability => (WORKER_CAPABILITIES as readonly string[]).includes(permission));
-    }
+  } else {
+    permissions = [...WORKER_CAPABILITIES];
   }
   return {
     userId: data.user_id,
