@@ -4,6 +4,7 @@
   "private": true,
   "engines": { "node": ">=20.9.0" },
   "scripts": {
+    "postinstall": "npm install --prefix frontend && npm install --prefix backend",
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "frontend:build": "npm --prefix frontend run build",
