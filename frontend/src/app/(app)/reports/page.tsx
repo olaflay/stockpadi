@@ -59,9 +59,9 @@ export default function ReportsPage() {
 
   if (result.sales.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-140px)] flex-col">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Reports" hideBack={true} />
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center my-auto">
           <EmptyState
             illustration={EmptySalesIllustration}
             title="No sales yet"

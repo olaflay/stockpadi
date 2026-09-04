@@ -167,24 +167,20 @@ export default function ProductsPage() {
 
   if (result.products.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Products" hideBack={true} />
-        <EmptyState
-          illustration={EmptyShelfIllustration}
-          title="Your shelf is empty"
-          description="Add your first product to start selling and tracking stock."
-          action={
-            hasAccountType(user, CAN_EDIT_PRODUCTS)
-              ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
-              : undefined
-          }
-          fullScreen
-        />
-        {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
-          <FAB id="tour-add-product" href="/products/new" label="Add product">
-            <Plus size={26} aria-hidden />
-          </FAB>
-        )}
+        <div className="flex flex-1 items-center justify-center my-auto">
+          <EmptyState
+            illustration={EmptyShelfIllustration}
+            title="Your shelf is empty"
+            description="Add your first product to start selling and tracking stock."
+            action={
+              hasAccountType(user, CAN_EDIT_PRODUCTS)
+                ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
+                : undefined
+            }
+          />
+        </div>
       </div>
     );
   }

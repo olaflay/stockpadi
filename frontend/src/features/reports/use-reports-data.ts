@@ -48,15 +48,9 @@ export function useReportsData() {
         const lowStockIds = new Set(products.filter((product) => product.lowStockThreshold !== null && (stockByProduct.get(product.id) ?? 0) <= product.lowStockThreshold).map((product) => product.id));
         return { sales, products, stockByProduct, profile: undefined, expenses, purchases, creditMovements: [], lowStockIds, serverSummary: remote, error: null as string | null };
       } catch (error) {
-        if (
-          !(error instanceof NetworkUnavailableError) &&
-          !(error instanceof BackendConfigurationError) &&
-          typeof navigator !== "undefined" &&
-          navigator.onLine
-        ) {
-          throw error;
+        if (!(error instanceof NetworkUnavailableError) && !(error instanceof BackendConfigurationError)) {
+          console.warn("Remote reports fetch failed, falling back to local snapshot:", error);
         }
-        /* offline / unconfigured uses the local snapshot below */
       }
       const [sales, products, profile, expenses, purchases, creditMovements] = await Promise.all([
         tenantArray<Sale>(db.sales

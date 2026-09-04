@@ -64,8 +64,8 @@ export function ProductCoreFields({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">SKU *</span>
-          <TextInput {...register("sku")} placeholder="e.g. IND-70G" />
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">SKU (optional)</span>
+          <TextInput {...register("sku")} placeholder="e.g. IND-70G (auto-fills)" />
           {errors.sku && (
             <span className="text-[length:var(--font-size-caption)] text-danger">{errors.sku.message}</span>
           )}

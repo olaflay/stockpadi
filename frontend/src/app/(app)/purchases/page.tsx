@@ -109,24 +109,20 @@ export default function PurchasesPage() {
 
   if (result.purchases.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
-        <EmptyState
-          icon={Truck}
-          title="No restocks recorded"
-          description="Record stock coming in from a supplier so what's on the shelf matches the app."
-          action={
-            canAdd
-              ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
-              : undefined
-          }
-          fullScreen
-        />
-        {canAdd && (
-          <FAB href="/purchases/new" label="Record a restock">
-            <Plus size={26} aria-hidden />
-          </FAB>
-        )}
+        <div className="flex flex-1 items-center justify-center my-auto">
+          <EmptyState
+            icon={Truck}
+            title="No restocks recorded"
+            description="Record stock coming in from a supplier so what's on the shelf matches the app."
+            action={
+              canAdd
+                ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
+                : undefined
+            }
+          />
+        </div>
       </div>
     );
   }

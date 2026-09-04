@@ -207,11 +207,17 @@ export function renderVerificationEmail(fullName: string, code: string): Rendere
   };
 }
 
+function getFrontendUrl(): string {
+  const origin = Deno.env.get("FRONTEND_ORIGIN") || Deno.env.get("SITE_URL") || "https://stockpadi-drab.vercel.app";
+  return origin.trim().replace(/\/$/, "");
+}
+
 /** Welcome Email after verification completes */
 export function renderWelcomeEmail(fullName: string, storeName: string): RenderedEmail {
   const safeName = escapeHtml(fullName);
   const safeStore = escapeHtml(storeName);
   const subject = "Your StockPadi store is ready!";
+  const dashboardUrl = `${getFrontendUrl()}/dashboard`;
 
   const text = `Hi ${fullName},\n\nCongratulations! Your email is verified and ${storeName} is ready to use.\n\nYou can now log in to add inventory, set up staff accounts, and process sales.\n\nWelcome aboard!`;
 
@@ -230,7 +236,7 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
     </div>
 
     <p style="text-align: center;">
-      <a href="https://stockpadi.app" class="btn">Go to StockPadi Dashboard &rarr;</a>
+      <a href="${dashboardUrl}" class="btn">Go to StockPadi Dashboard &rarr;</a>
     </p>
   `;
 

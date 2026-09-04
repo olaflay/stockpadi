@@ -131,18 +131,16 @@ export default function ExpensesPage() {
 
   if (result.expenses.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
-        <EmptyState
-          icon={Wallet}
-          title="No expenses recorded"
-          description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
-          action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
-          fullScreen
-        />
-        <FAB onClick={() => setIsAddSheetOpen(true)} label="Add expense">
-          <Plus size={26} aria-hidden />
-        </FAB>
+        <div className="flex flex-1 items-center justify-center my-auto">
+          <EmptyState
+            icon={Wallet}
+            title="No expenses recorded"
+            description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
+            action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
+          />
+        </div>
         <AddExpenseSheet isOpen={isAddSheetOpen} onClose={() => setIsAddSheetOpen(false)} />
       </div>
     );

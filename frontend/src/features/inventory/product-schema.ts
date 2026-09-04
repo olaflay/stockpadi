@@ -10,7 +10,7 @@ import { EXPIRY_TRACKING_MODES } from "@/types/product";
 export const productFormSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required"),
-    sku: z.string().trim().min(1, "SKU is required"),
+    sku: z.string().trim().optional().default(""),
     sellPrice: z.coerce.number({ error: "Enter a valid price" }).min(0, "Sell price can't be negative"),
     costPrice: z.coerce.number({ error: "Enter a valid price" }).min(0, "Cost price can't be negative"),
     barcode: z.string().trim().optional(),

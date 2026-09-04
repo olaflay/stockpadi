@@ -82,9 +82,9 @@ export default function CustomersPage() {
 
   if (customersWithBalance.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-140px)] flex-col">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center my-auto">
           <EmptyState
             icon={Users}
             title="No customers yet"

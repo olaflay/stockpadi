@@ -56,78 +56,88 @@ export function useNewProductForm() {
   const initialStockQty = Number(initialStock);
   const hasInitialStock = initialStock !== "" && Number.isFinite(initialStockQty) && initialStockQty > 0;
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (hasInitialStock && !effectiveStockBranchId) {
-      showToast("Choose which branch this stock is at.", "warning");
-      return;
+  function generateFallbackSku(name: string): string {
+    const prefix = name
+      .trim()
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 4)
+      .toUpperCase() || "ITEM";
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `${prefix}-${rand}`;
+  }
+
+  const onSubmit = handleSubmit(
+    async (values) => {
+      try {
+        if (hasInitialStock && !effectiveStockBranchId) {
+          showToast("Choose which branch this stock is at.", "warning");
+          return;
+        }
+
+        const capStatus = productCapStatusFor((await countActiveProducts()) + 1);
+        if (capStatus === "blocked") {
+          showToast(`This store is at its ${PRODUCT_CAP}-product cap. Remove some to free space.`, "danger");
+          return;
+        }
+        if (capStatus === "warn") {
+          showToast(`Getting close to the ${PRODUCT_CAP}-product cap.`, "warning");
+        }
+
+        let resolvedCategoryId: string | null = categoryId || null;
+        const newCategoryName = categoryInputName.trim();
+        if (!resolvedCategoryId && newCategoryName) {
+          resolvedCategoryId = crypto.randomUUID();
+          await db.categories.add({ id: resolvedCategoryId, name: newCategoryName });
+        }
+
+        const finalSku = values.sku?.trim() || generateFallbackSku(values.name);
+        const hasAltUnit = Boolean(values.altUnitLabel?.trim());
+        const product: Product = {
+          id: crypto.randomUUID(),
+          sku: finalSku,
+          barcode: values.barcode || null,
+          name: values.name.trim(),
+          categoryId: resolvedCategoryId,
+          brandId: null,
+          unitLabel: values.unitLabel.trim() || "piece",
+          altUnitLabel: hasAltUnit ? values.altUnitLabel!.trim() : null,
+          altUnitConversionFactor: hasAltUnit ? (values.altUnitConversionFactor ?? null) : null,
+          altUnitSellPrice: hasAltUnit ? (values.altUnitSellPrice ?? null) : null,
+          costPrice: values.costPrice,
+          sellPrice: values.sellPrice,
+          expiryTracking: values.expiryTracking,
+          expiryDate: values.expiryTracking === "off" ? null : values.expiryDate || null,
+          lowStockThreshold: values.lowStockThreshold ?? null,
+          version: 1,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const conflict = await findProductReferenceConflict(product);
+        if (conflict) {
+          showToast(`A product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
+          return;
+        }
+
+        await writeNewProductOffline(
+          product,
+          hasInitialStock && effectiveStockBranchId
+            ? { branchId: effectiveStockBranchId, quantity: initialStockQty, createdByUserId: user.id }
+            : null
+        );
+
+        if (product.categoryId) markCategoryUsed(product.categoryId);
+        showToast(`${product.name} added`, "success");
+        router.push("/products");
+      } catch (err) {
+        console.error("Failed to save product:", err);
+        showToast(err instanceof Error ? err.message : "Could not save product.", "danger");
+      }
+    },
+    (formErrors) => {
+      const firstError = Object.values(formErrors)[0]?.message;
+      showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
     }
-
-    const capStatus = productCapStatusFor((await countActiveProducts()) + 1);
-    if (capStatus === "blocked") {
-      showToast(`This store is at its ${PRODUCT_CAP}-product cap. Remove some to free space.`, "danger");
-      return;
-    }
-    if (capStatus === "warn") {
-      showToast(`Getting close to the ${PRODUCT_CAP}-product cap.`, "warning");
-    }
-
-    // The autocomplete already resolved to an existing id if the typed name
-    // matched one; an empty id with a non-empty name means "create this
-    // category," the same way typing a new value into a password-manager
-    // field just remembers it — no separate "add category" screen needed.
-    let resolvedCategoryId: string | null = categoryId || null;
-    const newCategoryName = categoryInputName.trim();
-    if (!resolvedCategoryId && newCategoryName) {
-      resolvedCategoryId = crypto.randomUUID();
-      await db.categories.add({ id: resolvedCategoryId, name: newCategoryName });
-    }
-
-    const hasAltUnit = Boolean(values.altUnitLabel?.trim());
-    const product: Product = {
-      id: crypto.randomUUID(),
-      sku: values.sku,
-      barcode: values.barcode || null,
-      name: values.name,
-      categoryId: resolvedCategoryId,
-      brandId: null,
-      unitLabel: values.unitLabel.trim() || "piece",
-      altUnitLabel: hasAltUnit ? values.altUnitLabel!.trim() : null,
-      altUnitConversionFactor: hasAltUnit ? (values.altUnitConversionFactor ?? null) : null,
-      altUnitSellPrice: hasAltUnit ? (values.altUnitSellPrice ?? null) : null,
-      costPrice: values.costPrice,
-      sellPrice: values.sellPrice,
-      expiryTracking: values.expiryTracking,
-      expiryDate: values.expiryTracking === "off" ? null : values.expiryDate || null,
-      lowStockThreshold: values.lowStockThreshold ?? null,
-      version: 1,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const conflict = await findProductReferenceConflict(product);
-    if (conflict) {
-      showToast(`A product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
-      return;
-    }
-
-    // The product (and optional starting-stock movement) are always written
-    // through the single offline-first path: data + outbox in one Dexie
-    // transaction. This replaces the earlier "POST directly then return"
-    // fast path, which left the local ledger stale on success and — worse —
-    // minted a fresh, clientId-less adjustment id for the opening stock that
-    // a fallback would re-apply, double-counting it. Threading one id through
-    // data + outbox here is atomic, idempotent on sync, and never diverges
-    // from the server. See .agents/rules/offline-sync-and-ledger.md.
-    await writeNewProductOffline(
-      product,
-      hasInitialStock && effectiveStockBranchId
-        ? { branchId: effectiveStockBranchId, quantity: initialStockQty, createdByUserId: user.id }
-        : null
-    );
-
-    if (product.categoryId) markCategoryUsed(product.categoryId);
-    showToast(`${product.name} added`, "success");
-    router.push("/products");
-  });
+  );
 
   return {
     user,

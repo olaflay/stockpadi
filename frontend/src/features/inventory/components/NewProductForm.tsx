@@ -15,6 +15,7 @@ import { TextInput } from "@/components/ui/TextInput";
 
 export function NewProductForm({
   onSubmit,
+  onCancel,
   register,
   setValue,
   errors,
@@ -37,6 +38,7 @@ export function NewProductForm({
   onInitialStockBranchChange,
 }: {
   onSubmit: (event?: BaseSyntheticEvent) => Promise<void>;
+  onCancel?: () => void;
   register: UseFormRegister<ProductFormInput>;
   setValue: UseFormSetValue<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
@@ -116,14 +118,25 @@ export function NewProductForm({
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
-        <RippleButton
-          id="tour-save-product"
-          type="submit"
-          disabled={isSubmitting}
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
-        >
-          {isSubmitting ? "Saving…" : "Save product"}
-        </RippleButton>
+        <div className="flex items-center gap-3 max-w-lg mx-auto w-full">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="min-h-[var(--touch-target-min)] px-5 rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
+            >
+              Cancel
+            </button>
+          )}
+          <RippleButton
+            id="tour-save-product"
+            type="submit"
+            disabled={isSubmitting}
+            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+          >
+            {isSubmitting ? "Saving…" : "Save product"}
+          </RippleButton>
+        </div>
       </div>
     </form>
   );

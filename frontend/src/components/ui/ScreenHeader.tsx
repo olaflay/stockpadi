@@ -15,9 +15,13 @@ interface ScreenHeaderProps {
    * If true, hides the back button. Useful for the 5 root tab screens.
    */
   hideBack?: boolean;
+  /**
+   * Optional right-hand action (e.g. Cancel button)
+   */
+  action?: React.ReactNode;
 }
 
-export function ScreenHeader({ title, onBack, hideBack = false }: ScreenHeaderProps) {
+export function ScreenHeader({ title, onBack, hideBack = false, action }: ScreenHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -43,6 +47,7 @@ export function ScreenHeader({ title, onBack, hideBack = false }: ScreenHeaderPr
       <h1 className="min-w-0 flex-1 truncate text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">
         {title}
       </h1>
+      {action && <div className="shrink-0">{action}</div>}
       <div className="shrink-0">
         <SyncIndicator />
       </div>

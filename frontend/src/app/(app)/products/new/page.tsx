@@ -49,9 +49,22 @@ export default function NewProductPage() {
 
   return (
     <div>
-      <ScreenHeader title="Add product" onBack={() => router.push("/products")} />
+      <ScreenHeader
+        title="Add product"
+        onBack={() => router.push("/products")}
+        action={
+          <button
+            type="button"
+            onClick={() => router.push("/products")}
+            className="text-[length:var(--font-size-body)] font-medium text-on-surface-muted hover:text-on-surface transition-colors px-2 py-1"
+          >
+            Cancel
+          </button>
+        }
+      />
       <NewProductForm
         onSubmit={onSubmit}
+        onCancel={() => router.push("/products")}
         register={register}
         setValue={setValue}
         errors={errors}

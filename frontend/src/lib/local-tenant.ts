@@ -15,14 +15,41 @@ export function clearLocalBusinessId(): void {
 export async function getLocalBusinessId(): Promise<string | undefined> {
   if (activeBusinessId) return activeBusinessId;
   const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
-  activeBusinessId = profile?.businessId;
-  return activeBusinessId;
+  if (profile?.businessId) {
+    activeBusinessId = profile.businessId;
+    return activeBusinessId;
+  }
+  // Fallback: check logged-in localUser
+  try {
+    const session = await db.session.get("current");
+    if (session?.userId) {
+      const user = await db.localUsers.get(session.userId);
+      if (user?.businessId) {
+        activeBusinessId = user.businessId;
+        return activeBusinessId;
+      }
+    }
+  } catch {
+    // Ignore db read issues on startup
+  }
+  return undefined;
 }
 
 export async function setLocalBusinessId(businessId: string | null | undefined): Promise<void> {
   if (!businessId) return;
   activeBusinessId = businessId;
-  await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId });
+  const existing = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
+  if (existing) {
+    await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId });
+  } else {
+    await db.businessProfile.put({
+      id: BUSINESS_PROFILE_SINGLETON_ID,
+      businessId,
+      name: "My Store",
+      businessTypeId: "retail",
+      currency: "NGN",
+    });
+  }
   // Repair only legacy unscoped reference data. This preserves the existing
   // branch/category records created before tenant stamping was introduced;
   // transactional business records are never guessed or reassigned here.

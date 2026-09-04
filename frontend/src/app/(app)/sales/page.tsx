@@ -116,24 +116,20 @@ export default function SalesPage() {
 
   if (visibleSales.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
         <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
-        <EmptyState
-          icon={Receipt}
-          title="No sales yet today"
-          description="Completed sales show up here, tap any one to see its full receipt."
-          action={
-            hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)
-              ? { label: "Make a sale", onClick: () => router.push("/pos") }
-              : undefined
-          }
-          fullScreen
-        />
-        {hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES) && (
-          <FAB href="/pos" label="New sale">
-            <Plus size={26} aria-hidden />
-          </FAB>
-        )}
+        <div className="flex flex-1 items-center justify-center my-auto">
+          <EmptyState
+            icon={Receipt}
+            title="No sales yet today"
+            description="Completed sales show up here, tap any one to see its full receipt."
+            action={
+              hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)
+                ? { label: "Make a sale", onClick: () => router.push("/pos") }
+                : undefined
+            }
+          />
+        </div>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { SyncEntityType } from "@/types/sync";
-import { getCachedLocalBusinessId } from "@/lib/local-tenant";
+import { getCachedLocalBusinessId, getLocalBusinessId } from "@/lib/local-tenant";
 
 /**
  * The append-to-outbox half of every offline write — one queued row per
@@ -15,7 +15,7 @@ export async function enqueueOutboxWrite(
   payload: unknown,
   createdAtLocal: string
 ): Promise<void> {
-  const businessId = getCachedLocalBusinessId();
+  const businessId = getCachedLocalBusinessId() ?? (await getLocalBusinessId());
   await db.outbox.add({
     clientId,
     businessId,

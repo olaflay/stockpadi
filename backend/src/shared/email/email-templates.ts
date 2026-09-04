@@ -208,11 +208,17 @@ export function renderVerificationEmail(fullName: string, code: string): Rendere
   };
 }
 
+function getFrontendUrl(): string {
+  const origin = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_ORIGINS?.split(",")[0] || process.env.SITE_URL || "https://stockpadi-drab.vercel.app";
+  return origin.trim().replace(/\/$/, "");
+}
+
 /** Welcome Email after verification completes */
 export function renderWelcomeEmail(fullName: string, storeName: string): RenderedEmail {
   const safeName = escapeHtml(fullName);
   const safeStore = escapeHtml(storeName);
   const subject = "Your StockPadi store is ready!";
+  const dashboardUrl = `${getFrontendUrl()}/dashboard`;
 
   const text = `Hi ${fullName},\n\nCongratulations! Your email is verified and ${storeName} is ready to use.\n\nYou can now log in to add inventory, set up staff accounts, and process sales.\n\nWelcome aboard!`;
 
@@ -231,7 +237,7 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
     </div>
 
     <p style="text-align: center;">
-      <a href="https://stockpadi.app" class="btn">Go to StockPadi Dashboard &rarr;</a>
+      <a href="${dashboardUrl}" class="btn">Go to StockPadi Dashboard &rarr;</a>
     </p>
   `;
 
@@ -247,6 +253,7 @@ export function renderWorkerInviteEmail(name: string, email: string): RenderedEm
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
   const subject = "Your StockPadi worker access";
+  const loginUrl = `${getFrontendUrl()}/login`;
 
   const text = `Hi ${name},\n\nYou have been added as a worker on StockPadi.\n\nLogin Email: ${email}\n\nPlease ask your store manager for your login details.`;
 
@@ -266,7 +273,7 @@ export function renderWorkerInviteEmail(name: string, email: string): RenderedEm
     </div>
 
     <p style="text-align: center;">
-      <a href="https://stockpadi.app/login" class="btn">Log In to StockPadi &rarr;</a>
+      <a href="${loginUrl}" class="btn">Log In to StockPadi &rarr;</a>
     </p>
   `;
 
