@@ -6,7 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Search, Users } from "lucide-react";
 import { db } from "@/lib/db";
-import { getAllCustomerCreditBalances } from "@/features/customers/credit";
+import { getAllCustomerCreditBalances, getCustomerDebtAges, getAgingBucket } from "@/features/customers/credit";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,14 +28,24 @@ export default function CustomersPage() {
   const customersWithBalance = useLiveQuery(async () => {
     let customers;
     let balances;
+    let debtAges;
     try {
       const remote = await fetchServerCustomers();
       customers = remote.customers.map((customer) => ({ id: customer.id, name: customer.name, phone: customer.phone, updatedAt: customer.updated_at }));
       balances = new Map(remote.customers.map((customer) => [customer.id, customer.balance]));
+      debtAges = new Map<string, number>();
     } catch {
-      [customers, balances] = await Promise.all([tenantArray<LocalCustomer>(db.customers), getAllCustomerCreditBalances()]);
+      [customers, balances, debtAges] = await Promise.all([
+        tenantArray<LocalCustomer>(db.customers),
+        getAllCustomerCreditBalances(),
+        getCustomerDebtAges(),
+      ]);
     }
-    const withBalances = customers.map((customer) => ({ customer, balance: balances.get(customer.id) ?? 0 }));
+    const withBalances = customers.map((customer) => ({
+      customer,
+      balance: balances.get(customer.id) ?? 0,
+      debtAgeDays: debtAges.get(customer.id) ?? 0,
+    }));
     withBalances.sort((a, b) => b.balance - a.balance);
     return withBalances;
   }, []);
@@ -126,30 +136,40 @@ export default function CustomersPage() {
       ) : (
         <div>
           <ul className="flex flex-col gap-2">
-            {filtered.slice(0, visibleLimit).map(({ customer, balance }) => (
-              <li key={customer.id}>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/customers/${customer.id}`)}
-                  aria-label={`View customer ${customer.name}, owing ${formatCurrency(Math.max(balance, 0))}`}
-                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{customer.name}</p>
-                    {customer.phone && (
-                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
-                    )}
-                  </div>
-                  <p
-                    className={`shrink-0 text-[length:var(--font-size-body)] font-medium ${
-                      balance > 0 ? "text-on-surface" : "text-on-surface-muted"
-                    }`}
+            {filtered.slice(0, visibleLimit).map(({ customer, balance, debtAgeDays }) => {
+              const aging = balance > 0 && debtAgeDays > 0 ? getAgingBucket(debtAgeDays) : null;
+              return (
+                <li key={customer.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/customers/${customer.id}`)}
+                    aria-label={`View customer ${customer.name}, owing ${formatCurrency(Math.max(balance, 0))}`}
+                    className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
                   >
-                    {formatCurrency(Math.max(balance, 0))}
-                  </p>
-                </button>
-              </li>
-            ))}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{customer.name}</p>
+                      {customer.phone && (
+                        <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {aging && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}>
+                          {aging.label}
+                        </span>
+                      )}
+                      <p
+                        className={`text-[length:var(--font-size-body)] font-medium ${
+                          balance > 0 ? "text-on-surface" : "text-on-surface-muted"
+                        }`}
+                      >
+                        {formatCurrency(Math.max(balance, 0))}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           {filtered.length > visibleLimit && (
             <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">

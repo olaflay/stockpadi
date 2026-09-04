@@ -106,8 +106,10 @@
   --font-line-height-tight: 1.2;
   --font-line-height-normal: 1.5;
 
-  /* Font Families: Neue Helvetica for major numbers, financial metrics & statistics */
-  --font-family-number: "Neue Helvetica", "Helvetica Neue", "Helvetica", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  /* Font Families: Neue Helvetica for major numbers, financial metrics & statistics.
+     The Naira symbol (₦ U+20A6) is included explicitly in the stack so older
+     Android devices with limited system fonts never show a "tofu" glyph. */
+  --font-family-number: "Neue Helvetica", "Helvetica Neue", "Noto Sans", "Helvetica", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 
   /* Weight: named so components never hardcode a numeric weight. */
   --font-weight-regular: 400;

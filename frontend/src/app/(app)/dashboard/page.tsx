@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Store, Bell, TrendingUp, TrendingDown, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Store, Bell, TrendingUp, TrendingDown, Activity, CheckCircle2, AlertTriangle, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -146,25 +146,21 @@ export default function DashboardPage() {
         </RippleButton>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         {canSeeMoney && (
           <RippleButton
             type="button"
             onClick={() => router.push("/sales")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-6 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
+            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
           >
             <div className="flex items-start justify-between gap-2">
-              <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                 {user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
               </p>
-              <PerformancePill
-                tone={metrics.todaysSalesCount > 0 ? "success" : "neutral"}
-                icon={metrics.todaysSalesCount > 0 ? TrendingUp : Activity}
-                label={metrics.todaysSalesCount > 0 ? "Active" : "Ready"}
-              />
+              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
             </div>
             <div>
-              <p className="mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums text-on-surface">
+              <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
                 {formatCurrency(metrics.todaysSalesTotal)}
               </p>
               <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -178,18 +174,14 @@ export default function DashboardPage() {
           <RippleButton
             type="button"
             onClick={() => router.push("/reports")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-6 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
+            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
           >
             <div className="flex items-start justify-between gap-2">
-              <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Net cash flow</p>
-              <PerformancePill
-                tone={netCashFlow >= 0 ? "success" : "danger"}
-                icon={netCashFlow >= 0 ? TrendingUp : TrendingDown}
-                label={netCashFlow >= 0 ? "Positive" : "Deficit"}
-              />
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Net cash flow</p>
+              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
             </div>
             <div>
-              <p className={`mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums ${netCashFlow < 0 ? 'text-danger' : 'text-success'}`}>
+              <p className={`mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums ${netCashFlow < 0 ? 'text-danger' : 'text-success'}`}>
                 {formatCurrency(netCashFlow)}
               </p>
               <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -202,18 +194,14 @@ export default function DashboardPage() {
         <RippleButton
           type="button"
           onClick={() => router.push("/products?filter=low-stock")}
-          className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-6 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
+          className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Low stock</p>
-            <PerformancePill
-              tone={metrics.lowStockCount > 0 ? "danger" : "success"}
-              icon={metrics.lowStockCount > 0 ? AlertTriangle : CheckCircle2}
-              label={metrics.lowStockCount > 0 ? "Restock" : "Optimal"}
-            />
+            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Low stock</p>
+            <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
           </div>
           <div>
-            <p className="mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums text-on-surface">
+            <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
               {metrics.lowStockCount}
             </p>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">products below threshold</p>
@@ -224,23 +212,20 @@ export default function DashboardPage() {
           <RippleButton
             type="button"
             onClick={() => router.push("/customers")}
-            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container active:scale-[0.99] transition-all"
+            className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high active:scale-[0.99] transition-all flex flex-col justify-between"
           >
-            <p className="text-[length:var(--font-size-body)] font-medium text-on-surface">Customers Owing</p>
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              {totalOwed !== undefined ? formatCurrency(totalOwed) : "…"} owed
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Customers Owing</p>
+              <ChevronRight size={14} className="text-on-surface-muted/50 shrink-0" />
+            </div>
+            <div>
+              <p className="mt-1 truncate font-number text-lg sm:text-xl font-bold tracking-tight tabular-nums text-on-surface">
+                {totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
+              </p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">total debt</p>
+            </div>
           </RippleButton>
         )}
-
-        <RippleButton
-          type="button"
-          onClick={() => router.push("/stock-count")}
-          className="min-h-[var(--touch-target-min)] min-w-0 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container active:scale-[0.99] transition-all"
-        >
-          <p className="text-[length:var(--font-size-body)] font-medium text-on-surface">Stocktaking</p>
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Reconcile counted vs. computed stock</p>
-        </RippleButton>
       </div>
 
       {metrics.expiringCount > 0 && (

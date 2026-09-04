@@ -180,6 +180,20 @@ export async function recoverStuckSyncingItems(): Promise<void> {
   );
 }
 
+/**
+ * Auto-recover items stuck in "syncing" for longer than 30 seconds.
+ * Prevents permanent lockout after a crash, tab kill, or network timeout.
+ */
+export async function recoverStaleSyncingItems(maxAgeMs = 30000): Promise<void> {
+  const threshold = new Date(Date.now() - maxAgeMs).toISOString();
+  const stale = (await db.outbox.where("status").equals("syncing").toArray())
+    .filter((item) => matchesActiveTenant(item) && item.createdAtLocal < threshold);
+  if (stale.length === 0) return;
+  await db.outbox.bulkUpdate(
+    stale.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
+  );
+}
+
 async function revertToPending(items: SyncQueueItem[], message: string): Promise<void> {
   await db.outbox.bulkUpdate(
     items.map((item) => ({

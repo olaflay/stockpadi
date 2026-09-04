@@ -100,7 +100,7 @@ export function ProductCoreFields({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Cost price *</span>
-          <TextInput type="number" min="0" step="0.01" {...register("costPrice")} placeholder="0.00" />
+          <TextInput type="number" min="0" step="0.01" inputMode="decimal" {...register("costPrice")} placeholder="₦0.00" />
           {errors.costPrice && (
             <span className="text-[length:var(--font-size-caption)] text-danger">{errors.costPrice.message}</span>
           )}
@@ -108,7 +108,7 @@ export function ProductCoreFields({
 
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Sell price *</span>
-          <TextInput type="number" min="0" step="0.01" {...register("sellPrice")} placeholder="0.00" />
+          <TextInput type="number" min="0" step="0.01" inputMode="decimal" {...register("sellPrice")} placeholder="₦0.00" />
           {errors.sellPrice && (
             <span className="text-[length:var(--font-size-caption)] text-danger">{errors.sellPrice.message}</span>
           )}
@@ -130,7 +130,7 @@ export function ProductStockAlertField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Stock alert (optional)</span>
+      <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Stock alert *</span>
       <TextInput
         type="number"
         min="0"

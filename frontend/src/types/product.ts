@@ -30,6 +30,8 @@ export interface Product {
   expiryDate: string | null;
   /** Per-product low-stock alert level; null falls back to the app-wide LOW_STOCK_THRESHOLD. */
   lowStockThreshold: number | null;
+  /** Soft-delete flag: archived products are hidden from search/POS but preserved for historical data integrity. */
+  archived?: boolean;
   version: number;
   updatedAt: string;
 }

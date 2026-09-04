@@ -12,10 +12,18 @@ import {
 } from "@/features/inventory/components/ProductFormFields";
 import type { CategoryOption } from "@/components/ui/CategoryAutocomplete";
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
+import { TextInput } from "@/components/ui/TextInput";
+import { SelectInput } from "@/components/ui/SelectInput";
+import type { LocalBranch } from "@/lib/db";
 
 export function EditProductForm({
   totalStock,
   stockValueClass,
+  stockInput,
+  onStockInputChange,
+  branches,
+  stockBranchId,
+  onStockBranchChange,
   onSubmit,
   register,
   setValue,
@@ -35,6 +43,11 @@ export function EditProductForm({
 }: {
   totalStock: number | undefined;
   stockValueClass: string;
+  stockInput?: string;
+  onStockInputChange?: (value: string) => void;
+  branches?: LocalBranch[];
+  stockBranchId?: string | null;
+  onStockBranchChange?: (id: string | null) => void;
   onSubmit: (event?: BaseSyntheticEvent) => Promise<void>;
   register: UseFormRegister<ProductFormInput>;
   setValue: UseFormSetValue<ProductFormInput>;
@@ -67,9 +80,50 @@ export function EditProductForm({
 
   return (
     <div className="pb-24">
-      <div className="mb-4 rounded-[var(--radius-card)] bg-surface-container px-4 py-3">
-        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Current stock</p>
-        <p className={`text-[length:var(--font-size-title)] font-semibold ${stockValueClass}`}>{totalStock ?? "…"}</p>
+      <div className="mb-4 rounded-[var(--radius-card)] bg-surface-container p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div>
+            <p className="text-[length:var(--font-size-label)] font-medium text-on-surface">Current stock</p>
+            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              Edit the number directly to adjust on-shelf quantity.
+            </p>
+          </div>
+          <p className={`text-[length:var(--font-size-title)] font-semibold ${stockValueClass}`}>{totalStock ?? "…"}</p>
+        </div>
+
+        {onStockInputChange && (
+          <div className="pt-3 border-t border-border flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                Adjust stock count ({unitLabel})
+              </span>
+              <TextInput
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={stockInput ?? ""}
+                onChange={(e) => onStockInputChange(e.target.value)}
+                placeholder={String(totalStock ?? 0)}
+              />
+            </label>
+
+            {branches && branches.length > 1 && onStockBranchChange && (
+              <label className="flex flex-col gap-1">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Branch to adjust:</span>
+                <SelectInput
+                  value={stockBranchId ?? ""}
+                  onChange={(e) => onStockBranchChange(e.target.value || null)}
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </SelectInput>
+              </label>
+            )}
+          </div>
+        )}
       </div>
       <form id="edit-product-form" onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <ProductCoreFields

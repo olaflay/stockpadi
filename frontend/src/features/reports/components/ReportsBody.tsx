@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
+import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
@@ -40,6 +41,17 @@ export function ReportsBody({
   periodNetCashFlow: number;
 }) {
   const router = useRouter();
+  const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
+  const [showCashFlowBreakdown, setShowCashFlowBreakdown] = useState(false);
+
+  // Compute drill-down values
+  const totalRevenue = periodSales.reduce((sum, s) => sum + s.total, 0);
+  const totalExpenses = periodExpensesTotal;
+  const totalRestocks = periodPurchasesTotal;
+  // COGS estimate: sum of (item.quantity * item.unitPrice) for all sale items
+  const totalCogs = periodSales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitPrice, 0), 0);
+  const computedNetProfit = totalRevenue - totalCogs - totalExpenses;
+  const computedNetCashFlow = totalRevenue - totalExpenses - totalRestocks;
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,38 +103,98 @@ export function ReportsBody({
         )}
       </section>
 
-      <div className="grid grid-cols-2 gap-4">
-        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 flex flex-col justify-between">
+      <div className="flex flex-col gap-4">
+        {/* Net Profit Card — expandable drill-down */}
+        <button
+          type="button"
+          onClick={() => setShowProfitBreakdown((v) => !v)}
+          className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 text-left transition-colors hover:bg-surface-container-high"
+        >
           <div className="flex items-start justify-between gap-2">
             <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
               Est. net profit
             </p>
-            <PerformancePill
-              tone={periodNetProfit >= 0 ? "success" : "danger"}
-              icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
-              label={periodNetProfit >= 0 ? "Profit" : "Loss"}
-            />
+            <div className="flex items-center gap-2">
+              <PerformancePill
+                tone={periodNetProfit >= 0 ? "success" : "danger"}
+                icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
+                label={periodNetProfit >= 0 ? "Profit" : "Loss"}
+              />
+              {showProfitBreakdown ? <ChevronUp size={14} className="text-on-surface-muted" /> : <ChevronDown size={14} className="text-on-surface-muted" />}
+            </div>
           </div>
           <p className={`mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums ${periodNetProfit >= 0 ? "text-success" : "text-danger"}`}>
             {formatCurrency(periodNetProfit)}
           </p>
-        </section>
+          {showProfitBreakdown && (
+            <div className="mt-3 space-y-1.5 border-t border-border pt-3 animate-step-in">
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Revenue (sales)</span>
+                <span className="font-number tabular-nums text-on-surface">{formatCurrency(totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Cost of goods sold</span>
+                <span className="font-number tabular-nums text-danger">-{formatCurrency(totalCogs)}</span>
+              </div>
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Expenses</span>
+                <span className="font-number tabular-nums text-danger">-{formatCurrency(totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 text-[length:var(--font-size-body)] font-medium">
+                <span className="text-on-surface">Net profit</span>
+                <span className={`font-number tabular-nums ${computedNetProfit >= 0 ? "text-success" : "text-danger"}`}>
+                  {formatCurrency(computedNetProfit)}
+                </span>
+              </div>
+            </div>
+          )}
+        </button>
 
-        <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 flex flex-col justify-between">
+        {/* Net Cash Flow Card — expandable drill-down */}
+        <button
+          type="button"
+          onClick={() => setShowCashFlowBreakdown((v) => !v)}
+          className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5 text-left transition-colors hover:bg-surface-container-high"
+        >
           <div className="flex items-start justify-between gap-2">
             <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
               Net cash flow
             </p>
-            <PerformancePill
-              tone={periodNetCashFlow >= 0 ? "success" : "danger"}
-              icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
-              label={periodNetCashFlow >= 0 ? "Positive" : "Deficit"}
-            />
+            <div className="flex items-center gap-2">
+              <PerformancePill
+                tone={periodNetCashFlow >= 0 ? "success" : "danger"}
+                icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
+                label={periodNetCashFlow >= 0 ? "Positive" : "Deficit"}
+              />
+              {showCashFlowBreakdown ? <ChevronUp size={14} className="text-on-surface-muted" /> : <ChevronDown size={14} className="text-on-surface-muted" />}
+            </div>
           </div>
           <p className={`mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums ${periodNetCashFlow >= 0 ? "text-success" : "text-danger"}`}>
             {formatCurrency(periodNetCashFlow)}
           </p>
-        </section>
+          {showCashFlowBreakdown && (
+            <div className="mt-3 space-y-1.5 border-t border-border pt-3 animate-step-in">
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Cash received (sales)</span>
+                <span className="font-number tabular-nums text-on-surface">{formatCurrency(totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Expenses paid</span>
+                <span className="font-number tabular-nums text-danger">-{formatCurrency(totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between text-[length:var(--font-size-caption)]">
+                <span className="text-on-surface-muted">Restock payments</span>
+                <span className="font-number tabular-nums text-danger">-{formatCurrency(totalRestocks)}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 text-[length:var(--font-size-body)] font-medium">
+                <span className="text-on-surface">Net cash flow</span>
+                <span className={`font-number tabular-nums ${computedNetCashFlow >= 0 ? "text-success" : "text-danger"}`}>
+                  {formatCurrency(computedNetCashFlow)}
+                </span>
+              </div>
+            </div>
+          )}
+        </button>
       </div>
 
       {period !== "today" && (

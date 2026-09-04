@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, Camera } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 // Loaded on demand — @zxing/library is a non-trivial decode library only
 // actually needed once the camera icon is tapped, but was previously
@@ -36,6 +38,7 @@ export function BrowseStep(props: {
   total: number;
   onReviewCart: () => void;
   onGoToSettings: () => void;
+  stockByProduct?: Record<string, number>;
 }) {
   const {
     hasNoBranches,
@@ -54,7 +57,18 @@ export function BrowseStep(props: {
     total,
     onReviewCart,
     onGoToSettings,
+    stockByProduct,
   } = props;
+
+  const router = useRouter();
+  const { showToast } = useToast();
+
+  function handleOutOfStockAttempt(product: Product) {
+    showToast(`Out of stock: "${product.name}" has 0 on shelf.`, "danger", {
+      label: "Restock",
+      onClick: () => router.push("/purchases/new"),
+    });
+  }
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -279,6 +293,9 @@ export function BrowseStep(props: {
             const baseQty = cart[baseKey]?.quantity ?? 0;
             const altKey = product.altUnitLabel ? cartLineKey(product.id, product.altUnitLabel) : null;
             const altQty = altKey ? (cart[altKey]?.quantity ?? 0) : 0;
+            const stock = stockByProduct?.[product.id] ?? 0;
+            const isOutOfStock = stockByProduct !== undefined && stock <= 0;
+            const isLowStock = !isOutOfStock && stockByProduct !== undefined && stock <= (product.lowStockThreshold ?? 5);
 
             return (
             <li key={product.id}>
@@ -288,9 +305,20 @@ export function BrowseStep(props: {
                   id={idx === 0 ? "tour-pos-item" : undefined}
                   className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 rounded-[var(--radius-card)] border border-border px-4 py-3"
                 >
-                  <span className="min-w-0 flex-1 truncate text-[length:var(--font-size-body-lg)] text-on-surface">
-                    {product.name}
-                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
+                      {product.name}
+                    </span>
+                    {isOutOfStock ? (
+                      <span className="shrink-0 rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">
+                        Out of stock
+                      </span>
+                    ) : isLowStock ? (
+                      <span className="shrink-0 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
+                        {stock} left
+                      </span>
+                    ) : null}
+                  </div>
 
                   {/* Base unit — inline stepper if already in cart */}
                   {baseQty > 0 ? (
@@ -304,10 +332,18 @@ export function BrowseStep(props: {
                   ) : (
                     <RippleButton
                       type="button"
-                      onClick={() => handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)}
+                      onClick={() =>
+                        isOutOfStock
+                          ? handleOutOfStockAttempt(product)
+                          : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
+                      }
                       disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
-                      className="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium transition-colors disabled:opacity-50 ${
+                        isOutOfStock
+                          ? "border border-danger/40 bg-danger/5 text-danger hover:bg-danger/10"
+                          : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+                      }`}
                     >
                       {product.unitLabel} · {formatCurrency(product.sellPrice)}
                     </RippleButton>
@@ -326,12 +362,21 @@ export function BrowseStep(props: {
                     <RippleButton
                       type="button"
                       onClick={() =>
-                        handleFreshAdd(
-                          product.id,
-                          product.altUnitSellPrice!,
-                          product.altUnitLabel!,
-                          product.altUnitConversionFactor!
-                        )
+                        isOutOfStock || stock < (product.altUnitConversionFactor ?? 1)
+                          ? showToast(
+                              `Not enough stock for a ${product.altUnitLabel}: only ${stock} in stock.`,
+                              "warning",
+                              {
+                                label: "Restock",
+                                onClick: () => router.push("/purchases/new"),
+                              }
+                            )
+                          : handleFreshAdd(
+                              product.id,
+                              product.altUnitSellPrice!,
+                              product.altUnitLabel!,
+                              product.altUnitConversionFactor!
+                            )
                       }
                       disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.altUnitLabel}) for ${formatCurrency(product.altUnitSellPrice)} to cart`}
@@ -363,14 +408,31 @@ export function BrowseStep(props: {
                   <RippleButton
                     id={idx === 0 ? "tour-pos-item" : undefined}
                     type="button"
-                    onClick={() => handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)}
+                    onClick={() =>
+                      isOutOfStock
+                        ? handleOutOfStockAttempt(product)
+                        : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
+                    }
                     disabled={hasNoBranches}
                     aria-label={`Add ${product.name} for ${formatCurrency(product.sellPrice)} to cart`}
-                    className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left disabled:opacity-50"
+                    className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left disabled:opacity-50 ${
+                      isOutOfStock ? "border-danger/30 bg-danger/5" : "border-border"
+                    }`}
                   >
-                    <span className="min-w-0 flex-1 truncate text-[length:var(--font-size-body-lg)] text-on-surface">
-                      {product.name}
-                    </span>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
+                        {product.name}
+                      </span>
+                      {isOutOfStock ? (
+                        <span className="shrink-0 rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">
+                          Out of stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="shrink-0 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
+                          {stock} left
+                        </span>
+                      ) : null}
+                    </div>
                     <span className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                       {formatCurrency(product.sellPrice)}
                     </span>

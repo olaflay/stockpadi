@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { drainOutbox, recoverStuckSyncingItems } from "@/features/sync/drain-outbox";
+import { drainOutbox, recoverStuckSyncingItems, recoverStaleSyncingItems } from "@/features/sync/drain-outbox";
 
 /**
  * Invisible. On boot and on reconnection: first recovers any outbox rows left
@@ -9,10 +9,14 @@ import { drainOutbox, recoverStuckSyncingItems } from "@/features/sync/drain-out
  * fires the outbox drain (in case the app opens already online with items
  * queued from a previous session). See .agents/rules/offline-sync-and-ledger.md
  * and PRD 10.1.
+ *
+ * Also runs a stale-syncing sweeper on boot: items stuck in "syncing" for
+ * longer than 30 seconds are reverted to "pending" automatically.
  */
 export function SyncEngine() {
   useEffect(() => {
     const run = async () => {
+      await recoverStaleSyncingItems();
       await recoverStuckSyncingItems();
       await drainOutbox();
     };

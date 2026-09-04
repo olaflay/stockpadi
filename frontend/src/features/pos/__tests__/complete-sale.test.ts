@@ -175,4 +175,39 @@ describe("completeSale", () => {
     expect(await db.stockMovements.count()).toBe(1);
     expect(await db.outbox.count()).toBe(0);
   });
+
+  it("rejects sales with an explicit 'Out of stock' message when available stock is 0", async () => {
+    // Zero-stock product
+    const ZERO_PRODUCT_ID = "product-zero";
+    await db.products.put({
+      id: ZERO_PRODUCT_ID,
+      name: "Cold Water",
+      sku: "COLD-01",
+      barcode: null,
+      categoryId: null,
+      brandId: null,
+      unitLabel: "bottle",
+      altUnitLabel: null,
+      altUnitConversionFactor: null,
+      altUnitSellPrice: null,
+      costPrice: 50,
+      sellPrice: 100,
+      expiryTracking: "off",
+      expiryDate: null,
+      lowStockThreshold: null,
+      version: 1,
+      updatedAt: new Date().toISOString(),
+    });
+
+    await expect(
+      completeSale({
+        branchId: BRANCH_ID,
+        customerId: null,
+        payments: [{ method: "cash", amount: 200 }],
+        lines: [line({ productId: ZERO_PRODUCT_ID, quantity: 2, unitPrice: 100 })],
+        createdByUserId: CASHIER.id,
+        actor: CASHIER,
+      })
+    ).rejects.toThrow('Out of stock: "Cold Water" has 0 in stock.');
+  });
 });

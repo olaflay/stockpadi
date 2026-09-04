@@ -29,7 +29,7 @@ function row(num: number): ParsedCsvRow {
       altUnitSellPrice: undefined,
       expiryTracking: "off",
       expiryDate: "",
-      lowStockThreshold: undefined,
+      lowStockThreshold: 5,
     },
   };
 }

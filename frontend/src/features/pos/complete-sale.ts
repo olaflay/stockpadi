@@ -161,8 +161,12 @@ export async function completeSale(params: {
         const currentStock = await getCurrentStock(productId, params.branchId);
         if (requested > currentStock) {
           const product = await tenantGet<Product>(db.products, productId);
+          const name = product?.name ?? "This item";
+          if (currentStock <= 0) {
+            throw new Error(`Out of stock: "${name}" has 0 in stock.`);
+          }
           throw new Error(
-            `Not enough stock for ${product?.name ?? "this product"} — ${currentStock} available, ${requested} requested.`
+            `Not enough stock: "${name}" only has ${currentStock} available (${requested} requested).`
           );
         }
       }

@@ -60,6 +60,14 @@ export function PaymentStep(props: {
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [cashTendered, setCashTendered] = useState("");
+  const [transferNotes, setTransferNotes] = useState<Record<number, string>>({});
+
+  /** First payment is cash and it's the only line (no split). */
+  const isCashOnly = effectivePayments.length === 1 && effectivePayments[0].method === "cash";
+  const tenderedAmount = parseFloat(cashTendered) || 0;
+  const changeDue = tenderedAmount - total;
+  const insufficientCash = isCashOnly && tenderedAmount > 0 && tenderedAmount < total - AMOUNT_EPSILON;
 
   async function handleAddCreditCustomer() {
     const name = newCustomerName.trim();
@@ -87,37 +95,50 @@ export function PaymentStep(props: {
         <div className="flex flex-col gap-2">
           <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Payment method</span>
           {effectivePayments.map((payment, index) => (
-            <div key={index} className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label={`Payment method ${index + 1}`}
-                value={payment.method}
-                onChange={(event) => onUpdatePaymentMethod(index, event.target.value as PaymentMethod)}
-                className="min-h-[var(--touch-target-min)] flex-1 min-w-[120px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
-              >
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {PAYMENT_LABELS[method]}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                aria-label={`Payment amount ${index + 1}`}
-                min="0"
-                step="0.01"
-                value={payment.amount}
-                onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
-                className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
-              />
-              {effectivePayments.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onRemovePaymentLine(index)}
-                  aria-label="Remove this payment method"
-                  className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
+            <div key={index} className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label={`Payment method ${index + 1}`}
+                  value={payment.method}
+                  onChange={(event) => onUpdatePaymentMethod(index, event.target.value as PaymentMethod)}
+                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[120px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
                 >
-                  ×
-                </button>
+                  {PAYMENT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {PAYMENT_LABELS[method]}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  aria-label={`Payment amount ${index + 1}`}
+                  min="0"
+                  step="0.01"
+                  value={payment.amount}
+                  onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
+                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                />
+                {effectivePayments.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => onRemovePaymentLine(index)}
+                    aria-label="Remove this payment method"
+                    className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              {/* Bank transfer audit note */}
+              {payment.method === "transfer" && (
+                <input
+                  type="text"
+                  aria-label={`Bank transfer note for payment ${index + 1}`}
+                  placeholder="Bank name, reference, time…"
+                  value={transferNotes[index] ?? ""}
+                  onChange={(e) => setTransferNotes((prev) => ({ ...prev, [index]: e.target.value }))}
+                  className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface-muted"
+                />
               )}
             </div>
           ))}
@@ -143,6 +164,42 @@ export function PaymentStep(props: {
             )}
           </div>
         </div>
+
+        {/* Cash tendered & change due — only when the sole payment is cash */}
+        {isCashOnly && (
+          <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+            <label className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              Cash tendered
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              placeholder="How much did the customer give you?"
+              value={cashTendered}
+              onChange={(e) => setCashTendered(e.target.value)}
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums"
+            />
+            {tenderedAmount > 0 && (
+              <div className="flex items-center justify-between">
+                {insufficientCash ? (
+                  <span className="text-[length:var(--font-size-body)] font-medium text-danger">
+                    Not enough — need {formatCurrency(total - tenderedAmount)} more
+                  </span>
+                ) : changeDue > 0 ? (
+                  <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    Change due: <span className="font-number tabular-nums">{formatCurrency(changeDue)}</span>
+                  </span>
+                ) : (
+                  <span className="text-[length:var(--font-size-body)] font-medium text-on-surface-muted">
+                    Exact amount
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {hasCreditLine && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-3">
@@ -249,7 +306,7 @@ export function PaymentStep(props: {
           id="tour-pos-checkout"
           type="button"
           onClick={onCompleteSale}
-          disabled={isSubmitting || Math.abs(remaining) > AMOUNT_EPSILON || (hasCreditLine && !creditCustomerId)}
+          disabled={isSubmitting || Math.abs(remaining) > AMOUNT_EPSILON || (hasCreditLine && !creditCustomerId) || insufficientCash}
           className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
         >
           {isSubmitting ? "Completing sale…" : "Complete sale"}

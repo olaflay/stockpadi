@@ -12,12 +12,12 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { voidSale, VoidSaleError } from "@/features/pos/void-sale";
 import { ReceiptIllustration } from "@/components/illustrations";
+import { WhatsAppReceiptModal } from "@/components/pos/WhatsAppReceiptModal";
 import type { PaymentMethod, Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -47,8 +47,8 @@ export default function SaleDetailPage({ params }: PageProps) {
   const { showToast } = useToast();
   const isOnline = useOnlineStatus();
 
-  const [manualPhone, setManualPhone] = useState("");
   const [voiding, setVoiding] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   const sale = useLiveQuery(() => tenantGet<Sale>(db.sales, id), [id]);
   const products = useLiveQuery(() => tenantArray<Product>(db.products), [], []);
@@ -102,26 +102,48 @@ export default function SaleDetailPage({ params }: PageProps) {
       : "Syncing…";
 
   function shareReceipt() {
-    if (!sale) return;
-    const businessName = businessProfile?.name ?? "Receipt";
-    const lines = sale.items.map((item) => {
-      const product = products?.find((p) => p.id === item.productId);
-      return `${item.quantity} ${item.unitLabel} × ${product?.name ?? "Item"} - ${formatCurrency(item.unitPrice * item.quantity - item.discount)}`;
-    });
-    const message =
-      `*${businessName}*\n` +
-      `${new Date(sale.createdAtLocal).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}\n\n` +
-      `${lines.join("\n")}\n\n` +
-      `Total: ${formatCurrency(sale.total)}`;
-    // Shares to the credit customer's own number when there is one on file;
-    // otherwise falls back to WhatsApp's contact picker, per
-    // src/lib/whatsapp.ts.
-    const phone = customer?.phone || manualPhone;
-    if (!phone) {
-      alert("Please enter a WhatsApp number.");
+    setShowWhatsAppModal(true);
+  }
+
+  function handlePrint() {
+    // Hide everything except the thermal receipt for clean printing
+    const receipt = document.getElementById("printable-thermal-receipt");
+    if (!receipt) {
+      window.print();
       return;
     }
-    window.open(buildWhatsAppUrl(phone, message), "_blank");
+    // Create a print-only window with just the thermal receipt
+    const printWindow = window.open("", "_blank", "width=320,height=600");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Receipt</title>
+      <style>
+        @page { size: 58mm auto; margin: 2mm 3mm; }
+        body { font-family: "Courier New", Courier, monospace; font-size: 11px; line-height: 1.25; color: #000; margin: 0; padding: 0; width: 52mm; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: bold; }
+        .text-sm { font-size: 13px; }
+        .text-xs { font-size: 10px; }
+        .mt-1 { margin-top: 4px; }
+        .my-1 { margin-top: 4px; margin-bottom: 4px; }
+        .my-2 { margin-top: 8px; margin-bottom: 8px; }
+        .mb-1 { margin-bottom: 4px; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .uppercase { text-transform: uppercase; }
+      </style>
+      </head>
+      <body>${receipt.innerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+    setTimeout(() => printWindow.close(), 500);
   }
 
   async function handleVoid() {
@@ -228,21 +250,6 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      {!customer && (
-        <section className="px-4 print:hidden">
-          <label className="mb-1 block text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Share to customer
-          </label>
-          <input
-            type="tel"
-            placeholder="WhatsApp number..."
-            value={manualPhone}
-            onChange={(e) => setManualPhone(e.target.value)}
-            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
-          />
-        </section>
-      )}
-
       <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-surface px-4 pt-3 pb-4 print:hidden">
         <RippleButton
           type="button"
@@ -254,7 +261,7 @@ export default function SaleDetailPage({ params }: PageProps) {
         </RippleButton>
         <RippleButton
           type="button"
-          onClick={() => window.print()}
+          onClick={handlePrint}
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-5 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
         >
           <Printer size={18} aria-hidden />
@@ -273,6 +280,16 @@ export default function SaleDetailPage({ params }: PageProps) {
           </RippleButton>
         )}
       </div>
+
+      {showWhatsAppModal && (
+        <WhatsAppReceiptModal
+          sale={sale}
+          products={products ?? []}
+          customer={customer}
+          businessName={businessProfile?.name ?? "Receipt"}
+          onClose={() => setShowWhatsAppModal(false)}
+        />
+      )}
     </div>
   );
 }

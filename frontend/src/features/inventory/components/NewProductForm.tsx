@@ -75,7 +75,7 @@ export function NewProductForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Starting stock (optional)</span>
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Starting stock</span>
           <TextInput
             type="number"
             min="0"
@@ -91,7 +91,7 @@ export function NewProductForm({
 
       {hasInitialStock && branches && branches.length > 1 && (
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch is this stock at?</span>
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch is this stock at? *</span>
           <SelectInput
             value={initialStockBranchId ?? ""}
             onChange={(e) => onInitialStockBranchChange(e.target.value || null)}

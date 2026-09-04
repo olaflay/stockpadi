@@ -41,6 +41,11 @@ export default function EditProductPage({ params }: PageProps) {
     expiryTracking,
     unitLabel,
     altUnitLabel,
+    branches,
+    stockInput,
+    setStockInput,
+    stockBranchId,
+    setStockBranchId,
     onSubmit,
     handleDelete,
     setValue,
@@ -145,6 +150,11 @@ export default function EditProductPage({ params }: PageProps) {
       <EditProductForm
         totalStock={totalStock}
         stockValueClass={stockValueClass}
+        stockInput={stockInput}
+        onStockInputChange={setStockInput}
+        branches={branches}
+        stockBranchId={stockBranchId}
+        onStockBranchChange={setStockBranchId}
         onSubmit={onSubmit}
         register={register}
         setValue={setValue}

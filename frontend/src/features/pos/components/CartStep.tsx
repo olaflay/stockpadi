@@ -15,9 +15,24 @@ export function CartStep(props: {
   onIncrement: (key: string) => void;
   onDecrement: (key: string) => void;
   onContinueToPayment: () => void;
+  stockByProduct?: Record<string, number>;
 }) {
-  const { cartLines, products, itemCount, total, onBack, onClearCart, onIncrement, onDecrement, onContinueToPayment } =
-    props;
+  const {
+    cartLines,
+    products,
+    itemCount,
+    total,
+    onBack,
+    onClearCart,
+    onIncrement,
+    onDecrement,
+    onContinueToPayment,
+    stockByProduct,
+  } = props;
+
+  const hasOutOfStockItem =
+    stockByProduct !== undefined &&
+    cartLines.some((l) => (stockByProduct[l.productId] ?? 0) < l.quantity * l.conversionFactor);
 
   return (
     <div key="cart" className="flex h-full flex-col gap-4 animate-step-in">
@@ -42,16 +57,27 @@ export function CartStep(props: {
           const product = products.find((p) => p.id === line.productId);
           if (!product) return null;
           const key = cartLineKey(line.productId, line.unitLabel);
+          const stock = stockByProduct?.[line.productId] ?? 0;
+          const requestedBase = line.quantity * line.conversionFactor;
+          const isOverStock = stockByProduct !== undefined && requestedBase > stock;
+
           return (
             <li
               key={key}
-              className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-[length:var(--font-size-body)]"
+              className={`flex items-center justify-between gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-[length:var(--font-size-body)] ${
+                isOverStock ? "border-danger/40 bg-danger/5" : "border-border"
+              }`}
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-on-surface">{product.name}</p>
                 <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                   {formatCurrency(line.unitPrice)} / {line.unitLabel}
                 </p>
+                {isOverStock && (
+                  <p className="text-xs font-semibold text-danger mt-0.5">
+                    {stock <= 0 ? "Out of stock on shelf" : `Only ${stock} available on shelf`}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2">

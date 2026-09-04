@@ -1,6 +1,4 @@
-import { OfflineBanner } from "@/components/ui/OfflineBanner";
-import { InstallBanner } from "@/components/ui/InstallBanner";
-import { NotificationBanner } from "@/components/ui/NotificationBanner";
+import { BannerStrip } from "@/components/ui/BannerStrip";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { SyncEngine } from "@/features/sync/SyncEngine";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -20,9 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
           <SyncEngine />
           <GuidedTour />
-          <OfflineBanner />
-          <InstallBanner />
-          <NotificationBanner />
+          <BannerStrip />
           <main className="flex-1 overflow-y-auto px-5 pt-4 pb-24">{children}</main>
           <BottomNav />
         </div>

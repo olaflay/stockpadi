@@ -69,6 +69,11 @@ export function useNewProductForm() {
   const onSubmit = handleSubmit(
     async (values) => {
       try {
+        if (initialStock !== "" && (!Number.isFinite(initialStockQty) || initialStockQty < 0)) {
+          showToast("Starting stock cannot be negative.", "warning");
+          return;
+        }
+
         if (hasInitialStock && !effectiveStockBranchId) {
           showToast("Choose which branch this stock is at.", "warning");
           return;

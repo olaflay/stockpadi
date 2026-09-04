@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
 
-// Loaded on demand — see the matching comment in
-// src/features/pos/components/BrowseStep.tsx.
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
 });
+
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
 import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds } from "@/features/inventory/product-insights";
@@ -23,7 +22,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { RippleLink } from "@/components/ui/Ripple";
+import { RippleButton } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
+import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
@@ -55,6 +56,9 @@ export default function ProductsPage() {
   const [prevFilter, setPrevFilter] = useState<ProductFilter>("all");
   const [scanning, setScanning] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { showToast } = useToast();
 
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -70,6 +74,30 @@ export default function ProductsPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleArchiveSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Archive ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? They won't appear in searches but historical data is preserved.`)) return;
+    try {
+      await db.products.bulkUpdate(
+        Array.from(selectedIds).map((id) => ({ key: id, changes: { archived: true } as Partial<Product> }))
+      );
+      showToast(`${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} archived`, "success");
+      setSelectedIds(new Set());
+      setDeleteMode(false);
+    } catch {
+      showToast("Couldn't archive products", "danger");
+    }
+  }, [selectedIds, showToast]);
 
   if (debouncedQuery !== prevQuery || filter !== prevFilter) {
     setPrevQuery(debouncedQuery);
@@ -106,6 +134,7 @@ export default function ProductsPage() {
 
   const byFilter = result
     ? result.products.filter((product) => {
+        if (product.archived) return false;
         if (filter === "low-stock") return result.lowStockIds.has(product.id);
         if (filter === "best-sellers") return result.bestSellerIds.has(product.id);
         if (filter === "expiring") return result.expiringIds.has(product.id);
@@ -287,6 +316,15 @@ export default function ProductsPage() {
                   <Truck size={16} aria-hidden />
                   Restocks
                 </Link>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setDeleteMode(true); setMenuOpen(false); }}
+                  className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-colors"
+                >
+                  <Trash2 size={16} aria-hidden />
+                  Delete selected
+                </button>
               </div>
             )}
           </div>
@@ -320,20 +358,49 @@ export default function ProductsPage() {
           <ul className="flex flex-col gap-2">
             {filtered.slice(0, visibleLimit).map((product) => (
               <li key={product.id}>
-                <RippleLink
-                  href={`/products/${product.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{product.name}</p>
-                    <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                      {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
+                {deleteMode ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSelect(product.id)}
+                    className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left transition-all ${
+                      selectedIds.has(product.id)
+                        ? "border-brand-accent bg-brand-accent/5"
+                        : "border-border bg-surface hover:bg-surface-container"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(product.id)}
+                      onChange={() => toggleSelect(product.id)}
+                      className="h-5 w-5 shrink-0 accent-[var(--color-brand-accent)]"
+                      aria-label={`Select ${product.name}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{product.name}</p>
+                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                        {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                      {formatCurrency(product.sellPrice)}
                     </p>
-                  </div>
-                  <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                    {formatCurrency(product.sellPrice)}
-                  </p>
-                </RippleLink>
+                  </button>
+                ) : (
+                  <RippleLink
+                    href={`/products/${product.id}`}
+                    className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{product.name}</p>
+                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
+                        {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                      {formatCurrency(product.sellPrice)}
+                    </p>
+                  </RippleLink>
+                )}
               </li>
             ))}
           </ul>
@@ -344,7 +411,34 @@ export default function ProductsPage() {
           )}
         </div>
       )}
-      {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
+
+      {/* Batch delete floating action bar */}
+      {deleteMode && (
+        <div className="fixed bottom-20 left-0 right-0 z-[var(--z-fab)] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+          <button
+            type="button"
+            onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}
+            className="flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+          >
+            <X size={16} aria-hidden />
+            Cancel
+          </button>
+          <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+            {selectedIds.size} selected
+          </span>
+          <RippleButton
+            type="button"
+            onClick={handleArchiveSelected}
+            disabled={selectedIds.size === 0}
+            className="flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-medium text-white disabled:opacity-50 hover:opacity-95 transition-opacity"
+          >
+            <Trash2 size={16} aria-hidden />
+            Archive
+          </RippleButton>
+        </div>
+      )}
+
+      {hasAccountType(user, CAN_EDIT_PRODUCTS) && !deleteMode && (
         <FAB id="tour-add-product" href="/products/new" label="Add product">
           <Plus size={26} aria-hidden />
         </FAB>

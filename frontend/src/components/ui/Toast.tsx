@@ -5,21 +5,29 @@ import { X } from "lucide-react";
 
 type ToastTone = "neutral" | "success" | "warning" | "danger";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastMessage {
   id: number;
   text: string;
   tone: ToastTone;
+  action?: ToastAction;
   onClick?: () => void;
 }
 
 interface ToastContextValue {
   /**
-   * onClick makes the toast tappable (e.g. "Sale completed · View receipt")
-   * without turning it into a modal — it still auto-dismisses on its own,
-   * a tap just navigates instead of doing nothing. Never required: every
-   * existing call site with no onClick renders exactly as before.
+   * showToast can accept an optional action object { label, onClick } or an onClick callback.
+   * If an action object is provided, a small dedicated CTA button is rendered on the toast card.
    */
-  showToast: (text: string, tone?: ToastTone, onClick?: () => void) => void;
+  showToast: (
+    text: string,
+    tone?: ToastTone,
+    actionOrOnClick?: ToastAction | (() => void)
+  ) => void;
   dismissToast?: (id: number) => void;
 }
 
@@ -28,22 +36,26 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 /**
  * Toast styling mapped to design system colors and container tokens.
  */
-const TONE_CLASSES: Record<ToastTone, { container: string; close: string }> = {
+const TONE_CLASSES: Record<ToastTone, { container: string; close: string; actionBtn: string }> = {
   neutral: {
     container: "border border-neutral-700/30 bg-inverse-surface text-inverse-on-surface shadow-black/20",
     close: "text-inverse-on-surface/75 hover:text-inverse-on-surface hover:bg-white/10 active:bg-white/20",
+    actionBtn: "border-white/30 bg-white/15 text-inverse-on-surface hover:bg-white/25 active:bg-white/30",
   },
   success: {
     container: "border border-success-container bg-success-container text-on-success-container shadow-black/10",
     close: "text-on-success-container/75 hover:text-on-success-container hover:bg-black/5 active:bg-black/10",
+    actionBtn: "border-on-success-container/30 bg-on-success-container/10 text-on-success-container hover:bg-on-success-container/20 active:bg-on-success-container/25",
   },
   warning: {
     container: "border border-warning-container bg-warning-container text-on-warning-container shadow-black/10",
     close: "text-on-warning-container/75 hover:text-on-warning-container hover:bg-black/5 active:bg-black/10",
+    actionBtn: "border-on-warning-container/30 bg-on-warning-container/10 text-on-warning-container hover:bg-on-warning-container/20 active:bg-on-warning-container/25",
   },
   danger: {
     container: "border border-danger-container bg-danger-container text-on-danger-container shadow-black/10",
     close: "text-on-danger-container/75 hover:text-on-danger-container hover:bg-black/5 active:bg-black/10",
+    actionBtn: "border-on-danger-container/30 bg-on-danger-container/10 text-on-danger-container hover:bg-on-danger-container/20 active:bg-on-danger-container/25",
   },
 };
 
@@ -68,9 +80,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showToast = useCallback(
-    (text: string, tone: ToastTone = "neutral", onClick?: () => void) => {
+    (
+      text: string,
+      tone: ToastTone = "neutral",
+      actionOrOnClick?: ToastAction | (() => void)
+    ) => {
       const id = Date.now() + Math.random();
-      setToasts((current) => [...current, { id, text, tone, onClick }]);
+      const action =
+        typeof actionOrOnClick === "object" && actionOrOnClick !== null && "label" in actionOrOnClick
+          ? actionOrOnClick
+          : undefined;
+      const onClick = typeof actionOrOnClick === "function" ? actionOrOnClick : undefined;
+
+      setToasts((current) => [...current, { id, text, tone, action, onClick }]);
 
       const timer = setTimeout(() => {
         dismissToast(id);
@@ -103,7 +125,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={toast.id}
             role="status"
-            className={`pointer-events-auto animate-toast-slide-down flex items-center justify-between gap-3 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] ${TONE_CLASSES[toast.tone].container}`}
+            className={`pointer-events-auto animate-toast-slide-down flex items-center justify-between gap-2.5 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] ${TONE_CLASSES[toast.tone].container}`}
           >
             {toast.onClick ? (
               <button
@@ -116,6 +138,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             ) : (
               <span className="flex-1 font-medium leading-snug">{toast.text}</span>
             )}
+
+            {toast.action && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.action?.onClick();
+                  dismissToast(toast.id);
+                }}
+                className={`shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${TONE_CLASSES[toast.tone].actionBtn}`}
+              >
+                {toast.action.label}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={(e) => {

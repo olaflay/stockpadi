@@ -25,6 +25,8 @@ import { PaymentStep } from "@/features/pos/components/PaymentStep";
 import { formatCurrency } from "@/lib/format";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { tenantArray } from "@/lib/local-tenant";
+import type { StockMovement } from "@/types/stock-movement";
+import { getCurrentStock } from "@/features/inventory/stock";
 
 function PosPageContent() {
   const user = useCurrentUser();
@@ -45,6 +47,19 @@ function PosPageContent() {
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   const categories = useLiveQuery(() => tenantArray<LocalCategory>(db.categories), [], []);
   const customers = useLiveQuery(() => tenantArray<LocalCustomer>(db.customers), [], []);
+
+  const stockByProduct = useLiveQuery(async () => {
+    const branchId = branches?.[0]?.id;
+    if (!branchId) return {};
+    const movements = await tenantArray<StockMovement>(
+      db.stockMovements.where("branchId").equals(branchId)
+    );
+    const map: Record<string, number> = {};
+    for (const m of movements) {
+      map[m.productId] = (map[m.productId] ?? 0) + m.quantityDelta;
+    }
+    return map;
+  }, [branches], {});
 
   const result = useLiveQuery(async () => {
     try {
@@ -120,6 +135,7 @@ function PosPageContent() {
   const { term: filterTerm } = parsePosQuery(debouncedQuery);
 
   const filtered = result.products.filter((product) => {
+    if (product.archived) return false;
     const matchesQuery = `${product.name} ${product.sku} ${product.barcode ?? ""}`
       .toLowerCase()
       .includes(filterTerm.toLowerCase());
@@ -147,6 +163,7 @@ function PosPageContent() {
 
     setIsSubmitting(true);
     try {
+      const soldLines = [...cart.cartLines];
       const sale = await completeSale({
         branchId,
         customerId: payment.hasCreditLine ? payment.creditCustomerId : null,
@@ -164,13 +181,45 @@ function PosPageContent() {
       cart.clearCart();
       payment.reset();
       setStep("browse");
+
+      // Check remaining stock for products sold to trigger low-stock alert if applicable
+      const uniqueProductIds = Array.from(new Set(soldLines.map((l) => l.productId)));
+      for (const pid of uniqueProductIds) {
+        const remaining = await getCurrentStock(pid, branchId);
+        const prod = result?.products.find((p) => p.id === pid);
+        const threshold = prod?.lowStockThreshold ?? 5;
+        if (remaining <= threshold) {
+          const prodName = prod?.name ?? "An item";
+          setTimeout(() => {
+            showToast(
+              `⚠️ Low stock alert: "${prodName}" is down to ${remaining} left.`,
+              "warning",
+              {
+                label: "Restock",
+                onClick: () => router.push("/purchases/new"),
+              }
+            );
+          }, 350);
+          break; // Surface the most urgent item
+        }
+      }
     } catch (err) {
       console.error("Failed to complete sale:", err);
       const message =
         err instanceof Error
           ? err.message
           : "Couldn't save the sale. It's still in your cart, try again.";
-      showToast(message, "danger");
+      const isStockError = message.toLowerCase().includes("stock");
+      showToast(
+        message,
+        "danger",
+        isStockError
+          ? {
+              label: "Restock",
+              onClick: () => router.push("/purchases/new"),
+            }
+          : undefined
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +240,7 @@ function PosPageContent() {
         onIncrement={cart.incrementLine}
         onDecrement={cart.decrementLine}
         onContinueToPayment={() => setStep("payment")}
+        stockByProduct={stockByProduct}
       />
     );
   }
@@ -237,6 +287,7 @@ function PosPageContent() {
       total={cart.total}
       onReviewCart={() => setStep("cart")}
       onGoToSettings={() => router.push("/settings")}
+      stockByProduct={stockByProduct}
     />
   );
 }

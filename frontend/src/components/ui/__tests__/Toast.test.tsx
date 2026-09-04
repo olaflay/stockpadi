@@ -79,4 +79,46 @@ describe("Toast notification system", () => {
     // Toast should be removed immediately without waiting for the timer
     expect(screen.queryByText("Warning: stock is low")).not.toBeInTheDocument();
   });
+
+  it("renders a dedicated action CTA button on the toast card and fires on click", () => {
+    const handleAction = vi.fn();
+
+    function ActionConsumer() {
+      const { showToast } = useToast();
+      return (
+        <button
+          onClick={() =>
+            showToast("Out of stock: Water has 0 on shelf.", "danger", {
+              label: "Restock",
+              onClick: handleAction,
+            })
+          }
+        >
+          Trigger Action Toast
+        </button>
+      );
+    }
+
+    render(
+      <ToastProvider>
+        <ActionConsumer />
+      </ToastProvider>
+    );
+
+    act(() => {
+      screen.getByText("Trigger Action Toast").click();
+    });
+
+    expect(screen.getByText("Out of stock: Water has 0 on shelf.")).toBeInTheDocument();
+
+    const restockBtn = screen.getByRole("button", { name: "Restock" });
+    expect(restockBtn).toBeInTheDocument();
+
+    act(() => {
+      restockBtn.click();
+    });
+
+    expect(handleAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Out of stock: Water has 0 on shelf.")).not.toBeInTheDocument();
+  });
 });
