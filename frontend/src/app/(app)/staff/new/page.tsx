@@ -177,7 +177,7 @@ export default function NewStaffPage() {
               id="staff-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@domain.com"
+              placeholder="name@example.com"
               type="email"
               autoComplete="email"
               autoCapitalize="none"

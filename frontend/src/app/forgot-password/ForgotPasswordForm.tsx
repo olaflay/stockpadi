@@ -105,7 +105,7 @@ export default function ForgotPasswordForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder="name@domain.com"
+              placeholder="name@example.com"
               autoComplete="email"
               autoCapitalize="none"
               inputMode="email"

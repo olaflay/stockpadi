@@ -255,7 +255,7 @@ export default function RegisterForm() {
                 id="register-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@domain.com"
+                placeholder="name@example.com"
                 type="email"
                 autoComplete="email"
                 autoCapitalize="none"
