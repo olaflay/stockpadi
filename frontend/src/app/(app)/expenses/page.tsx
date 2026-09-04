@@ -38,22 +38,7 @@ export default function ExpensesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(50);
-<<<<<<< HEAD
-  const [prevPeriod, setPrevPeriod] = useState(period);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  // Reset the pagination limit whenever the selected period changes. This is
-  // the sanctioned render-time "adjust state when a prop changes" pattern —
-  // stopping short of an effect keeps it out of the set-state-in-effect lint
-  // and avoids a cascading render. All hooks stay above the early returns so
-  // their call order is stable across every render path.
-  if (period !== prevPeriod) {
-    setPrevPeriod(period);
-    setVisibleLimit(50);
-  }
-=======
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
->>>>>>> 6211528971e29fc98f6d19d6362efdf639ea1355
 
   const result = useLiveQuery(async () => {
     try {
