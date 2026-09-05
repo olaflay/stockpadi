@@ -63,10 +63,10 @@ export function useNewProductForm(options?: { prefill?: string }) {
       name: prefill ?? "",
     },
   });
-  const { register, handleSubmit, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, control, formState } = form;
+  const expiryTracking = form.watch("expiryTracking");
+  const unitLabel = form.watch("unitLabel") || "piece";
+  const altUnitLabel = form.watch("altUnitLabel") || "";
 
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
   const earlyInitialStockQty = Number(initialStock);

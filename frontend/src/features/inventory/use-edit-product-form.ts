@@ -59,10 +59,10 @@ export function useEditProductForm(id: string) {
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
   });
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, setValue, control, formState } = form;
+  const expiryTracking = form.watch("expiryTracking");
+  const unitLabel = form.watch("unitLabel") || "piece";
+  const altUnitLabel = form.watch("altUnitLabel") || "";
 
   // Load existing values into form when product has loaded
   useEffect(() => {
