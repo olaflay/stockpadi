@@ -18,6 +18,9 @@ jobs:
 
       - run: npm ci
 
+      # Ensure postinstall isn't failing to install sub-dependencies by manually installing them for CI just in case
+      - run: npm --prefix frontend install && npm --prefix backend install
+
       - run: npm run lint
 
       - run: npm run test
