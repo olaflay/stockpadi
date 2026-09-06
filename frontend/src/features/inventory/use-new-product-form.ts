@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -63,23 +63,23 @@ export function useNewProductForm(options?: { prefill?: string }) {
       name: prefill ?? "",
     },
   });
-  const { register, handleSubmit, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
   const earlyInitialStockQty = Number(initialStock);
   const hasInitialStock = initialStock !== "" && Number.isFinite(earlyInitialStockQty) && earlyInitialStockQty > 0;
 
+  const [initialRandom] = useState(() => Math.floor(1000 + Math.random() * 9000));
   function generateFallbackSku(name: string): string {
     const prefix = name
       .trim()
       .replace(/[^a-zA-Z0-9]/g, "")
       .slice(0, 4)
       .toUpperCase() || "ITEM";
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}-${rand}`;
+    return `${prefix}-${initialRandom}`;
   }
 
   // The live SKU-fill keeps its random tail stable while the user keeps
