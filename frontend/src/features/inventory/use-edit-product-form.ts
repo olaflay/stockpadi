@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -44,8 +44,10 @@ export function useEditProductForm(id: string) {
 
   useEffect(() => {
     if (totalStock !== undefined && !stockInitialized) {
-      setStockInput(String(totalStock));
-      setStockInitialized(true);
+      queueMicrotask(() => {
+        setStockInput(String(totalStock));
+        setStockInitialized(true);
+      });
     }
   }, [totalStock, stockInitialized]);
 
@@ -59,28 +61,30 @@ export function useEditProductForm(id: string) {
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
   });
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, setValue, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   // Load existing values into form when product has loaded
   useEffect(() => {
     if (product) {
-      setValue("name", product.name);
-      setValue("sku", product.sku);
-      setValue("sellPrice", product.sellPrice);
-      setValue("costPrice", product.costPrice);
-      setValue("barcode", product.barcode || "");
-      setValue("expiryTracking", product.expiryTracking);
-      setValue("expiryDate", product.expiryDate || "");
-      setCategoryId(product.categoryId || "");
-      setValue("unitLabel", product.unitLabel || "piece");
-      setValue("altUnitLabel", product.altUnitLabel || "");
-      if (product.altUnitConversionFactor !== null) setValue("altUnitConversionFactor", product.altUnitConversionFactor);
-      if (product.altUnitSellPrice !== null) setValue("altUnitSellPrice", product.altUnitSellPrice);
-      if (product.lowStockThreshold !== null) setValue("lowStockThreshold", product.lowStockThreshold);
-      if (product.altUnitLabel) setShowUnitConversion(true);
+      queueMicrotask(() => {
+        setValue("name", product.name);
+        setValue("sku", product.sku);
+        setValue("sellPrice", product.sellPrice);
+        setValue("costPrice", product.costPrice);
+        setValue("barcode", product.barcode || "");
+        setValue("expiryTracking", product.expiryTracking);
+        setValue("expiryDate", product.expiryDate || "");
+        setCategoryId(product.categoryId || "");
+        setValue("unitLabel", product.unitLabel || "piece");
+        setValue("altUnitLabel", product.altUnitLabel || "");
+        if (product.altUnitConversionFactor !== null) setValue("altUnitConversionFactor", product.altUnitConversionFactor);
+        if (product.altUnitSellPrice !== null) setValue("altUnitSellPrice", product.altUnitSellPrice);
+        if (product.lowStockThreshold !== null) setValue("lowStockThreshold", product.lowStockThreshold);
+        if (product.altUnitLabel) setShowUnitConversion(true);
+      });
     }
   }, [product, setValue]);
 
