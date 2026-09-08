@@ -5,7 +5,7 @@ import { resolveAccountContext } from "./account-context.js";
 export async function handleAccountContext(request: globalThis.Request) {
   const auth = await authenticateRequest(request);
   const db = supabaseAdmin();
-  const context = await resolveAccountContext(db, auth.user);
+  const context = await resolveAccountContext(db, auth.user, { allowPendingOwner: false });
   if (context.accountType === "ADMIN") {
     return { accountType: "ADMIN", profile: { id: auth.user.id, full_name: auth.user.user_metadata?.full_name ?? auth.user.email?.split("@")[0] ?? "Admin", role: "admin", account_type: "ADMIN", is_active: true, business_id: null }, permissions: [], branchIds: [] };
   }

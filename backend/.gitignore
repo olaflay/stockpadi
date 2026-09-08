@@ -1,5 +1,14 @@
 node_modules/
 dist/
+# Tests, test suites, and test scripts
+__tests__/
+**/__tests__/
+*.test.*
+**/*.test.*
+*.spec.*
+**/*.spec.*
+scripts/test-*
+vitest.config.*
 coverage/
 .vitest/
 test-results/

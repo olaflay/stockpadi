@@ -119,14 +119,13 @@ function PosPageContent() {
 
   if (result.products.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Sell" hideBack={true} />
         <EmptyState
           icon={ShoppingBag}
           title="Nothing to sell yet"
           description="Add products first, then come back here to start checking out sales."
           action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
-          fullScreen
         />
       </div>
     );

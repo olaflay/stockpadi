@@ -48,16 +48,14 @@ export default function StaffAuditPage() {
 
   if (logs.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-140px)] flex-col">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
-        <div className="flex flex-1 items-center justify-center">
-          <EmptyState
-            icon={ScrollText}
-            title="Nothing logged yet"
-            description="Staff and role changes will show up here."
-            action={{ label: "Manage Staff", onClick: () => router.push("/staff") }}
-          />
-        </div>
+        <EmptyState
+          icon={ScrollText}
+          title="Nothing logged yet"
+          description="Staff and role changes will show up here."
+          action={{ label: "Manage Staff", onClick: () => router.push("/staff") }}
+        />
       </div>
     );
   }

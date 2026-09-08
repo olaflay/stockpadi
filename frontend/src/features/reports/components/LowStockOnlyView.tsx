@@ -25,12 +25,14 @@ export function LowStockOnlyView({
         Your role sees low-stock visibility only.
       </p>
       {products.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="No products yet"
-          description="Low-stock alerts will show up here once products exist."
-          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
-        />
+        <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
+          <EmptyState
+            icon={Package}
+            title="No products yet"
+            description="Low-stock alerts will show up here once products exist."
+            action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+          />
+        </div>
       ) : lowStockProducts.length === 0 ? (
         <p className="text-[length:var(--font-size-body)] text-on-surface">Nothing is low on stock right now.</p>
       ) : (

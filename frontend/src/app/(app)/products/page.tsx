@@ -196,20 +196,18 @@ export default function ProductsPage() {
 
   if (result.products.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Products" hideBack={true} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            illustration={EmptyShelfIllustration}
-            title="Your shelf is empty"
-            description="Add your first product to start selling and tracking stock."
-            action={
-              hasAccountType(user, CAN_EDIT_PRODUCTS)
-                ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
-                : undefined
-            }
-          />
-        </div>
+        <EmptyState
+          illustration={EmptyShelfIllustration}
+          title="Your shelf is empty"
+          description="Add your first product to start selling and tracking stock."
+          action={
+            hasAccountType(user, CAN_EDIT_PRODUCTS)
+              ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
+              : undefined
+          }
+        />
       </div>
     );
   }
@@ -332,27 +330,29 @@ export default function ProductsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        debouncedQuery ? (
-          <NoResultsState query={debouncedQuery} />
-        ) : (
-          <EmptyState
-            icon={Package}
-            title={
-              filter === "low-stock"
-                ? "Nothing is low on stock"
-                : filter === "expiring"
-                  ? "Nothing expiring soon"
-                  : "No products found"
-            }
-            description={
-              filter === "low-stock"
-                ? "Every product is above the low-stock threshold right now."
-                : filter === "expiring"
-                  ? "Nothing is expired or due to expire in the next 7 days."
-                  : "Add products to start tracking stock."
-            }
-          />
-        )
+        <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
+          {debouncedQuery ? (
+            <NoResultsState query={debouncedQuery} />
+          ) : (
+            <EmptyState
+              icon={Package}
+              title={
+                filter === "low-stock"
+                  ? "Nothing is low on stock"
+                  : filter === "expiring"
+                    ? "Nothing expiring soon"
+                    : "No products found"
+              }
+              description={
+                filter === "low-stock"
+                  ? "Every product is above the low-stock threshold right now."
+                  : filter === "expiring"
+                    ? "Nothing is expired or due to expire in the next 7 days."
+                    : "Add products to start tracking stock."
+              }
+            />
+          )}
+        </div>
       ) : (
         <div>
           <ul className="flex flex-col gap-2">

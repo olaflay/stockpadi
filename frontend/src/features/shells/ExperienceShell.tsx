@@ -79,7 +79,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
       <OfflineBanner />
       <InstallBanner />
       <NotificationBanner />
-      <main className="flex-1 overflow-y-auto px-5 pt-4 pb-24">{children}</main>
+      <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">{children}</main>
       <nav aria-label={`${shell} navigation`} className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]">
         <Link href={shell === "business" ? "/business" : "/work"} className="flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
           <span className="relative flex items-center justify-center">

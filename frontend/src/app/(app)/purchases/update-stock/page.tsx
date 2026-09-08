@@ -59,7 +59,7 @@ export default function UpdateStockPage() {
 
   if (products.length === 0) {
     return (
-      <div>
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
         <EmptyState
           icon={ClipboardList}

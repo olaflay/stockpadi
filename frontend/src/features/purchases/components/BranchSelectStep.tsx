@@ -16,12 +16,14 @@ export function BranchSelectStep({
 
   if (branches.length === 0) {
     return (
-      <EmptyState
-        icon={ClipboardList}
-        title="No branches yet"
-        description="Add a branch in Settings before updating stock."
-        action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
-      />
+      <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
+        <EmptyState
+          icon={ClipboardList}
+          title="No branches yet"
+          description="Add a branch in Settings before updating stock."
+          action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
+        />
+      </div>
     );
   }
 

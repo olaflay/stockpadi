@@ -104,16 +104,14 @@ export default function StockCountPage() {
   if (!effectiveBranchId) {
     if (branches.length === 0) {
       return (
-        <div className="flex min-h-[calc(100vh-140px)] flex-col">
+        <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
           <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
-          <div className="flex flex-1 items-center justify-center">
-            <EmptyState
-              icon={ClipboardList}
-              title="No branches yet"
-              description="Add a branch in Settings before counting stock."
-              action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
-            />
-          </div>
+          <EmptyState
+            icon={ClipboardList}
+            title="No branches yet"
+            description="Add a branch in Settings before counting stock."
+            action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
+          />
         </div>
       );
     }
@@ -220,16 +218,14 @@ export default function StockCountPage() {
 
   if (products.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-140px)] flex-col">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
-        <div className="flex flex-1 items-center justify-center">
-          <EmptyState
-            icon={ClipboardList}
-            title="No products yet"
-            description="Add products before counting stock."
-            action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
-          />
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="No products yet"
+          description="Add products before counting stock."
+          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+        />
       </div>
     );
   }

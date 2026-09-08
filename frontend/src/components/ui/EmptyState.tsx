@@ -35,37 +35,35 @@ export function EmptyState({
   return (
     <div
       role="status"
-      className={`flex h-full min-h-full w-full max-w-sm mx-auto flex-col animate-step-in ${
-        fullScreen ? "" : "rounded-[var(--radius-focus-block)] bg-surface-container"
-      } ${className ?? ""}`}
+      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card bg-surface-container-low border border-border/60 p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
     >
-      <div className="flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
         {Illustration ? (
-          <Illustration className="mb-4 h-24 w-24 text-brand-accent shrink-0" />
+          <Illustration className="mb-4 h-22 w-22 sm:h-24 sm:w-24 text-brand-accent shrink-0" />
         ) : (
           Icon && (
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 shrink-0">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent shrink-0 depth-bubble">
               <Icon size={28} className="text-brand-accent" aria-hidden />
             </div>
           )
         )}
 
-        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+        <p className="text-base sm:text-lg font-bold text-on-surface leading-snug">
           {title}
         </p>
 
-        <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+        <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
           {description}
         </p>
       </div>
 
       {action && (
-        <div className="w-full px-6 pb-6 pt-2">
+        <div className="w-full pt-4 mt-auto">
           <RippleButton
             id={action.id}
             type="button"
             onClick={action.onClick}
-            className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-6 py-2.5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 transition-opacity inline-flex items-center justify-center"
+            className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer"
           >
             {action.label}
           </RippleButton>

@@ -73,7 +73,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
             role="status"
             title={`${failedCount} changes didn't sync · Tap to retry`}
             aria-label={`${failedCount} changes didn't sync · Tap to retry`}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-full bg-danger-container px-2.5 py-1 text-xs font-semibold text-on-danger-container disabled:opacity-70 transition-transform active:scale-95"
+            className="inline-flex h-7 items-center gap-1.5 rounded-full bg-danger-container px-2.5 text-xs font-semibold text-on-danger-container disabled:opacity-70 transition-transform active:scale-95"
           >
             <span aria-hidden className="h-2 w-2 rounded-full animate-pulse" style={{ background: "var(--color-danger)" }} />
             <span className="font-number leading-none">{isRetrying ? "…" : failedCount}</span>
@@ -82,7 +82,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
             type="button"
             onClick={handleRetryFailed}
             disabled={isRetrying}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-full bg-danger/10 px-2 py-1 text-xs font-medium text-danger hover:bg-danger/20 transition-colors active:scale-95 disabled:opacity-70"
+            className="inline-flex h-7 items-center gap-1 rounded-full bg-danger/10 px-2 text-xs font-medium text-danger hover:bg-danger/20 transition-colors active:scale-95 disabled:opacity-70"
           >
             <RefreshCw size={11} className={isRetrying ? "animate-spin" : ""} />
             <span>Sync now</span>
@@ -128,7 +128,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
           role="status"
           title={`${pendingCount} changes saved on this device (offline)`}
           aria-label={`${pendingCount} changes saved on this device (offline)`}
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface-muted transition-transform active:scale-95"
+          className="inline-flex h-7 items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 text-xs font-semibold text-on-surface-muted transition-transform active:scale-95"
         >
           <span
             aria-hidden
@@ -173,7 +173,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
           role="status"
           title="All changes backed up. Tap to force sync."
           aria-label="All changes backed up. Tap to force sync."
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-full px-2 py-1 text-xs text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
+          className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
         >
           <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
           <RefreshCw size={11} className={isSyncing ? "animate-spin text-brand-accent" : "opacity-60"} />
@@ -204,7 +204,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
           role="status"
           title={`${pendingCount} changes waiting to sync`}
           aria-label={`${pendingCount} changes waiting to sync`}
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface-muted"
+          className="inline-flex h-7 items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 text-xs font-semibold text-on-surface-muted"
         >
           <span
             aria-hidden
@@ -220,7 +220,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean } = {}) {
           role="button"
           title="Tap to sync now"
           aria-label="Tap to sync now"
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-full bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent hover:bg-brand-accent/20 transition-colors active:scale-95 disabled:opacity-70"
+          className="inline-flex h-7 items-center gap-1 rounded-full bg-brand-accent/10 px-2 text-xs font-medium text-brand-accent hover:bg-brand-accent/20 transition-colors active:scale-95 disabled:opacity-70"
         >
           <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
           <span>Sync now</span>

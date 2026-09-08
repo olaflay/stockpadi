@@ -27,34 +27,34 @@ export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: 
   return (
     <div
       role="status"
-      className="flex h-full min-h-full w-full max-w-sm mx-auto flex-col rounded-[var(--radius-focus-block)] bg-surface-container animate-step-in"
+      className="flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card bg-surface-container-low border border-border/60 p-6 sm:p-7 overflow-hidden animate-step-in select-none"
     >
-      <div className="flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/15 text-warning shrink-0">
-          <ShieldAlert size={28} aria-hidden />
+      <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
+        <div className="mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning shrink-0 depth-bubble">
+          <ShieldAlert size={26} aria-hidden />
         </div>
 
-        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+        <p className="text-base sm:text-lg font-bold text-on-surface leading-snug">
           You don&apos;t have access to this screen
         </p>
 
-        <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+        <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
           Ask someone with the <strong className="text-on-surface">{roleList}</strong> account type to make this change.
         </p>
       </div>
 
-      <div className="flex w-full flex-col items-center gap-2 px-6 pb-6 pt-2">
+      <div className="flex w-full flex-col items-center gap-2 pt-4 mt-auto">
         <RippleButton
           type="button"
           onClick={() => router.push("/dashboard")}
-          className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-2.5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 transition-opacity"
+          className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
         >
           Go to Dashboard
         </RippleButton>
 
         <Link
           href="/login"
-          className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center text-xs font-semibold text-on-surface-muted hover:text-on-surface transition-colors"
+          className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center text-xs font-semibold text-on-surface-muted hover:text-on-surface transition-colors cursor-pointer"
         >
           Switch account
         </Link>

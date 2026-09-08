@@ -63,25 +63,29 @@ export default function CloseDayPage() {
       .catch(() => undefined);
   }, []);
 
+  const todayIso = getStartOfTodayIso();
+
   // 100% local-first live query: runs in <5ms directly against IndexedDB without network stalls
   const result = useLiveQuery(async () => {
     try {
+      const todayStart = getStartOfTodayIso();
       const [sales, products, expenses, profile, branches] = await Promise.all([
-        tenantArray<Sale>(db.sales),
-        tenantArray<Product>(db.products),
-        tenantArray<Expense>(db.expenses),
-        db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
-        tenantArray<LocalBranch>(db.branches),
+        tenantArray<Sale>(db.sales.where("createdAtLocal").aboveOrEqual(todayStart)).catch(() => tenantArray<Sale>(db.sales)),
+        tenantArray<Product>(db.products).catch(() => []),
+        tenantArray<Expense>(db.expenses.where("createdAtLocal").aboveOrEqual(todayStart)).catch(() => tenantArray<Expense>(db.expenses)).catch(() => []),
+        db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID).catch(() => undefined),
+        tenantArray<LocalBranch>(db.branches).catch(() => []),
       ]);
       return {
-        sales: user.accountType === "WORKER" ? sales.filter((sale) => sale.createdByUserId === user.id) : sales,
-        products: user.accountType === "WORKER" ? [] : products,
-        expenses: user.accountType === "WORKER" ? [] : expenses,
-        branches,
+        sales: user.accountType === "WORKER" ? (sales ?? []).filter((sale) => sale.createdByUserId === user.id) : (sales ?? []),
+        products: user.accountType === "WORKER" ? [] : (products ?? []),
+        expenses: user.accountType === "WORKER" ? [] : (expenses ?? []),
+        branches: branches ?? [],
         profile,
         error: null as string | null,
       };
     } catch (err) {
+      console.error("[CloseDay] Live query error:", err);
       return {
         sales: [],
         products: [],
@@ -115,12 +119,14 @@ export default function CloseDayPage() {
     return (
       <div>
         <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
-        <ErrorState message="Couldn't load today's sales." onRetry={() => window.location.reload()} />
+        <ErrorState
+          title="Couldn't load today's sales"
+          message={result.error}
+          onRetry={() => window.location.reload()}
+        />
       </div>
     );
   }
-
-  const todayIso = getStartOfTodayIso();
 
   const multiBranchOwner = user.accountType === "BUSINESS_OWNER" && (result.branches?.length ?? 0) > 1;
   const resolvedBranchId = closeBranchId ?? resolveDefaultBranch(result.branches, user);
@@ -151,8 +157,8 @@ export default function CloseDayPage() {
   const expectedPos = totalByMethod("pos_terminal");
   const creditTotal = totalByMethod("credit");
 
-  const grossProfit = computeGrossProfit(todaySales, result.products);
-  const netProfit = computeNetProfit(grossProfit, todayExpenses);
+  const grossProfit = computeGrossProfit(todaySales ?? [], result.products ?? []);
+  const netProfit = computeNetProfit(grossProfit, todayExpenses ?? []);
   const whatsappNumber = result.profile?.whatsappNumber;
 
   // Counts & Variances
@@ -262,7 +268,7 @@ export default function CloseDayPage() {
       <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
 
       {/* Top Sales & Profit Overview */}
-      <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
+      <div className="flex flex-col gap-3 rounded-2xl depth-card p-4.5 sm:p-5">
         {multiBranchOwner ? (
           <div className="flex flex-col gap-1.5">
             <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
@@ -298,7 +304,7 @@ export default function CloseDayPage() {
           <span>Transactions: {todaySales.length}</span>
           <span>Expenses: −{formatCurrency(todayExpensesTotal)}</span>
         </div>
-        <hr className="border-border" />
+        <hr className="border-border/60" />
         <div className="flex justify-between items-center">
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">Estimated net profit</span>
           <span className={`text-[length:var(--font-size-body-lg)] font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
@@ -308,20 +314,22 @@ export default function CloseDayPage() {
       </div>
 
       {/* Multi-Channel Balancing Section */}
-      <h2 className="text-[length:var(--font-size-body-lg)] font-bold text-on-surface px-1">
+      <h2 className="text-base sm:text-lg font-bold text-on-surface px-1">
         Balance your channels
       </h2>
 
       {/* 1. Cash in Till */}
-      <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+      <div className="flex flex-col gap-2.5 rounded-2xl depth-card p-4 sm:p-4.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-brand-accent" />
-            <span className="text-[length:var(--font-size-body)] font-semibold text-on-surface">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent depth-bubble">
+              <Banknote className="h-4.5 w-4.5" />
+            </div>
+            <span className="text-sm font-semibold text-on-surface">
               Physical Cash in Drawer
             </span>
           </div>
-          <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">
+          <span className="text-xs font-medium text-on-surface-muted">
             Expected: {formatCurrency(expectedNetCash)}
           </span>
         </div>
@@ -336,20 +344,20 @@ export default function CloseDayPage() {
             value={countedCashInput}
             onChange={(e) => setCountedCashInput(e.target.value)}
             placeholder={`e.g. ${expectedNetCash}`}
-            className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+            className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border/80 bg-surface px-3.5 text-sm text-on-surface shadow-[var(--shadow-recessed)] outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
           />
           <button
             type="button"
             onClick={() => setCountedCashInput(expectedNetCash.toString())}
             aria-label="Set physical cash matching expected total"
-            className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
+            className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-xs font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
           >
             Matches
           </button>
         </div>
 
         {hasCashCount && (
-          <div className="flex items-center gap-1.5 text-[length:var(--font-size-caption)] font-medium">
+          <div className="flex items-center gap-1.5 text-xs font-medium">
             {Math.abs(cashVariance) < 0.5 ? (
               <span className="text-success flex items-center gap-1">
                 <Check className="h-3.5 w-3.5" /> Cash is balanced
@@ -364,15 +372,17 @@ export default function CloseDayPage() {
       </div>
 
       {/* 2. Bank Transfers */}
-      <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+      <div className="flex flex-col gap-2.5 rounded-2xl depth-card p-4 sm:p-4.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-brand-accent" />
-            <span className="text-[length:var(--font-size-body)] font-semibold text-on-surface">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent depth-bubble">
+              <Smartphone className="h-4.5 w-4.5" />
+            </div>
+            <span className="text-sm font-semibold text-on-surface">
               Bank Transfers (OPay / PalmPay / Bank)
             </span>
           </div>
-          <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">
+          <span className="text-xs font-medium text-on-surface-muted">
             Expected: {formatCurrency(expectedTransfer)}
           </span>
         </div>
@@ -387,20 +397,20 @@ export default function CloseDayPage() {
             value={verifiedTransferInput}
             onChange={(e) => setVerifiedTransferInput(e.target.value)}
             placeholder={`e.g. ${expectedTransfer}`}
-            className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+            className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border/80 bg-surface px-3.5 text-sm text-on-surface shadow-[var(--shadow-recessed)] outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
           />
           <button
             type="button"
             onClick={() => setVerifiedTransferInput(expectedTransfer.toString())}
             aria-label="Set bank transfers matching expected total"
-            className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
+            className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-xs font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
           >
             Matches
           </button>
         </div>
 
         {hasTransferCount && (
-          <div className="flex items-center gap-1.5 text-[length:var(--font-size-caption)] font-medium">
+          <div className="flex items-center gap-1.5 text-xs font-medium">
             {Math.abs(transferVariance) < 0.5 ? (
               <span className="text-success flex items-center gap-1">
                 <Check className="h-3.5 w-3.5" /> Transfers verified
@@ -416,15 +426,17 @@ export default function CloseDayPage() {
 
       {/* 3. POS Card Terminal */}
       {expectedPos > 0 && (
-        <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+        <div className="flex flex-col gap-2.5 rounded-2xl depth-card p-4 sm:p-4.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-brand-accent" />
-              <span className="text-[length:var(--font-size-body)] font-semibold text-on-surface">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent depth-bubble">
+                <CreditCard className="h-4.5 w-4.5" />
+              </div>
+              <span className="text-sm font-semibold text-on-surface">
                 POS Terminal Slip Total
               </span>
             </div>
-            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">
+            <span className="text-xs font-medium text-on-surface-muted">
               Expected: {formatCurrency(expectedPos)}
             </span>
           </div>
@@ -439,20 +451,20 @@ export default function CloseDayPage() {
               value={countedPosInput}
               onChange={(e) => setCountedPosInput(e.target.value)}
               placeholder={`e.g. ${expectedPos}`}
-              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border/80 bg-surface px-3.5 text-sm text-on-surface shadow-[var(--shadow-recessed)] outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
             />
             <button
               type="button"
               onClick={() => setCountedPosInput(expectedPos.toString())}
               aria-label="Set POS card slip matching expected total"
-              className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
+              className="rounded-[var(--radius-control)] border border-brand-accent/30 bg-brand-accent/10 px-3 text-xs font-semibold text-brand-accent hover:bg-brand-accent/20 transition-colors"
             >
               Matches
             </button>
           </div>
 
           {hasPosCount && (
-            <div className="flex items-center gap-1.5 text-[length:var(--font-size-caption)] font-medium">
+            <div className="flex items-center gap-1.5 text-xs font-medium">
               {Math.abs(posVariance) < 0.5 ? (
                 <span className="text-success flex items-center gap-1">
                   <Check className="h-3.5 w-3.5" /> POS slip balanced

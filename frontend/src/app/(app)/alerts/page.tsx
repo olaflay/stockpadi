@@ -21,12 +21,12 @@ export default function AlertsPage() {
   const { alerts, isLoading, error, acknowledgeAlert } = useAlertCenter();
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
       <ScreenHeader title="Alerts" onBack={() => router.back()} />
 
-      <div className="flex-1 p-4 pb-20">
+      <div className="flex-1 flex flex-col justify-between">
         {isLoading ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 py-2">
             <Skeleton className="h-16" />
             <Skeleton className="h-16" />
             <Skeleton className="h-16" />

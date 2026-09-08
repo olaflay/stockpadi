@@ -24,7 +24,20 @@
 *.tsbuildinfo
 next-env.d.ts
 
-# Tests and local tooling
+# Tests, test suites, test scripts, and test tooling
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+**/tests/
+test/
+tests/
+**/test-email.*
+**/test-*.mjs
+**/test-*.js
+**/test-*.ts
+**/vitest.config.*
+**/vitest.setup.*
+**/playwright.config.*
 **/coverage/
 **/.vitest/
 **/test-results/

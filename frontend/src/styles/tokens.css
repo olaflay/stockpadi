@@ -143,14 +143,16 @@
   --radius-sheet: 1.75rem;    /* 28px — M3 bottom sheets, dialogs (Extra Large) */
   --radius-full: 9999px;      /* pills, avatars, active nav indicators */
 
-  /* Elevation: budget-Android optimized single-pass shadows (tonal surfaces handle visual depth) */
+  /* Elevation & Depth: Multi-layer ambient + key light shadows for welcoming, physical depth */
   --elevation-0: none;
-  --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.05);
-  --elevation-2: 0 2px 4px rgba(20, 24, 26, 0.08);
-  --elevation-3: 0 4px 8px rgba(20, 24, 26, 0.10);
-  --elevation-4: 0 6px 12px rgba(20, 24, 26, 0.12);
-  --elevation-5: 0 8px 16px rgba(20, 24, 26, 0.14);
-  --elevation-sticky-top: 0 -2px 4px rgba(20, 24, 26, 0.06);
+  --elevation-1: 0 1px 3px rgba(20, 24, 26, 0.05), 0 2px 6px -1px rgba(20, 24, 26, 0.04);
+  --elevation-2: 0 4px 8px -2px rgba(20, 24, 26, 0.07), 0 2px 4px -1px rgba(20, 24, 26, 0.05);
+  --elevation-3: 0 10px 18px -4px rgba(20, 24, 26, 0.08), 0 4px 6px -2px rgba(20, 24, 26, 0.04);
+  --elevation-4: 0 14px 24px -4px rgba(20, 24, 26, 0.10), 0 6px 10px -3px rgba(20, 24, 26, 0.06);
+  --elevation-5: 0 20px 30px -6px rgba(20, 24, 26, 0.12), 0 8px 14px -4px rgba(20, 24, 26, 0.08);
+  --elevation-sticky-top: 0 -4px 16px rgba(20, 24, 26, 0.04), 0 -1px 2px rgba(20, 24, 26, 0.02);
+  --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-recessed: inset 0 1.5px 3px rgba(20, 24, 26, 0.06);
 
   /* Touch target floor, non-negotiable per PRD Section 8 */
   --touch-target-min: 2.75rem; /* 44px */
@@ -225,12 +227,14 @@
     --color-badge-alert-bg: #fca5a5;
     --color-badge-alert-fg: #7f1d1d;
 
-    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
-    --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
-    --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
-    --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
-    --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
-    --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
+    --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.25);
+    --elevation-2: 0 4px 8px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.30);
+    --elevation-3: 0 10px 18px -4px rgba(0, 0, 0, 0.55), 0 4px 6px -2px rgba(0, 0, 0, 0.35);
+    --elevation-4: 0 14px 24px -4px rgba(0, 0, 0, 0.60), 0 6px 10px -3px rgba(0, 0, 0, 0.40);
+    --elevation-5: 0 20px 30px -6px rgba(0, 0, 0, 0.65), 0 8px 14px -4px rgba(0, 0, 0, 0.45);
+    --elevation-sticky-top: 0 -4px 16px rgba(0, 0, 0, 0.40), 0 -1px 2px rgba(0, 0, 0, 0.20);
+    --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    --shadow-recessed: inset 0 1.5px 3px rgba(0, 0, 0, 0.40);
   }
 }
 
@@ -272,10 +276,12 @@
   --color-badge-alert-bg: #fca5a5;
   --color-badge-alert-fg: #7f1d1d;
 
-  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
-  --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
-  --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
-  --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
-  --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.25);
+  --elevation-2: 0 4px 8px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.30);
+  --elevation-3: 0 10px 18px -4px rgba(0, 0, 0, 0.55), 0 4px 6px -2px rgba(0, 0, 0, 0.35);
+  --elevation-4: 0 14px 24px -4px rgba(0, 0, 0, 0.60), 0 6px 10px -3px rgba(0, 0, 0, 0.40);
+  --elevation-5: 0 20px 30px -6px rgba(0, 0, 0, 0.65), 0 8px 14px -4px rgba(0, 0, 0, 0.45);
+  --elevation-sticky-top: 0 -4px 16px rgba(0, 0, 0, 0.40), 0 -1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-recessed: inset 0 1.5px 3px rgba(0, 0, 0, 0.40);
 }

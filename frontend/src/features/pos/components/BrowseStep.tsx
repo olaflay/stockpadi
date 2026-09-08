@@ -248,9 +248,9 @@ export function BrowseStep(props: {
           <button
             type="button"
             onClick={() => onSelectCategory(null)}
-            className={`min-h-[var(--touch-target-min)] shrink-0 rounded-full px-4 py-1 text-sm font-medium transition-colors ${
+            className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-medium transition-colors flex items-center ${
               selectedCategoryId === null
-                ? "bg-brand-accent text-brand-accent-contrast"
+                ? "bg-brand-accent text-brand-accent-contrast font-semibold"
                 : "bg-surface-container hover:bg-surface-container-high text-on-surface"
             }`}
           >
@@ -275,9 +275,9 @@ export function BrowseStep(props: {
                 onSelectCategory(cat.id);
                 markCategoryUsed(cat.id);
               }}
-              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-full px-4 py-1 text-sm font-medium transition-colors ${
+              className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-medium transition-colors flex items-center ${
                 selectedCategoryId === cat.id
-                  ? "bg-brand-accent text-brand-accent-contrast"
+                  ? "bg-brand-accent text-brand-accent-contrast font-semibold"
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >

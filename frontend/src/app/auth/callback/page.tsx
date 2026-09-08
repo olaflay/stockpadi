@@ -6,7 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
 import { startSession } from "@/features/auth/session";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { callBackend } from "@/features/auth/backend-client";
+import { BackendError, callBackend } from "@/features/auth/backend-client";
 
 /**
  * Landing point for "Continue with Google" from the login screen.
@@ -37,7 +37,20 @@ export default function AuthCallbackPage() {
       let permissions: string[] = [];
       let branchIds: string[] = [];
       let businessId: string | undefined;
-      try { const context = await callBackend<{ profile: Profile; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {}); profile = context.profile; permissions = context.permissions ?? []; branchIds = context.branchIds ?? []; businessId = context.businessId; } catch { profile = null; }
+      try {
+        const context = await callBackend<{ profile: Profile; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {});
+        profile = context.profile;
+        permissions = context.permissions ?? [];
+        branchIds = context.branchIds ?? [];
+        businessId = context.businessId;
+      } catch (err) {
+        if (err instanceof BackendError && (err.code === "ACCOUNT_NOT_APPROVED" || err.message?.includes("not approved") || err.message?.includes("wait for approval"))) {
+          await supabase.auth.signOut().catch(() => {});
+          router.replace("/login?error=account_not_approved");
+          return;
+        }
+        profile = null;
+      }
 
       if (!profile || !profile.is_active) {
         // Authenticated with Google but no StockPadi account exists for

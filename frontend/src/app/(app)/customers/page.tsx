@@ -98,16 +98,14 @@ export default function CustomersPage() {
 
   if (customersWithBalance.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            icon={Users}
-            title="No customers yet"
-            description="Customers are added when you tag a sale as credit, at checkout."
-            action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
-          />
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No customers yet"
+          description="Customers are added when you tag a sale as credit, at checkout."
+          action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
+        />
       </div>
     );
   }

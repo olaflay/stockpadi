@@ -65,6 +65,7 @@ export function Modal({
       <div
         ref={modalRef}
         className={`w-full ${maxWidth} flex flex-col max-h-[90vh] bg-surface rounded-t-[var(--radius-sheet)] sm:rounded-[var(--radius-focus-block)] border-t sm:border border-border/80 shadow-[var(--shadow-elevation-3)] overflow-hidden animate-sheet-up`}
+        style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
       >
         {/* M3 Mobile Drag Handle */}
         {variant === "sheet" && (
@@ -75,7 +76,7 @@ export function Modal({
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-surface-container-low">
-          <h2 id="modal-title" className="text-[length:var(--font-size-title)] font-semibold text-on-surface">
+          <h2 id="modal-title" className="text-base sm:text-lg font-semibold text-on-surface">
             {title}
           </h2>
           <button

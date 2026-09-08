@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, WifiOff } from "lucide-react";
+import { Eye, EyeOff, WifiOff, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { startSession } from "@/features/auth/session";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -29,12 +29,17 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   useEffect(() => {
     void removeLegacyTestUser();
     const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "account_not_approved") {
+      setIsApprovalModalOpen(true);
+      setError("Account is not approved. Please wait for approval.");
+    }
     const force = params.get("force") === "true";
     if (force) {
       setTimeout(() => setChecking(false), 0);
@@ -71,7 +76,14 @@ export default function LoginForm() {
       await startSession(profile.id);
       router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
     } catch (error) {
-      if (error instanceof BackendError && error.status === 403) {
+      if (error instanceof BackendError && (error.code === "ACCOUNT_NOT_APPROVED" || error.message?.includes("not approved") || error.message?.includes("wait for approval"))) {
+        const supabase = getSupabase();
+        if (supabase) {
+          await supabase.auth.signOut().catch(() => {});
+        }
+        setIsApprovalModalOpen(true);
+        setError("Account is not approved. Please wait for approval.");
+      } else if (error instanceof BackendError && error.status === 403) {
         setError(error.message || "This Worker account is not active for business operations.");
       } else if (error instanceof BackendError && error.status === 401) {
         setError("Your session expired. Please sign in again.");
@@ -263,6 +275,42 @@ export default function LoginForm() {
           Create a business account
         </button>
       </form>
+
+      {isApprovalModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approval-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface p-6 border border-border/80"
+            style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning-container text-on-warning-container mb-3.5 depth-bubble">
+              <Clock size={24} aria-hidden />
+            </div>
+            <h2 id="approval-modal-title" className="text-center text-base sm:text-lg font-bold text-on-surface">
+              Account Not Approved
+            </h2>
+            <p className="mt-1.5 text-center text-xs sm:text-sm font-medium text-warning">
+              Account is not approved. Please wait for approval.
+            </p>
+            <p className="mt-2 text-center text-xs sm:text-sm text-on-surface-muted leading-relaxed">
+              Your account registration was received and is currently waiting for administrator review. You will be able to log in once your account is approved.
+            </p>
+            <div className="mt-5">
+              <RippleButton
+                type="button"
+                onClick={() => setIsApprovalModalOpen(false)}
+                className="w-full justify-center rounded-[var(--radius-control)] bg-brand-accent py-2.5 text-center text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)]"
+              >
+                Understood
+              </RippleButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

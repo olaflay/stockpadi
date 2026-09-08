@@ -23,10 +23,17 @@ type ContextResult = { context: AccountContext; error: null } | { context: null;
  * this check themselves because service-role queries bypass RLS.
  */
 export async function resolveAccountContext(db: SupabaseClient, user: User): Promise<ContextResult> {
-  const { data: rawData, error } = await db.rpc("resolve_account_context", { p_user_id: user.id }).maybeSingle();
+  const { data: rawData, error } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: false }).maybeSingle();
   if (error) return { context: null, error: error.message };
   const data = rawData as { user_id: string; account_type: string; business_id: string | null; business_status: string | null; membership_status: string | null; branch_ids: string[] | null } | null;
-  if (!data || data.user_id !== user.id) return { context: null, error: "No active account context found" };
+  if (!data || data.user_id !== user.id) {
+    const { data: pendingRaw } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: true }).maybeSingle();
+    const pendingData = pendingRaw as { business_status: string | null; membership_status: string | null } | null;
+    if (pendingData && (pendingData.business_status === "pending" || pendingData.membership_status === "pending")) {
+      return { context: null, error: "Account is not approved. Please wait for approval." };
+    }
+    return { context: null, error: "No active account context found" };
+  }
   // A Worker is granted exactly the permissions an owner enabled for them —
   // never a full fallback set, so "disable everything" is honest. Owners and
   // admins carry the full worker capability surface.

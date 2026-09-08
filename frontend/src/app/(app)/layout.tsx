@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SyncEngine />
           <GuidedTour />
           <BannerStrip />
-          <main className="flex-1 overflow-y-auto px-5 pt-4 pb-24">{children}</main>
+          <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">{children}</main>
           <BottomNav />
         </div>
       </LegacyShellGuard>
