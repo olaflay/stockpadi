@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Search, Camera } from "lucide-react";
+import { Search, Camera, GitBranch, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
@@ -139,18 +139,28 @@ export function BrowseStep(props: {
       <ScreenHeader title="Sell" />
 
       {hasNoBranches && (
-        <div className="rounded-[var(--radius-card)] bg-warning-container p-4 text-on-warning-container">
-          <h3 className="font-semibold text-[length:var(--font-size-body-lg)] mb-1">No branches configured</h3>
-          <p className="text-[length:var(--font-size-body)] mb-3">
-            You must create at least one branch in Settings before you can record sales.
-          </p>
-          <button
-            type="button"
-            onClick={onGoToSettings}
-            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-warning px-4 text-on-warning font-medium text-[length:var(--font-size-body)] hover:opacity-90 transition-opacity"
-          >
-            Go to Settings
-          </button>
+        <div className="flex flex-col gap-3 rounded-2xl bg-warning-container border border-warning/30 p-4 text-on-warning-container shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/20 text-warning">
+              <GitBranch size={20} aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-base text-on-warning-container">Create a branch to start selling</h3>
+              <p className="text-xs sm:text-sm text-on-warning-container/90 mt-0.5">
+                Every sale and stock movement belongs to a branch. Create your first branch to unlock selling and inventory sync.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end pt-0.5">
+            <button
+              type="button"
+              onClick={onGoToSettings}
+              className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center gap-2 rounded-xl bg-warning px-4 py-2.5 text-on-warning font-semibold text-sm hover:opacity-95 active:scale-[0.98] transition-all shadow-xs"
+            >
+              <Plus size={16} aria-hidden />
+              <span>Create Branch</span>
+            </button>
+          </div>
         </div>
       )}
 

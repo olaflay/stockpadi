@@ -299,7 +299,7 @@ function PosPageContent() {
       itemCount={cart.itemCount}
       total={cart.total}
       onReviewCart={() => setStep("cart")}
-      onGoToSettings={() => router.push("/settings")}
+      onGoToSettings={() => router.push("/settings/branches")}
       stockByProduct={stockByProduct}
     />
   );

@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
+import { db, BUSINESS_PROFILE_SINGLETON_ID, SESSION_SINGLETON_ID } from "@/lib/db";
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
+import { getLocalBusinessId, tenantArray } from "@/lib/local-tenant";
+import type { Product } from "@/types/product";
 import {
   OnboardingStep,
   OnboardingState,
@@ -32,6 +35,7 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("marketing");
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
   const [state, setState] = useState<OnboardingState>({
     businessName: "",
@@ -51,6 +55,14 @@ export default function OnboardingPage() {
       const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
       const productCount = await db.products.count();
       const saleCount = await db.sales.count();
+      const session = await db.session.get(SESSION_SINGLETON_ID);
+
+      if (session?.userId) {
+        const localUser = await db.localUsers.get(session.userId);
+        setEmailVerified(localUser?.emailVerified ?? false);
+      } else {
+        setEmailVerified(null);
+      }
 
       // Only skip onboarding if user already configured inventory or started selling
       if (profile && (productCount > 0 || saleCount > 0)) {
@@ -87,17 +99,29 @@ export default function OnboardingPage() {
     const now = new Date().toISOString();
 
     try {
+      const existingProfile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
+      const session = await db.session.get(SESSION_SINGLETON_ID);
+      const user = session?.userId ? await db.localUsers.get(session.userId) : null;
+      const businessId = existingProfile?.businessId ?? user?.businessId ?? (await getLocalBusinessId());
+
+      const existingBranches = await tenantArray(db.branches);
+      const branchId = existingBranches[0]?.id || crypto.randomUUID();
+
       await db.transaction(
         "rw",
-        db.businessProfile,
-        db.categories,
-        db.branches,
-        db.products,
-        db.stockMovements,
+        [
+          db.businessProfile,
+          db.categories,
+          db.branches,
+          db.products,
+          db.stockMovements,
+          db.outbox,
+        ],
         async () => {
-          // 1. Business Profile
+          // 1. Business Profile (Preserves businessId for multi-device sync)
           await db.businessProfile.put({
             id: BUSINESS_PROFILE_SINGLETON_ID,
+            businessId,
             name: state.businessName.trim() || "My Retail Shop",
             businessTypeId: template.id,
             currency: "NGN",
@@ -106,24 +130,29 @@ export default function OnboardingPage() {
           // 2. Categories
           const categoryRecords = template.defaultCategories.map((name) => ({
             id: crypto.randomUUID(),
+            businessId,
             name,
           }));
           await db.categories.bulkPut(categoryRecords);
           const defaultCategoryId = categoryRecords[0]?.id || null;
 
-          // 3. Main Branch
-          await db.branches.add({
-            id: branchId,
-            name: "Main branch",
-            isActive: true,
-          });
+          // 3. Main Branch (Only create if no branch exists yet; reuse registered branch)
+          if (existingBranches.length === 0) {
+            await db.branches.add({
+              id: branchId,
+              businessId,
+              name: "Main branch",
+              isActive: true,
+            });
+          }
 
-          // 4. Starter Pack Products (if enabled)
+          // 4. Starter Pack Products (if enabled) — queued to outbox for cloud sync
           if (state.loadStarterPack && template.sampleProducts.length > 0) {
             for (const sample of template.sampleProducts) {
               const productId = crypto.randomUUID();
-              await db.products.put({
+              const product: Product = {
                 id: productId,
+                businessId,
                 sku: sample.sku,
                 barcode: null,
                 name: sample.name,
@@ -140,34 +169,41 @@ export default function OnboardingPage() {
                 lowStockThreshold: sample.lowStockThreshold,
                 version: 1,
                 updatedAt: now,
-              });
+              };
+              await db.products.put(product);
+              await enqueueOutboxWrite(productId, "product", product, now);
 
               // Initial stock movement
-              await db.stockMovements.put({
-                id: crypto.randomUUID(),
-                clientId: crypto.randomUUID(),
+              const movementId = crypto.randomUUID();
+              const movement = {
+                id: movementId,
+                clientId: movementId,
+                businessId,
                 branchId,
                 productId,
                 quantityDelta: 20,
-                source: "initial_stock",
+                source: "initial_stock" as const,
                 sourceReferenceId: null,
-                reasonCode: null,
+                reasonCode: "initial_stock" as const,
                 createdAtLocal: now,
                 createdAt: now,
-                createdByUserId: "owner",
-              });
+                createdByUserId: user?.id || "owner",
+              };
+              await db.stockMovements.put(movement);
+              await enqueueOutboxWrite(movementId, "stock_adjustment", movement, now);
             }
           }
 
-          // 5. Custom First Product (if added)
+          // 5. Custom First Product (if added) — queued to outbox for cloud sync
           if (
             state.firstProduct.name.trim() &&
             typeof state.firstProduct.sellPrice === "number" &&
             state.firstProduct.sellPrice > 0
           ) {
             const firstProdId = crypto.randomUUID();
-            await db.products.put({
+            const firstProduct: Product = {
               id: firstProdId,
+              businessId,
               sku: "PROD-001",
               barcode: null,
               name: state.firstProduct.name.trim(),
@@ -187,26 +223,32 @@ export default function OnboardingPage() {
               lowStockThreshold: state.firstProduct.lowStockThreshold || 5,
               version: 1,
               updatedAt: now,
-            });
+            };
+            await db.products.put(firstProduct);
+            await enqueueOutboxWrite(firstProdId, "product", firstProduct, now);
 
-            await db.stockMovements.put({
-              id: crypto.randomUUID(),
-              clientId: crypto.randomUUID(),
+            const firstMovementId = crypto.randomUUID();
+            const firstMovement = {
+              id: firstMovementId,
+              clientId: firstMovementId,
+              businessId,
               branchId,
               productId: firstProdId,
               quantityDelta: 10,
-              source: "initial_stock",
+              source: "initial_stock" as const,
               sourceReferenceId: null,
-              reasonCode: null,
+              reasonCode: "initial_stock" as const,
               createdAtLocal: now,
               createdAt: now,
-              createdByUserId: "owner",
-            });
+              createdByUserId: user?.id || "owner",
+            };
+            await db.stockMovements.put(firstMovement);
+            await enqueueOutboxWrite(firstMovementId, "stock_adjustment", firstMovement, now);
           }
         }
       );
 
-      showToast("Shop setup complete. Ready to sell offline.", "success");
+      showToast("Shop setup complete. Ready to sell.", "success");
       router.push(destination);
     } catch (err) {
       console.error("Failed to complete onboarding:", err);
@@ -222,6 +264,11 @@ export default function OnboardingPage() {
       BUSINESS_TYPE_TEMPLATES[0];
 
     try {
+      const existingProfile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
+      const session = await db.session.get(SESSION_SINGLETON_ID);
+      const user = session?.userId ? await db.localUsers.get(session.userId) : null;
+      const businessId = existingProfile?.businessId ?? user?.businessId ?? (await getLocalBusinessId());
+
       await db.transaction(
         "rw",
         db.businessProfile,
@@ -230,6 +277,7 @@ export default function OnboardingPage() {
         async () => {
           await db.businessProfile.put({
             id: BUSINESS_PROFILE_SINGLETON_ID,
+            businessId,
             name: state.businessName.trim() || "My Retail Shop",
             businessTypeId: template.id,
             currency: "NGN",
@@ -237,11 +285,13 @@ export default function OnboardingPage() {
           await db.categories.bulkPut(
             template.defaultCategories.map((name) => ({
               id: crypto.randomUUID(),
+              businessId,
               name,
             }))
           );
           await db.branches.add({
             id: crypto.randomUUID(),
+            businessId,
             name: "Main branch",
             isActive: true,
           });
@@ -315,6 +365,32 @@ export default function OnboardingPage() {
           Skip
         </button>
       </div>
+
+      {/* Upfront Verification Notice: tells users what is required for cloud database sync */}
+      {emailVerified === false && (
+        <div className="my-2 flex items-start gap-3 rounded-2xl bg-warning-container border border-warning/30 p-3.5 text-on-warning-container text-xs shadow-xs">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/20 text-warning">
+            <AlertTriangle size={18} aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-on-warning-container text-xs sm:text-sm">
+              Account verification required for cloud sync
+            </p>
+            <p className="text-on-warning-container/85 mt-0.5 leading-relaxed">
+              You can set up your store and sell offline right now. To sync products and branches to your central database, verify your email.
+            </p>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/verify-email")}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-warning px-3 py-1.5 text-xs font-semibold text-on-warning hover:opacity-90 transition-opacity shadow-xs"
+              >
+                Verify Email Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step Views */}
       {step === "marketing" && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -20,6 +20,7 @@ export const CurrentUserContext = createContext<CurrentUser | null>(null);
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => { void removeLegacyTestUser(); }, []);
 
@@ -59,17 +60,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (resolved.kind === "no-session") router.replace("/login?force=true");
     if (resolved.kind === "needs-login") router.replace("/login?force=true");
     if (resolved.kind === "active" && resolved.user.accountType === "ADMIN") {
-      router.replace("/admin");
+      if (!pathname.startsWith("/admin")) {
+        router.replace("/admin");
+      }
     }
     if (resolved.kind === "active" && resolved.user.accountType === "WORKER") {
-      router.replace("/work");
+      if (!pathname.startsWith("/work")) {
+        router.replace("/work");
+      }
     }
     // Slide the 30-day expiry forward on every active visit so the session
     // only lapses after 30 days of the app not being opened at all.
     if (resolved.kind === "active") {
       void refreshSession();
     }
-  }, [resolved, router]);
+  }, [resolved, router, pathname]);
 
   if (!resolved || resolved.kind !== "active") {
     return (

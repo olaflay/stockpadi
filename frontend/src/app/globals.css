@@ -16,6 +16,7 @@
   --color-border: var(--color-border);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
+  --color-on-warning: var(--color-on-warning);
   --color-danger: var(--color-danger);
   --color-stock-alert: var(--color-stock-alert);
   --color-success-container: var(--color-success-container);

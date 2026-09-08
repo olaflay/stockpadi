@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X, GitBranch } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -132,6 +132,9 @@ export default function ProductsPage() {
       };
     }
   }, [filter]);
+
+  const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
+  const hasBranch = (branches?.length ?? 0) > 0;
 
   const byFilter = result
     ? result.products.filter((product) => {
@@ -333,6 +336,16 @@ export default function ProductsPage() {
         <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
           {debouncedQuery ? (
             <NoResultsState query={debouncedQuery} />
+          ) : !hasBranch ? (
+            <EmptyState
+              icon={GitBranch}
+              title="Create a branch first"
+              description="Before adding products and tracking inventory, you need to set up your store's primary branch."
+              action={{
+                label: "Create branch",
+                onClick: () => router.push("/settings/branches"),
+              }}
+            />
           ) : (
             <EmptyState
               icon={Package}
@@ -341,14 +354,22 @@ export default function ProductsPage() {
                   ? "Nothing is low on stock"
                   : filter === "expiring"
                     ? "Nothing expiring soon"
-                    : "No products found"
+                    : "Add your first product"
               }
               description={
                 filter === "low-stock"
                   ? "Every product is above the low-stock threshold right now."
                   : filter === "expiring"
                     ? "Nothing is expired or due to expire in the next 7 days."
-                    : "Add products to start tracking stock."
+                    : "Your branch is set up and ready. Add products to start tracking inventory and ringing up sales."
+              }
+              action={
+                filter === "all"
+                  ? {
+                      label: "Add product",
+                      onClick: () => router.push("/products/new"),
+                    }
+                  : undefined
               }
             />
           )}
@@ -439,8 +460,12 @@ export default function ProductsPage() {
       )}
 
       {hasAccountType(user, CAN_EDIT_PRODUCTS) && !deleteMode && (
-        <FAB id="tour-add-product" href="/products/new" label="Add product">
-          <Plus size={26} aria-hidden />
+        <FAB
+          id="tour-add-product"
+          href={hasBranch ? "/products/new" : "/settings/branches"}
+          label={hasBranch ? "Add product" : "Create branch"}
+        >
+          {hasBranch ? <Plus size={26} aria-hidden /> : <GitBranch size={24} aria-hidden />}
         </FAB>
       )}
     </div>

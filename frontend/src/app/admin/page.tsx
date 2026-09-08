@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { callBackend } from "@/features/auth/backend-client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RippleButton } from "@/components/ui/Ripple";
@@ -47,14 +45,6 @@ export default function SuperAdminTenantsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Client session validation
-  const adminUser = useLiveQuery(async () => {
-    const session = await db.session.get(SESSION_SINGLETON_ID);
-    if (!session || new Date(session.expiresAt).getTime() < Date.now()) return null;
-    const u = await db.localUsers.get(session.userId);
-    return u && u.accountType === "ADMIN" ? u : null;
-  }, []);
-
   const fetchTenants = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     else setRefreshing(true);
@@ -70,10 +60,8 @@ export default function SuperAdminTenantsPage() {
   }, [showToast]);
 
   useEffect(() => {
-    if (adminUser) {
-      fetchTenants();
-    }
-  }, [adminUser, fetchTenants]);
+    fetchTenants();
+  }, [fetchTenants]);
 
   async function toggleTenantStatus(tenantId: string, currentStatus: boolean, e: React.MouseEvent) {
     e.preventDefault();

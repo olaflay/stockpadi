@@ -11,7 +11,7 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (user.accountType !== "ADMIN") {
-      router.replace(user.accountType === "BUSINESS_OWNER" ? "/business" : "/work");
+      router.replace(user.accountType === "BUSINESS_OWNER" ? "/dashboard" : "/work");
     }
   }, [router, user.accountType]);
 

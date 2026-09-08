@@ -13,7 +13,9 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (existing.data) return { userId: authenticatedUser.id };
     const result = await provision(db, authenticatedUser.id, authenticatedUser.user_metadata?.full_name ?? authenticatedUser.email?.split("@")[0] ?? "Owner", request.businessName, request.businessTypeId);
     if (result.error) throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
-    return { userId: authenticatedUser.id, businessId: await findBusinessId(db, authenticatedUser.id) };
+    const businessId = await findBusinessId(db, authenticatedUser.id);
+    const branch = businessId ? await findDefaultBranch(db, businessId) : undefined;
+    return { userId: authenticatedUser.id, businessId, branch };
   }
   validateRegistration(request);
   const created = await db.auth.admin.createUser({ email: request.email!, password: request.password!, email_confirm: true, user_metadata: { full_name: request.fullName, business_name: request.businessName, business_type_id: request.businessTypeId, account_type: "BUSINESS_OWNER" } });
@@ -25,7 +27,9 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (cleanup.error) console.error("Registration Auth compensation failed", cleanup.error);
     throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
   }
-  return { userId: created.data.user.id, businessId: await findBusinessId(db, created.data.user.id) };
+  const businessId = await findBusinessId(db, created.data.user.id);
+  const branch = businessId ? await findDefaultBranch(db, businessId) : undefined;
+  return { userId: created.data.user.id, businessId, branch };
 }
 
 export function registrationCreationError(error: { code?: string; message: string }) {
@@ -52,4 +56,10 @@ async function findBusinessId(db: ReturnType<typeof supabaseAdmin>, userId: stri
 
 function provision(db: ReturnType<typeof supabaseAdmin>, userId: string, fullName: string, businessName: string, businessTypeId: string) {
   return db.rpc("provision_business_owner", { p_user_id: userId, p_full_name: fullName, p_business_name: businessName, p_business_type: businessTypeId });
+}
+
+async function findDefaultBranch(db: ReturnType<typeof supabaseAdmin>, businessId: string) {
+  const result = await db.from("branches").select("id, name, is_active").eq("business_id", businessId).limit(1).maybeSingle();
+  if (result.error || !result.data) return undefined;
+  return { id: result.data.id, name: result.data.name, isActive: result.data.is_active };
 }

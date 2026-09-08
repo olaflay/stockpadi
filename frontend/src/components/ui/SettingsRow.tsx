@@ -12,6 +12,7 @@ interface SettingsRowProps {
   trailing?: string;
   /** What this row's icon color means — see icon-tone.ts. Defaults to "neutral" for purely structural rows. */
   tone?: IconTone;
+  className?: string;
   onClick: () => void;
 }
 
@@ -19,7 +20,15 @@ interface SettingsRowProps {
  * The shared row for the grouped Settings list — every row tappable, every
  * row leading somewhere. docs/RESEARCH-AND-PLAN.md Phase 2 item 17.
  */
-export function SettingsRow({ icon: Icon, label, description, trailing, tone = "neutral", onClick }: SettingsRowProps) {
+export function SettingsRow({
+  icon: Icon,
+  label,
+  description,
+  trailing,
+  tone = "neutral",
+  className = "",
+  onClick,
+}: SettingsRowProps) {
   const { ripples, onPointerDown } = useRipple();
 
   return (
@@ -27,7 +36,7 @@ export function SettingsRow({ icon: Icon, label, description, trailing, tone = "
       type="button"
       onClick={onClick}
       onPointerDown={onPointerDown}
-      className="relative flex min-h-[var(--touch-target-min)] w-full items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
+      className={`relative flex min-h-[var(--touch-target-min)] w-full items-center gap-3 overflow-hidden px-4 py-3 text-left hover:bg-surface-container-high transition-colors ${className}`}
     >
       <RippleLayer ripples={ripples} />
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES[tone]}`}>

@@ -89,7 +89,11 @@ export default function RegisterForm() {
       const cleanBusinessName = sanitizeString(businessName);
       const cleanEmail = email.trim().toLowerCase();
 
-      const registration = await callBackend<{ userId: string; businessId?: string }>("register-business", {
+      const registration = await callBackend<{
+        userId: string;
+        businessId?: string;
+        branch?: { id: string; name: string; isActive?: boolean };
+      }>("register-business", {
         email: cleanEmail,
         password,
         fullName: cleanFullName,
@@ -112,6 +116,10 @@ export default function RegisterForm() {
       const userId = signInData.user.id;
       if (registration.businessId) await setLocalBusinessId(registration.businessId);
 
+      const branchRecord = registration.branch
+        ? { id: registration.branch.id, name: registration.branch.name, isActive: true }
+        : { id: crypto.randomUUID(), name: "Main branch", isActive: true };
+
       // Seed local IndexedDB
       await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
         await db.businessProfile.put({
@@ -124,7 +132,7 @@ export default function RegisterForm() {
         await db.categories.bulkPut(
           await withLocalBusinessIds(defaultTemplate.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })))
         );
-        await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
+        await db.branches.put(await withLocalBusinessId(branchRecord));
         await db.localUsers.put({
           id: userId,
           fullName: cleanFullName,
