@@ -72,6 +72,15 @@ export function EmailVerificationBanner({ userId }: EmailVerificationBannerProps
     try {
       const result = await verifyEmailCode(code);
       if (!result.ok) {
+        // 409 ALREADY_VERIFIED: the server confirms the account is verified.
+        // The client is out of sync — self-heal IndexedDB and dismiss the banner.
+        if (result.message === "Email is already verified") {
+          await db.localUsers.update(userId, {
+            emailVerified: true,
+            updatedAt: new Date().toISOString(),
+          });
+          return;
+        }
         setError(result.message ?? "That code did not work.");
         setCode("");
         return;

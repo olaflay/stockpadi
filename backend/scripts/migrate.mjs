@@ -45,6 +45,8 @@ async function runMigrations() {
         version TEXT PRIMARY KEY,
         applied_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE public._migrations ENABLE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE public._migrations FROM anon, authenticated;
     `);
 
     const { rows: supabaseRows } = await client.query(`SELECT version FROM supabase_migrations.schema_migrations`);

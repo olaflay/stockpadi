@@ -91,6 +91,14 @@ export interface LocalUser {
    * src/features/auth/EmailVerificationBanner.tsx.
    */
   emailVerified?: boolean;
+  /**
+   * Mirror of business_profile.status for the logged-in owner's business.
+   * One of: 'pending' | 'verified' | 'suspended' | 'rejected'.
+   * Synced from account-context on login. Allows state-aware routing
+   * (verify-email, pending-approval) without a backend round-trip on every
+   * page load. Not present for WORKER or ADMIN accounts.
+   */
+  businessStatus?: string;
 }
 
 export const SESSION_SINGLETON_ID = "current";
@@ -265,6 +273,11 @@ class StockPadiDB extends Dexie {
       suppliers: "id, businessId, name",
       purchases: "id, businessId, clientId, branchId, supplierId, createdAtLocal",
     });
+
+    // Additive only: businessStatus field on LocalUser, for state-aware routing
+    // (verify-email, pending-approval) without a backend round-trip.
+    // No schema change needed — businessStatus is plain data, not an index.
+    this.version(10).stores({});
   }
 }
 

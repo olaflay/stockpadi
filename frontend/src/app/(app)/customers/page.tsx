@@ -116,7 +116,7 @@ export default function CustomersPage() {
     e.stopPropagation();
     if (!customer.phone) return;
     const shopName = businessProfile?.name ?? "StockPadi";
-    const message = `Hi ${customer.name}, this is a friendly reminder from ${shopName} — your outstanding balance is ${formatCurrency(Math.max(balance, 0))}. Please pay at your convenience. Thank you!`;
+    const message = `Hi ${customer.name}, gentle reminder from ${shopName}. Your balance is ${formatCurrency(Math.max(balance, 0))}. Please pay when convenient. Thank you.`;
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   };
 

@@ -1,12 +1,12 @@
 import { HttpError } from "../../shared/errors/http-error.js";
 
-export type AdminAction = "list_businesses" | "get_business" | "set_business_status" | "publish_broadcast";
+export type AdminAction = "list_businesses" | "get_business" | "set_business_status" | "publish_broadcast" | "list_broadcasts" | "get_system_stats";
 export interface AdminRequest { action: AdminAction; businessId?: string; status?: "pending" | "verified" | "suspended" | "rejected"; content?: string; }
 
 export function parseAdminRequest(input: unknown): AdminRequest {
   if (!input || typeof input !== "object") throw new HttpError(400, "INVALID_BODY", "Request body must be an object");
   const body = input as Record<string, unknown>;
-  const actions: AdminAction[] = ["list_businesses", "get_business", "set_business_status", "publish_broadcast"];
+  const actions: AdminAction[] = ["list_businesses", "get_business", "set_business_status", "publish_broadcast", "list_broadcasts", "get_system_stats"];
   if (!actions.includes(body.action as AdminAction)) throw new HttpError(400, "INVALID_BODY", "Unknown admin action");
   if (body.businessId !== undefined && typeof body.businessId !== "string") throw new HttpError(400, "INVALID_BODY", "businessId must be a string");
   if (body.content !== undefined && typeof body.content !== "string") throw new HttpError(400, "INVALID_BODY", "content must be a string");

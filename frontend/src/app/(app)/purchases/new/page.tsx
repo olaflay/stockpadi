@@ -187,7 +187,7 @@ export default function NewPurchasePage() {
         ) : supplierList.length === 0 ? (
           <div className="flex flex-col gap-2 rounded-[var(--radius-control)] bg-surface-container p-3">
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              No suppliers yet — add your first one to receive stock against.
+              No suppliers yet. Add your first supplier to record stock.
             </p>
             <input
               value={newSupplierName}

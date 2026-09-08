@@ -271,26 +271,53 @@ function baseTemplate(title: string, bodyHtml: string): string {
 </html>`;
 }
 
-/** Verification Code Email (6-digit OTP) */
+/**
+ * Verification Code Email (6-digit OTP)
+ * Simple, layman copy with 100% reliable copy-pasting across all email clients.
+ */
 export function renderVerificationEmail(fullName: string, code: string): RenderedEmail {
   const safeName = escapeHtml(fullName);
-  const subject = "Your StockPadi verification code";
+  const safeCode = escapeHtml(code);
+  const subject = "Your StockPadi code";
 
-  const text = `Hi ${fullName},\n\nYour StockPadi verification code is: ${code}\n\nThis code expires in 30 minutes. Never share this code with anyone.\n\nIf you did not request this code, please ignore this email.`;
+  const text = `Hi ${fullName},\n\nYour StockPadi code is: ${code}\n\nIt expires in 30 minutes. Never share it with anyone.`;
 
   const bodyHtml = `
-    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">Email Verification</h2>
-    <p>Hi <strong>${safeName}</strong>,</p>
-    <p>Use the 6-digit code below to complete your registration and activate your StockPadi store profile:</p>
+    <h2 style="margin-top: 0; margin-bottom: 6px; color: #0f172a; font-size: 22px; font-weight: 800; text-align: center; letter-spacing: -0.5px;">
+      Your 6-digit code
+    </h2>
+    <p style="margin: 0 0 20px 0; color: #475569; font-size: 14px; text-align: center; line-height: 1.5;">
+      Hi <strong>${safeName}</strong>, enter this code in StockPadi to activate your shop:
+    </p>
 
-    <div class="code-box">
-      <div class="code-text">${escapeHtml(code)}</div>
-      <div class="badge">&#9200; Valid for 30 minutes</div>
-    </div>
+    <!-- Copy-Paste OTP Plaque -->
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 22px auto; width: 100%; max-width: 360px;">
+      <tr>
+        <td align="center" style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 14px rgba(10, 110, 77, 0.07);">
+          <div style="font-size: 11px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+            Your code
+          </div>
+          <div style="font-family: 'SF Mono', Consolas, Monaco, 'Courier New', monospace; font-size: 38px; font-weight: 800; letter-spacing: 14px; padding-left: 14px; color: #064e3b; line-height: 1.2; user-select: all; -webkit-user-select: all; word-break: keep-all; white-space: nowrap;">
+            ${safeCode}
+          </div>
+          <div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 8px;">
+            Tap or double-click to copy
+          </div>
+        </td>
+      </tr>
+    </table>
 
-    <div class="security-note">
-      <strong>&#128274; Security Warning:</strong> Never share this code with anyone. StockPadi staff will never ask for your verification code.
-    </div>
+    <p style="font-size: 13px; color: #64748b; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
+      Valid for <strong>30 minutes</strong>. Never share this code with anyone.
+    </p>
+
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 20px auto 14px auto;">
+      <tr>
+        <td align="center" style="border-radius: 10px; background-color: #0a6e4d;">
+          <a href="${getFrontendUrl()}/verify-email" style="display: inline-block; padding: 13px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff !important; text-decoration: none; border-radius: 10px;">Open StockPadi &rarr;</a>
+        </td>
+      </tr>
+    </table>
   `;
 
   return {
@@ -320,7 +347,7 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
     <p>Your email is verified and your store <strong>${safeStore}</strong> is now active and ready for business.</p>
 
     <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0; color: #166534;">
-      <strong style="font-size: 15px;">&#10003; Store Setup Checklist:</strong>
+      <strong style="font-size: 15px;">Store Setup Checklist:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; line-height: 1.6;">
         <li>Add products and stock quantities</li>
         <li>Invite team workers & set branch roles</li>

@@ -35,7 +35,7 @@ export function NoResultsState({ query, onClear, className }: NoResultsStateProp
         <RippleButton
           type="button"
           onClick={() => router.push(`/products/new?prefill=${encodeURIComponent(query)}`)}
-          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 py-3 text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
+          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-brand-accent/50 bg-brand-accent/10 px-4 py-3 text-sm font-semibold text-brand-accent hover:bg-brand-accent/15 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
         >
           <Plus size={16} aria-hidden />
           <span>Create &quot;{query}&quot;</span>

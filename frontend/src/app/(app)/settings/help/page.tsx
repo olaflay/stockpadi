@@ -13,14 +13,14 @@ const USER_GUIDE_STEPS = [
   { title: "Add your products", body: "Products → the + button. Set a cost price and sell price; starting stock is optional." },
   { title: "Make a sale", body: "Sell tab → tap a product to add it to the cart → Complete sale. Works fully offline; it syncs once you're back online." },
   { title: "Track what's owed", body: "Tag a sale as Credit at checkout to link it to a customer. Their balance shows on the Customers screen." },
-  { title: "Close out your day", body: "Reports → Close day (guided) — counts your cash and shows what you made today." },
+  { title: "Close out your day", body: "Reports → Close day (cash count). Count your cash and see what you made today." },
 ];
 
 const FAQS = [
   { q: "Do I need the internet to make a sale?", a: "No. Sales, stock updates, and daily totals all work fully offline and sync automatically the next time you're online." },
-  { q: "Why is a product showing as low stock?", a: "Each product has a low-stock threshold — the default is 5, but you can set a custom one per product on its edit screen." },
-  { q: "How do I access the app?", a: "Sign in through the normal login screen with your email and password. Workers receive their generated password by email from the Business Owner." },
-  { q: "Can more than one person use the app?", a: "Yes — the Business Owner can add Workers under Staff & Access. Each Worker receives their own generated password and permissions." },
+  { q: "Why is a product showing as low stock?", a: "Each product has a low-stock level. The default is 5, but you can change it on the product edit screen." },
+  { q: "How do I access the app?", a: "Sign in with your email and password. Workers get their password directly from the shop owner." },
+  { q: "Can more than one person use the app?", a: "Yes. The shop owner can add staff under Staff & Access. Each worker gets their own password and role." },
 ];
 
 export default function HelpPage() {

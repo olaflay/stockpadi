@@ -60,12 +60,12 @@ export function WhatsAppReceiptModal({
     .map((p) => {
       const method =
         p.method === "cash"
-          ? "💵 Cash"
+          ? "Cash"
           : p.method === "transfer"
-            ? "🏦 Transfer"
+            ? "Bank Transfer"
             : p.method === "pos_terminal"
-              ? "📱 POS"
-              : "📋 Credit";
+              ? "POS Terminal"
+              : "Credit";
       let line = `  ${method}: ${formatCurrency(p.amount)}`;
       // Register drawer line + transfer audit note, matching the thermal
       // receipt (§9.1, §9.3).
@@ -81,7 +81,7 @@ export function WhatsAppReceiptModal({
 
   const debtSummarySection =
     includeDebt && customerDebtBalance > 0
-      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ *CUSTOMER ACCOUNT SUMMARY:*\nOutstanding Balance: *${formatCurrency(customerDebtBalance)}*`
+      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n*CUSTOMER ACCOUNT SUMMARY*\nOutstanding Balance: *${formatCurrency(customerDebtBalance)}*`
       : "";
 
   const previewText =
@@ -92,7 +92,7 @@ export function WhatsAppReceiptModal({
     `*TOTAL: ${formatCurrency(sale.total)}*\n\n` +
     `Payment:\n${paymentLine}` +
     `${debtSummarySection}\n\n` +
-    `Thank you for your patronage! 🙏\n` +
+    `Thank you for your business.\n` +
     `Powered by StockPadi`;
 
   function handleSend() {
@@ -143,7 +143,7 @@ export function WhatsAppReceiptModal({
         {customerDebtBalance > 0 && (
           <div className="mb-3 rounded-[var(--radius-control)] border border-warning/40 bg-warning-container/30 p-2.5 text-xs text-on-warning-container">
             <p className="font-semibold text-warning">
-              ⚠️ Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
+              Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
             </p>
             <label className="mt-1.5 flex items-center gap-2 cursor-pointer font-medium select-none text-on-surface">
               <input

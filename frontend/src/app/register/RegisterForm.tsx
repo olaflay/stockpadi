@@ -71,7 +71,7 @@ export default function RegisterForm() {
   async function handleSubmit() {
     setError(null);
     if (!formComplete) {
-      setError("Fill out every field before continuing — password needs at least 8 characters.");
+      setError("Fill in all fields. Password must have at least 8 characters.");
       return;
     }
     if (!isOnline) {

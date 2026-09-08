@@ -37,15 +37,13 @@ export function BottomNav() {
             href={item.href}
             id={`tour-nav-${item.label.toLowerCase()}`}
             prefetch={true}
-            className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
-              isActive ? "text-brand-accent-active font-semibold" : "text-on-surface-muted"
-            }`}
+            className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${isActive ? "text-brand-accent-active font-semibold" : "text-on-surface-muted"
+              }`}
             aria-current={isActive ? "page" : undefined}
           >
             <span
-              className={`relative flex items-center justify-center rounded-full px-4 py-0.5 transition-colors duration-[var(--motion-duration-short)] ${
-                isActive ? "bg-brand-accent/10" : ""
-              }`}
+              className={`relative flex items-center justify-center rounded-full px-4 py-0.5 transition-colors duration-[var(--motion-duration-short)] ${isActive ? "bg-brand-accent/10" : ""
+                }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
               {item.href === "/dashboard" && <AlertBadge />}

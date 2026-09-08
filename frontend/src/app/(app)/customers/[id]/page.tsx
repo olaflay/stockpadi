@@ -128,9 +128,9 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
   function handleRemind() {
     if (!customer) return;
-    const message = `Hi ${customer.name}, this is a friendly reminder from ${
+    const message = `Hi ${customer.name}, gentle reminder from ${
       process.env.NEXT_PUBLIC_BUSINESS_NAME ?? "us"
-    } — your outstanding balance is ${formatCurrency(Math.max(balance ?? 0, 0))}. Please pay at your convenience. Thank you!`;
+    }. Your balance is ${formatCurrency(Math.max(balance ?? 0, 0))}. Please pay when convenient. Thank you.`;
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   }
 

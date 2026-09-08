@@ -245,7 +245,7 @@ export default function CloseDayPage() {
 
   function shareOnWhatsApp() {
     const shareMessage =
-      `*Close Day Summary — ${new Date().toLocaleDateString("en-NG")}*\n` +
+      `*Close Day Summary: ${new Date().toLocaleDateString("en-NG")}*\n` +
       `Total Sales: ${formatCurrency(todaySalesTotal)} (${todaySales.length} sales)\n` +
       `------------------------\n` +
       `• Cash in Till: Expected ${formatCurrency(expectedNetCash)}` +
@@ -258,7 +258,7 @@ export default function CloseDayPage() {
       `• Expenses: ${formatCurrency(todayExpensesTotal)}\n` +
       `------------------------\n` +
       `Est. Net Profit: ${formatCurrency(netProfit)}\n` +
-      `Status: ${isFullyBalanced ? "Fully Balanced" : Math.abs(totalNetVariance) > 0 ? `Variance ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} (Discrepancy)` : "Pending Count"}`;
+      `Status: ${isFullyBalanced ? "Fully Balanced" : Math.abs(totalNetVariance) > 0 ? `Variance ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} (Difference)` : "Pending Count"}`;
 
     window.open(buildWhatsAppUrl(whatsappNumber, shareMessage), "_blank");
   }
@@ -495,12 +495,12 @@ export default function CloseDayPage() {
           )}
           <div>
             <p className="font-bold text-[length:var(--font-size-body)]">
-              {isFullyBalanced ? "All channels fully balanced" : "Discrepancy detected"}
+              {isFullyBalanced ? "All payments balanced" : "Difference found"}
             </p>
             <p className="text-[length:var(--font-size-caption)] opacity-90">
               {isFullyBalanced
-                ? "Physical cash and bank transfer alerts match the expected ledger totals."
-                : `Total net variance is ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} across channels.`}
+                ? "Cash in hand and bank transfers match your sales."
+                : `Difference is ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)}.`}
             </p>
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function CloseDayPage() {
           disabled={!hasAnyCount || reconciliationBusy}
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
         >
-          {reconciliationBusy ? "Saving close day…" : "Save Close Day"}
+          {reconciliationBusy ? "Saving close day..." : "Save Close Day"}
         </RippleButton>
 
         {reconciliationMessage && (
@@ -543,7 +543,7 @@ export default function CloseDayPage() {
             >
               <span className="font-medium text-on-surface">{record.business_date}</span>
               <span className="text-on-surface-muted">
-                Cash {formatCurrency(record.actual_cash)} · Discrepancy {formatCurrency(record.discrepancy)}
+                Cash {formatCurrency(record.actual_cash)} · Difference {formatCurrency(record.discrepancy)}
               </span>
             </div>
           ))}

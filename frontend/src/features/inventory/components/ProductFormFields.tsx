@@ -129,7 +129,7 @@ export function ProductCoreFields({
           <FieldError id="field-error-barcode" error={errors.barcode?.message} />
         </label>
       </div>
-      
+
       {scanning && (
         <BarcodeScanner
           onResult={(res) => {
@@ -239,8 +239,7 @@ export function ProductUnitConversionFields({
       {showUnitConversion && (
         <div id="unit-conversion-panel" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
           <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-            For when you sell the same stock two ways — e.g. by the piece, but also by the carton. Leave the
-            second unit blank if that&apos;s not you.
+            Note : Use this if you sell the same item two ways, like by retail or wholesale.
           </p>
 
           <label className="flex flex-col gap-1">

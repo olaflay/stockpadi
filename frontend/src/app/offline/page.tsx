@@ -16,11 +16,11 @@ export default function OfflinePage() {
         </div>
 
         <h1 className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
-          You&apos;re Offline — StockPadi Still Works
+          You&apos;re Offline. StockPadi Still Works
         </h1>
 
         <p className="mt-2 max-w-sm text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
-          No internet connection right now. Your local ledger is running securely on this device. Everything you record will sync automatically when you reconnect.
+          No internet right now. StockPadi works offline on this device. Everything you record will sync automatically when you reconnect.
         </p>
 
         {/* Actionable navigation cards — Zero Dead Ends */}

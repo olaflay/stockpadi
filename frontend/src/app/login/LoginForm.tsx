@@ -66,14 +66,50 @@ export default function LoginForm() {
         setError("Incorrect email or password.");
         return;
       }
-      const context = await callBackend<{ accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; businessId?: string; branchIds?: string[]; profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions: string[] }>("account-context", {});
+      const context = await callBackend<{
+        accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+        accountState?: "REGISTERED_UNVERIFIED" | "EMAIL_VERIFIED_PENDING_ADMIN" | "FULLY_ACTIVATED" | "SUSPENDED" | "REJECTED";
+        businessId?: string;
+        businessStatus?: string;
+        branchIds?: string[];
+        profile: {
+          id: string;
+          full_name: string;
+          role: string;
+          account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+          is_active: boolean;
+          email_verified?: boolean;
+        };
+        permissions: string[];
+      }>("account-context", {});
       const profile = context.profile;
-      await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: context.accountType, permissions: context.permissions, isActive: profile.is_active, updatedAt: new Date().toISOString() });
+      await db.localUsers.put({
+        id: profile.id,
+        businessId: context.businessId,
+        branchIds: context.branchIds ?? [],
+        fullName: profile.full_name,
+        accountType: context.accountType,
+        permissions: context.permissions,
+        isActive: profile.is_active,
+        emailVerified: profile.email_verified ?? false,
+        businessStatus: context.businessStatus,
+        updatedAt: new Date().toISOString(),
+      });
       if (context.businessId) {
         await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId: context.businessId });
         await setLocalBusinessId(context.businessId);
       }
       await startSession(profile.id);
+      // Route based on accountState (Phase B state machine)
+      const state = context.accountState;
+      if (state === "REGISTERED_UNVERIFIED") {
+        router.replace("/verify-email");
+        return;
+      }
+      if (state === "EMAIL_VERIFIED_PENDING_ADMIN") {
+        router.replace("/pending-approval");
+        return;
+      }
       router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
     } catch (error) {
       if (error instanceof BackendError && (error.code === "ACCOUNT_NOT_APPROVED" || error.message?.includes("not approved") || error.message?.includes("wait for approval"))) {

@@ -260,7 +260,7 @@ export default function DataSettingsPage() {
             className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
           >
             <Download size={18} />
-            Export Sales CSV — This month
+            Export Sales CSV (This month)
           </RippleButton>
         </div>
       </section>

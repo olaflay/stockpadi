@@ -6,9 +6,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { CurrentUser } from "@/features/auth/use-current-user";
-import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
-import { signOut } from "@/features/auth/logout";
 import { removeLegacyTestUser } from "@/features/auth/legacy-cleanup";
+import { refreshSession } from "@/features/auth/session";
 
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
@@ -65,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (resolved.kind === "active" && resolved.user.accountType === "WORKER") {
       router.replace("/work");
     }
+    // Slide the 30-day expiry forward on every active visit so the session
+    // only lapses after 30 days of the app not being opened at all.
+    if (resolved.kind === "active") {
+      void refreshSession();
+    }
   }, [resolved, router]);
 
   if (!resolved || resolved.kind !== "active") {
@@ -76,28 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Force unverified owners to complete verification before accessing any app views
-  if (resolved.user.accountType === "BUSINESS_OWNER" && !resolved.user.emailVerified) {
-    return (
-      <div className="flex min-h-screen w-screen flex-col items-center justify-center p-6 bg-surface-container/20">
-        <div className="w-full max-w-md">
-          <EmailVerificationBanner userId={resolved.user.id} />
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={async () => {
-                await signOut();
-                router.replace("/login?force=true");
-              }}
-              className="text-[length:var(--font-size-body)] font-semibold text-brand-accent hover:underline min-h-[var(--touch-target-min)] px-2"
-            >
-              Sign out / Switch account
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // BUSINESS_OWNER email verification and admin-approval gating is handled by
+  // standalone pages (/verify-email, /pending-approval) that the login router
+  // directs users to. Any BUSINESS_OWNER who reaches AuthProvider is fully
+  // activated (email_verified=true, business_status='verified').
 
   return <CurrentUserContext.Provider value={resolved.user}>{children}</CurrentUserContext.Provider>;
 }

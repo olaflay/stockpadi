@@ -202,7 +202,7 @@ export default function NewStaffPage() {
               className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-warning-container px-4 py-3 text-[length:var(--font-size-body)] text-on-warning-container"
             >
               <span className="font-semibold">No branches yet.</span>
-              <span>Create a branch first, then add staff — every worker is assigned to one branch.</span>
+              <span>Create a branch first, then add staff. Every worker belongs to one branch.</span>
             </div>
           )}
 

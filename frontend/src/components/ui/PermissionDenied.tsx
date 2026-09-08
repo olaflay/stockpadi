@@ -47,7 +47,7 @@ export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: 
         <RippleButton
           type="button"
           onClick={() => router.push("/dashboard")}
-          className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
+          className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent/50 bg-brand-accent/10 px-5 py-3 text-sm font-semibold text-brand-accent hover:bg-brand-accent/15 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
         >
           Go to Dashboard
         </RippleButton>

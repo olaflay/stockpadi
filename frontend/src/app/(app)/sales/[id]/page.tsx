@@ -154,7 +154,7 @@ export default function SaleDetailPage({ params }: PageProps) {
     setVoiding(true);
     try {
       await voidSale({ saleId: sale.id, branchId: sale.branchId });
-      showToast("Sale voided — stock has been restored.", "success");
+      showToast("Sale cancelled. Stock restored.", "success");
     } catch (err) {
       showToast(err instanceof VoidSaleError ? err.message : "Couldn't void this sale.", "danger");
     } finally {

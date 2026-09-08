@@ -1,5 +1,8 @@
 import { BannerStrip } from "@/components/ui/BannerStrip";
 import { BottomNav } from "@/components/ui/BottomNav";
+import { DrawerProvider } from "@/components/ui/DrawerContext";
+import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
+import { SideDrawer } from "@/components/ui/SideDrawer";
 import { SyncEngine } from "@/features/sync/SyncEngine";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { GuidedTour } from "@/features/onboarding/components/GuidedTour";
@@ -15,13 +18,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <LegacyShellGuard>
-        <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
-          <SyncEngine />
-          <GuidedTour />
-          <BannerStrip />
-          <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">{children}</main>
-          <BottomNav />
-        </div>
+        <DrawerProvider>
+          <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
+            <TopStoreHeader />
+            <SyncEngine />
+            <GuidedTour />
+            <BannerStrip />
+            <SideDrawer />
+            <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">{children}</main>
+            <BottomNav />
+          </div>
+        </DrawerProvider>
       </LegacyShellGuard>
     </AuthProvider>
   );

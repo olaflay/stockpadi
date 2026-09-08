@@ -318,7 +318,7 @@ export function PaymentStep(props: {
               <div className="flex items-center justify-between">
                 {insufficientCash ? (
                   <span className="text-[length:var(--font-size-body)] font-medium text-danger">
-                    Not enough — need {formatCurrency(total - tenderedAmount)} more
+                    Not enough. Need {formatCurrency(total - tenderedAmount)} more.
                   </span>
                 ) : changeDue > 0 ? (
                   <div className="flex w-full flex-col items-center gap-0.5 rounded-[var(--radius-control)] bg-success-container px-3 py-3">

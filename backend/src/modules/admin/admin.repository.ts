@@ -10,9 +10,50 @@ export async function listBusinesses(db: SupabaseClient) {
 }
 
 export async function getBusiness(db: SupabaseClient, businessId: string) {
-  const result = await db.from("business_profile").select("id, name, business_type, currency, status, is_active, created_at").eq("id", businessId).maybeSingle();
+  const result = await db.from("business_profile").select("id, name, business_type, currency, status, is_active, branding, created_at, updated_at").eq("id", businessId).maybeSingle();
   if (result.error) throw new HttpError(500, "QUERY_FAILED", result.error.message);
-  return result.data;
+  if (!result.data) return null;
+
+  const owner = await db.from("users").select("id, full_name, is_active").eq("business_id", businessId).eq("account_type", "BUSINESS_OWNER").maybeSingle();
+  const branches = await db.from("branches").select("id, name, address, is_active").eq("business_id", businessId);
+  const productsCount = await db.from("products").select("id", { count: "exact", head: true }).eq("business_id", businessId);
+  const workersCount = await db.from("users").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("account_type", "WORKER");
+
+  return {
+    ...result.data,
+    owner_name: owner.data?.full_name ?? "Unknown Owner",
+    owner_id: owner.data?.id ?? null,
+    branches: branches.data ?? [],
+    branch_count: branches.data?.length ?? 0,
+    product_count: productsCount.count ?? 0,
+    worker_count: workersCount.count ?? 0,
+  };
+}
+
+export async function getSystemStats(db: SupabaseClient) {
+  const businesses = await db.from("business_profile").select("id, status, is_active");
+  if (businesses.error) throw new HttpError(500, "QUERY_FAILED", businesses.error.message);
+  const allBusinesses = businesses.data ?? [];
+  const total = allBusinesses.length;
+  const verified = allBusinesses.filter((b) => b.status === "verified" || b.is_active).length;
+  const suspended = allBusinesses.filter((b) => b.status === "suspended" || !b.is_active).length;
+  const pending = allBusinesses.filter((b) => b.status === "pending").length;
+
+  const totalUsers = await db.from("users").select("id", { count: "exact", head: true });
+  const totalProducts = await db.from("products").select("id", { count: "exact", head: true });
+  const totalBroadcasts = await db.from("broadcasts").select("id", { count: "exact", head: true }).eq("scope", "platform");
+
+  return {
+    total_tenants: total,
+    verified_tenants: verified,
+    suspended_tenants: suspended,
+    pending_tenants: pending,
+    total_users: totalUsers.count ?? 0,
+    total_products: totalProducts.count ?? 0,
+    total_broadcasts: totalBroadcasts.count ?? 0,
+    status: "healthy",
+    checked_at: new Date().toISOString(),
+  };
 }
 
 export async function setBusinessStatus(db: SupabaseClient, actorId: string, businessId: string, status: NonNullable<AdminRequestStatus>) {

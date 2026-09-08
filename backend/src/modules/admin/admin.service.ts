@@ -1,8 +1,9 @@
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
-import { getBusiness, listBusinesses, setBusinessStatus } from "./admin.repository.js";
+import { getBusiness, getSystemStats, listBusinesses, setBusinessStatus } from "./admin.repository.js";
 import { publishPlatformBroadcast } from "../broadcasts/broadcast.service.js";
+import { listPlatformBroadcasts } from "../broadcasts/broadcast.repository.js";
 import type { AdminRequest } from "./admin.schema.js";
 
 export async function executeAdminOperation(db: SupabaseClient, actor: User, request: AdminRequest) {
@@ -17,6 +18,12 @@ export async function executeAdminOperation(db: SupabaseClient, actor: User, req
     if (!request.businessId || !request.status) throw new HttpError(400, "INVALID_BODY", "businessId and status are required");
     await setBusinessStatus(db, actor.id, request.businessId, request.status);
     return { status: "ok" };
+  }
+  if (request.action === "list_broadcasts") {
+    return { broadcasts: await listPlatformBroadcasts(db) };
+  }
+  if (request.action === "get_system_stats") {
+    return { stats: await getSystemStats(db) };
   }
   return { status: "ok", broadcastId: await publishPlatformBroadcast(db, actor, request.content ?? "") };
 }

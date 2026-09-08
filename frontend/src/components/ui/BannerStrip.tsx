@@ -86,8 +86,8 @@ export function BannerStrip() {
       {showOffline && (
         <div className="bg-warning-container px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-warning-container">
           {pendingCount >= UNSYNCED_HEADS_UP
-            ? `Offline — ${pendingCount} changes saved, will sync when online`
-            : "Offline — changes are saved locally and will sync when online"}
+            ? `Offline: ${pendingCount} changes saved. Syncs when online`
+            : "Offline: changes are saved locally and sync when online"}
         </div>
       )}
 

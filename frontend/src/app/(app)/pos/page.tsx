@@ -153,7 +153,7 @@ function PosPageContent() {
     if (!branchId) {
       showToast(
         user.accountType === "WORKER"
-          ? "No branch is assigned to this account — ask your owner to assign one."
+          ? "No branch assigned to this account. Ask your shop owner to assign one."
           : "Set up a branch in Settings before selling.",
         "warning"
       );
@@ -201,7 +201,7 @@ function PosPageContent() {
           const prodName = prod?.name ?? "An item";
           setTimeout(() => {
             showToast(
-              `⚠️ Low stock alert: "${prodName}" is down to ${remaining} left.`,
+              `Low stock: "${prodName}" is down to ${remaining} left.`,
               "warning",
               {
                 label: "Restock",

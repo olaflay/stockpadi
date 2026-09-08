@@ -229,7 +229,7 @@ export default function ImportProductsPage() {
                       <AlertCircle size={16} aria-hidden className="mt-0.5 shrink-0 text-danger" />
                       <p className="text-[length:var(--font-size-caption)] text-on-surface">
                         <span className="font-semibold">Row {err.rowNum}</span>
-                        {err.field ? ` · ${err.field}` : ""} — {err.message}
+                        {err.field ? ` · ${err.field}: ` : ": "}{err.message}
                       </p>
                     </li>
                   ))}
@@ -239,7 +239,7 @@ export default function ImportProductsPage() {
 
             {willWarnCap && !willExceedCap && (
               <p className="rounded-[var(--radius-card)] bg-warning/10 px-4 py-3 text-[length:var(--font-size-caption)] text-on-surface">
-                Heads up: this file brings you close to the {PRODUCT_CAP}-product cap. That is fine — you can still import it.
+                Heads up: this file brings you close to the {PRODUCT_CAP}-product limit. You can still import it.
               </p>
             )}
             {willExceedCap && (

@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Receipt, Plus } from "lucide-react";
+import { Receipt, Plus, BarChart3 } from "lucide-react";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -58,30 +59,48 @@ export default function SalesPage() {
   // matrix ("View sales: Own only"); everyone else with sales visibility
   // sees the branch's full history.
   const visibleSales =
-    result?.sales.filter((sale) => user.accountType !== "WORKER" || sale.createdByUserId === user.id) ?? [];
+    result?.sales.filter((sale) => {
+      if (user.accountType === "WORKER") {
+        return sale.createdByUserId === user.id;
+      }
+      return true;
+    }) ?? [];
 
-  const [visibleLimit, setVisibleLimit] = useState(50);
+  const [visibleLimit, setVisibleLimit] = useState(25);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (visibleSales.length <= visibleLimit) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleLimit((prev) => prev + 50);
-      }
-    }, { threshold: 0.1 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleLimit < visibleSales.length) {
+          setVisibleLimit((prev) => prev + 25);
+        }
+      },
+      { threshold: 0.1 }
+    );
 
     const el = loadMoreRef.current;
     if (el) observer.observe(el);
+
     return () => {
       if (el) observer.unobserve(el);
     };
-  }, [visibleSales.length, visibleLimit]);
+  }, [visibleLimit, visibleSales.length]);
+
+  const reportsAction = user.accountType !== "WORKER" ? (
+    <Link
+      href="/reports"
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-accent-active bg-brand-accent/10 hover:bg-brand-accent/20 rounded-full transition-colors"
+    >
+      <BarChart3 size={15} />
+      <span>Reports</span>
+    </Link>
+  ) : undefined;
 
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
     return (
       <div>
-        <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Sales History" hideBack={true} />
         <PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} />
       </div>
     );
@@ -90,7 +109,7 @@ export default function SalesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -108,7 +127,7 @@ export default function SalesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
         <ErrorState message="Couldn't load today's sales." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -117,7 +136,7 @@ export default function SalesPage() {
   if (visibleSales.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
         <EmptyState
           icon={Receipt}
           title="No sales yet today"
@@ -134,7 +153,7 @@ export default function SalesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Sales" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
       <div>
         <ul className="flex flex-col gap-2">
           {visibleSales.slice(0, visibleLimit).map((sale) => {
