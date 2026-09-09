@@ -150,16 +150,24 @@ function PosPageContent() {
   const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
   const filtered = [...exact, ...suggestions];
 
-  const hasNoBranches = branches !== undefined && branches.length === 0;
-
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;
-    const branchId = resolveDefaultBranch(branches, user);
+    let branchId = resolveDefaultBranch(branches, user);
+    if (!branchId && user.accountType !== "WORKER") {
+      const fallbackId = user.businessId ? `${user.businessId}-main` : "main-branch";
+      await db.branches.put({
+        id: fallbackId,
+        businessId: user.businessId || undefined,
+        name: "Main Branch",
+        isActive: true,
+      });
+      branchId = fallbackId;
+    }
     if (!branchId) {
       showToast(
         user.accountType === "WORKER"
           ? "No branch assigned to this account. Ask your shop owner to assign one."
-          : "Set up a branch in Settings before selling.",
+          : "Could not resolve store branch.",
         "warning"
       );
       return;
@@ -289,7 +297,6 @@ function PosPageContent() {
 
   return (
     <BrowseStep
-      hasNoBranches={hasNoBranches}
       query={query}
       onQueryChange={setQuery}
       categories={categories}

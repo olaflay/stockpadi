@@ -37,6 +37,10 @@ export function useCurrentUser(): CurrentUser {
   return user;
 }
 
+export function useCurrentUserOptional(): CurrentUser | null {
+  return useContext(CurrentUserContext);
+}
+
 /** Presentation-only account check. Authorization remains server/database-owned. */
 export function hasAccountType(user: CurrentUser, allowed: readonly AccountType[]): boolean {
   return Boolean(user.accountType && allowed.includes(user.accountType));

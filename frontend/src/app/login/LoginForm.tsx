@@ -103,20 +103,13 @@ export default function LoginForm() {
         await setLocalBusinessId(context.businessId);
       }
       await startSession(profile.id);
-      // Route based on accountState (Phase B state machine)
+      // Route based on accountState
       const state = context.accountState;
       if (state === "REGISTERED_UNVERIFIED") {
         router.replace("/verify-email");
         return;
       }
-      if (state === "EMAIL_VERIFIED_PENDING_ADMIN") {
-        router.replace("/pending-approval");
-        return;
-      }
-      if (state === "PENDING_ADMIN_APPROVAL") {
-        router.replace("/pending-approval");
-        return;
-      }
+      // Unverified business owners can enter /dashboard immediately; cloud sync will await verification
       router.replace(profile.account_type === "ADMIN" ? "/admin" : "/dashboard");
     } catch (error) {
       if (error instanceof BackendError && (error.code === "ACCOUNT_NOT_APPROVED" || error.message?.includes("not approved") || error.message?.includes("wait for approval"))) {

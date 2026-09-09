@@ -4,6 +4,7 @@ import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-
 import { retryFailedOutboxItems, drainOutbox } from "@/features/sync/drain-outbox";
 import { useToast } from "@/components/ui/Toast";
 import { useOnlineStatus } from "@/lib/use-online-status";
+import { db } from "@/lib/db";
 
 /**
  * Sync status indicator with manual "Force Sync Now" control.
@@ -60,11 +61,14 @@ export function SyncIndicator({
   const handleRetryFailed = async () => {
     if (isRetrying) return;
     setIsRetrying(true);
-    if (compact) {
-      showToast(`Retrying ${failedCount} unsynced change${failedCount === 1 ? "" : "s"}…`, "danger");
-    }
     try {
       await retryFailedOutboxItems();
+      const firstFailed = await db.outbox.where("status").equals("failed").first();
+      if (firstFailed?.lastError?.includes("verification") || firstFailed?.lastError?.includes("approved")) {
+        showToast("Account pending verification: products and sales are saved locally and will sync once approved.", "warning");
+      } else if (compact) {
+        showToast(`Retried sync for ${failedCount} change${failedCount === 1 ? "" : "s"}.`, "neutral");
+      }
     } finally {
       setIsRetrying(false);
     }

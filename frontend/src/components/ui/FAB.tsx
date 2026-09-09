@@ -15,7 +15,7 @@ interface FABProps {
  */
 export function FAB({ href, onClick, label, id, children }: FABProps) {
   const commonClass =
-    "fixed bottom-16 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-transform";
+    "fixed bottom-22 sm:bottom-24 right-5 sm:right-6 z-[var(--z-fab,50)] flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:scale-95 transition-all";
 
   if (onClick) {
     return (

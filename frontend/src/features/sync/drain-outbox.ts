@@ -118,6 +118,30 @@ async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof ge
 
   if (!session) return;
 
+  const sessionRow = await db.session.get("current");
+  if (sessionRow?.userId) {
+    const localUser = await db.localUsers.get(sessionRow.userId);
+    if (
+      localUser &&
+      localUser.accountType === "BUSINESS_OWNER" &&
+      localUser.businessStatus &&
+      localUser.businessStatus !== "verified" &&
+      localUser.businessStatus !== "active"
+    ) {
+      await db.outbox.bulkUpdate(
+        slice.map((item) => ({
+          key: item.clientId,
+          changes: {
+            status: "failed" as const,
+            attemptCount: item.attemptCount + 1,
+            lastError: "Account pending verification. Products and data will sync once approved by admin.",
+          },
+        }))
+      );
+      return;
+    }
+  }
+
   await db.outbox.bulkUpdate(
     slice.map((item) => ({ key: item.clientId, changes: { status: "syncing" as const } }))
   );
@@ -142,6 +166,30 @@ async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof ge
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        let errMessage = "Account pending verification. Products and data will sync once approved by admin.";
+        try {
+          const errBody = await response.json();
+          if (errBody?.error?.code === "BUSINESS_UNAVAILABLE" || errBody?.error?.message?.includes("verified")) {
+            errMessage = "Account pending verification. Cloud sync activates once approved by admin.";
+          } else if (errBody?.error?.message) {
+            errMessage = errBody.error.message;
+          }
+        } catch {
+          // Keep default message
+        }
+        await db.outbox.bulkUpdate(
+          slice.map((item) => ({
+            key: item.clientId,
+            changes: {
+              status: "failed" as const,
+              attemptCount: item.attemptCount + 1,
+              lastError: errMessage,
+            },
+          }))
+        );
+        return;
+      }
       await revertToPending(slice, `sync-push responded ${response.status}`);
       return;
     }

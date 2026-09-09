@@ -5,6 +5,7 @@ import { Download, X, Bell } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { usePendingSyncCount } from "@/lib/use-pending-sync-count";
+import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 
 const UNSYNCED_HEADS_UP = 250;
 
@@ -76,12 +77,27 @@ export function BannerStrip() {
     setShowNotification(false);
   };
 
+  const user = useCurrentUserOptional();
+  const showUnverified = Boolean(
+    user?.accountType === "BUSINESS_OWNER" &&
+    user.businessStatus &&
+    user.businessStatus !== "verified" &&
+    user.businessStatus !== "active"
+  );
+
   const showOffline = !isOnline;
-  const hasAnyBanner = showOffline || showInstall || showNotification;
+  const hasAnyBanner = showOffline || showInstall || showNotification || showUnverified;
   if (!hasAnyBanner) return null;
 
   return (
     <div className="flex w-full flex-col" role="status">
+      {/* Pending verification banner */}
+      {showUnverified && (
+        <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-amber-950 dark:text-amber-200">
+          Store pending admin approval · Changes are saved locally and will sync once verified
+        </div>
+      )}
+
       {/* Offline banner — slim, persistent, top priority */}
       {showOffline && (
         <div className="bg-warning-container px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-warning-container">

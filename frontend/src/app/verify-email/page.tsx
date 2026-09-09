@@ -46,7 +46,7 @@ export default function VerifyEmailPage() {
       return;
     }
     if (resolved.user.emailVerified) {
-      router.replace(resolved.user.businessStatus === "verified" ? "/dashboard" : "/pending-approval");
+      router.replace("/dashboard");
     }
   }, [resolved, router]);
 
@@ -74,7 +74,7 @@ export default function VerifyEmailPage() {
         <EmailVerificationCard
           userId={resolved.user.id}
           onSuccess={() => {
-            router.replace(resolved.user.businessStatus === "verified" ? "/dashboard" : "/pending-approval");
+            router.replace("/dashboard");
           }}
         />
 

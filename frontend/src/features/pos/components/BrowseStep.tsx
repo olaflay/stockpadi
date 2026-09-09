@@ -23,7 +23,6 @@ import type { Product } from "@/types/product";
 import type { LocalCategory } from "@/lib/db";
 
 export function BrowseStep(props: {
-  hasNoBranches: boolean;
   query: string;
   onQueryChange: (query: string) => void;
   categories: LocalCategory[] | undefined;
@@ -43,7 +42,6 @@ export function BrowseStep(props: {
   stockByProduct?: Record<string, number>;
 }) {
   const {
-    hasNoBranches,
     query,
     onQueryChange,
     categories,
@@ -164,32 +162,6 @@ export function BrowseStep(props: {
     <div key="browse" className="flex flex-col gap-4 animate-step-in">
       <h1 className="sr-only">Sell</h1>
 
-      {hasNoBranches && (
-        <div className="flex flex-col gap-3 rounded-2xl bg-warning-container border border-warning/30 p-4 text-on-warning-container shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/20 text-warning">
-              <GitBranch size={20} aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-base text-on-warning-container">Create a branch to start selling</h3>
-              <p className="text-xs sm:text-sm text-on-warning-container/90 mt-0.5">
-                Every sale and stock movement belongs to a branch. Create your first branch to unlock selling and inventory sync.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end pt-0.5">
-            <button
-              type="button"
-              onClick={onGoToSettings}
-              className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center gap-2 rounded-xl bg-warning px-4 py-2.5 text-on-warning font-semibold text-sm hover:opacity-95 active:scale-[0.98] transition-all shadow-xs"
-            >
-              <Plus size={16} aria-hidden />
-              <span>Create Branch</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-1 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
         <div className="flex gap-2">
           <div className="relative flex-1 min-w-0">
@@ -210,7 +182,6 @@ export function BrowseStep(props: {
                 // a unit, so Enter would guess wrong. H7: expert accelerator.
                 if (
                   e.key === "Enter" &&
-                  !hasNoBranches &&
                   filteredProducts.length > 0
                 ) {
                   const first = filteredProducts[0];
@@ -221,9 +192,8 @@ export function BrowseStep(props: {
                   }
                 }
               }}
-              disabled={hasNoBranches}
-              placeholder={hasNoBranches ? "Configure branch in settings to search" : "Search shop..."}
-              className={`min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 text-center placeholder:text-center focus:text-left focus:placeholder:text-left text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all disabled:opacity-50 ${
+              placeholder="Search shop..."
+              className={`min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 text-center placeholder:text-center focus:text-left focus:placeholder:text-left text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all ${
                 itemCount > 0 ? "pr-16" : "pr-10"
               }`}
             />
@@ -242,7 +212,6 @@ export function BrowseStep(props: {
           </div>
           <button
             type="button"
-            disabled={hasNoBranches}
             onClick={() => setScanning(true)}
             aria-label="Scan barcode"
             className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-surface-container-low text-on-surface hover:bg-surface-container disabled:opacity-50 transition-colors"
@@ -350,7 +319,6 @@ export function BrowseStep(props: {
                         ? handleOutOfStockAttempt(product)
                         : handleBestSellerAdd(product)
                     }
-                    disabled={hasNoBranches}
                     aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
                     className={`flex w-36 flex-col items-start gap-1 rounded-[var(--radius-card)] px-3 py-2.5 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
                       isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container hover:bg-surface-container-high"
@@ -440,7 +408,6 @@ export function BrowseStep(props: {
                       label={`${product.name} (${product.unitLabel})`}
                       onDecrement={() => onDecrementLine(baseKey)}
                       onIncrement={() => onIncrementLine(baseKey)}
-                      disabled={hasNoBranches}
                       incrementDisabled={!canAddBase}
                       onIncrementBlocked={() =>
                         showToast(
@@ -461,7 +428,6 @@ export function BrowseStep(props: {
                           ? handleOutOfStockAttempt(product)
                           : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
                       }
-                      disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
                       className={`shrink-0 rounded-full px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
                         isOutOfStock
@@ -480,7 +446,6 @@ export function BrowseStep(props: {
                       label={`${product.name} (${product.altUnitLabel})`}
                       onDecrement={() => onDecrementLine(altKey!)}
                       onIncrement={() => onIncrementLine(altKey!)}
-                      disabled={hasNoBranches}
                       incrementDisabled={!canAddAlt}
                       onIncrementBlocked={() =>
                         showToast(
@@ -513,7 +478,6 @@ export function BrowseStep(props: {
                               product.altUnitConversionFactor!
                             )
                       }
-                      disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.altUnitLabel}) for ${formatCurrency(product.altUnitSellPrice)} to cart`}
                       className="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface transition-[background-color,transform] active:scale-[0.98] hover:bg-surface-container-high disabled:opacity-50"
                     >
@@ -536,7 +500,6 @@ export function BrowseStep(props: {
                       label={product.name}
                       onDecrement={() => onDecrementLine(baseKey)}
                       onIncrement={() => onIncrementLine(baseKey)}
-                      disabled={hasNoBranches}
                       incrementDisabled={!canAddBase}
                       onIncrementBlocked={() =>
                         showToast(
@@ -559,7 +522,6 @@ export function BrowseStep(props: {
                         ? handleOutOfStockAttempt(product)
                         : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
                     }
-                    disabled={hasNoBranches}
                     aria-label={`Add ${product.name} for ${formatCurrency(product.sellPrice)} to cart`}
                     className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
                       isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container-high hover:bg-surface-container-highest"
@@ -626,7 +588,7 @@ function InlineStepper({
   label,
   onDecrement,
   onIncrement,
-  disabled,
+  disabled = false,
   incrementDisabled = false,
   onIncrementBlocked,
 }: {
@@ -634,7 +596,7 @@ function InlineStepper({
   label: string;
   onDecrement: () => void;
   onIncrement: () => void;
-  disabled: boolean;
+  disabled?: boolean;
   incrementDisabled?: boolean;
   onIncrementBlocked?: () => void;
 }) {

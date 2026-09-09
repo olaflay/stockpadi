@@ -158,12 +158,10 @@ export default function RegisterForm() {
       await startSession(userId);
 
       showToast(
-        "Account created. We'll review your store and email a verification code once it's approved.",
+        "Account created! Start managing your inventory right away. Cloud sync will activate once approved.",
         "success"
       );
-      // Admin approval gate — the verification email is sent only after an
-      // admin approves the account, so the user waits on /pending-approval.
-      router.replace("/pending-approval");
+      router.replace("/dashboard");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {

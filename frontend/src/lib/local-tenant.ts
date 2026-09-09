@@ -68,6 +68,17 @@ export async function setLocalBusinessId(businessId: string | null | undefined):
     await db.outbox.toCollection().modify((row) => {
       if (!row.businessId) row.businessId = businessId;
     });
+
+    // An account is always at least one branch. Guarantee a primary branch exists.
+    const branchCount = await db.branches.where("businessId").equals(businessId).count();
+    if (branchCount === 0) {
+      await db.branches.put({
+        id: `${businessId}-main`,
+        businessId,
+        name: "Main Branch",
+        isActive: true,
+      });
+    }
   });
 }
 

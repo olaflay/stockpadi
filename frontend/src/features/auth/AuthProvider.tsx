@@ -69,12 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (resolved.kind === "active" && resolved.user.accountType === "BUSINESS_OWNER") {
-      const approved = resolved.user.businessStatus === "verified";
-      if (!approved && !pathname.startsWith("/pending-approval")) {
-        router.replace("/pending-approval");
-        return;
-      }
-      if (approved && !resolved.user.emailVerified && !pathname.startsWith("/verify-email")) {
+      // Unverified accounts can use the app locally; cloud sync is gated by verification status
+      if (resolved.user.businessStatus === "verified" && !resolved.user.emailVerified && !pathname.startsWith("/verify-email")) {
         router.replace("/verify-email");
       }
     }

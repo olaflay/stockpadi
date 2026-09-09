@@ -351,16 +351,6 @@ export default function ProductsPage() {
         <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
           {debouncedQuery ? (
             <NoResultsState query={debouncedQuery} />
-          ) : !hasBranch ? (
-            <EmptyState
-              icon={GitBranch}
-              title="Create a branch first"
-              description="Before adding products and tracking inventory, you need to set up your store's primary branch."
-              action={{
-                label: "Create branch",
-                onClick: () => router.push("/settings/branches"),
-              }}
-            />
           ) : (
             <EmptyState
               icon={Package}
@@ -477,7 +467,7 @@ export default function ProductsPage() {
 
       {/* Batch delete floating action bar */}
       {deleteMode && (
-        <div className="fixed bottom-20 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab)] flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+        <div className="fixed bottom-22 sm:bottom-24 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab,50)] flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
           <button
             type="button"
             onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}
@@ -504,10 +494,10 @@ export default function ProductsPage() {
       {hasAccountType(user, CAN_EDIT_PRODUCTS) && !deleteMode && (
         <FAB
           id="tour-add-product"
-          href={hasBranch ? "/products/new" : "/settings/branches"}
-          label={hasBranch ? "Add product" : "Create branch"}
+          href="/products/new"
+          label="Add product"
         >
-          {hasBranch ? <Plus size={26} aria-hidden /> : <GitBranch size={24} aria-hidden />}
+          <Plus size={26} aria-hidden />
         </FAB>
       )}
     </div>
