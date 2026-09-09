@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { getBrandingConfig } from "@/config/branding";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -12,6 +13,8 @@ try {
   var t = localStorage.getItem("stockpadi-theme");
   if (t === "light" || t === "dark") {
     document.documentElement.setAttribute("data-theme", t);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
   }
 } catch (e) {}
 `;
@@ -90,11 +93,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#0a6e4d",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  viewportFit: "cover" as const,
+  interactiveWidget: "resizes-content" as const,
 };
 
 const JSON_LD_SCHEMA = {
@@ -137,6 +141,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
+          <ServiceWorkerRegister />
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

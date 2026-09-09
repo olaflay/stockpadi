@@ -13,7 +13,7 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { fetchStaff } from "@/features/auth/manage-staff-client";
 
 /** "Up to 3 staff on top of the owner." docs/RESEARCH-AND-PLAN.md Section 4.2. */
-export const STAFF_CAP = 3;
+const STAFF_CAP = 3;
 
 export default function StaffPage() {
   const router = useRouter();

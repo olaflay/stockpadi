@@ -15,7 +15,7 @@ export function NoResultsState({ query, onClear, className }: NoResultsStateProp
   return (
     <div
       role="status"
-      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card bg-surface-container-low border border-border/60 p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
+      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
     >
       <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
         <div className="mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container-high shrink-0 depth-bubble">
@@ -35,7 +35,7 @@ export function NoResultsState({ query, onClear, className }: NoResultsStateProp
         <RippleButton
           type="button"
           onClick={() => router.push(`/products/new?prefill=${encodeURIComponent(query)}`)}
-          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-brand-accent/50 bg-brand-accent/10 px-4 py-3 text-sm font-semibold text-brand-accent hover:bg-brand-accent/15 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
         >
           <Plus size={16} aria-hidden />
           <span>Create &quot;{query}&quot;</span>

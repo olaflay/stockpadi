@@ -30,7 +30,7 @@ export function ThemeToggle({ variant = "capsule-pill", className = "" }: ThemeT
       <div
         role="radiogroup"
         aria-label="Appearance"
-        className={`inline-flex items-center gap-0.5 rounded-full bg-surface-container p-1 ${className}`}
+        className={`inline-flex items-center gap-0.5 rounded-full bg-surface-container p-0.5 border border-border/40 shadow-2xs ${className}`}
       >
         {OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = theme === value;
@@ -43,13 +43,13 @@ export function ThemeToggle({ variant = "capsule-pill", className = "" }: ThemeT
               aria-label={`${label} theme`}
               title={`${label} theme`}
               onClick={() => setTheme(value)}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-all ${
+              className={`flex h-6.5 w-6.5 items-center justify-center rounded-full transition-all ${
                 selected
                   ? "bg-surface text-brand-accent shadow-xs scale-105"
                   : "text-on-surface-muted hover:text-on-surface hover:bg-surface-container-high/60"
               }`}
             >
-              <Icon size={15} aria-hidden />
+              <Icon size={14} aria-hidden />
             </button>
           );
         })}
@@ -76,8 +76,8 @@ export function ThemeToggle({ variant = "capsule-pill", className = "" }: ThemeT
               onClick={() => setTheme(value)}
               className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
                 selected
-                  ? "bg-surface text-on-surface shadow-xs px-3.5 py-1.5 gap-1.5 font-semibold text-xs sm:text-sm"
-                  : "text-on-surface-muted hover:text-on-surface px-3 py-1.5 font-medium text-xs sm:text-sm"
+                  ? "bg-surface text-on-surface shadow-xs px-2.5 sm:px-3.5 py-1 sm:py-1.5 gap-1.5 font-semibold text-xs sm:text-sm"
+                  : "text-on-surface-muted hover:text-on-surface px-2 sm:px-3 py-1 sm:py-1.5 font-medium text-xs sm:text-sm"
               }`}
             >
               {selected && <Icon size={14} className="text-brand-accent shrink-0" aria-hidden />}

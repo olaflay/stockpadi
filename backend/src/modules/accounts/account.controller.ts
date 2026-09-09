@@ -55,9 +55,12 @@ export async function handleAccountContext(request: globalThis.Request) {
       .maybeSingle();
     if (error || !profile) throw new Error("Account profile was not found");
 
+    const isEmailVerified = context.accountType === "BUSINESS_OWNER" ? (profile.email_verified ?? false) : true;
+    const accountState: AccountState = isEmailVerified ? "FULLY_ACTIVATED" : "REGISTERED_UNVERIFIED";
+
     return {
       accountType: context.accountType,
-      accountState: "FULLY_ACTIVATED" as AccountState,
+      accountState,
       profile: {
         ...profile,
         role: profile.role ?? (context.accountType === "WORKER" ? "WORKER" : "BUSINESS_OWNER"),

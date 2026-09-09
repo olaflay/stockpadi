@@ -4,6 +4,8 @@ import { createContext, useCallback, useState } from "react";
 
 export type ThemePreference = "light" | "dark" | "system";
 
+export const DEFAULT_THEME: ThemePreference = "system";
+
 const STORAGE_KEY = "stockpadi-theme";
 
 export const ThemeContext = createContext<{
@@ -23,16 +25,16 @@ function applyTheme(theme: ThemePreference) {
 /**
  * Wraps the app so every screen can read/set the light-dark-system
  * preference from one place. Defaults to "system" (the existing
- * prefers-color-scheme behavior in src/styles/tokens.css); "light" and
- * "dark" pin the choice via a data-theme attribute that overrides the OS
- * preference. Persisted to localStorage; the inline script in
+ * prefers-color-scheme behavior in src/styles/tokens.css) for all new users;
+ * "light" and "dark" pin the choice via a data-theme attribute that overrides
+ * the OS preference. Persisted to localStorage; the inline script in
  * src/app/layout.tsx applies the stored value before hydration to avoid a
  * flash of the wrong theme.
  */
 function readStoredTheme(): ThemePreference {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return DEFAULT_THEME;
   const stored = window.localStorage.getItem(STORAGE_KEY) as ThemePreference | null;
-  return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+  return stored === "light" || stored === "dark" ? stored : DEFAULT_THEME;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

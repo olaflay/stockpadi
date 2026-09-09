@@ -33,7 +33,15 @@ export function CountBadge({ count, className = "", tone = "neutral" }: BadgePro
   );
 }
 
-export function AlertBadge({ count: propCount, className = "" }: { count?: number; className?: string }) {
+export function AlertBadge({
+  count: propCount,
+  className = "",
+  inline = false,
+}: {
+  count?: number;
+  className?: string;
+  inline?: boolean;
+}) {
   const hookCount = useAlertBadgeCount();
   const count = propCount ?? hookCount;
 
@@ -42,7 +50,11 @@ export function AlertBadge({ count: propCount, className = "" }: { count?: numbe
   return (
     <span
       aria-label={`${count} unread notifications`}
-      className={`absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`}
+      className={
+        inline
+          ? `inline-flex h-4.5 min-w-[1.125rem] items-center justify-center rounded-full bg-badge-alert-bg px-1.5 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-xs ${className}`
+          : `absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`
+      }
     >
       {count > 99 ? "99+" : count}
     </span>

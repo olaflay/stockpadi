@@ -26,20 +26,21 @@
 
 :root {
    /* Brand accent, overridden at runtime from src/config/branding.ts */
-   --color-brand-accent: #0a6e4d;
+   --color-brand-accent: var(--brand-accent-configured, #0a6e4d);
    --color-brand-accent-contrast: #ffffff;
    --color-brand-accent-active: var(--color-brand-accent);
 
    /* Surface / text, light mode. Crisp high-contrast neutral scale (WCAG AAA compliant). */
    --color-surface: #ffffff;
    --color-surface-container-lowest: #ffffff;
-   --color-surface-container-low: #f8fafc;
-   --color-surface-container: #f1f5f9;
-   --color-surface-container-high: #e2e8f0;
-   --color-surface-container-highest: #cbd5e1;
-   --color-on-surface: #0f172a;
-   --color-on-surface-muted: #334155;
-   --color-border: #cbd5e1;
+   --color-surface-container-low: #f7f9fa;
+   --color-surface-container: #eff2f3;
+   --color-surface-container-high: #e3e7e8;
+   --color-surface-container-highest: #d6dcde;
+   --color-on-surface: #14181a;
+   --color-on-surface-muted: #5e6b6f;
+   --color-border: #b8c1c4;
+   --color-outline: #73796e;
 
    --color-success: #1a7f3c;
    --color-warning: #a15c00;
@@ -69,10 +70,10 @@
    --gradient-brand-header: linear-gradient(180deg, #0a6e4d 0%, #075239 100%);
    --gradient-brand-subtle: linear-gradient(135deg, rgba(10, 110, 77, 0.08) 0%, rgba(10, 110, 77, 0.02) 100%);
 
-   /* Outline vs outline-variant (M3 pattern): --color-border is the
-     stronger outline (inputs); this is the subtler one, for decorative
-     list dividers that shouldn't compete with real borders. */
-   --color-outline-variant: #e2e8f0;
+   /* Outline vs outline-variant (M3 pattern): --color-border / --color-outline is the
+     stronger outline (inputs, buttons); this is the subtler one, for decorative
+     list dividers and cards that shouldn't compete with real borders. */
+   --color-outline-variant: #d6dcde;
 
    /* Inverse surface (M3 pattern): used for a snackbar/toast so it reads as
      a distinct floating layer instead of blending into the page. */
@@ -195,6 +196,14 @@
    /* toast, chip toggle, shimmer */
    --motion-duration-long: 300ms;
    /* sheets, dialogs, full page steps */
+   /* Stacking context & Z-Index tokens */
+   --z-sticky: 20;
+   --z-bottom-nav: 40;
+   --z-fab: 45;
+   --z-drawer: 50;
+   --z-modal: 60;
+   --z-toast: 70;
+
    --easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
    --easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
    --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
@@ -221,10 +230,15 @@
       --color-surface-container: #1c2022;
       --color-surface-container-high: #272c2e;
       --color-surface-container-highest: #32383a;
-      --color-on-surface: #f8fafc;
-      --color-on-surface-muted: #94a3b8;
-      --color-border: #334155;
-      --color-brand-accent-active: #4ade80;
+      --color-on-surface: #e7ebec;
+      --color-on-surface-muted: #a4adaf;
+      --color-border: #33393a;
+      --color-outline: #8c9388;
+      --color-outline-variant: #43494a;
+
+      --color-brand-accent: #4ade80 !important;
+      --color-brand-accent-contrast: #052e16 !important;
+      --color-brand-accent-active: #38c86d !important;
 
       --color-success: #4ade80;
       --color-warning: #fbbf24;
@@ -241,8 +255,6 @@
       --color-on-success: #0d4d21;
       --color-on-warning: #4a3300;
       --color-on-danger: #690005;
-
-      --color-outline-variant: #475569;
 
       --color-inverse-surface: #e7ebec;
       --color-inverse-on-surface: #262b2c;
@@ -270,10 +282,15 @@
    --color-surface-container: #1c2022;
    --color-surface-container-high: #272c2e;
    --color-surface-container-highest: #32383a;
-   --color-on-surface: #f8fafc;
-   --color-on-surface-muted: #94a3b8;
+   --color-on-surface: #e7ebec;
+   --color-on-surface-muted: #a4adaf;
    --color-border: #33393a;
-   --color-brand-accent-active: #4ade80;
+   --color-outline: #8c9388;
+   --color-outline-variant: #43494a;
+
+   --color-brand-accent: #4ade80 !important;
+   --color-brand-accent-contrast: #052e16 !important;
+   --color-brand-accent-active: #38c86d !important;
 
    --color-success: #4ade80;
    --color-warning: #fbbf24;
@@ -290,8 +307,6 @@
    --color-on-success: #0d4d21;
    --color-on-warning: #4a3300;
    --color-on-danger: #690005;
-
-   --color-outline-variant: #475569;
 
    --color-inverse-surface: #e7ebec;
    --color-inverse-on-surface: #262b2c;

@@ -54,8 +54,25 @@ export default function AdminBroadcastsPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchBroadcasts();
-  }, [fetchBroadcasts]);
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await callBackend<{ broadcasts: BroadcastItem[] }>("platform-api", {
+          action: "list_broadcasts",
+        });
+        if (!ignore) setBroadcasts(res.broadcasts || []);
+      } catch (err) {
+        if (!ignore) showToast(err instanceof Error ? err.message : "Failed to load broadcast history.", "danger");
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    }
+    void load();
+    return () => { ignore = true; };
+  }, [showToast]);
 
   async function handlePublish() {
     const trimmed = content.trim();

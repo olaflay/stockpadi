@@ -64,9 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.replace("/admin");
       }
     }
-    if (resolved.kind === "active" && resolved.user.accountType === "WORKER") {
-      if (!pathname.startsWith("/work")) {
-        router.replace("/work");
+    if (resolved.kind === "active" && resolved.user.accountType === "BUSINESS_OWNER") {
+      if (!resolved.user.emailVerified) {
+        router.replace("/verify-email");
       }
     }
     // Slide the 30-day expiry forward on every active visit so the session

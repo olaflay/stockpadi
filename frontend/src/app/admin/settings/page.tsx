@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { callBackend } from "@/features/auth/backend-client";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { RippleButton } from "@/components/ui/Ripple";
 import {
   Server,
   Database,
@@ -12,7 +11,6 @@ import {
   Zap,
   RefreshCw,
   CheckCircle2,
-  AlertCircle,
   HardDrive,
   Cpu,
   Layers,
@@ -55,8 +53,25 @@ export default function AdminSettingsPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await callBackend<{ stats: SystemStats }>("platform-api", {
+          action: "get_system_stats",
+        });
+        if (!ignore) setStats(res.stats);
+      } catch (err) {
+        if (!ignore) showToast(err instanceof Error ? err.message : "Failed to load platform stats.", "danger");
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    }
+    void load();
+    return () => { ignore = true; };
+  }, [showToast]);
 
   function handleExportAudit() {
     if (!stats) return;

@@ -14,9 +14,7 @@ import {
 } from "lucide-react";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import { OfflineBanner } from "@/components/ui/OfflineBanner";
-import { InstallBanner } from "@/components/ui/InstallBanner";
-import { NotificationBanner } from "@/components/ui/NotificationBanner";
+import { BannerStrip } from "@/components/ui/BannerStrip";
 import { SyncEngine } from "@/features/sync/SyncEngine";
 import { DrawerProvider } from "@/components/ui/DrawerContext";
 import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
@@ -62,12 +60,10 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
 
   return (
     <DrawerProvider>
-      <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
+      <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden">
         <TopStoreHeader />
         <SyncEngine />
-        <OfflineBanner />
-        <InstallBanner />
-        <NotificationBanner />
+        <BannerStrip />
         <SideDrawer />
         <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">
           {children}

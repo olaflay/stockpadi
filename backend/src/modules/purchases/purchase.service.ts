@@ -21,8 +21,7 @@ export async function listPurchases(db: SupabaseClient, actor: User) {
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireBusinessOwner(context);
   const { data, error } = await db.from("purchases").select("id, client_id, branch_id, supplier_id, status, created_at, created_by_user_id").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(500);
-  if (error) throw new HttpError(500, "PURCHASES_LOAD_FAILED", error.message);
-  const purchases = context.accountType === "WORKER" ? (data ?? []).filter((purchase) => context.branchIds.includes(purchase.branch_id as string)) : (data ?? []);
+  const purchases = data ?? [];
   const ids = purchases.map((purchase) => purchase.id as string);
   if (!ids.length) return { purchases: [] };
   const { data: items, error: itemError } = await db.from("purchase_items").select("purchase_id, product_id, quantity, unit_cost").in("purchase_id", ids);

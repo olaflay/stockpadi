@@ -24,6 +24,13 @@
 *.tsbuildinfo
 next-env.d.ts
 
+# Generated PWA Service Worker & Workbox artifacts
+**/public/sw.js
+**/public/sw.js.map
+**/public/workbox-*.js
+**/public/workbox-*.js.map
+**/public/sw.js.LICENSE.txt
+
 # Tests, test suites, test scripts, and test tooling
 **/__tests__/
 **/*.test.*
@@ -50,20 +57,39 @@ tests/
 .claude/settings.local.json
 .playwright-mcp/
 
+# Next.js & AI tool generated files
+**/CLAUDE.md
+frontend/AGENTS.md
+
 # Supabase local state
 .supabase/
 supabase/.temp/
 supabase/.branches/
 
-# Logs, OS files, and certificates
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+
+# IDE, Editor, and OS files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+*.pem
+
+# Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-.DS_Store
-Thumbs.db
-*.pem
 
 # Local databases and archives
 *.sqlite
@@ -74,3 +100,11 @@ Thumbs.db
 *.zip
 *.tar
 *.gz
+
+# Scratch, temp, and local audit documents
+*.tmp
+*.temp
+scratch/
+tmp/
+temp/
+*audit_report*.md

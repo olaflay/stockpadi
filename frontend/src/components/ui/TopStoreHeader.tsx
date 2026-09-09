@@ -94,7 +94,7 @@ export function TopStoreHeader() {
             >
               <Bell size={17} aria-hidden />
               <span
-                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-400 ring-1.5 ring-emerald-900"
+                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--color-stock-alert)] ring-1.5 ring-[var(--color-brand-accent)]"
                 aria-hidden
               />
             </Link>

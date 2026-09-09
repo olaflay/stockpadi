@@ -9,7 +9,6 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { useToast } from "@/components/ui/Toast";
 import {
   Store,
-  Building2,
   Users,
   Package,
   ShieldCheck,
@@ -78,8 +77,27 @@ export default function AdminBusinessDetailPage() {
   }, [id, showToast]);
 
   useEffect(() => {
-    fetchDetail();
-  }, [fetchDetail]);
+    let ignore = false;
+    async function load() {
+      if (!id) return;
+      try {
+        const res = await callBackend<{ business: BusinessDetail | null }>("platform-api", {
+          action: "get_business",
+          businessId: id,
+        });
+        if (!ignore) setBusiness(res.business);
+      } catch (err) {
+        if (!ignore) showToast(err instanceof Error ? err.message : "Failed to load store details.", "danger");
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    }
+    void load();
+    return () => { ignore = true; };
+  }, [id, showToast]);
 
   async function handleToggleStatus() {
     if (!business) return;

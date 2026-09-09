@@ -505,7 +505,7 @@ export function BrowseStep(props: {
       )}
 
       {itemCount > 0 && (
-        <div className="sticky bottom-0 -mx-5 flex items-center justify-between gap-3 border-t border-border bg-surface px-5 py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
+        <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex items-center justify-between gap-3 border-t border-border bg-surface px-3.5 sm:px-5 py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
           <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
             {itemCount} item{itemCount === 1 ? "" : "s"} · <span className="font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
           </span>

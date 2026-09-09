@@ -44,16 +44,35 @@ export function SideDrawer() {
   );
   const storeName = businessProfile?.name?.trim() || getBrandingConfig().businessName;
 
-  // Close drawer on path change
+  const drawerRef = React.useRef<HTMLElement>(null);
+
+  // Close on path change
   useEffect(() => {
     closeDrawer();
   }, [pathname, closeDrawer]);
 
-  // Handle escape key
+  // Handle escape key and focus trap
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen) {
+      if (!isOpen) return;
+      if (e.key === "Escape") {
         closeDrawer();
+        return;
+      }
+      if (e.key === "Tab" && drawerRef.current) {
+        const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -72,23 +91,23 @@ export function SideDrawer() {
     };
   }, [isOpen]);
 
-  const closeDayHref = isOwnerOrAdmin ? "/close-day" : "/work/close-day";
+  const closeDayHref = "/close-day";
   const isCloseDayActive = pathname === closeDayHref || pathname.startsWith(`${closeDayHref}/`);
 
   const navItems: NavItem[] = [
     {
       label: "Customers",
-      href: isOwnerOrAdmin ? "/customers" : "/work/customers",
+      href: "/customers",
       icon: UserCircle,
     },
     {
       label: "Sales & Receipts",
-      href: isOwnerOrAdmin ? "/sales" : "/work/sales",
+      href: "/sales",
       icon: ReceiptText,
     },
     {
       label: "Stock Count",
-      href: isOwnerOrAdmin ? "/stock-count" : "/work/stock-count",
+      href: "/stock-count",
       icon: ClipboardCheck,
     },
     {
@@ -105,9 +124,9 @@ export function SideDrawer() {
     },
     {
       label: "Stock & Alerts",
-      href: isOwnerOrAdmin ? "/alerts" : "/work/alerts",
+      href: "/alerts",
       icon: Bell,
-      badge: <AlertBadge />,
+      badge: <AlertBadge inline />,
     },
   ];
 
@@ -124,6 +143,7 @@ export function SideDrawer() {
 
       {/* Slide-out Drawer Panel (Google Drive / One UI style, 60fps GPU accelerated) */}
       <aside
+        ref={drawerRef}
         className={`fixed inset-y-0 top-0 bottom-0 left-0 z-50 flex h-full w-[310px] max-w-[85vw] flex-col border-r border-border bg-surface shadow-2xl gpu-layer transition-transform duration-[280ms] will-change-transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -167,8 +187,8 @@ export function SideDrawer() {
           </div>
         </div>
 
-        {/* Navigation Items (Core 6 items not easily accessible elsewhere, zero scroll needed) */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1">
+        {/* Navigation Items (Core 6 items with generous breathing room) */}
+        <nav className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1.5">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-on-surface-muted">
             Operations
           </p>
@@ -184,7 +204,7 @@ export function SideDrawer() {
                   href={item.href}
                   onClick={closeDrawer}
                   prefetch={true}
-                  className={`flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[length:var(--font-size-body)] font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[length:var(--font-size-body)] font-medium transition-colors ${
                     isActive
                       ? "bg-brand-accent/10 text-brand-accent-active font-semibold shadow-xs"
                       : "text-on-surface hover:bg-surface-container"
@@ -197,14 +217,14 @@ export function SideDrawer() {
                     aria-hidden
                   />
                   <span className="flex-1 truncate">{item.label}</span>
-                  {item.badge && <span className="shrink-0">{item.badge}</span>}
+                  {item.badge && <span className="shrink-0 ml-2 flex items-center">{item.badge}</span>}
                 </Link>
               );
             })}
         </nav>
 
-        {/* Core Action: Close Day (Prominent Outline Button Style) */}
-        <div className="px-3 py-2.5 border-t border-border/70 bg-surface-container-lowest/30">
+        {/* Core Action: Close Day (Prominent Outline Button Style with generous breathing room) */}
+        <div className="px-3.5 py-3 border-t border-border/70 bg-surface-container-lowest/30">
           <Link
             href={closeDayHref}
             onClick={closeDrawer}
@@ -220,28 +240,28 @@ export function SideDrawer() {
           </Link>
         </div>
 
-        {/* Drawer Footer: Appearance Pill above Sign Out */}
+        {/* Drawer Footer: Appearance Row & Sign Out with comfortable breathing room */}
         <div className="border-t border-border px-3.5 py-3 bg-surface-container-low/50 space-y-2.5">
-          {/* 1. Appearance Pill (Theme toggle placed comfortably above logout) */}
-          <div className="flex items-center justify-between rounded-xl bg-surface-container/60 border border-border/40 px-3 py-1.5">
-            <span className="text-xs font-medium text-on-surface-muted">Appearance</span>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container/60 border border-border/40 px-3.5 py-2">
+            <span className="text-xs font-semibold text-on-surface">Appearance</span>
             <ThemeToggle variant="pill-icons" />
           </div>
 
-          {/* 2. Sign Out Button */}
           <button
             type="button"
             onClick={async () => {
               closeDrawer();
               await signOut();
             }}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-xl border border-danger/25 bg-danger/5 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 active:scale-[0.98] transition-all"
+            className="flex min-h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-danger/25 bg-danger/5 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 active:scale-[0.98] transition-all"
+            title="Sign Out"
+            aria-label="Sign Out"
           >
-            <LogOut size={15} aria-hidden />
+            <LogOut size={14} aria-hidden />
             <span>Sign Out</span>
           </button>
 
-          <p className="text-center text-[10px] text-on-surface-muted/70 pt-0.5">
+          <p className="text-center text-[10px] text-on-surface-muted/60 pt-0.5">
             StockPadi • Offline-First Retail
           </p>
         </div>

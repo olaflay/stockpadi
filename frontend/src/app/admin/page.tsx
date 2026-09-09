@@ -60,8 +60,23 @@ export default function SuperAdminTenantsPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
+    let ignore = false;
+    async function load() {
+      try {
+        const result = await callBackend<{ businesses: Tenant[] }>("platform-api", { action: "list_businesses" });
+        if (!ignore) setTenants(result.businesses || []);
+      } catch (err) {
+        if (!ignore) showToast(err instanceof Error ? err.message : "Failed to load tenants.", "danger");
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    }
+    void load();
+    return () => { ignore = true; };
+  }, [showToast]);
 
   async function toggleTenantStatus(tenantId: string, currentStatus: boolean, e: React.MouseEvent) {
     e.preventDefault();
@@ -292,7 +307,6 @@ export default function SuperAdminTenantsPage() {
           {filteredTenants.map((tenant) => {
             const isVerified = tenant.is_active && tenant.status !== "suspended";
             const isSuspended = !tenant.is_active || tenant.status === "suspended";
-            const isPending = tenant.status === "pending";
 
             return (
               <div

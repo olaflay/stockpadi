@@ -6,7 +6,7 @@ import { db, BUSINESS_PROFILE_SINGLETON_ID, SESSION_SINGLETON_ID } from "@/lib/d
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { getLocalBusinessId, tenantArray } from "@/lib/local-tenant";
 import type { Product } from "@/types/product";
@@ -95,7 +95,6 @@ export default function OnboardingPage() {
       BUSINESS_TYPE_TEMPLATES.find((t) => t.id === state.businessTypeId) ||
       BUSINESS_TYPE_TEMPLATES[0];
 
-    const branchId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     try {

@@ -103,7 +103,7 @@ export default function RegisterForm() {
 
       // Sign in to establish local session JWT
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -119,6 +119,12 @@ export default function RegisterForm() {
       const branchRecord = registration.branch
         ? { id: registration.branch.id, name: registration.branch.name, isActive: true }
         : { id: crypto.randomUUID(), name: "Main branch", isActive: true };
+
+      // Ensure theme defaults to system theme for the new user
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("stockpadi-theme");
+        document.documentElement.removeAttribute("data-theme");
+      }
 
       // Seed local IndexedDB
       await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
@@ -145,14 +151,19 @@ export default function RegisterForm() {
 
       await startSession(userId);
 
-      const verification = await sendVerificationEmail();
-      if (!verification.ok) {
-        showToast("Account created, but the verification email could not be sent. Use Resend from the app.", "warning");
+      try {
+        const verification = await sendVerificationEmail();
+        if (!verification.ok) {
+          showToast("Account created, but the verification email could not be sent. Use Resend from the verification page.", "warning");
+        } else {
+          showToast("Account created. A 6-digit verification code has been sent to your email.", "success");
+        }
+      } catch (mailErr) {
+        console.warn("Verification email dispatch warning", mailErr);
+        showToast("Account created. You can resend the code from the verification page.", "warning");
       }
-
-      if (verification.ok) showToast("Account created. Welcome to StockPadi!", "success");
-      // Seamlessly transition into the interactive Onboarding walk
-      router.replace("/onboarding");
+      // Mandatory account verification gate
+      router.replace("/verify-email");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {

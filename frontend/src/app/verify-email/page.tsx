@@ -18,7 +18,7 @@
  * and redirects to /pending-approval.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const [autoSent, setAutoSent] = useState(false);
+  const autoSentRef = useRef(false);
 
   const resolved = useLiveQuery(async () => {
     const session = await db.session.get(SESSION_SINGLETON_ID);
@@ -43,10 +43,10 @@ export default function VerifyEmailPage() {
   // Auto-send a verification code on mount so returning users don't have
   // to press "Resend" manually. Silent — errors are handled by the card.
   useEffect(() => {
-    if (autoSent || !resolved || resolved.kind !== "active") return;
-    setAutoSent(true);
+    if (autoSentRef.current || !resolved || resolved.kind !== "active") return;
+    autoSentRef.current = true;
     void sendVerificationEmail().catch(() => {/* card will show resend option */});
-  }, [resolved, autoSent]);
+  }, [resolved]);
 
   // Routing guards
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function VerifyEmailPage() {
 
   if (!resolved || resolved.kind !== "active") {
     return (
-      <div className="flex min-h-screen w-screen flex-col items-center justify-center p-6 bg-gradient-to-b from-[#f4f9f6] via-[#edf5f0] to-[#e4eee7]">
+      <div className="flex min-h-dvh w-full flex-col items-center justify-center p-6 bg-gradient-to-b from-[#f4f9f6] via-[#edf5f0] to-[#e4eee7]">
         <div className="w-full max-w-[420px] rounded-[28px] sm:rounded-[32px] bg-surface p-8 sm:p-10 shadow-sm border border-brand-accent/15 flex flex-col gap-4">
           <Skeleton className="h-13 w-13 rounded-2xl mx-auto" />
           <Skeleton className="h-7 w-48 mx-auto" />
@@ -81,7 +81,7 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-screen flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#f4f9f6] via-[#edf5f0] to-[#e4eee7] relative overflow-hidden">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#f4f9f6] via-[#edf5f0] to-[#e4eee7] relative overflow-hidden">
       <div className="w-full max-w-[420px] flex flex-col gap-5 relative z-10">
         {/* Onboarding step indicator */}
         <nav aria-label="Onboarding Progress" className="flex items-center justify-between px-2 text-[length:var(--font-size-caption)] text-on-surface-muted">

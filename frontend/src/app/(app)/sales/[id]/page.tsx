@@ -191,31 +191,37 @@ export default function SaleDetailPage({ params }: PageProps) {
 
         <section>
           <h2 className="mb-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Items</h2>
-          <ul className="divide-y divide-border">
-            {sale.items.map((item, index) => {
-              const product = products?.find((p) => p.id === item.productId);
-              return (
-                <li key={index} className="flex items-center justify-between gap-3 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[length:var(--font-size-body)] text-on-surface">
-                      <RippleLink
-                        href={`/products/${item.productId}`}
-                        className="inline-block hover:underline hover:text-brand-accent"
-                      >
-                        {product?.name ?? "Unknown product"}
-                      </RippleLink>
+          {sale.items && sale.items.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {sale.items.map((item, index) => {
+                const product = products?.find((p) => p.id === item.productId);
+                return (
+                  <li key={index} className="flex items-center justify-between gap-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[length:var(--font-size-body)] text-on-surface">
+                        <RippleLink
+                          href={`/products/${item.productId}`}
+                          className="inline-block hover:underline hover:text-brand-accent"
+                        >
+                          {product?.name ?? "Unknown product"}
+                        </RippleLink>
+                      </p>
+                      <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                        {item.quantity} {item.unitLabel} × {formatCurrency(item.unitPrice)}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                      {formatCurrency(item.quantity * item.unitPrice - item.discount)}
                     </p>
-                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                      {item.quantity} {item.unitLabel} × {formatCurrency(item.unitPrice)}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    {formatCurrency(item.quantity * item.unitPrice - item.discount)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="rounded-[var(--radius-card)] border border-border/60 bg-surface-container/30 px-3.5 py-3 text-center text-xs text-on-surface-muted">
+              No item breakdown recorded for this transaction.
+            </div>
+          )}
         </section>
 
         <section>
@@ -252,7 +258,7 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-surface px-4 pt-3 pb-4 print:hidden">
+      <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex flex-col gap-3 border-t border-border bg-surface px-3.5 sm:px-5 pt-3 pb-4 print:hidden">
         <RippleButton
           type="button"
           onClick={shareReceipt}

@@ -29,13 +29,12 @@ export function EmptyState({
   action,
   icon: Icon,
   illustration: Illustration,
-  fullScreen,
   className,
 }: EmptyStateProps) {
   return (
     <div
       role="status"
-      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card bg-surface-container-low border border-border/60 p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
+      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
     >
       <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
         {Illustration ? (
@@ -63,7 +62,7 @@ export function EmptyState({
             id={action.id}
             type="button"
             onClick={action.onClick}
-            className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent/50 bg-brand-accent/10 px-5 py-3 text-sm font-semibold text-brand-accent hover:bg-brand-accent/15 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer shadow-xs"
+            className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer"
           >
             {action.label}
           </RippleButton>

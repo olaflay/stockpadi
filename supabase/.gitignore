@@ -3,12 +3,8 @@
 .temp
 
 # Tests and test suites
-__tests__/
-**/__tests__/
-*.test.*
-**/*.test.*
-*.spec.*
-**/*.spec.*
+!__tests__/
+!__tests__/**
 
 # dotenvx
 .env.keys

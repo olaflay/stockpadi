@@ -26,16 +26,56 @@ export function Modal({
   maxWidth = "max-w-md",
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
 
-  // Close on Escape key
+  // Focus trap, Escape key, and focus restoration
   useEffect(() => {
+    if (!isOpen) return;
+
+    triggerElementRef.current = document.activeElement as HTMLElement | null;
+
+    // Initial focus on mount
+    const focusTimer = setTimeout(() => {
+      if (modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        } else {
+          modalRef.current.focus();
+        }
+      }
+    }, 50);
+
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && isOpen) {
+      if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     }
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      clearTimeout(focusTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+      triggerElementRef.current?.focus();
+    };
   }, [isOpen, onClose]);
 
   // Lock body scroll while modal is open

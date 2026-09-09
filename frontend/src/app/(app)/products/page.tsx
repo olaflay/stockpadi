@@ -435,7 +435,7 @@ export default function ProductsPage() {
 
       {/* Batch delete floating action bar */}
       {deleteMode && (
-        <div className="fixed bottom-20 left-0 right-0 z-[var(--z-fab)] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+        <div className="fixed bottom-20 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab)] flex max-w-lg items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
           <button
             type="button"
             onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}

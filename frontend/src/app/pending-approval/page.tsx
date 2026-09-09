@@ -118,7 +118,7 @@ export default function PendingApprovalPage() {
 
   if (!resolved || resolved.kind !== "active") {
     return (
-      <div className="flex min-h-screen w-screen flex-col items-center justify-center p-6">
+      <div className="flex min-h-dvh w-full flex-col items-center justify-center p-6">
         <div className="w-full max-w-md flex flex-col gap-3">
           <Skeleton className="h-12 w-12 rounded-full mx-auto" />
           <Skeleton className="h-6 w-48 mx-auto" />
@@ -129,7 +129,7 @@ export default function PendingApprovalPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-screen flex-col items-center justify-center p-6 bg-surface-container/20">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center p-6 bg-surface-container/20">
       <div className="w-full max-w-md flex flex-col gap-6">
 
         {/* Progress indicator */}

@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <LegacyShellGuard>
         <DrawerProvider>
-          <div className="flex h-screen w-full max-w-full flex-col overflow-hidden">
+          <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden">
             <TopStoreHeader />
             <SyncEngine />
             <GuidedTour />

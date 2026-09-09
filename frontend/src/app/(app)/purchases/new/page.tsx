@@ -420,7 +420,7 @@ export default function NewPurchasePage() {
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-5 flex flex-col gap-3 border-t border-border bg-surface px-5 pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex flex-col gap-3 border-t border-border bg-surface px-3.5 sm:px-5 pt-3 pb-4">
         <div className="flex items-end justify-between gap-3">
           <div className="flex flex-col">
             <span className="font-semibold text-on-surface">Total cost</span>
