@@ -6,13 +6,13 @@ import { PRODUCT_CAP } from "@/config/limits";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
-import type { ParsedCsvRow } from "./csv-import";
+import type { ParsedImportRow } from "./product-import";
 
 // Matches every other write-path function (completeSale, writeStockAdjustment,
 // etc.) — CurrentUser, not LocalUser. The two were previously mismatched
 // here, papered over with a `user as any` cast at the one call site.
 export async function importProducts(
-  rows: ParsedCsvRow[],
+  rows: ParsedImportRow[],
   user: CurrentUser,
   branchId: string | null
 ): Promise<void> {

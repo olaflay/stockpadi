@@ -63,7 +63,7 @@ export default function RegisterForm() {
       });
       if (error) throw error;
     } catch {
-      setError("Could not register with Google.");
+      setError("Google sign-up didn't work. Check your connection and try again.");
       setBusy(false);
     }
   }

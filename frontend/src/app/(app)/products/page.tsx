@@ -65,6 +65,15 @@ export default function ProductsPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  // Reset visible limit when query or filter changes
+  useEffect(() => {
+    if (debouncedQuery !== prevQuery || filter !== prevFilter) {
+      setPrevQuery(debouncedQuery);
+      setPrevFilter(filter);
+      setVisibleLimit(50);
+    }
+  }, [debouncedQuery, filter, prevQuery, prevFilter]);
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(event: MouseEvent) {
@@ -96,15 +105,9 @@ export default function ProductsPage() {
       setSelectedIds(new Set());
       setDeleteMode(false);
     } catch {
-      showToast("Couldn't archive products", "danger");
+      showToast("Couldn't archive products. Try again.", "danger");
     }
   }, [selectedIds, showToast]);
-
-  if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-    setPrevQuery(debouncedQuery);
-    setPrevFilter(filter);
-    setVisibleLimit(50);
-  }
 
   const result = useLiveQuery(async () => {
     try {

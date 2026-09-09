@@ -12,7 +12,7 @@ Each department follows the same shape: its mandate, its mandatory sources (real
 
 ### Design (UX and visual design system)
 **Mandate**: turn Product's research into real, non-generic screens.
-**Sources**: `zero-ai-slop-design.md` in full (Material Design 3, Apple HIG, Samsung One UI, Meta's design systems), plus Baymard Institute, Nielsen Norman Group, GOV.UK Design System, IBM Carbon, and Shopify Polaris as precedent references under that skill's "every pattern needs a receipt" rule.
+**Sources**: `zero-ai-slop-design.md` in full (Material Design 3, Apple HIG, Samsung One UI, Meta's design systems), plus Baymard Institute, Nielsen Norman Group, UN Plain Language Guidelines, Microsoft Style Guide, IBM Carbon, and Shopify Polaris as precedent references under that skill's "every pattern needs a receipt" rule.
 **Always check**: `zero-ai-slop-design.md`'s ban list before proposing any pattern, and its checklist before calling a screen done.
 **Authority**: can block shipping anything that fails its own ban list without a stated justification.
 
@@ -58,6 +58,6 @@ Each department follows the same shape: its mandate, its mandatory sources (real
 
 ### Marketing & Conversion Copy (added: 2026-09-09, confirmed by user via skill-gap protocol)
 **Mandate**: every word a user reads — in-app copy, transaction emails, WhatsApp and thermal receipts, empty states, error messages — is plain, honest, and speaks the language of the actual user (Nigerian 1–6 branch retail owners and cashiers). Conversion and trust copy is grounded in public research, never dark patterns, never invented psychology.
-**Sources**: Nielsen Norman Group (tone of voice, UX writing), GOV.UK style guide (plain-English rules), Baymard Institute (checkout and payment copy conventions), Google's actual transaction-email style (the flat, single-CTA, quiet-footer format shipped on Google product emails; human-checkable), and the copy rules already locked in `zero-ai-slop-design.md`.
+**Sources**: Nielsen Norman Group (tone of voice, UX writing), UN Plain Language Guidelines (universal plain-language rules for global audiences), Microsoft Style Guide (clear, concise UI writing for international products), Baymard Institute (checkout and payment copy conventions), Google's actual transaction-email style (the flat, single-CTA, quiet-footer format shipped on Google product emails; human-checkable), and the copy rules already locked in `zero-ai-slop-design.md`.
 **Always check**: `zero-ai-slop-design.md`'s copy rules and the PRD's stated user before rewriting anything. Every rewrite that changes meaning cites the specific source rule behind it; see `research-office.md` for tiers and confidence, and `skill-gap-and-learning.md` for how this works as a per-pass specialist rather than a standing authority.
 **Defers to**: Accessibility (plain language and reading level are accessibility concerns) and Security (warning, suspicion, and alert copy is never "softened" for conversion). Provides input, not vetoes.

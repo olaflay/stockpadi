@@ -155,7 +155,7 @@ export function EditProductForm({
             onClick={() => setIsDeleteModalOpen(true)}
             className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger/30 bg-surface px-5 py-2.5 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-all"
           >
-            Delete Product
+            Delete product
           </button>
         </div>
       </form>
@@ -164,7 +164,7 @@ export function EditProductForm({
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
-        title="Delete Product"
+        title="Delete product"
       >
         <div className="flex flex-col items-center gap-3 text-center py-2">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger mb-1">

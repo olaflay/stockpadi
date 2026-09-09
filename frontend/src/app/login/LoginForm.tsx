@@ -161,7 +161,7 @@ export default function LoginForm() {
       });
       if (error) throw error;
     } catch {
-      setError("Could not sign in with Google.");
+      setError("Google sign-in didn't work. Check your connection and try again.");
       setBusy(false);
     }
   }
@@ -218,7 +218,7 @@ export default function LoginForm() {
       router.replace("/dashboard");
     } catch (err) {
       console.error("Demo login error:", err);
-      setError("Demo login failed.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }

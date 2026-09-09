@@ -84,7 +84,7 @@ export default function StockCountPage() {
   if (!hasAccountType(user, CAN_COUNT_STOCK)) {
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <PermissionDenied requiredAccountTypes={CAN_COUNT_STOCK} />
       </div>
     );
@@ -93,7 +93,7 @@ export default function StockCountPage() {
   if (branches === undefined || products === undefined) {
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <Skeleton className="h-40" />
       </div>
     );
@@ -105,7 +105,7 @@ export default function StockCountPage() {
     if (branches.length === 0) {
       return (
         <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-          <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+          <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
           <EmptyState
             icon={ClipboardList}
             title="No branches yet"
@@ -117,7 +117,7 @@ export default function StockCountPage() {
     }
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <div className="flex flex-col gap-2">
             <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch?</p>
             {branches.map((branch) => (
@@ -219,7 +219,7 @@ export default function StockCountPage() {
   if (products.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <EmptyState
           icon={ClipboardList}
           title="No products yet"
@@ -232,7 +232,7 @@ export default function StockCountPage() {
 
   return (
     <div>
-      <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
 
       <div className="relative mb-3 w-full">
         <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted" aria-hidden />

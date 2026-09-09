@@ -89,13 +89,10 @@ export default function AdminBroadcastsPage() {
       });
 
       setContent("");
-      showToast("Platform broadcast published to all tenant stores.", "success");
+      showToast("Message sent to all stores.", "success");
       fetchBroadcasts(true);
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Failed to publish broadcast.",
-        "danger"
-      );
+    } catch {
+      showToast("Couldn't send the message. Try again.", "danger");
     } finally {
       setPublishing(false);
     }

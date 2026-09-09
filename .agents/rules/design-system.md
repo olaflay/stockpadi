@@ -42,6 +42,16 @@ Icon color: see `src/components/ui/icon-tone.ts`. Every icon outside BottomNav c
 
 Tap feedback: `src/components/ui/Ripple.tsx` (`RippleButton`/`RippleLink`) is the default for a tappable card or list row — Settings, Dashboard, Products, Sales, Staff, and POS's product rows use it. A plain `<button>`/`<Link>` for a card is a gap to close, not a second accepted style.
 
+## UX writing standard (locked)
+
+All user-facing copy follows **UN Plain Language Guidelines** and **Microsoft Style Guide** principles. This ensures clarity for Nigerian retail users and international audiences alike.
+
+- **Casing**: sentence case for all headings and labels ("Save changes", not "Save Changes")
+- **Voice**: direct, respectful, present tense. Address the user as "you"
+- **Error messages**: explain what happened and what to do next. Never expose error codes, stack traces, or backend details
+- **Empty states**: say what's missing and how to fix it
+- **Success messages**: confirm completion briefly. No database or technical language
+
 ## Before shipping any screen
 
 Run the twelve-point checklist in Section 6 of `zero-ai-slop-design.md`. Name the lead system in the PR description or a code comment. Three or more hits against that skill's ban list means stop and redesign, not polish further.

@@ -68,6 +68,7 @@ export default function AuthCallbackPage() {
         businessId,
         branchIds,
         isActive: profile.is_active,
+        emailVerified: false,
         updatedAt: new Date().toISOString(),
       });
       await startSession(profile.id);

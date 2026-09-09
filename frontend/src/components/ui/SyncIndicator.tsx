@@ -46,9 +46,9 @@ export function SyncIndicator({
       if (result.pendingRemaining === 0) {
         showToast("Sync complete! All changes backed up.", "success");
       } else if (result.drained > 0) {
-        showToast(`${result.drained} backed up, ${result.pendingRemaining} still processing…`, "neutral");
+        showToast(`${result.drained} backed up, ${result.pendingRemaining} still uploading...`, "neutral");
       } else {
-        showToast(`${result.pendingRemaining} changes pending server verification.`, "neutral");
+        showToast(`${result.pendingRemaining} changes waiting to upload.`, "neutral");
       }
     } catch {
       showToast("Could not complete cloud sync. Check connection and retry.", "warning");

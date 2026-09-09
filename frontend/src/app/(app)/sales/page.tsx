@@ -100,7 +100,7 @@ export default function SalesPage() {
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
     return (
       <div>
-        <ScreenHeader title="Sales History" hideBack={true} />
+        <ScreenHeader title="Sales history" hideBack={true} />
         <PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} />
       </div>
     );
@@ -109,7 +109,7 @@ export default function SalesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -127,7 +127,7 @@ export default function SalesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
         <ErrorState message="Couldn't load today's sales." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -136,7 +136,7 @@ export default function SalesPage() {
   if (visibleSales.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
         <EmptyState
           icon={Receipt}
           title="No sales yet today"
@@ -153,7 +153,7 @@ export default function SalesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Sales History" hideBack={true} action={reportsAction} />
+      <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
       <div>
         <ul className="flex flex-col gap-2">
           {visibleSales.slice(0, visibleLimit).map((sale) => {

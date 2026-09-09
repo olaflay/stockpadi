@@ -13,7 +13,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
-import { parseProductCsv, buildSampleCsv, buildErrorReportCsv, type CsvImportResult } from "@/features/inventory/csv-import";
+import { parseProductFile, buildSampleExcel, buildErrorReportCsv, type ImportResult } from "@/features/inventory/product-import";
 import { importProducts } from "@/features/inventory/import-products";
 import { countActiveProducts } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP, PRODUCT_CAP_WARN_AT } from "@/config/limits";
@@ -22,7 +22,7 @@ const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: boolean }> = [
   { key: "name", label: "Product name", note: "What your customers call it.", required: true },
-  { key: "sku", label: "SKU / code", note: "Optional — leave blank and we'll make one from the product name, like Add Product. If you add one it must be unique." },
+  { key: "sku", label: "SKU / code", note: "Optional. Leave blank and we'll make one from the product name." },
   { key: "barcode", label: "Barcode", note: "Leave blank if you don't scan barcodes." },
   { key: "costPrice", label: "Cost price", note: "Numbers only, no currency symbol, e.g. 1200.", required: true },
   { key: "sellPrice", label: "Selling price", note: "What the customer pays. Numbers only, e.g. 1500.", required: true },
@@ -57,7 +57,7 @@ export default function ImportProductsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [result, setResult] = useState<CsvImportResult | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [willExceedCap, setWillExceedCap] = useState(false);
   const [willWarnCap, setWillWarnCap] = useState(false);
 
@@ -70,13 +70,12 @@ export default function ImportProductsPage() {
     );
   }
 
-  const handleDownloadSample = () => {
-    const csv = buildSampleCsv();
-    const blob = new Blob([csv], { type: "text/csv" });
+  const handleDownloadSample = async () => {
+    const blob = await buildSampleExcel();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "stockpadi-products-template.csv";
+    a.download = "stockpadi-products-template.xlsx";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -102,7 +101,7 @@ export default function ImportProductsPage() {
     setWillExceedCap(false);
     setWillWarnCap(false);
     try {
-      const parsed = await parseProductCsv(selected);
+      const parsed = await parseProductFile(selected);
       setResult(parsed);
 
       if (parsed.validRows.length > 0) {
@@ -115,7 +114,7 @@ export default function ImportProductsPage() {
         setWillWarnCap(false);
       }
     } catch {
-      showToast("We couldn't read that file. Check it's a .csv and try again.", "danger");
+      showToast("We couldn't read that file. Check it's an .xlsx or .txt file and try again.", "danger");
       setResult(null);
     } finally {
       setIsParsing(false);
@@ -128,7 +127,7 @@ export default function ImportProductsPage() {
   const handleImport = async () => {
     if (!result || result.validRows.length === 0) return;
     if (result.errors.length > 0) {
-      showToast("Fix every row first — nothing is imported until the whole file is valid.", "warning");
+      showToast("Fix every row first. Nothing is imported until the whole file is valid.", "warning");
       return;
     }
     if (hasInitialStock && !effectiveBranchId) {
@@ -172,7 +171,7 @@ export default function ImportProductsPage() {
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
         >
           <Download size={18} aria-hidden />
-          Download template file (CSV)
+          Download template file (Excel .xlsx)
         </RippleButton>
         <p className="mt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
           Opens in Excel, Google Sheets, or Numbers. Fill it in like a spreadsheet, save it, and upload it in the next step.
@@ -208,10 +207,10 @@ export default function ImportProductsPage() {
           </span>
           {!isParsing && (
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              {file ? file.name : ".csv file from the template above"}
+              {file ? file.name : ".xlsx file from the template above"}
             </span>
           )}
-          <input type="file" accept=".csv" onChange={handleFileSelect} className="sr-only" />
+          <input type="file" accept=".xlsx,.txt,.csv" onChange={handleFileSelect} className="sr-only" />
         </label>
 
         {result && (
@@ -302,7 +301,7 @@ export default function ImportProductsPage() {
           {result.errors.length > 0 && (
             <div role="alert" className="mb-4 rounded-[var(--radius-card)] bg-danger/10 px-4 py-3">
               <p className="text-[length:var(--font-size-caption)] text-danger">
-                This file isn't valid yet — fix the rows listed above and choose the file again. Nothing is imported
+                This file isn't valid yet. Fix the rows listed above and choose the file again. Nothing is imported
                 until every row is correct.
               </p>
             </div>

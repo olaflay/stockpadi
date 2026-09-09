@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useEffect } from "react";
+import { createContext, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
@@ -21,14 +21,13 @@ export const CurrentUserContext = createContext<CurrentUser | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const sessionRefreshed = useRef(false);
 
   useEffect(() => { void removeLegacyTestUser(); }, []);
 
   const resolved = useLiveQuery(async () => {
     const session = await db.session.get(SESSION_SINGLETON_ID);
     if (!session) {
-      // Every account now returns to the normal online login flow when the
-      // local session is missing or expired; the normal online login flow is required.
       return { kind: "needs-login" as const };
     }
     if (new Date(session.expiresAt).getTime() < Date.now()) return { kind: "expired" as const };
@@ -53,37 +52,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Routing guards — only redirect when not already on the target page
   useEffect(() => {
     if (!resolved) return;
-    // A missing or expired local session must be re-established through the
-    // normal Supabase email/password login flow.
-    if (resolved.kind === "expired") router.replace("/login?force=true");
-    if (resolved.kind === "no-session") router.replace("/login?force=true");
-    if (resolved.kind === "needs-login") router.replace("/login?force=true");
+    if (resolved.kind === "expired" || resolved.kind === "no-session" || resolved.kind === "needs-login") {
+      if (!pathname.startsWith("/login")) {
+        router.replace("/login?force=true");
+      }
+      return;
+    }
     if (resolved.kind === "active" && resolved.user.accountType === "ADMIN") {
       if (!pathname.startsWith("/admin")) {
         router.replace("/admin");
       }
+      return;
     }
     if (resolved.kind === "active" && resolved.user.accountType === "BUSINESS_OWNER") {
-      // Approved but email not yet verified → the code email was sent by the
-      // approval action, so route to the OTP page.
       const approved = resolved.user.businessStatus === "verified";
-      if (approved && !resolved.user.emailVerified) {
+      if (!approved && !pathname.startsWith("/pending-approval")) {
+        router.replace("/pending-approval");
+        return;
+      }
+      if (approved && !resolved.user.emailVerified && !pathname.startsWith("/verify-email")) {
         router.replace("/verify-email");
       }
-      // Not approved yet → hold in the admin review lobby regardless of
-      // email state. (Direct deep-link into the app shell while pending.)
-      if (!approved) {
-        router.replace("/pending-approval");
-      }
-    }
-    // Slide the 30-day expiry forward on every active visit so the session
-    // only lapses after 30 days of the app not being opened at all.
-    if (resolved.kind === "active") {
-      void refreshSession();
     }
   }, [resolved, router, pathname]);
+
+  // Refresh session expiry once per mount, NOT on every resolved change.
+  // Writing to db.session inside a dependency of the same useLiveQuery that
+  // produces `resolved` would create an infinite re-render loop.
+  useEffect(() => {
+    if (resolved?.kind === "active" && !sessionRefreshed.current) {
+      sessionRefreshed.current = true;
+      void refreshSession();
+    }
+  }, [resolved]);
 
   if (!resolved || resolved.kind !== "active") {
     return (
@@ -93,11 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  // BUSINESS_OWNER email verification and admin-approval gating is handled by
-  // standalone pages (/verify-email, /pending-approval) that the login router
-  // directs users to. Any BUSINESS_OWNER who reaches AuthProvider is fully
-  // activated (email_verified=true, business_status='verified').
 
   return <CurrentUserContext.Provider value={resolved.user}>{children}</CurrentUserContext.Provider>;
 }

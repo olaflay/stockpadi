@@ -235,7 +235,7 @@ export default function CloseDayPage() {
           try { localStorage.setItem("stockpadi_reconciliation_history", JSON.stringify(next)); } catch {}
           return next;
         });
-        setReconciliationMessage("Close day saved on this device (offline). Reconnect to sync to cloud.");
+        setReconciliationMessage("Saved on this device. It'll sync when you're back online.");
         setReconciliationOk(true);
       }
     } finally {
@@ -326,7 +326,7 @@ export default function CloseDayPage() {
               <Banknote className="h-4.5 w-4.5" />
             </div>
             <span className="text-sm font-semibold text-on-surface">
-              Physical Cash in Drawer
+              Physical cash in drawer
             </span>
           </div>
           <span className="text-xs font-medium text-on-surface-muted">
@@ -379,7 +379,7 @@ export default function CloseDayPage() {
               <Smartphone className="h-4.5 w-4.5" />
             </div>
             <span className="text-sm font-semibold text-on-surface">
-              Bank Transfers (OPay / PalmPay / Bank)
+              Bank transfers (OPay, PalmPay, bank)
             </span>
           </div>
           <span className="text-xs font-medium text-on-surface-muted">

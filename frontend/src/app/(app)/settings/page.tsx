@@ -121,8 +121,8 @@ export default function SettingsPage() {
           <div className="flex flex-col divide-y divide-outline-variant/50 border-y border-outline-variant/60">
             <SettingsRow
               icon={Users}
-              label="Staff & Access"
-              description="Add cashiers, workers & manage permissions"
+              label="Staff and access"
+              description="Add cashiers, workers and manage permissions"
               tone="warning"
               onClick={() => router.push("/staff")}
             />
@@ -139,15 +139,15 @@ export default function SettingsPage() {
           <div className="flex flex-col divide-y divide-outline-variant/50 border-y border-outline-variant/60">
             <SettingsRow
               icon={Store}
-              label="Business Details"
-              description="Store name, receipt headers & contact info"
+              label="Business details"
+              description="Store name, receipt headers and contact info"
               tone="brand"
               onClick={() => router.push("/settings/business")}
             />
             <SettingsRow
               icon={GitBranch}
-              label="Branches & Outlets"
-              description="Store locations & staff assignments"
+              label="Branches and outlets"
+              description="Store locations and staff assignments"
               tone="neutral"
               onClick={() => router.push("/settings/branches")}
             />
@@ -164,15 +164,15 @@ export default function SettingsPage() {
           <div className="flex flex-col divide-y divide-outline-variant/50 border-y border-outline-variant/60">
             <SettingsRow
               icon={DatabaseBackup}
-              label="Data & Backup"
-              description="Sync health, outbox queue & local backup"
+              label="Data and backup"
+              description="Sync health, outbox queue and local backup"
               tone="success"
               onClick={() => router.push("/settings/data")}
             />
             <SettingsRow
               icon={Share2}
-              label="WhatsApp Reports"
-              description="Automated daily sales & register close summary"
+              label="WhatsApp reports"
+              description="Automated daily sales and register close summary"
               tone="success"
               onClick={() => router.push("/settings/sharing")}
             />

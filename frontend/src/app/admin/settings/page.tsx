@@ -88,7 +88,7 @@ export default function AdminSettingsPage() {
     a.download = `stockpadi-platform-audit-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("Platform diagnostic snapshot downloaded.", "success");
+    showToast("Audit file downloaded.", "success");
   }
 
   return (
@@ -291,7 +291,7 @@ export default function AdminSettingsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  showToast("Local Dexie cache and service worker revalidated.", "success");
+                  showToast("Local data refreshed.", "success");
                 }}
                 className="w-full flex items-center justify-between rounded-lg border border-border bg-surface p-3 text-xs font-semibold text-on-surface hover:bg-surface-container transition-all cursor-pointer shadow-xs"
               >

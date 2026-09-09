@@ -33,7 +33,7 @@ export default function RegisterCallbackPage() {
       try {
         const context = await callBackend<{ profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {});
         const profile = context.profile;
-        await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: profile.account_type, permissions: context.permissions ?? [], isActive: profile.is_active, updatedAt: new Date().toISOString() });
+        await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: profile.account_type, permissions: context.permissions ?? [], isActive: profile.is_active, emailVerified: false, updatedAt: new Date().toISOString() });
         await startSession(profile.id);
         router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
         return;

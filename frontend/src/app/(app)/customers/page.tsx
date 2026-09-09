@@ -84,7 +84,7 @@ export default function CustomersPage() {
   if (customersWithBalance === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -99,7 +99,7 @@ export default function CustomersPage() {
   if (customersWithBalance.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
         <EmptyState
           icon={Users}
           title="No customers yet"
@@ -122,7 +122,7 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
 
       <div className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Total owed to you</p>

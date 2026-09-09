@@ -25,7 +25,7 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
     alerts.push({
       id: "unsynced-outbox",
       type: "unsynced",
-      title: "Unsynced Changes",
+      title: "Unsynced changes",
       description: `${unsyncedCount} change${unsyncedCount === 1 ? "" : "s"} waiting to sync.`,
       href: "/settings/data",
     });
@@ -46,7 +46,7 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
       alerts.push({
         id: `low-stock-${product.id}`,
         type: "low_stock",
-        title: "Low Stock",
+        title: "Low stock",
         description: `${product.name} is running low.`,
         href: `/products/${product.id}`,
       });
@@ -56,7 +56,7 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
       alerts.push({
         id: `expiring-${product.id}`,
         type: "expiring",
-        title: "Expiring Soon",
+        title: "Expiring soon",
         description: `${product.name} is expiring soon or already expired.`,
         href: `/products/${product.id}`,
       });

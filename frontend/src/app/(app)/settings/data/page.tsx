@@ -59,9 +59,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Backup exported successfully", "success");
+      showToast("Backup downloaded.", "success");
     } catch {
-      showToast("Failed to export backup", "danger");
+      showToast("Couldn't export the backup. Try again.", "danger");
     }
   }
 
@@ -69,7 +69,7 @@ export default function DataSettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!confirm("Are you sure you want to restore this backup? This will overwrite all current local data!")) {
+    if (!confirm("Restore this backup? Your current data on this device will be replaced.")) {
       event.target.value = "";
       return;
     }
@@ -79,7 +79,7 @@ export default function DataSettingsPage() {
       const backup = JSON.parse(text);
 
       if (backup.appName !== "stockpadi" || !backup.data) {
-        showToast("Invalid backup file format", "danger");
+        showToast("That file doesn't look like a StockPadi backup. Check the file and try again.", "danger");
         event.target.value = "";
         return;
       }
@@ -89,7 +89,7 @@ export default function DataSettingsPage() {
       const importedRows = [branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases]
         .flatMap((rows) => Array.isArray(rows) ? rows : []);
       if (!activeBusinessId || importedRows.some((row) => row.businessId && row.businessId !== activeBusinessId)) {
-        showToast("Backup belongs to a different business", "danger");
+        showToast("This backup was made for a different shop. It can't be restored here.", "danger");
         event.target.value = "";
         return;
       }
@@ -145,10 +145,10 @@ export default function DataSettingsPage() {
         }
       );
 
-      showToast("Backup restored successfully", "success");
+      showToast("Backup restored.", "success");
       window.location.reload();
-    } catch (err) {
-      showToast("Failed to restore backup: " + (err instanceof Error ? err.message : "unknown error"), "danger");
+    } catch {
+      showToast("Couldn't restore the backup. Try a different file.", "danger");
       event.target.value = "";
     }
   }
@@ -164,9 +164,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-products-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Products CSV exported successfully", "success");
+      showToast("Products downloaded as a spreadsheet.", "success");
     } catch {
-      showToast("Failed to export products CSV", "danger");
+      showToast("Couldn't export the spreadsheet. Try again.", "danger");
     }
   }
 
@@ -186,9 +186,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-sales-this-month.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Sales CSV exported successfully", "success");
+      showToast("Sales downloaded as a spreadsheet.", "success");
     } catch {
-      showToast("Failed to export sales CSV", "danger");
+      showToast("Couldn't export the spreadsheet. Try again.", "danger");
     }
   }
 

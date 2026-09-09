@@ -336,13 +336,11 @@ input:-webkit-autofill:active {
 /* Tactile Depth & Sculpted Surfaces System */
 .depth-card {
   background-color: var(--color-surface-container-low);
-  border: 1px solid var(--color-outline-variant);
   box-shadow: var(--elevation-1), var(--shadow-inner-highlight);
 }
 
 .depth-card-interactive {
   background-color: var(--color-surface-container-low);
-  border: 1px solid var(--color-outline-variant);
   box-shadow: var(--elevation-1), var(--shadow-inner-highlight);
   transition: transform var(--motion-duration-short) var(--easing-standard),
               box-shadow var(--motion-duration-short) var(--easing-standard),
@@ -365,4 +363,11 @@ input:-webkit-autofill:active {
 
 .depth-recessed {
   box-shadow: var(--shadow-recessed);
+}
+
+/* Profile card variant — keeps the border for visual distinction */
+.depth-card-bordered {
+  background-color: var(--color-surface-container-low);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--elevation-1), var(--shadow-inner-highlight);
 }

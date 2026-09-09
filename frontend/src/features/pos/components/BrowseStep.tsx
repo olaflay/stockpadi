@@ -95,11 +95,14 @@ export function BrowseStep(props: {
         .filter((p: Product | undefined): p is Product => p != null && !p.archived)
     : [];
 
-  if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
-    setPrevProductsLength(filteredProducts.length);
-    setPrevCategoryId(selectedCategoryId);
-    setVisibleLimit(50);
-  }
+  // Reset visible limit when products or category changes
+  useEffect(() => {
+    if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
+      setPrevProductsLength(filteredProducts.length);
+      setPrevCategoryId(selectedCategoryId);
+      setVisibleLimit(50);
+    }
+  }, [filteredProducts.length, selectedCategoryId, prevProductsLength, prevCategoryId]);
 
   useEffect(() => {
     if (filteredProducts.length <= visibleLimit) return;
