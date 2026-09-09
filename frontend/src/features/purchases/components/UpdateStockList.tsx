@@ -62,7 +62,7 @@ export function UpdateStockList({
             return (
               <li
                 key={product.id}
-                className={`rounded-[var(--radius-card)] p-4 transition-colors ${dirty ? "bg-brand-accent/10" : "bg-surface-container-low"
+                className={`rounded-[var(--radius-card)] p-4 transition-colors ${dirty ? "bg-brand-container" : "bg-surface-container"
                   }`}
               >
                 <input

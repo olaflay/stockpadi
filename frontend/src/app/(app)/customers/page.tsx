@@ -142,7 +142,7 @@ export default function CustomersPage() {
               return (
                 <li
                   key={customer.id}
-                  className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 hover:bg-surface-container transition-colors"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high transition-colors"
                 >
                   <div
                     role="button"

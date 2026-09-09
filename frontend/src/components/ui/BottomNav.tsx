@@ -48,7 +48,10 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] gpu-layer"
+      className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/95 backdrop-blur-md gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface after:pointer-events-none"
+      style={{
+        paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 1.25rem))",
+      }}
     >
       {items.map((item) => {
         const isActive =

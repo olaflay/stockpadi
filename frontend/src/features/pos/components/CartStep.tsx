@@ -74,7 +74,7 @@ export function CartStep(props: {
             <li
               key={key}
               className={`flex flex-col gap-2 rounded-[var(--radius-card)] px-4 py-3 text-[length:var(--font-size-body)] transition-colors ${
-                isOverStock ? "bg-danger/10" : "bg-surface-container-low"
+                isOverStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container"
               }`}
             >
               <div className="flex items-center justify-between gap-3">

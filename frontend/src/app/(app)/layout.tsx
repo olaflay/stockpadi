@@ -19,13 +19,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <LegacyShellGuard>
         <DrawerProvider>
-          <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden">
+          <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface">
             <TopStoreHeader />
             <SyncEngine />
             <GuidedTour />
             <BannerStrip />
             <SideDrawer />
-            <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-24 w-full max-w-xl md:max-w-2xl mx-auto">{children}</main>
+            <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">{children}</main>
             <BottomNav />
           </div>
         </DrawerProvider>

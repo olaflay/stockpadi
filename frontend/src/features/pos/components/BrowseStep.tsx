@@ -353,7 +353,7 @@ export function BrowseStep(props: {
                     disabled={hasNoBranches}
                     aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
                     className={`flex w-36 flex-col items-start gap-1 rounded-[var(--radius-card)] px-3 py-2.5 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
-                      isOutOfStock ? "bg-danger/10" : "bg-surface-container-low"
+                      isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container hover:bg-surface-container-high"
                     }`}
                   >
                     <span className="w-full truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
@@ -368,16 +368,16 @@ export function BrowseStep(props: {
                         {formatCurrency(product.sellPrice)}
                       </span>
                       {baseQty > 0 && (
-<span
-                        key={baseQty}
-                        className="animate-count-pop rounded-full bg-brand-accent/15 px-1.5 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-brand-accent"
-                        aria-label={`${baseQty} in cart`}
-                      >
+                        <span
+                          key={baseQty}
+                          className="animate-count-pop rounded-full bg-brand-container px-1.5 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-on-brand-container"
+                          aria-label={`${baseQty} in cart`}
+                        >
                           ×{baseQty}
                         </span>
                       )}
                       {isOutOfStock && (
-                        <span className="rounded-full bg-danger/15 px-1.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-danger">
+                        <span className="rounded-full bg-danger-container px-1.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-danger-container">
                           Out
                         </span>
                       )}
@@ -416,18 +416,18 @@ export function BrowseStep(props: {
                 /* Dual-unit row: base unit pill + alt unit pill */
                 <div
                   id={idx === 0 ? "tour-pos-item" : undefined}
-                  className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3"
+                  className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 rounded-[var(--radius-card)] bg-surface-container-high px-4 py-3"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <span className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
                       {product.name}
                     </span>
                     {isOutOfStock ? (
-                      <span className="shrink-0 rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">
+                      <span className="shrink-0 rounded-full bg-danger-container px-2 py-0.5 text-xs font-semibold text-on-danger-container">
                         Out of stock
                       </span>
                     ) : isLowStock ? (
-                      <span className="shrink-0 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
+                      <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
                         {stock} left
                       </span>
                     ) : null}
@@ -562,7 +562,7 @@ export function BrowseStep(props: {
                     disabled={hasNoBranches}
                     aria-label={`Add ${product.name} for ${formatCurrency(product.sellPrice)} to cart`}
                     className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
-                      isOutOfStock ? "bg-danger/10" : "bg-surface-container-low"
+                      isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container-high hover:bg-surface-container-highest"
                     }`}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -570,11 +570,11 @@ export function BrowseStep(props: {
                         {product.name}
                       </span>
                       {isOutOfStock ? (
-                        <span className="shrink-0 rounded-full bg-danger/15 px-2 py-0.5 text-xs font-semibold text-danger">
+                        <span className="shrink-0 rounded-full bg-danger-container px-2 py-0.5 text-xs font-semibold text-on-danger-container">
                           Out of stock
                         </span>
                       ) : isLowStock ? (
-                        <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+                        <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
                           {stock} left
                         </span>
                       ) : null}

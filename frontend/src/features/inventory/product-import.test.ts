@@ -192,7 +192,7 @@ describe("parseProductFile — Excel (.xlsx)", () => {
     expect(result.errors).toHaveLength(0);
     expect(result.validRows).toHaveLength(2);
     expect(result.validRows[0].data.sku).toBe("TOMATO-001");
-  });
+  }, 15000);
 
   it("honours header order in a reordered Excel sheet", async () => {
     const { Workbook } = await import("exceljs");

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Geist_Mono } from "next/font/google";
 import { getBrandingConfig } from "@/config/branding";
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: branding.businessName,
   },
   openGraph: {
@@ -95,13 +95,13 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport = {
-  themeColor: "#0a6e4d",
+export const viewport: Viewport = {
+  themeColor: branding.accentColor,
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  viewportFit: "cover" as const,
-  interactiveWidget: "overlays-content" as const,
+  viewportFit: "cover",
+  interactiveWidget: "overlays-content",
 };
 
 const JSON_LD_SCHEMA = {
@@ -131,7 +131,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${googleSansFlex.variable} ${geistMono.variable} h-full antialiased`}
-      style={{ "--color-brand-accent": branding.accentColor } as React.CSSProperties}
+      style={{
+        "--color-brand-accent": branding.accentColor,
+        "--brand-accent-configured": branding.accentColor,
+      } as React.CSSProperties}
       suppressHydrationWarning
     >
       <head>

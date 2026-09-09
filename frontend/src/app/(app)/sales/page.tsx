@@ -159,7 +159,7 @@ export default function SalesPage() {
               <li key={sale.id}>
                 <RippleLink
                   href={`/sales/${sale.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high active:scale-[0.99] transition-all"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-number text-[length:var(--font-size-body-lg)] font-medium tabular-nums text-on-surface">

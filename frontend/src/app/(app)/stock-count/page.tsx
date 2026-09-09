@@ -125,7 +125,7 @@ export default function StockCountPage() {
               key={branch.id}
               type="button"
               onClick={() => setBranchId(branch.id)}
-              className="min-h-[var(--touch-target-min)] rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-left text-[length:var(--font-size-body-lg)] text-on-surface hover:bg-surface-container transition-colors"
+              className="min-h-[var(--touch-target-min)] rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left text-[length:var(--font-size-body-lg)] text-on-surface hover:bg-surface-container-high transition-colors"
             >
               {branch.name}
             </button>
@@ -257,7 +257,7 @@ export default function StockCountPage() {
                   type="button"
                   onClick={() => setActiveProduct(product)}
                   aria-label={`Count stock for ${product.name}`}
-                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-left hover:bg-surface-container transition-colors"
+                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
                 >
                   <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{product.name}</p>
                   <p className="shrink-0 text-[length:var(--font-size-caption)] text-on-surface-muted">{product.sku}</p>

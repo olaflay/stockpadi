@@ -38,7 +38,7 @@ export function LowStockOnlyView({
       ) : (
         <ul className="flex flex-col gap-2">
           {lowStockProducts.map((product) => (
-            <li key={product.id} className="rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-on-surface">
+            <li key={product.id} className="rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-on-surface">
               {product.name}
             </li>
           ))}

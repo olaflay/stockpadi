@@ -73,7 +73,7 @@ export function RestockLineRow(props: {
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-[length:var(--font-size-body)] transition-colors">
+    <li className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-[length:var(--font-size-body)] transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-on-surface">{product.name}</p>
@@ -85,7 +85,7 @@ export function RestockLineRow(props: {
           type="button"
           onClick={() => onRemove(line.productId)}
           aria-label={`Remove ${product.name}`}
-          className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
+          className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger-container hover:text-on-danger-container transition-colors"
         >
           <Trash2 size={18} aria-hidden />
         </button>

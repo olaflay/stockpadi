@@ -371,3 +371,13 @@ input:-webkit-autofill:active {
   background-color: var(--color-surface-container);
   box-shadow: none;
 }
+
+/* Safe Area Inset Layout Helpers (Handles notches, dynamic islands, and curved bottom chins) */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+}
+

@@ -55,24 +55,29 @@ export function TopStoreHeader() {
 
   return (
     <header
-      className="sticky top-0 left-0 right-0 z-40 flex h-13 sm:h-14 w-full items-center justify-between px-4 sm:px-6 bg-brand-accent text-brand-accent-contrast shadow-sm select-none gpu-layer"
+      className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col shadow-sm select-none gpu-layer before:content-[''] before:absolute before:bottom-full before:inset-x-0 before:h-32 before:bg-[var(--brand-accent-configured,var(--color-brand-accent,#0a6e4d))] before:pointer-events-none"
+      style={{
+        backgroundColor: "var(--brand-accent-configured, var(--color-brand-accent, #0a6e4d))",
+        color: "var(--color-brand-accent-contrast, #ffffff)",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
       role="banner"
       aria-label="Application header"
     >
-      <div className="w-full max-w-xl md:max-w-2xl mx-auto flex items-center justify-between">
+      <div className="w-full flex h-13 sm:h-14 items-center justify-between px-4 sm:px-6 max-w-xl md:max-w-2xl mx-auto">
         {/* Left: Hamburger Drawer Trigger + Page Name */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <button
             type="button"
             onClick={openDrawer}
             aria-label="Open navigation menu"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-accent-contrast/95 hover:text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
             <Menu size={22} aria-hidden />
           </button>
 
           <h1
-            className="truncate text-lg sm:text-xl font-bold tracking-tight text-brand-accent-contrast leading-tight"
+            className="truncate text-lg sm:text-xl font-bold tracking-tight text-white leading-tight"
             title={pageTitle}
           >
             {pageTitle}
@@ -86,11 +91,11 @@ export function TopStoreHeader() {
             <Link
               href="/alerts"
               aria-label={`${alertCount} unread alerts`}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-brand-accent-contrast/90 hover:text-white hover:bg-white/10 transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center rounded-full text-white/90 hover:text-white hover:bg-white/10 transition-colors"
             >
               <Bell size={17} aria-hidden />
               <span
-                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--color-stock-alert)] ring-1.5 ring-[var(--color-brand-accent)]"
+                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--color-stock-alert)] ring-1.5 ring-[var(--brand-accent-configured,#0a6e4d)]"
                 aria-hidden
               />
             </Link>
