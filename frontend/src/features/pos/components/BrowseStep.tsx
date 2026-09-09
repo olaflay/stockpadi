@@ -98,9 +98,11 @@ export function BrowseStep(props: {
   // Reset visible limit when products or category changes
   useEffect(() => {
     if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
-      setPrevProductsLength(filteredProducts.length);
-      setPrevCategoryId(selectedCategoryId);
-      setVisibleLimit(50);
+      queueMicrotask(() => {
+        setPrevProductsLength(filteredProducts.length);
+        setPrevCategoryId(selectedCategoryId);
+        setVisibleLimit(50);
+      });
     }
   }, [filteredProducts.length, selectedCategoryId, prevProductsLength, prevCategoryId]);
 

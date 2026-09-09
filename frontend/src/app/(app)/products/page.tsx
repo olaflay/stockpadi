@@ -68,9 +68,11 @@ export default function ProductsPage() {
   // Reset visible limit when query or filter changes
   useEffect(() => {
     if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-      setPrevQuery(debouncedQuery);
-      setPrevFilter(filter);
-      setVisibleLimit(50);
+      queueMicrotask(() => {
+        setPrevQuery(debouncedQuery);
+        setPrevFilter(filter);
+        setVisibleLimit(50);
+      });
     }
   }, [debouncedQuery, filter, prevQuery, prevFilter]);
 
