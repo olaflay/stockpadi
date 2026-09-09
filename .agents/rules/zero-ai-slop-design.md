@@ -48,6 +48,31 @@ The test: read the copy out loud. If it sounds like something a careful person w
 
 ---
 
+## 2a. Voice and tone: universal plain language for global products
+
+StockPadi serves Nigerian retail businesses, but UX writing must follow universal plain-language principles that work across cultures and literacy levels. Base all user-facing copy on:
+
+- **UN Plain Language Guidelines**: Write so people can understand what they need to do the first time they read it. Use common words, short sentences, and active voice. Avoid jargon, legal language, and idioms that don't translate.
+- **Microsoft Style Guide**: Be concise, direct, and respectful. Use sentence case for headings. Write in present tense. Address the user as "you." Don't blame the user for errors.
+
+### Casing convention (locked)
+Use **sentence case** for all headings and labels. Not "Save Changes" but "Save changes." This is clearer for non-native English speakers and follows international conventions.
+
+### Error messages
+- Say what happened, why it matters, and what the user can do next.
+- Never expose technical details: no error codes, no stack traces, no backend property names, no database terms.
+- Example: "This product name is already used. Choose a different name." Not: "Error: UNIQUE constraint failed on products.name"
+
+### Empty states
+- Say what's missing and how to fix it.
+- Example: "No products yet. Add your first product to start selling." Not: "No data found."
+
+### Success messages
+- Confirm the action completed. Keep it brief.
+- Example: "Product saved." Not: "Your product has been successfully saved to the database."
+
+---
+
 ## 3. The four references, and what they actually constrain
 
 Don't reach for these systems for their "look." Each one encodes hard-won answers to a specific problem. Pull the *problem-solving logic*, then style it for the product at hand.
@@ -104,7 +129,7 @@ State the choice explicitly in the product's `design-system.md` or `AGENTS.md` (
 Don't invent a new interaction pattern, layout convention, or copy pattern and present it as good design because it seemed clever in the moment. Anything proposed as a UI pattern needs to trace back to something real that has actually shipped and been tested at scale. Acceptable receipts:
 
 - Any of the four systems in Section 3 (M3, Apple HIG, Samsung One UI, Meta's design systems)
-- Published research from a recognized usability body (Nielsen Norman Group, Baymard Institute, GOV.UK Design System)
+- Published research from a recognized usability body (Nielsen Norman Group, Baymard Institute, UN Plain Language Guidelines, Microsoft Style Guide)
 - A named product from a firm known for disciplined, tested UI (Stripe, Airbnb, Linear, Notion, Duolingo, and similar) where the pattern is publicly visible and can be pointed to directly
 
 If an agent proposes something with no traceable precedent, that is allowed, but it must be labeled explicitly as experimental ("no precedent found, this is a novel proposal, test before committing") rather than presented with the same confidence as a proven pattern. Confident invention dressed up as best practice is exactly how slop happens, not just in gradients and fonts, but in interaction logic nobody has actually validated with real users.

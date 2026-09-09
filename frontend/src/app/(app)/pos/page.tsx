@@ -29,6 +29,7 @@ import type { StockMovement } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
+import { getBestSellingProductIds } from "@/features/inventory/product-insights";
 import { feedbackSaleComplete } from "@/lib/feedback";
 
 function PosPageContent() {
@@ -72,6 +73,10 @@ function PosPageContent() {
       return { products: [], error: err instanceof Error ? err.message : "Could not load products." };
     }
   }, []);
+
+  // Top sellers over the last 30 days, ranked by unit volume. Insertion order
+  // of the returned Set is the rank order — see getBestSellingProductIds.
+  const bestSellerIds = useLiveQuery(() => getBestSellingProductIds(10), [], new Set<string>());
 
   useEffect(() => {
     if (addProductId && result?.products && result.products.length > 0) {
@@ -119,14 +124,13 @@ function PosPageContent() {
 
   if (result.products.length === 0) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Sell" hideBack={true} />
         <EmptyState
           icon={ShoppingBag}
           title="Nothing to sell yet"
           description="Add products first, then come back here to start checking out sales."
           action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
-          fullScreen
         />
       </div>
     );
@@ -154,7 +158,7 @@ function PosPageContent() {
     if (!branchId) {
       showToast(
         user.accountType === "WORKER"
-          ? "No branch is assigned to this account — ask your owner to assign one."
+          ? "No branch assigned to this account. Ask your shop owner to assign one."
           : "Set up a branch in Settings before selling.",
         "warning"
       );
@@ -202,7 +206,7 @@ function PosPageContent() {
           const prodName = prod?.name ?? "An item";
           setTimeout(() => {
             showToast(
-              `⚠️ Low stock alert: "${prodName}" is down to ${remaining} left.`,
+              `Low stock: "${prodName}" is down to ${remaining} left.`,
               "warning",
               {
                 label: "Restock",
@@ -293,6 +297,7 @@ function PosPageContent() {
       onSelectCategory={setSelectedCategoryId}
       filteredProducts={filtered}
       allProducts={result.products}
+      bestSellerIds={bestSellerIds}
       cart={cart.cart}
       onAddToCart={cart.addToCart}
       onIncrementLine={cart.incrementLine}
@@ -300,7 +305,7 @@ function PosPageContent() {
       itemCount={cart.itemCount}
       total={cart.total}
       onReviewCart={() => setStep("cart")}
-      onGoToSettings={() => router.push("/settings")}
+      onGoToSettings={() => router.push("/settings/branches")}
       stockByProduct={stockByProduct}
     />
   );

@@ -53,7 +53,7 @@ export default function WelcomePage() {
   if (!hasAccountType(user, CAN_EDIT_PRODUCTS)) {
     return (
       <div>
-        <ScreenHeader title="First Product" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="First product" onBack={() => router.push("/dashboard")} />
         <PermissionDenied requiredAccountTypes={CAN_EDIT_PRODUCTS} />
       </div>
     );
@@ -104,7 +104,7 @@ export default function WelcomePage() {
       ]);
       
       if (!profile?.businessTypeId || !branch) {
-        showToast("Profile or branch missing.", "danger");
+        showToast("Your shop setup isn't complete yet. Go to Settings to add your branch.", "danger");
         return;
       }
       
@@ -113,7 +113,7 @@ export default function WelcomePage() {
       router.push("/pos");
     } catch (err) {
       console.error(err);
-      showToast("Couldn't load sample data.", "danger");
+      showToast("Couldn't load sample data. Check your connection and try again.", "danger");
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +121,7 @@ export default function WelcomePage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <ScreenHeader title="First Product" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="First product" onBack={() => router.push("/dashboard")} />
 
       <div className="flex flex-col items-center gap-3 rounded-[var(--radius-focus-block)] bg-surface-container px-6 py-8 text-center animate-step-in">
         <OfflineIllustration className="mb-1 h-24 w-24 text-brand-accent" />

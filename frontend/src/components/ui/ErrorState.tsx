@@ -14,35 +14,35 @@ export function ErrorState({ title = "Something went wrong", message, onRetry, c
   return (
     <div
       role="alert"
-      className={`flex h-full min-h-full w-full max-w-sm mx-auto flex-col rounded-[var(--radius-focus-block)] border border-danger/20 bg-danger/5 animate-step-in ${className ?? ""}`}
+      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card border-danger/30 bg-danger/[0.04] p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
     >
-      <div className="flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger shrink-0">
-          <AlertCircle size={28} aria-hidden />
+      <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
+        <div className="mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger shrink-0 depth-bubble">
+          <AlertCircle size={26} aria-hidden />
         </div>
 
-        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+        <p className="text-base sm:text-lg font-bold text-on-surface leading-snug">
           {title}
         </p>
 
-        <p className="mt-1.5 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+        <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
           {message}
         </p>
       </div>
 
-      <div className="flex w-full flex-col items-center gap-2 px-6 pb-6 pt-2">
+      <div className="flex w-full flex-col items-center gap-2 pt-4 mt-auto">
         <RippleButton
           type="button"
           onClick={onRetry}
-          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-danger px-5 py-2.5 text-[length:var(--font-size-body)] font-semibold text-white shadow-[var(--shadow-elevation-1)] hover:opacity-90 transition-opacity"
+          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-elevation-1)] hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
         >
-          <RotateCcw size={16} aria-hidden />
+          <RotateCcw size={15} aria-hidden />
           <span>Try again</span>
         </RippleButton>
 
         <Link
           href="/dashboard"
-          className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center text-xs font-semibold text-on-surface-muted hover:text-on-surface transition-colors"
+          className="min-h-[var(--touch-target-min)] inline-flex items-center justify-center text-xs font-semibold text-on-surface-muted hover:text-on-surface transition-colors cursor-pointer"
         >
           Return to Dashboard
         </Link>

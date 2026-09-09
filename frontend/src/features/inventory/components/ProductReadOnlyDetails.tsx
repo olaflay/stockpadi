@@ -19,11 +19,11 @@ export function ProductReadOnlyDetails({
     <div className="flex flex-col gap-4">
       <div className="rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Current stock</p>
-        <p className={`mt-1 text-[length:var(--font-size-display)] font-semibold ${stockValueClass}`}>
+        <p className={`mt-1 font-number text-[length:var(--font-size-display)] font-semibold tabular-nums ${stockValueClass}`}>
           {totalStock ?? "…"}
         </p>
       </div>
-      <dl className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border p-4">
+      <dl className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low p-4">
         <div className="flex items-center justify-between gap-3">
           <dt className="text-[length:var(--font-size-body)] text-on-surface-muted">SKU</dt>
           <dd className="text-[length:var(--font-size-body)] font-medium text-on-surface">{product.sku}</dd>
@@ -38,7 +38,7 @@ export function ProductReadOnlyDetails({
           <dt className="text-[length:var(--font-size-body)] text-on-surface-muted">
             Sell price ({product.unitLabel || "piece"})
           </dt>
-          <dd className="text-[length:var(--font-size-body)] font-medium text-on-surface">
+          <dd className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
             {formatCurrency(product.sellPrice)}
           </dd>
         </div>
@@ -47,7 +47,7 @@ export function ProductReadOnlyDetails({
             <dt className="text-[length:var(--font-size-body)] text-on-surface-muted">
               Sell price ({product.altUnitLabel})
             </dt>
-            <dd className="text-[length:var(--font-size-body)] font-medium text-on-surface">
+            <dd className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
               {formatCurrency(product.altUnitSellPrice ?? 0)}
             </dd>
           </div>

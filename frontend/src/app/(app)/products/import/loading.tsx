@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function ImportProductsLoading() {
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Import Products" />
+      <ScreenHeader title="Import products" />
       <Skeleton className="h-48 w-full rounded-[var(--radius-card)]" />
       <Skeleton className="h-40 w-full rounded-[var(--radius-card)]" />
       <Skeleton className="h-40 w-full rounded-[var(--radius-card)]" />

@@ -50,14 +50,22 @@ export async function setLocalBusinessId(businessId: string | null | undefined):
       currency: "NGN",
     });
   }
-  // Repair only legacy unscoped reference data. This preserves the existing
-  // branch/category records created before tenant stamping was introduced;
-  // transactional business records are never guessed or reassigned here.
-  await db.transaction("rw", db.branches, db.categories, async () => {
+  // Repair legacy unscoped data so offline rows created before businessId
+  // was available get stamped with the authenticated tenant.
+  await db.transaction("rw", db.branches, db.categories, db.products, db.stockMovements, db.outbox, async () => {
     await db.branches.toCollection().modify((row) => {
       if (!row.businessId) row.businessId = businessId;
     });
     await db.categories.toCollection().modify((row) => {
+      if (!row.businessId) row.businessId = businessId;
+    });
+    await db.products.toCollection().modify((row) => {
+      if (!row.businessId) row.businessId = businessId;
+    });
+    await db.stockMovements.toCollection().modify((row) => {
+      if (!row.businessId) row.businessId = businessId;
+    });
+    await db.outbox.toCollection().modify((row) => {
       if (!row.businessId) row.businessId = businessId;
     });
   });

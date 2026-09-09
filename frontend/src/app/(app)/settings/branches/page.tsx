@@ -85,7 +85,7 @@ export default function BranchesSettingsPage() {
         {branches.map((branch) => (
           <li
             key={branch.id}
-            className="rounded-[var(--radius-card)] border border-border px-4 py-3 text-[length:var(--font-size-body)] text-on-surface"
+            className="rounded-2xl bg-surface-container px-4 py-3 text-[length:var(--font-size-body)] text-on-surface"
           >
             {branch.name}
           </li>

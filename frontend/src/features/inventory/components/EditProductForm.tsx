@@ -79,7 +79,7 @@ export function EditProductForm({
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-6">
       <div className="mb-4 rounded-[var(--radius-card)] bg-surface-container p-4">
         <div className="flex items-center justify-between gap-3 mb-2">
           <div>
@@ -88,11 +88,11 @@ export function EditProductForm({
               Edit the number directly to adjust on-shelf quantity.
             </p>
           </div>
-          <p className={`text-[length:var(--font-size-title)] font-semibold ${stockValueClass}`}>{totalStock ?? "…"}</p>
+          <p className={`font-number text-[length:var(--font-size-title)] font-semibold tabular-nums ${stockValueClass}`}>{totalStock ?? "…"}</p>
         </div>
 
         {onStockInputChange && (
-          <div className="pt-3 border-t border-border flex flex-col gap-3">
+          <div className="pt-3 flex flex-col gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                 Adjust stock count ({unitLabel})
@@ -155,7 +155,7 @@ export function EditProductForm({
             onClick={() => setIsDeleteModalOpen(true)}
             className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger/30 bg-surface px-5 py-2.5 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-all"
           >
-            Delete Product
+            Delete product
           </button>
         </div>
       </form>
@@ -164,7 +164,7 @@ export function EditProductForm({
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
-        title="Delete Product"
+        title="Delete product"
       >
         <div className="flex flex-col items-center gap-3 text-center py-2">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger mb-1">
@@ -182,7 +182,7 @@ export function EditProductForm({
               type="button"
               onClick={() => setIsDeleteModalOpen(false)}
               disabled={isDeleting}
-              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors disabled:opacity-50"
+              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -198,7 +198,7 @@ export function EditProductForm({
         </div>
       </Modal>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface/95 backdrop-blur-md z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
         <RippleButton
           type="button"
           onClick={() => {

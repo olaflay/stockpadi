@@ -134,13 +134,13 @@ export function NewProductForm({
 
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
-        <div className="flex items-center gap-3 max-w-lg mx-auto w-full">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface/95 backdrop-blur-md z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
+        <div className="flex items-center gap-3 max-w-xl md:max-w-2xl mx-auto w-full">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-[var(--touch-target-min)] px-5 rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
+              className="min-h-[var(--touch-target-min)] px-5 rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
             >
               Cancel
             </button>

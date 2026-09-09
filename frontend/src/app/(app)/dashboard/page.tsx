@@ -6,17 +6,10 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Store,
   Bell,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
   Wallet,
   PackagePlus,
   Plus,
   CalendarCheck,
-  ShoppingBag,
-  Users,
-  Boxes,
-  type LucideIcon,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -29,7 +22,6 @@ import { useDashboardMetrics } from "@/features/dashboard/use-dashboard-metrics"
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
-import { ICON_TONE_CLASSES, type IconTone } from "@/components/ui/icon-tone";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
@@ -37,42 +29,32 @@ import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
 /**
- * One KPI tile: tone-tinted icon chip + label up top, big number + caption
- * below. Every tile is a button linking to the screen that owns the number
- * (research: KPI cards read as glanceable metrics, not dead end labels).
+ * One KPI tile: label up top, big number + caption below.
+ * Pure typography and tonal surface matching the reports design.
  */
 function KpiCard({
   label,
   value,
   sub,
-  tone,
-  icon: Icon,
   onClick,
 }: {
   label: string;
   value: string;
   sub: string;
-  tone: IconTone;
-  icon: LucideIcon;
   onClick: () => void;
 }) {
   return (
     <RippleButton
       type="button"
       onClick={onClick}
-      className="flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-[var(--radius-card)] bg-surface-container p-3.5 text-left transition-all hover:bg-surface-container-high active:scale-[0.99] sm:p-4"
+      className="flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-4 text-left hover:bg-surface-container-high transition-colors"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">{label}</p>
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES[tone]}`}>
-          <Icon size={16} aria-hidden />
-        </div>
-      </div>
-      <div className="mt-1 min-w-0">
+      <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight">{label}</p>
+      <div className="mt-2 min-w-0">
         <p className="truncate font-number text-lg font-bold tracking-tight tabular-nums text-on-surface sm:text-xl">
           {value}
         </p>
-        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted">{sub}</p>
+        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">{sub}</p>
       </div>
     </RippleButton>
   );
@@ -150,7 +132,7 @@ export default function DashboardPage() {
 
   if (!metrics.hasAnyProducts) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Dashboard" hideBack={true} />
         <EmptyState
           icon={Store}
@@ -160,7 +142,6 @@ export default function DashboardPage() {
             label: "Add a product",
             onClick: () => router.push(hasAccountType(user, CAN_EDIT_PRODUCTS) ? "/products/new" : "/products"),
           }}
-          fullScreen
         />
       </div>
     );
@@ -199,12 +180,12 @@ export default function DashboardPage() {
         <RippleButton
           type="button"
           onClick={() => router.push("/alerts")}
-          className="mb-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-brand-accent/20 bg-brand-accent/10 px-4 py-3 text-left hover:bg-brand-accent/15 transition-colors"
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-container text-on-brand-container px-4 py-3 text-left hover:brightness-95 transition-all"
         >
-          <span className="text-[length:var(--font-size-body)] font-medium text-brand-accent">
+          <span className="text-[length:var(--font-size-body)] font-medium">
             {allAlertsCount} {allAlertsCount === 1 ? "alert" : "alerts"} need your attention
           </span>
-          <Bell size={18} className="text-brand-accent" aria-hidden />
+          <Bell size={18} aria-hidden />
         </RippleButton>
       )}
 
@@ -212,22 +193,17 @@ export default function DashboardPage() {
         <RippleButton
           type="button"
           onClick={() => router.push("/products")}
-          className="mb-3 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-accent p-4 text-left transition-all hover:opacity-95 active:scale-[0.99]"
+          className="mb-3.5 flex w-full flex-col rounded-2xl bg-surface-container p-4.5 sm:p-5 text-left hover:bg-surface-container-high transition-colors"
         >
-          <div className="min-w-0">
-            <p className="text-[length:var(--font-size-label)] font-medium text-brand-accent-contrast/80">
-              Inventory value
-            </p>
-            <p className="mt-1 truncate font-number text-2xl font-bold tracking-tight tabular-nums text-brand-accent-contrast">
-              {formatCurrency(metrics.inventoryValue)}
-            </p>
-            <p className="mt-0.5 text-[length:var(--font-size-caption)] text-brand-accent-contrast/70">
-              Stock at cost · {metrics.stockedProductCount} {metrics.stockedProductCount === 1 ? "product" : "products"} on hand
-            </p>
-          </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-accent-contrast/15 text-brand-accent-contrast">
-            <Boxes size={22} aria-hidden />
-          </div>
+          <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+            Inventory value
+          </p>
+          <p className="mt-1 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
+            {formatCurrency(metrics.inventoryValue)}
+          </p>
+          <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
+            Stock at cost · {metrics.stockedProductCount} {metrics.stockedProductCount === 1 ? "product" : "products"} on hand
+          </p>
         </RippleButton>
       )}
 
@@ -237,8 +213,6 @@ export default function DashboardPage() {
             label={user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
             value={formatCurrency(metrics.todaysSalesTotal)}
             sub={`${metrics.todaysSalesCount} ${metrics.todaysSalesCount === 1 ? "sale" : "sales"} · ${formatCurrency(metrics.todaysCashSalesTotal)} cash · ${formatCurrency(Math.max(metrics.todaysSalesTotal - metrics.todaysCashSalesTotal, 0))} credit`}
-            tone="brand"
-            icon={ShoppingBag}
             onClick={() => router.push("/sales")}
           />
         )}
@@ -248,8 +222,6 @@ export default function DashboardPage() {
             label="Net cash flow"
             value={formatCurrency(netCashFlow)}
             sub="After expenses & purchases"
-            tone={netCashFlow < 0 ? "danger" : "success"}
-            icon={netCashFlow < 0 ? TrendingDown : TrendingUp}
             onClick={() => router.push("/reports")}
           />
         )}
@@ -258,8 +230,6 @@ export default function DashboardPage() {
           label="Low stock"
           value={String(metrics.lowStockCount)}
           sub="products below threshold"
-          tone="warning"
-          icon={AlertTriangle}
           onClick={() => router.push("/products?filter=low-stock")}
         />
 
@@ -268,23 +238,21 @@ export default function DashboardPage() {
             label="Customers owing"
             value={totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
             sub="total debt"
-            tone="neutral"
-            icon={Users}
             onClick={() => router.push("/customers")}
           />
         )}
       </div>
 
       {metrics.expiringCount > 0 && (
-        <button
+        <RippleButton
           type="button"
           onClick={() => router.push("/products?filter=expiring")}
-          className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-stock-alert/20 bg-stock-alert/10 px-4 py-3 text-left transition-colors hover:bg-stock-alert/15"
+          className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
         >
-          <span className="text-[length:var(--font-size-body)] text-stock-alert">
+          <span className="text-[length:var(--font-size-body)] font-medium">
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
           </span>
-        </button>
+        </RippleButton>
       )}
 
       {/* Quick Actions Hub — Clean, accessible 2x2 grid for high-frequency operations */}
@@ -296,24 +264,19 @@ export default function DashboardPage() {
           <h2 className="mb-2.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
             Quick Actions
           </h2>
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
             {hasAccountType(user, CAN_RECORD_EXPENSES) && (
               <RippleButton
                 type="button"
                 onClick={() => setIsExpenseSheetOpen(true)}
-                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.warning}`}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
                   <Wallet size={20} aria-hidden />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    Record Expense
-                  </p>
-                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Log shop payout
-                  </p>
-                </div>
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                  Record Expense
+                </span>
               </RippleButton>
             )}
 
@@ -321,19 +284,14 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/purchases/new")}
-                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.brand}`}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
                   <PackagePlus size={20} aria-hidden />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    Restock
-                  </p>
-                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Receive inventory
-                  </p>
-                </div>
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                  Restock
+                </span>
               </RippleButton>
             )}
 
@@ -341,19 +299,14 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/products/new")}
-                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.success}`}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
                   <Plus size={20} aria-hidden />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    Add Product
-                  </p>
-                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    New catalog item
-                  </p>
-                </div>
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                  Add Product
+                </span>
               </RippleButton>
             )}
 
@@ -361,19 +314,14 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/close-day")}
-                className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-card)] border border-border/60 bg-surface p-3 text-left hover:bg-surface-container active:scale-[0.98] transition-all"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.neutral}`}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
                   <CalendarCheck size={20} aria-hidden />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    Close Day
-                  </p>
-                  <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Reconcile register
-                  </p>
-                </div>
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                  Close Day
+                </span>
               </RippleButton>
             )}
           </div>
@@ -391,7 +339,7 @@ export default function DashboardPage() {
                 key={p.id}
                 type="button"
                 onClick={() => router.push(`/pos?add=${p.id}`)}
-                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container active:scale-98 transition-all"
+                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high active:scale-98 transition-all"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{p.name}</p>
@@ -399,7 +347,7 @@ export default function DashboardPage() {
                     {formatCurrency(p.sellPrice)} · {p.currentStock} in stock
                   </p>
                 </div>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent font-semibold text-lg" aria-hidden>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container font-semibold text-lg" aria-hidden>
                   +
                 </span>
               </RippleButton>

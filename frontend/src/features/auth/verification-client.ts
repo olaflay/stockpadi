@@ -16,7 +16,8 @@ export async function sendVerificationEmail(): Promise<{ ok: boolean; message?: 
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   });
-  const result = await response.json();
+  let result: { error?: { message?: string } } | null = null;
+  try { result = await response.json(); } catch { /* ignore non-JSON */ }
   if (!response.ok) return { ok: false, message: result?.error?.message ?? "Could not send the verification email." };
   return { ok: true };
 }
@@ -31,7 +32,8 @@ export async function verifyEmailCode(code: string): Promise<{ ok: boolean; mess
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ code }),
   });
-  const result = await response.json();
+  let result: { error?: { message?: string } } | null = null;
+  try { result = await response.json(); } catch { /* ignore non-JSON */ }
   if (!response.ok) return { ok: false, message: result?.error?.message ?? "That code did not work." };
   return { ok: true };
 }

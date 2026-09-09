@@ -16,7 +16,6 @@ import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
-import { serverGet } from "@/features/operations/server-client";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Supplier, Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
@@ -36,14 +35,11 @@ export default function PurchasesPage() {
 
   const result = useLiveQuery(async () => {
     try {
-      let purchases;
-      const [suppliers, products] = await Promise.all([tenantArray<Supplier>(db.suppliers), tenantArray<Product>(db.products)]);
-      try {
-        const remote = await serverGet<{ purchases: Array<Record<string, unknown>> }>("/api/purchases");
-        purchases = remote.purchases.map((purchase) => ({ id: purchase.id as string, clientId: purchase.client_id as string, branchId: purchase.branch_id as string, supplierId: purchase.supplier_id as string, createdAtLocal: purchase.created_at as string, items: (purchase.items as Array<Record<string, unknown>> ?? []).map((item) => ({ productId: item.product_id as string, quantity: Number(item.quantity), unitCost: Number(item.unit_cost) })) }));
-      } catch {
-        purchases = await tenantArray<Purchase>(db.purchases.orderBy("createdAtLocal").reverse());
-      }
+      const [suppliers, products, purchases] = await Promise.all([
+        tenantArray<Supplier>(db.suppliers),
+        tenantArray<Product>(db.products),
+        tenantArray<Purchase>(db.purchases.orderBy("createdAtLocal").reverse()),
+      ]);
       return { purchases, suppliers, products, error: null as string | null };
     } catch (err) {
       return {
@@ -105,20 +101,18 @@ export default function PurchasesPage() {
 
   if (result.purchases.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            icon={Truck}
-            title="No restocks recorded"
-            description="Record stock coming in from a supplier so what's on the shelf matches the app."
-            action={
-              canAdd
-                ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
-                : undefined
-            }
-          />
-        </div>
+        <EmptyState
+          icon={Truck}
+          title="No restocks recorded"
+          description="Record stock coming in from a supplier so what's on the shelf matches the app."
+          action={
+            canAdd
+              ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
+              : undefined
+          }
+        />
       </div>
     );
   }

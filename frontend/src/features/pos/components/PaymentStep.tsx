@@ -2,7 +2,6 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
-import { NairaIcon } from "@/components/ui/NairaIcon";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
 import { addCreditCustomer } from "@/features/pos/add-credit-customer";
@@ -150,13 +149,12 @@ export function PaymentStep(props: {
       <ScreenHeader title="Payment" onBack={onBack} />
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
             {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>
-          <span className="flex items-center gap-1 font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
-            <NairaIcon size={16} />
-            {formatCurrency(total).replace(/[₦\s]/g, "")}
+          <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
+            {formatCurrency(total)}
           </span>
         </div>
 
@@ -169,7 +167,7 @@ export function PaymentStep(props: {
                   aria-label={`Payment method ${index + 1}`}
                   value={payment.method}
                   onChange={(event) => onUpdatePaymentMethod(index, event.target.value as PaymentMethod)}
-                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[120px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[120px] rounded-[var(--radius-control)] bg-surface-container-low px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                 >
                   {PAYMENT_METHODS.map((method) => (
                     <option key={method} value={method}>
@@ -184,7 +182,7 @@ export function PaymentStep(props: {
                   step="0.01"
                   value={payment.amount}
                   onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
-                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface-container-low px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                 />
                 {effectivePayments.length > 1 && (
                   <button
@@ -260,7 +258,7 @@ export function PaymentStep(props: {
             tender chips for one-tap denominations; the CHANGE TO RETURN block
             is a prominent success container so the cashier never misses it (§9.1) */}
         {isCashOnly && (
-          <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+          <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-low p-3">
             <label className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Cash tendered
             </label>
@@ -274,10 +272,10 @@ export function PaymentStep(props: {
                     type="button"
                     aria-pressed={active}
                     onClick={() => applyTendered(chip.value)}
-                    className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border px-3 font-number text-[length:var(--font-size-caption)] font-medium tabular-nums transition-colors ${
+                    className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-3 font-number text-[length:var(--font-size-caption)] font-medium tabular-nums transition-colors ${
                       active
-                        ? "border-brand-accent bg-brand-accent text-brand-accent-contrast"
-                        : "border-border bg-surface-container-high text-on-surface"
+                        ? "bg-brand-accent text-brand-accent-contrast"
+                        : "bg-surface-container-high text-on-surface hover:bg-surface-container"
                     }`}
                   >
                     {chip.label}
@@ -289,14 +287,14 @@ export function PaymentStep(props: {
                   <button
                     type="button"
                     onClick={() => applyTendered(tenderedAmount + 500)}
-                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums"
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums hover:bg-surface-container-high"
                   >
                     +₦500
                   </button>
                   <button
                     type="button"
                     onClick={() => applyTendered(tenderedAmount + 1000)}
-                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums"
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums hover:bg-surface-container-high"
                   >
                     +₦1,000
                   </button>
@@ -312,13 +310,13 @@ export function PaymentStep(props: {
               placeholder="How much did the customer give you?"
               value={cashTendered}
               onChange={(e) => handleTenderedTyped(e.target.value)}
-              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums"
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums outline-none focus:ring-2 focus:ring-brand-accent/20"
             />
             {tenderedAmount > 0 && (
               <div className="flex items-center justify-between">
                 {insufficientCash ? (
                   <span className="text-[length:var(--font-size-body)] font-medium text-danger">
-                    Not enough — need {formatCurrency(total - tenderedAmount)} more
+                    Not enough. Need {formatCurrency(total - tenderedAmount)} more.
                   </span>
                 ) : changeDue > 0 ? (
                   <div className="flex w-full flex-col items-center gap-0.5 rounded-[var(--radius-control)] bg-success-container px-3 py-3">
@@ -340,7 +338,7 @@ export function PaymentStep(props: {
         )}
 
         {hasCreditLine && (
-          <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+          <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-low p-3">
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Who&apos;s buying {formatCurrency(creditAmount)} on credit? *
             </span>
@@ -367,7 +365,7 @@ export function PaymentStep(props: {
                   value={customerSearch}
                   onChange={(event) => setCustomerSearch(event.target.value)}
                   placeholder="Search customer by name or phone"
-                  className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                  className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                 />
 
                 {customerSearch.trim() && (
@@ -404,14 +402,14 @@ export function PaymentStep(props: {
                       value={newCustomerName}
                       onChange={(event) => setNewCustomerName(event.target.value)}
                       placeholder="Customer name"
-                      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                     />
                     <input
                       aria-label="Phone (optional)"
                       value={newCustomerPhone}
                       onChange={(event) => setNewCustomerPhone(event.target.value)}
                       placeholder="Phone (optional)"
-                      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface"
+                      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                     />
                     <RippleButton
                       type="button"
@@ -427,7 +425,7 @@ export function PaymentStep(props: {
                     type="button"
                     onClick={() => setShowNewCustomerForm(true)}
                     aria-label="Add new customer for credit"
-                    className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed border-border text-[length:var(--font-size-body)] font-medium text-brand-accent"
+                    className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] font-medium text-brand-accent hover:bg-surface-container-high transition-colors"
                   >
                     <UserPlus size={18} aria-hidden />
                     New customer
@@ -439,7 +437,7 @@ export function PaymentStep(props: {
         )}
       </div>
 
-      <div className="sticky bottom-0 -mx-5 flex flex-col gap-2 border-t border-border bg-surface px-5 pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-4">
         <RippleButton
           id="tour-pos-checkout"
           type="button"

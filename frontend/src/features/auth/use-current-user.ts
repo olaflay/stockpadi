@@ -15,6 +15,11 @@ export interface CurrentUser {
   permissions?: WorkerCapability[];
   businessId?: string;
   branchIds?: string[];
+  /**
+   * Mirror of business_profile.status for the logged-in owner's business:
+   * 'pending' | 'verified' | 'suspended' | 'rejected'. Absent for WORKER/ADMIN.
+   */
+  businessStatus?: string;
 }
 
 /**

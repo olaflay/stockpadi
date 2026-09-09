@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, WifiOff } from "lucide-react";
+import { Eye, EyeOff, WifiOff, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { startSession } from "@/features/auth/session";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -19,6 +19,7 @@ import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { setLocalBusinessId } from "@/lib/local-tenant";
+import { seedSampleProducts } from "@/features/profile/seed-sample-products";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -29,12 +30,19 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   useEffect(() => {
     void removeLegacyTestUser();
     const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "account_not_approved") {
+      queueMicrotask(() => {
+        setIsApprovalModalOpen(true);
+        setError("Account is not approved. Please wait for approval.");
+      });
+    }
     const force = params.get("force") === "true";
     if (force) {
       setTimeout(() => setChecking(false), 0);
@@ -61,17 +69,64 @@ export default function LoginForm() {
         setError("Incorrect email or password.");
         return;
       }
-      const context = await callBackend<{ accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; businessId?: string; branchIds?: string[]; profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions: string[] }>("account-context", {});
+      const context = await callBackend<{
+        accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+        accountState?: "REGISTERED_UNVERIFIED" | "EMAIL_VERIFIED_PENDING_ADMIN" | "PENDING_ADMIN_APPROVAL" | "FULLY_ACTIVATED" | "SUSPENDED" | "REJECTED";
+        businessId?: string;
+        businessStatus?: string;
+        branchIds?: string[];
+        profile: {
+          id: string;
+          full_name: string;
+          role: string;
+          account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+          is_active: boolean;
+          email_verified?: boolean;
+        };
+        permissions: string[];
+      }>("account-context", {});
       const profile = context.profile;
-      await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: context.accountType, permissions: context.permissions, isActive: profile.is_active, updatedAt: new Date().toISOString() });
+      await db.localUsers.put({
+        id: profile.id,
+        businessId: context.businessId,
+        branchIds: context.branchIds ?? [],
+        fullName: profile.full_name,
+        accountType: context.accountType,
+        permissions: context.permissions,
+        isActive: profile.is_active,
+        emailVerified: profile.email_verified ?? false,
+        businessStatus: context.businessStatus,
+        updatedAt: new Date().toISOString(),
+      });
       if (context.businessId) {
         await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId: context.businessId });
         await setLocalBusinessId(context.businessId);
       }
       await startSession(profile.id);
-      router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
+      // Route based on accountState (Phase B state machine)
+      const state = context.accountState;
+      if (state === "REGISTERED_UNVERIFIED") {
+        router.replace("/verify-email");
+        return;
+      }
+      if (state === "EMAIL_VERIFIED_PENDING_ADMIN") {
+        router.replace("/pending-approval");
+        return;
+      }
+      if (state === "PENDING_ADMIN_APPROVAL") {
+        router.replace("/pending-approval");
+        return;
+      }
+      router.replace(profile.account_type === "ADMIN" ? "/admin" : "/dashboard");
     } catch (error) {
-      if (error instanceof BackendError && error.status === 403) {
+      if (error instanceof BackendError && (error.code === "ACCOUNT_NOT_APPROVED" || error.message?.includes("not approved") || error.message?.includes("wait for approval"))) {
+        const supabase = getSupabase();
+        if (supabase) {
+          await supabase.auth.signOut().catch(() => {});
+        }
+        setIsApprovalModalOpen(true);
+        setError("Account is not approved. Please wait for approval.");
+      } else if (error instanceof BackendError && error.status === 403) {
         setError(error.message || "This Worker account is not active for business operations.");
       } else if (error instanceof BackendError && error.status === 401) {
         setError("Your session expired. Please sign in again.");
@@ -106,7 +161,65 @@ export default function LoginForm() {
       });
       if (error) throw error;
     } catch {
-      setError("Could not sign in with Google.");
+      setError("Google sign-in didn't work. Check your connection and try again.");
+      setBusy(false);
+    }
+  }
+
+  async function handleDemoSignIn() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("stockpadi-theme");
+        document.documentElement.removeAttribute("data-theme");
+      }
+      const demoUserId = "demo-owner-" + Math.random().toString(36).substring(2, 8);
+      const demoBizId = "biz-demo-001";
+      const demoBranchId = "branch-demo-001";
+
+      await db.localUsers.put({
+        id: demoUserId,
+        businessId: demoBizId,
+        branchIds: [demoBranchId],
+        fullName: "Demo Store Owner",
+        accountType: "BUSINESS_OWNER",
+        permissions: [],
+        isActive: true,
+        emailVerified: true,
+        businessStatus: "verified",
+        updatedAt: new Date().toISOString(),
+      });
+      await db.businessProfile.put({
+        id: BUSINESS_PROFILE_SINGLETON_ID,
+        businessId: demoBizId,
+        name: "StockPadi Retail Demo",
+        businessTypeId: "general_retail",
+        currency: "NGN",
+      });
+      await setLocalBusinessId(demoBizId);
+
+      const existingBranch = await db.branches.get(demoBranchId);
+      if (!existingBranch) {
+        await db.branches.put({
+          id: demoBranchId,
+          businessId: demoBizId,
+          name: "Main Shop",
+          isActive: true,
+        });
+      }
+
+      const count = await db.products.count();
+      if (count === 0) {
+        await seedSampleProducts("general_retail", demoUserId, demoBranchId);
+      }
+
+      await startSession(demoUserId);
+      router.replace("/dashboard");
+    } catch (err) {
+      console.error("Demo login error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
       setBusy(false);
     }
   }
@@ -194,7 +307,7 @@ export default function LoginForm() {
           </>
         )}
 
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low p-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
               Email address
@@ -204,7 +317,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder="name@domain.com"
+              placeholder="johnsonaimus@gmail.com"
               autoComplete="email"
               autoCapitalize="none"
               inputMode="email"
@@ -262,7 +375,54 @@ export default function LoginForm() {
         >
           Create a business account
         </button>
+
+        {process.env.NODE_ENV === "development" && (
+          <button
+            type="button"
+            id="btn-dev-demo-login"
+            onClick={handleDemoSignIn}
+            className="w-full rounded-[var(--radius-control)] border border-dashed border-brand-accent/50 bg-brand-accent/5 py-2.5 text-center text-xs font-semibold text-brand-accent hover:bg-brand-accent/10 transition-colors min-h-[var(--touch-target-min)] flex items-center justify-center"
+          >
+            ⚡ Demo / Offline Test Login (Dev)
+          </button>
+        )}
       </form>
+
+      {isApprovalModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approval-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface p-6 border border-border/80"
+            style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning-container text-on-warning-container mb-3.5 depth-bubble">
+              <Clock size={24} aria-hidden />
+            </div>
+            <h2 id="approval-modal-title" className="text-center text-base sm:text-lg font-bold text-on-surface">
+              Account Not Approved
+            </h2>
+            <p className="mt-1.5 text-center text-xs sm:text-sm font-medium text-warning">
+              Account is not approved. Please wait for approval.
+            </p>
+            <p className="mt-2 text-center text-xs sm:text-sm text-on-surface-muted leading-relaxed">
+              Your account registration was received and is currently waiting for administrator review. You will be able to log in once your account is approved.
+            </p>
+            <div className="mt-5">
+              <RippleButton
+                type="button"
+                onClick={() => setIsApprovalModalOpen(false)}
+                className="w-full justify-center rounded-[var(--radius-control)] bg-brand-accent py-2.5 text-center text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)]"
+              >
+                Understood
+              </RippleButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

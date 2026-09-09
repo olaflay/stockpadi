@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X, GitBranch } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -14,7 +14,7 @@ const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").th
 
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
-import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds } from "@/features/inventory/product-insights";
+import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds, getStockByProduct, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { EmptyShelfIllustration } from "@/components/illustrations";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -65,6 +65,15 @@ export default function ProductsPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  // Reset visible limit when query or filter changes
+  useEffect(() => {
+    if (debouncedQuery !== prevQuery || filter !== prevFilter) {
+      setPrevQuery(debouncedQuery);
+      setPrevFilter(filter);
+      setVisibleLimit(50);
+    }
+  }, [debouncedQuery, filter, prevQuery, prevFilter]);
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(event: MouseEvent) {
@@ -96,15 +105,9 @@ export default function ProductsPage() {
       setSelectedIds(new Set());
       setDeleteMode(false);
     } catch {
-      showToast("Couldn't archive products", "danger");
+      showToast("Couldn't archive products. Try again.", "danger");
     }
   }, [selectedIds, showToast]);
-
-  if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-    setPrevQuery(debouncedQuery);
-    setPrevFilter(filter);
-    setVisibleLimit(50);
-  }
 
   const result = useLiveQuery(async () => {
     try {
@@ -133,18 +136,34 @@ export default function ProductsPage() {
     }
   }, [filter]);
 
+  const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
+  const hasBranch = (branches?.length ?? 0) > 0;
+
+  // Consolidated stock across all branches (business-level view, matching the
+  // filter chips which run with branchId null). One read of the ledger per
+  // live-query refresh; the figures below are derived from it, never from a
+  // mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
+  const stockByProduct = useLiveQuery(
+    () => getStockByProduct(null),
+    [],
+    new Map<string, number>()
+  );
+
   const byFilter = result
     ? result.products.filter((product) => {
-        if (product.archived) return false;
-        if (filter === "low-stock") return result.lowStockIds.has(product.id);
-        if (filter === "best-sellers") return result.bestSellerIds.has(product.id);
-        if (filter === "expiring") return result.expiringIds.has(product.id);
-        return true;
-      })
+      if (product.archived) return false;
+      if (filter === "low-stock") return result.lowStockIds.has(product.id);
+      if (filter === "best-sellers") return result.bestSellerIds.has(product.id);
+      if (filter === "expiring") return result.expiringIds.has(product.id);
+      return true;
+    })
     : [];
 
   const { exact, suggestions } = searchProductsFuzzy(byFilter, debouncedQuery);
   const filtered = [...exact, ...suggestions];
+
+  // Ledger-derived current stock for a product (see getStockByProduct above).
+  const stockFor = (product: Product) => stockByProduct.get(product.id) ?? 0;
 
   useEffect(() => {
     if (filtered.length <= visibleLimit) return;
@@ -196,20 +215,18 @@ export default function ProductsPage() {
 
   if (result.products.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Products" hideBack={true} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            illustration={EmptyShelfIllustration}
-            title="Your shelf is empty"
-            description="Add your first product to start selling and tracking stock."
-            action={
-              hasAccountType(user, CAN_EDIT_PRODUCTS)
-                ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
-                : undefined
-            }
-          />
-        </div>
+        <EmptyState
+          illustration={EmptyShelfIllustration}
+          title="Your shelf is empty"
+          description="Add your first product to start selling and tracking stock."
+          action={
+            hasAccountType(user, CAN_EDIT_PRODUCTS)
+              ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
+              : undefined
+          }
+        />
       </div>
     );
   }
@@ -217,10 +234,10 @@ export default function ProductsPage() {
 
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
       <ScreenHeader title="Products" hideBack={true} />
 
-      <div className="mb-3">
+      <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-3 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
         <div className="flex gap-2">
           <div className="relative flex-1 min-w-0">
             <Search
@@ -234,14 +251,14 @@ export default function ProductsPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, SKU, or barcode"
-              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface"
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
             />
           </div>
           <button
             type="button"
             onClick={() => setScanning(true)}
             aria-label="Scan barcode to search"
-            className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface text-on-surface hover:bg-surface-container transition-colors"
+            className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors"
           >
             <Camera size={18} aria-hidden />
           </button>
@@ -270,11 +287,10 @@ export default function ProductsPage() {
               type="button"
               aria-pressed={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] transition-colors ${
-                filter === key
+              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-full px-4 text-[length:var(--font-size-body)] transition-colors ${filter === key
                   ? "bg-brand-accent text-brand-accent-contrast"
                   : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
-              }`}
+                }`}
             >
               {FILTER_LABELS[key]}
             </button>
@@ -332,27 +348,47 @@ export default function ProductsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        debouncedQuery ? (
-          <NoResultsState query={debouncedQuery} />
-        ) : (
-          <EmptyState
-            icon={Package}
-            title={
-              filter === "low-stock"
-                ? "Nothing is low on stock"
-                : filter === "expiring"
-                  ? "Nothing expiring soon"
-                  : "No products found"
-            }
-            description={
-              filter === "low-stock"
-                ? "Every product is above the low-stock threshold right now."
-                : filter === "expiring"
-                  ? "Nothing is expired or due to expire in the next 7 days."
-                  : "Add products to start tracking stock."
-            }
-          />
-        )
+        <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
+          {debouncedQuery ? (
+            <NoResultsState query={debouncedQuery} />
+          ) : !hasBranch ? (
+            <EmptyState
+              icon={GitBranch}
+              title="Create a branch first"
+              description="Before adding products and tracking inventory, you need to set up your store's primary branch."
+              action={{
+                label: "Create branch",
+                onClick: () => router.push("/settings/branches"),
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={Package}
+              title={
+                filter === "low-stock"
+                  ? "Nothing is low on stock"
+                  : filter === "expiring"
+                    ? "Nothing expiring soon"
+                    : "Add your first product"
+              }
+              description={
+                filter === "low-stock"
+                  ? "Every product is above the low-stock threshold right now."
+                  : filter === "expiring"
+                    ? "Nothing is expired or due to expire in the next 7 days."
+                    : "Your branch is set up and ready. Add products to start tracking inventory and ringing up sales."
+              }
+              action={
+                filter === "all"
+                  ? {
+                    label: "Add product",
+                    onClick: () => router.push("/products/new"),
+                  }
+                  : undefined
+              }
+            />
+          )}
+        </div>
       ) : (
         <div>
           <ul className="flex flex-col gap-2">
@@ -362,11 +398,10 @@ export default function ProductsPage() {
                   <button
                     type="button"
                     onClick={() => toggleSelect(product.id)}
-                    className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left transition-all ${
-                      selectedIds.has(product.id)
-                        ? "border-brand-accent bg-brand-accent/5"
-                        : "border-border bg-surface hover:bg-surface-container"
-                    }`}
+                    className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-all ${selectedIds.has(product.id)
+                        ? "bg-brand-accent/10 text-brand-accent"
+                        : "bg-surface-container-low hover:bg-surface-container"
+                      }`}
                   >
                     <input
                       type="checkbox"
@@ -381,14 +416,28 @@ export default function ProductsPage() {
                         {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                       </p>
                     </div>
-                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                      {formatCurrency(product.sellPrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                        {formatCurrency(product.sellPrice)}
+                      </p>
+                      <p
+                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${stockFor(product) === 0
+                            ? "text-danger"
+                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
+                              ? "text-warning"
+                              : "text-on-surface-muted"
+                          }`}
+                      >
+                        {stockFor(product) === 0
+                          ? "Out of stock"
+                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
+                      </p>
+                    </div>
                   </button>
                 ) : (
                   <RippleLink
                     href={`/products/${product.id}`}
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
+                    className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 hover:bg-surface-container active:scale-[0.99] transition-all"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{product.name}</p>
@@ -396,9 +445,23 @@ export default function ProductsPage() {
                         {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                       </p>
                     </div>
-                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                      {formatCurrency(product.sellPrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                        {formatCurrency(product.sellPrice)}
+                      </p>
+                      <p
+                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${stockFor(product) === 0
+                            ? "text-danger"
+                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
+                              ? "text-warning"
+                              : "text-on-surface-muted"
+                          }`}
+                      >
+                        {stockFor(product) === 0
+                          ? "Out of stock"
+                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
+                      </p>
+                    </div>
                   </RippleLink>
                 )}
               </li>
@@ -414,7 +477,7 @@ export default function ProductsPage() {
 
       {/* Batch delete floating action bar */}
       {deleteMode && (
-        <div className="fixed bottom-20 left-0 right-0 z-[var(--z-fab)] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+        <div className="fixed bottom-20 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab)] flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
           <button
             type="button"
             onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}
@@ -439,8 +502,12 @@ export default function ProductsPage() {
       )}
 
       {hasAccountType(user, CAN_EDIT_PRODUCTS) && !deleteMode && (
-        <FAB id="tour-add-product" href="/products/new" label="Add product">
-          <Plus size={26} aria-hidden />
+        <FAB
+          id="tour-add-product"
+          href={hasBranch ? "/products/new" : "/settings/branches"}
+          label={hasBranch ? "Add product" : "Create branch"}
+        >
+          {hasBranch ? <Plus size={26} aria-hidden /> : <GitBranch size={24} aria-hidden />}
         </FAB>
       )}
     </div>

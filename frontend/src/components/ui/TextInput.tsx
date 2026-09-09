@@ -50,7 +50,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
 
     const isError = hasError || internalError;
 
-    const baseClass = "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface px-3.5 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)]";
+    const baseClass = "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface px-3.5 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)]";
     const normalClass = "border border-border/80 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
     const errorClass = "border-2 border-danger focus:border-danger focus:ring-2 focus:ring-danger/20";
 

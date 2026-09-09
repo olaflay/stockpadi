@@ -59,9 +59,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Backup exported successfully", "success");
+      showToast("Backup downloaded.", "success");
     } catch {
-      showToast("Failed to export backup", "danger");
+      showToast("Couldn't export the backup. Try again.", "danger");
     }
   }
 
@@ -69,7 +69,7 @@ export default function DataSettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!confirm("Are you sure you want to restore this backup? This will overwrite all current local data!")) {
+    if (!confirm("Restore this backup? Your current data on this device will be replaced.")) {
       event.target.value = "";
       return;
     }
@@ -79,7 +79,7 @@ export default function DataSettingsPage() {
       const backup = JSON.parse(text);
 
       if (backup.appName !== "stockpadi" || !backup.data) {
-        showToast("Invalid backup file format", "danger");
+        showToast("That file doesn't look like a StockPadi backup. Check the file and try again.", "danger");
         event.target.value = "";
         return;
       }
@@ -89,7 +89,7 @@ export default function DataSettingsPage() {
       const importedRows = [branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases]
         .flatMap((rows) => Array.isArray(rows) ? rows : []);
       if (!activeBusinessId || importedRows.some((row) => row.businessId && row.businessId !== activeBusinessId)) {
-        showToast("Backup belongs to a different business", "danger");
+        showToast("This backup was made for a different shop. It can't be restored here.", "danger");
         event.target.value = "";
         return;
       }
@@ -145,10 +145,10 @@ export default function DataSettingsPage() {
         }
       );
 
-      showToast("Backup restored successfully", "success");
+      showToast("Backup restored.", "success");
       window.location.reload();
-    } catch (err) {
-      showToast("Failed to restore backup: " + (err instanceof Error ? err.message : "unknown error"), "danger");
+    } catch {
+      showToast("Couldn't restore the backup. Try a different file.", "danger");
       event.target.value = "";
     }
   }
@@ -164,9 +164,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-products-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Products CSV exported successfully", "success");
+      showToast("Products downloaded as a spreadsheet.", "success");
     } catch {
-      showToast("Failed to export products CSV", "danger");
+      showToast("Couldn't export the spreadsheet. Try again.", "danger");
     }
   }
 
@@ -186,9 +186,9 @@ export default function DataSettingsPage() {
       a.download = `stockpadi-sales-this-month.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Sales CSV exported successfully", "success");
+      showToast("Sales downloaded as a spreadsheet.", "success");
     } catch {
-      showToast("Failed to export sales CSV", "danger");
+      showToast("Couldn't export the spreadsheet. Try again.", "danger");
     }
   }
 
@@ -196,7 +196,7 @@ export default function DataSettingsPage() {
     <div className="flex flex-col gap-6">
       <ScreenHeader title="Backup" onBack={() => router.push("/settings")} />
 
-      <section className="rounded-[var(--radius-card)] border border-border p-4">
+      <section className="rounded-2xl bg-surface-container p-4">
         <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Sync status</h2>
         <p className="text-[length:var(--font-size-body)] text-on-surface">
           {pendingCount > 0
@@ -211,7 +211,7 @@ export default function DataSettingsPage() {
             <button
               type="button"
               onClick={() => retryFailedOutboxItems()}
-              className="flex items-center gap-1 rounded-[var(--radius-control)] border border-current px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-danger-container"
+              className="flex items-center gap-1 rounded-[var(--radius-control)] bg-danger/10 px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-danger-container"
             >
               <RefreshCw size={14} aria-hidden />
               Retry
@@ -220,7 +220,7 @@ export default function DataSettingsPage() {
         )}
       </section>
 
-      <section className="rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
+      <section className="rounded-2xl bg-surface-container p-4">
         <p className="mb-4 text-[length:var(--font-size-body)] leading-relaxed text-on-surface-muted">
           Save a backup of your local database to a file to prevent data loss. You can restore this file on another device.
         </p>
@@ -228,19 +228,19 @@ export default function DataSettingsPage() {
           <RippleButton
             type="button"
             onClick={handleExportBackup}
-            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 py-2 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 py-2 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast shadow-sm hover:opacity-95 transition-opacity"
           >
             <Download size={18} />
             Export Backup
           </RippleButton>
-          <label className="flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors">
+          <label className="flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-highest transition-colors">
             <Upload size={18} />
             Import Backup
             <input type="file" accept="application/json" onChange={handleImportBackup} className="hidden" />
           </label>
         </div>
       </section>
-      <section className="rounded-[var(--radius-card)] border border-border bg-surface-container p-4">
+      <section className="rounded-2xl bg-surface-container p-4">
         <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface">Export for accounting</h2>
         <p className="mb-4 text-[length:var(--font-size-body)] leading-relaxed text-on-surface-muted">
           Export your products and sales data to CSV for use in spreadsheets or accounting software.
@@ -249,7 +249,7 @@ export default function DataSettingsPage() {
           <RippleButton
             type="button"
             onClick={handleExportProductsCsv}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             <Download size={18} />
             Export Products CSV
@@ -257,10 +257,10 @@ export default function DataSettingsPage() {
           <RippleButton
             type="button"
             onClick={handleExportSalesCsv}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             <Download size={18} />
-            Export Sales CSV — This month
+            Export Sales CSV (This month)
           </RippleButton>
         </div>
       </section>

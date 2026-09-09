@@ -14,6 +14,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
   }
   const name = await businessName(db, context.businessId);
   if (request.action === "create") {
+    if (!request.branchId) throw new HttpError(400, "WORKER_REQUIRES_BRANCH", "Assign the worker to a branch before adding them");
     await validateBranch(db, context.businessId, request.branchId);
     await validateCapacity(db, context.businessId);
     const password = generatePassword(name);

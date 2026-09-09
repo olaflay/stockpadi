@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function SalesLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Sales" />
+      <ScreenHeader title="Sales" hideBack={true} />
       <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />

@@ -23,6 +23,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 
 import { TextInput } from "@/components/ui/TextInput";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 
@@ -51,10 +52,12 @@ export default function NewStaffPage() {
     );
   }
 
+  const assignedBranchId = branchId ?? resolveDefaultBranch(branches, user) ?? null;
+
   const canSubmit =
     fullName.trim() &&
     email.trim() &&
-    email.trim();
+    typeof assignedBranchId === "string";
 
   async function handleCreate() {
     setError(null);
@@ -69,7 +72,7 @@ export default function NewStaffPage() {
         fullName: fullName.trim(),
         phone: phone.trim() || null,
         email: email.trim(),
-        branchId,
+        branchId: assignedBranchId,
       });
       setCreatedPassword(result.password ?? null);
       showToast(`${fullName.trim()} added.`, "success");
@@ -174,7 +177,7 @@ export default function NewStaffPage() {
               id="staff-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@domain.com"
+              placeholder="johnsonaimus@gmail.com"
               type="email"
               autoComplete="email"
               autoCapitalize="none"
@@ -193,23 +196,45 @@ export default function NewStaffPage() {
 
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Account type: <strong className="text-on-surface">Worker</strong></p>
 
-          {branches && branches.length > 1 && (
+          {branches.length === 0 && (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-warning-container px-4 py-3 text-[length:var(--font-size-body)] text-on-warning-container"
+            >
+              <span className="font-semibold">No branches yet.</span>
+              <span>Create a branch first, then add staff. Every worker belongs to one branch.</span>
+            </div>
+          )}
+
+          {branches.length === 1 && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
+                Branch
+              </span>
+              <div className="rounded-[var(--radius-control)] border border-border bg-surface-container px-4 py-3 text-[length:var(--font-size-body)] text-on-surface">
+                {branches[0]!.name}
+              </div>
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">New staff are assigned to your only branch.</span>
+            </label>
+          )}
+
+          {branches.length > 1 && (
             <label className="flex flex-col gap-1.5">
               <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
                 Branch
               </span>
               <SelectInput
                 id="staff-branch"
-                value={branchId ?? ""}
+                value={assignedBranchId ?? ""}
                 onChange={(e) => setBranchId(e.target.value || null)}
               >
-                <option value="">All branches</option>
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
                   </option>
                 ))}
               </SelectInput>
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Every worker is assigned to one branch.</span>
             </label>
           )}
         </div>

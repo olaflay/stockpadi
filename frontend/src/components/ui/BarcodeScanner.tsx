@@ -24,7 +24,7 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
       try {
         const videoInputDevices = await reader.listVideoInputDevices();
         if (videoInputDevices.length === 0) {
-          if (mounted) setError("No camera found.");
+          if (mounted) setError("No camera found. Connect a camera or use search instead.");
           return;
         }
 

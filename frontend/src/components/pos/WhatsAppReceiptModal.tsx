@@ -60,12 +60,12 @@ export function WhatsAppReceiptModal({
     .map((p) => {
       const method =
         p.method === "cash"
-          ? "💵 Cash"
+          ? "Cash"
           : p.method === "transfer"
-            ? "🏦 Transfer"
+            ? "Bank Transfer"
             : p.method === "pos_terminal"
-              ? "📱 POS"
-              : "📋 Credit";
+              ? "POS Terminal"
+              : "Credit";
       let line = `  ${method}: ${formatCurrency(p.amount)}`;
       // Register drawer line + transfer audit note, matching the thermal
       // receipt (§9.1, §9.3).
@@ -81,7 +81,7 @@ export function WhatsAppReceiptModal({
 
   const debtSummarySection =
     includeDebt && customerDebtBalance > 0
-      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ *CUSTOMER ACCOUNT SUMMARY:*\nOutstanding Balance: *${formatCurrency(customerDebtBalance)}*`
+      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n*CUSTOMER ACCOUNT SUMMARY*\nOutstanding Balance: *${formatCurrency(customerDebtBalance)}*`
       : "";
 
   const previewText =
@@ -92,7 +92,7 @@ export function WhatsAppReceiptModal({
     `*TOTAL: ${formatCurrency(sale.total)}*\n\n` +
     `Payment:\n${paymentLine}` +
     `${debtSummarySection}\n\n` +
-    `Thank you for your patronage! 🙏\n` +
+    `Thank you for your business.\n` +
     `Powered by StockPadi`;
 
   function handleSend() {
@@ -122,16 +122,17 @@ export function WhatsAppReceiptModal({
         role="dialog"
         aria-modal="true"
         aria-label="Share receipt on WhatsApp"
-        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-surface p-5 shadow-elevated animate-sheet-in sm:rounded-[var(--radius-card)]"
+        className="w-full max-w-md rounded-t-[var(--radius-sheet)] sm:rounded-2xl bg-surface p-5 border-t sm:border border-border/80 animate-sheet-in overflow-hidden"
+        style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[length:var(--font-size-title-md)] font-semibold text-on-surface">
+          <h2 className="text-base sm:text-lg font-semibold text-on-surface">
             Share receipt
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container active:scale-95 transition-all"
             aria-label="Close"
           >
             <X size={18} />
@@ -142,7 +143,7 @@ export function WhatsAppReceiptModal({
         {customerDebtBalance > 0 && (
           <div className="mb-3 rounded-[var(--radius-control)] border border-warning/40 bg-warning-container/30 p-2.5 text-xs text-on-warning-container">
             <p className="font-semibold text-warning">
-              ⚠️ Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
+              Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
             </p>
             <label className="mt-1.5 flex items-center gap-2 cursor-pointer font-medium select-none text-on-surface">
               <input
@@ -158,7 +159,7 @@ export function WhatsAppReceiptModal({
 
         {/* Phone number input */}
         <label className="mb-3 block">
-          <span className="mb-1 block text-[length:var(--font-size-label)] text-on-surface-muted">
+          <span className="mb-1 block text-[length:var(--font-size-label)] text-on-surface-muted font-medium">
             Customer WhatsApp number
           </span>
           <input
@@ -167,13 +168,13 @@ export function WhatsAppReceiptModal({
             placeholder="08012345678"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface focus-visible:outline-none focus-visible:border-brand-accent focus-visible:ring-1 focus-visible:ring-brand-accent"
+            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm text-on-surface shadow-[var(--shadow-recessed)] focus-visible:outline-none focus-visible:border-brand-accent focus-visible:ring-1 focus-visible:ring-brand-accent"
           />
         </label>
 
         {/* Receipt preview */}
-        <div className="mb-4 max-h-56 overflow-y-auto rounded-[var(--radius-card)] bg-surface-container p-3">
-          <pre className="whitespace-pre-wrap text-[length:var(--font-size-caption)] leading-relaxed text-on-surface font-sans">
+        <div className="mb-4 max-h-56 overflow-y-auto rounded-2xl bg-surface-container p-3.5 shadow-[var(--shadow-recessed)]">
+          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-on-surface font-sans">
             {previewText}
           </pre>
         </div>
@@ -183,16 +184,16 @@ export function WhatsAppReceiptModal({
           <button
             type="button"
             onClick={handleCopy}
-            className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors"
+            className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-xs sm:text-sm font-semibold text-on-surface hover:bg-surface-container active:scale-98 transition-all"
           >
             {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
             <span>{copied ? "Copied!" : "Copy text"}</span>
           </button>
 
-<RippleButton
+          <RippleButton
             type="button"
             onClick={handleSend}
-            className="flex min-h-[var(--touch-target-min)] flex-[2] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#25D366] px-4 text-xs font-semibold text-white hover:opacity-95 transition-opacity"
+            className="flex min-h-[var(--touch-target-min)] flex-[2] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#25D366] px-4 text-xs sm:text-sm font-semibold text-white shadow-[var(--shadow-elevation-1)] hover:opacity-95 transition-opacity"
           >
             <MessageCircle size={16} aria-hidden />
             Send on WhatsApp

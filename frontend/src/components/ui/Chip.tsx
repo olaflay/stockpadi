@@ -40,14 +40,14 @@ export function Chip({
 
   if (variant === "filter") {
     stateClasses = selected
-      ? "bg-brand-accent text-brand-accent-contrast border border-transparent shadow-xs"
-      : "bg-surface-container-high border border-border/80 text-on-surface hover:bg-surface-container-highest";
+      ? "bg-brand-accent text-brand-accent-contrast shadow-xs"
+      : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest";
   } else if (variant === "assist") {
     stateClasses =
-      "bg-surface border border-border/80 text-on-surface hover:bg-surface-container active:bg-surface-container-high";
+      "bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-surface-container-highest";
   } else if (variant === "input") {
     stateClasses =
-      "bg-surface-container border border-border/80 text-on-surface pr-1.5 hover:bg-surface-container-high";
+      "bg-surface-container text-on-surface pr-1.5 hover:bg-surface-container-high";
   }
 
   return (

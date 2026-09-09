@@ -2,6 +2,10 @@
 .branches
 .temp
 
+# Tests and test suites
+!__tests__/
+!__tests__/**
+
 # dotenvx
 .env.keys
 .env.local

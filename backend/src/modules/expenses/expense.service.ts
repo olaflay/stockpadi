@@ -22,5 +22,5 @@ export async function listExpenses(db: SupabaseClient, actor: User) {
   requireBusinessOwner(context);
   const { data, error } = await db.from("expenses").select("id, branch_id, category, amount, note, created_at, created_by_user_id").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(500);
   if (error) throw new HttpError(500, "EXPENSES_LOAD_FAILED", error.message);
-  return { expenses: context.accountType === "WORKER" ? (data ?? []).filter((expense) => !expense.branch_id || context.branchIds.includes(expense.branch_id as string)) : (data ?? []) };
+  return { expenses: data ?? [] };
 }

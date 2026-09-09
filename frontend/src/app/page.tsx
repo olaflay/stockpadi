@@ -20,8 +20,12 @@ export default function Home() {
           router.replace("/admin");
           return;
         }
+        if (accountType === "BUSINESS_OWNER" && !user?.emailVerified) {
+          router.replace("/verify-email");
+          return;
+        }
         const profile = await db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID);
-        router.replace(profile ? (accountType === "BUSINESS_OWNER" ? "/business" : "/work") : "/onboarding");
+        router.replace(profile ? "/dashboard" : "/onboarding");
         return;
       }
       // No active local session: use the single normal login route.

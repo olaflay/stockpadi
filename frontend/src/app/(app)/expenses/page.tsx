@@ -17,7 +17,6 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { deleteExpense } from "@/features/expenses/add-expense";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
-import { serverGet } from "@/features/operations/server-client";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch, LocalUser } from "@/lib/db";
 import type { Expense } from "@/types/expense";
@@ -42,22 +41,11 @@ export default function ExpensesPage() {
 
   const result = useLiveQuery(async () => {
     try {
-      const [branches, users] = await Promise.all([tenantArray<LocalBranch>(db.branches), tenantArray<LocalUser>(db.localUsers)]);
-      let expenses;
-      try {
-        const remote = await serverGet<{ expenses: Array<Record<string, unknown>> }>("/api/expenses");
-        expenses = remote.expenses.map((expense) => ({
-          id: expense.id as string,
-          branchId: expense.branch_id as string | null,
-          category: expense.category as string,
-          amount: Number(expense.amount),
-          note: expense.note as string | null,
-          createdAtLocal: expense.created_at as string,
-          createdByUserId: expense.created_by_user_id as string,
-        }));
-      } catch {
-        expenses = await tenantArray<Expense>(db.expenses.orderBy("createdAtLocal").reverse());
-      }
+      const [branches, users, expenses] = await Promise.all([
+        tenantArray<LocalBranch>(db.branches),
+        tenantArray<LocalUser>(db.localUsers),
+        tenantArray<Expense>(db.expenses.orderBy("createdAtLocal").reverse()),
+      ]);
       return { expenses, branches, users, error: false };
     } catch {
       return { expenses: [] as Expense[], branches: [] as LocalBranch[], users: [] as LocalUser[], error: true };
@@ -115,16 +103,14 @@ export default function ExpensesPage() {
 
   if (result.expenses.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            icon={Wallet}
-            title="No expenses recorded"
-            description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
-            action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
-          />
-        </div>
+        <EmptyState
+          icon={Wallet}
+          title="No expenses recorded"
+          description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
+          action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
+        />
         <AddExpenseSheet isOpen={isAddSheetOpen} onClose={() => setIsAddSheetOpen(false)} />
       </div>
     );

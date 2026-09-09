@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import type { SyncQueueItem } from "@/types/sync";
-import { matchesActiveTenant } from "@/lib/local-tenant";
+import { matchesActiveTenant, getLocalBusinessId } from "@/lib/local-tenant";
+import { reconcileLocalBranches } from "@/features/branches/reconcile-branches";
 
 /**
  * Pushes every pending outbox item to the sync-push Edge Function in
@@ -45,6 +46,8 @@ let isDraining = false;
  * without navigator.locks (Safari < 15.4).
  */
 export async function drainOutbox(): Promise<{ drained: number; pendingRemaining: number }> {
+  await getLocalBusinessId();
+
   const getPendingCount = async () =>
     (await db.outbox.where("status").anyOf("pending", "syncing").toArray()).filter(matchesActiveTenant).length;
 
@@ -75,6 +78,9 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
 async function drainOnce(): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
+
+  await getLocalBusinessId();
+  await reconcileLocalBranches();
 
   const pending = (await db.outbox.where("status").equals("pending").sortBy("createdAtLocal"))
     .filter(matchesActiveTenant);

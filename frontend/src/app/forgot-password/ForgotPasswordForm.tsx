@@ -95,7 +95,7 @@ export default function ForgotPasswordForm() {
       </div>
 
       <div className="flex flex-col gap-4 pb-10 shrink-0">
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low p-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
               Email address
@@ -105,7 +105,7 @@ export default function ForgotPasswordForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder="name@domain.com"
+              placeholder="johnsonaimus@gmail.com"
               autoComplete="email"
               autoCapitalize="none"
               inputMode="email"

@@ -56,6 +56,9 @@ function jsonResponse(status: number, body: unknown, requestOrigin?: string) {
     "content-type": "application/json",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
     vary: "Origin",
   });
   if (origin && allowedOrigins().has(origin)) {

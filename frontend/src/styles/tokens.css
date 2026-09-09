@@ -25,161 +25,220 @@
  */
 
 :root {
-  /* Brand accent, overridden at runtime from src/config/branding.ts */
-  --color-brand-accent: #0a6e4d;
-  --color-brand-accent-contrast: #ffffff;
-  --color-brand-accent-active: var(--color-brand-accent);
+   /* Brand accent, overridden at runtime from src/config/branding.ts */
+   --color-brand-accent: var(--brand-accent-configured, #0a6e4d);
+   --color-brand-accent-contrast: #ffffff;
+   --color-brand-accent-active: var(--color-brand-accent);
 
-  /* Surface / text, light mode. M3 5-tier Surface Container scale. Checked for WCAG AA contrast. */
-  --color-surface: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f8faf8;
-  --color-surface-container: #f2f4f2;
-  --color-surface-container-high: #eaecea;
-  --color-surface-container-highest: #e0e4e1;
-  --color-on-surface: #14181a;
-  --color-on-surface-muted: #565f61;
-  --color-border: #d9dcda;
+   /* Surface / text, light mode. Crisp high-contrast neutral scale (WCAG AAA compliant). */
+   --color-surface: #ffffff;
+   --color-surface-container-lowest: #ffffff;
+   --color-surface-container-low: #f7f9fa;
+   --color-surface-container: #eff2f3;
+   --color-surface-container-high: #e3e7e8;
+   --color-surface-container-highest: #d6dcde;
+   --color-on-surface: #14181a;
+   --color-on-surface-muted: #5e6b6f;
+   --color-border: #b8c1c4;
+   --color-outline: #73796e;
 
-  --color-success: #1a7f3c;
-  --color-warning: #a15c00;
-  --color-danger: #b3261e;
+   --color-success: #1a7f3c;
+   --color-warning: #a15c00;
+   --color-danger: #b3261e;
 
-  /* A trading signal (running low on stock), not a system error — kept as
+   /* A trading signal (running low on stock), not a system error — kept as
      its own token, deliberately not --color-danger, so a stock alert never
      visually reads as "something broke." */
-  --color-stock-alert: #dc2626;
+   --color-stock-alert: #dc2626;
 
-  /* Status containers: tonal role/container pairs (M3 pattern) for badges
+   /* Status containers: tonal role/container pairs (M3 pattern) for badges
      and chips — e.g. a low-stock chip, so status reads as a tinted surface
      rather than a saturated fill competing with the content around it. */
-  --color-success-container: #d7f2df;
-  --color-on-success-container: #0d4d21;
-  --color-warning-container: #ffe8c2;
-  --color-on-warning-container: #5c3800;
-  --color-danger-container: #fbdad7;
-  --color-on-danger-container: #7a140d;
+   --color-brand-container: #d7f2df;
+   --color-on-brand-container: #0a6e4d;
+   --color-success-container: #d7f2df;
+   --color-on-success-container: #0d4d21;
+   --color-warning-container: #ffe8c2;
+   --color-on-warning-container: #5c3800;
+   --color-danger-container: #fbdad7;
+   --color-on-danger-container: #7a140d;
 
-  /* On-role text/icon color for a *solid* fill of that role (M3 pattern) —
-     e.g. white text on a filled danger button for a void/delete action. */
-  --color-on-success: #ffffff;
-  --color-on-warning: #ffffff;
-  --color-on-danger: #ffffff;
+   /* On-role text/icon color for a solid fill — references semantic contrast, no raw hex */
+   --color-on-success: var(--color-brand-accent-contrast);
+   --color-on-warning: var(--color-brand-accent-contrast);
+   --color-on-danger: var(--color-brand-accent-contrast);
 
-  /* Outline vs outline-variant (M3 pattern): --color-border is the
-     stronger outline (inputs); this is the subtler one, for decorative
-     list dividers that shouldn't compete with real borders. */
-  --color-outline-variant: #e4e6e4;
+   /* Subtle brand gradients for headers and key containers */
+   --gradient-brand-header: linear-gradient(180deg, #0a6e4d 0%, #075239 100%);
+   --gradient-brand-subtle: linear-gradient(135deg, rgba(10, 110, 77, 0.08) 0%, rgba(10, 110, 77, 0.02) 100%);
 
-  /* Inverse surface (M3 pattern): used for a snackbar/toast so it reads as
+   /* Outline vs outline-variant (M3 pattern): --color-border / --color-outline is the
+     stronger outline (inputs, buttons); this is the subtler one, for decorative
+     list dividers and cards that shouldn't compete with real borders. */
+   --color-outline-variant: #d6dcde;
+
+   /* Inverse surface (M3 pattern): used for a snackbar/toast so it reads as
      a distinct floating layer instead of blending into the page. */
-  --color-inverse-surface: #2d3132;
-  --color-inverse-on-surface: #eef1f1;
+   --color-inverse-surface: #2d3132;
+   --color-inverse-on-surface: #eef1f1;
 
-  /* Badges & Notification counters:
+   /* Badges & Notification counters:
      Light mode: darker background, light number.
      Dark mode: lighter background, dark number. */
-  --color-badge-bg: #14181a;
-  --color-badge-fg: #ffffff;
-  --color-badge-alert-bg: #b91c1c;
-  --color-badge-alert-fg: #ffffff;
+   --color-badge-bg: #14181a;
+   --color-badge-fg: #ffffff;
+   --color-badge-alert-bg: #b91c1c;
+   --color-badge-alert-fg: #ffffff;
 
-  /* Scrim: modal/sheet backdrop. Same value in both themes, per M3. */
-  --color-scrim: rgba(0, 0, 0, 0.4);
+   /* Scrim: modal/sheet backdrop. Same value in both themes, per M3. */
+   --color-scrim: rgba(0, 0, 0, 0.4);
 
-  /* Type scale: mobile-first, One UI reads large and legible at arm's length */
-  /* Fluid, not fixed: a hero number (sale total, dashboard figures) must
+   /* Type scale: mobile-first, One UI reads large and legible at arm's length */
+   /* Fluid, not fixed: a hero number (sale total, dashboard figures) must
      stay on one line rather than wrap or leak on a narrow phone. Scales
      continuously between 24px and 32px with viewport width instead of
      jumping at a breakpoint; pair with `truncate` at the call site as a
      last-resort floor for pathologically long values. */
-  --font-size-display: clamp(1.5rem, 1.1rem + 3vw, 2rem); /* 24–32px — dashboard hero numbers */
-  --font-size-title-lg: clamp(1.25rem, 1.05rem + 1.5vw, 1.5rem); /* 20–24px — screen titles */
-  --font-size-title: clamp(1.0625rem, 0.95rem + 1vw, 1.25rem);   /* 17–20px — section titles, sale total */
+   --font-size-display: clamp(1.5rem, 1.1rem + 3vw, 2rem);
+   /* 24–32px — dashboard hero numbers */
+   --font-size-title-lg: clamp(1.25rem, 1.05rem + 1.5vw, 1.5rem);
+   /* 20–24px — screen titles */
+   --font-size-title: clamp(1.0625rem, 0.95rem + 1vw, 1.25rem);
+   /* 17–20px — section titles, sale total */
 
-  /* Fixed below this line, deliberately: body/label/caption are already the
+   /* Fixed below this line, deliberately: body/label/caption are already the
      small end of the scale. Shrinking them further on a narrow phone would
      violate the WCAG AA / low-end-legibility rule this product is locked
      to — reading text must never get smaller than its current size. */
-  --font-size-body-lg: 1.0625rem; /* 17px — primary reading text */
-  --font-size-body: 0.9375rem;    /* 15px — secondary text */
-  --font-size-label: 0.8125rem;   /* 13px — form labels, chips */
-  --font-size-caption: 0.75rem;   /* 12px — timestamps, meta */
+   --font-size-body-lg: 1.0625rem;
+   /* 17px — primary reading text */
+   --font-size-body: 0.9375rem;
+   /* 15px — secondary text */
+   --font-size-label: 0.8125rem;
+   /* 13px — form labels, chips */
+   --font-size-caption: 0.75rem;
+   /* 12px — timestamps, meta */
 
-  --font-line-height-tight: 1.2;
-  --font-line-height-normal: 1.5;
+   --font-line-height-tight: 1.2;
+   --font-line-height-normal: 1.5;
 
-  /* Font Families: Neue Helvetica for major numbers, financial metrics & statistics.
-     The Naira symbol (₦ U+20A6) is included explicitly in the stack so older
-     Android devices with limited system fonts never show a "tofu" glyph. */
-  --font-family-number: "Neue Helvetica", "Helvetica Neue", "Noto Sans", "Helvetica", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+   /* Font Families: the UI voice is the self-hosted Google Sans Flex. A
+      figure — recommended for major numbers — deliberately is NOT that
+      voice, so long Naira values stay glancingly scannable as numbers:
+      Roboto on Android is the distinct default figure face (Helvetica on
+      iOS), and Noto Sans keeps the old-Android no-tofu guarantee for the
+      Naira symbol (₦ U+20A6), which sits in latin-ext beyond the latin
+      slice of the bundled Google Sans Flex. */
+   --font-family-number: "Roboto", "Neue Helvetica", "Helvetica Neue", "Noto Sans", "Helvetica", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 
-  /* Weight: named so components never hardcode a numeric weight. */
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-emphasis: 600; /* buttons, labels, anything actionable */
+   /* Weight: named so components never hardcode a numeric weight. */
+   --font-weight-regular: 400;
+   --font-weight-medium: 500;
+   --font-weight-emphasis: 600;
+   /* buttons, labels, anything actionable */
 
-  /* Spacing: 4px base grid */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
+   /* Spacing: 4px base grid */
+   --space-1: 0.25rem;
+   --space-2: 0.5rem;
+   --space-3: 0.75rem;
+   --space-4: 1rem;
+   --space-5: 1.25rem;
+   --space-6: 1.5rem;
+   --space-8: 2rem;
+   --space-10: 2.5rem;
+   --space-12: 3rem;
+   --space-16: 4rem;
 
-  /* Shape: M3 graduated scale by role. */
-  --radius-xs: 0.25rem;       /* 4px — tiny tags */
-  --radius-inline: 0.375rem;  /* 6px — chips, badges */
-  --radius-sm: 0.5rem;        /* 8px */
-  --radius-control: 0.625rem; /* 10px — buttons, inputs */
-  --radius-md: 0.75rem;       /* 12px */
-  --radius-card: 0.875rem;    /* 14px — standard cards */
-  --radius-lg: 1rem;          /* 16px — large cards */
-  --radius-focus-block: 1.5rem; /* 24px — hero blocks, sale total */
-  --radius-sheet: 1.75rem;    /* 28px — M3 bottom sheets, dialogs (Extra Large) */
-  --radius-full: 9999px;      /* pills, avatars, active nav indicators */
+   /* Semantic rhythm (Google breathing room on top of the base grid):
+      --space-gutter* is the screen gutter, held in the app shell; screens
+      that need an edge-bleed footer mirror it with -mx-*. --space-section*
+      is the loose vertical rhythm between screen sections — apply it when
+      spacing blocks, prefer it over repeating gap-3/4 across a whole screen. */
+   --space-gutter: 1rem;
+   /* 16px — phone gutter */
+   --space-gutter-lg: 1.5rem;
+   /* 24px — wide/tablet gutter */
+   --space-section: 1.5rem;
+   /* 24px — default section rhythm */
+   --space-section-lg: 2rem;
+   /* 32px — openers / hero-to-content rhythm */
 
-  /* Elevation: budget-Android optimized single-pass shadows (tonal surfaces handle visual depth) */
-  --elevation-0: none;
-  --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.05);
-  --elevation-2: 0 2px 4px rgba(20, 24, 26, 0.08);
-  --elevation-3: 0 4px 8px rgba(20, 24, 26, 0.10);
-  --elevation-4: 0 6px 12px rgba(20, 24, 26, 0.12);
-  --elevation-5: 0 8px 16px rgba(20, 24, 26, 0.14);
-  --elevation-sticky-top: 0 -2px 4px rgba(20, 24, 26, 0.06);
+   /* Shape: M3 graduated scale by role. */
+   --radius-xs: 0.25rem;
+   /* 4px — tiny tags */
+   --radius-inline: 0.375rem;
+   /* 6px — chips, badges */
+   --radius-sm: 0.5rem;
+   /* 8px */
+   --radius-control: 0.625rem;
+   /* 10px — buttons, inputs */
+   --radius-md: 0.75rem;
+   /* 12px */
+   --radius-card: 0.875rem;
+   /* 14px — standard cards */
+   --radius-lg: 1rem;
+   /* 16px — large cards */
+   --radius-focus-block: 1.5rem;
+   /* 24px — hero blocks, sale total */
+   --radius-sheet: 1.75rem;
+   /* 28px — M3 bottom sheets, dialogs (Extra Large) */
+   --radius-full: 9999px;
+   /* pills, avatars, active nav indicators */
 
-  /* Touch target floor, non-negotiable per PRD Section 8 */
-  --touch-target-min: 2.75rem; /* 44px */
+   /* Elevation & Depth: Multi-layer ambient + key light shadows for welcoming, physical depth.
+      Sanity rule: shadows are whispered, not ink — the tonal surface step does the lifting
+      (Google feel: depth reads from tone + a faint diffuse shadow, never a hard dark edge). */
+   --elevation-0: none;
+   --elevation-1: 0 1px 2px rgba(20, 24, 26, 0.04), 0 2px 6px -1px rgba(20, 24, 26, 0.03);
+   --elevation-2: 0 4px 8px -2px rgba(20, 24, 26, 0.06), 0 2px 4px -1px rgba(20, 24, 26, 0.04);
+   --elevation-3: 0 8px 16px -4px rgba(20, 24, 26, 0.07), 0 4px 6px -2px rgba(20, 24, 26, 0.04);
+   --elevation-4: 0 12px 22px -4px rgba(20, 24, 26, 0.09), 0 6px 10px -3px rgba(20, 24, 26, 0.05);
+   --elevation-5: 0 18px 28px -6px rgba(20, 24, 26, 0.11), 0 8px 14px -4px rgba(20, 24, 26, 0.07);
+   --elevation-sticky-top: 0 -4px 16px rgba(20, 24, 26, 0.03), 0 -1px 2px rgba(20, 24, 26, 0.02);
+   --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+   --shadow-recessed: inset 0 1px 2px rgba(20, 24, 26, 0.05);
+   --shadow-recessed-strong: inset 0 1.5px 3px rgba(20, 24, 26, 0.08);
 
-  /* State layers: an opacity applied over a component's base color on
+   /* Touch target floor, non-negotiable per PRD Section 8 */
+   --touch-target-min: 2.75rem;
+   /* 44px */
+
+   /* State layers: an opacity applied over a component's base color on
      interaction (M3 pattern), not a separate hardcoded color per state. */
-  --state-opacity-hover: 0.08;
-  --state-opacity-focus: 0.12;
-  --state-opacity-pressed: 0.12;
-  --state-opacity-dragged: 0.16;
-  --state-opacity-disabled-container: 0.12;
-  --state-opacity-disabled-content: 0.38;
+   --state-opacity-hover: 0.08;
+   --state-opacity-focus: 0.12;
+   --state-opacity-pressed: 0.12;
+   --state-opacity-dragged: 0.16;
+   --state-opacity-disabled-container: 0.12;
+   --state-opacity-disabled-content: 0.38;
 
-  /* Motion: M3 authentic easing and duration standards */
-  --motion-duration-short: 100ms;  /* state-layer/color changes */
-  --motion-duration-medium: 200ms; /* toast, chip toggle, shimmer */
-  --motion-duration-long: 300ms;   /* sheets, dialogs, full page steps */
-  --easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
-  --easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
-  --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
-  --easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
+   /* Motion: M3 authentic easing and duration standards */
+   --motion-duration-short: 100ms;
+   /* state-layer/color changes */
+   --motion-duration-medium: 200ms;
+   /* toast, chip toggle, shimmer */
+   --motion-duration-long: 300ms;
+   /* sheets, dialogs, full page steps */
+   /* Stacking context & Z-Index tokens */
+   --z-sticky: 20;
+   --z-bottom-nav: 40;
+   --z-fab: 45;
+   --z-drawer: 50;
+   --z-modal: 60;
+   --z-toast: 70;
+
+   --easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+   --easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
+   --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+   --easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-duration-short: 0ms;
-    --motion-duration-medium: 0ms;
-    --motion-duration-long: 0ms;
-  }
+   :root {
+      --motion-duration-short: 0ms;
+      --motion-duration-medium: 0ms;
+      --motion-duration-long: 0ms;
+   }
 }
 
 /* Dark values shared by two triggers: the OS preference (system default,
@@ -187,95 +246,111 @@
    set by the Settings > Appearance switch (src/features/settings), which
    overrides the OS preference either way. See src/features/settings/ThemeProvider.tsx. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-surface: #121516;
-    --color-surface-container-lowest: #0d1011;
-    --color-surface-container-low: #171b1c;
-    --color-surface-container: #1c2022;
-    --color-surface-container-high: #272c2e;
-    --color-surface-container-highest: #32383a;
-    --color-on-surface: #e7ebec;
-    --color-on-surface-muted: #a4adaf;
-    --color-border: #33393a;
-    --color-brand-accent-active: #4ade80;
+   :root:not([data-theme="light"]) {
+      --color-surface: #121516;
+      --color-surface-container-lowest: #0d1011;
+      --color-surface-container-low: #171b1c;
+      --color-surface-container: #1c2022;
+      --color-surface-container-high: #272c2e;
+      --color-surface-container-highest: #32383a;
+      --color-on-surface: #e7ebec;
+      --color-on-surface-muted: #a4adaf;
+      --color-border: #33393a;
+      --color-outline: #8c9388;
+      --color-outline-variant: #43494a;
 
-    --color-success: #4ade80;
-    --color-warning: #fbbf24;
-    --color-danger: #f87171;
-    --color-stock-alert: #fb7185;
+      --color-brand-accent: #4ade80 !important;
+      --color-brand-accent-contrast: #052e16 !important;
+      --color-brand-accent-active: #38c86d !important;
 
-    --color-success-container: #0f3d20;
-    --color-on-success-container: #a6e6b8;
-    --color-warning-container: #4a3300;
-    --color-on-warning-container: #ffd48a;
-    --color-danger-container: #5c1712;
-    --color-on-danger-container: #ffb4ab;
+      --color-success: #4ade80;
+      --color-warning: #fbbf24;
+      --color-danger: #f87171;
+      --color-stock-alert: #fb7185;
 
-    --color-on-success: #0d4d21;
-    --color-on-warning: #4a3300;
-    --color-on-danger: #690005;
+      --color-brand-container: #0f3d20;
+      --color-on-brand-container: #a6e6b8;
+      --color-success-container: #0f3d20;
+      --color-on-success-container: #a6e6b8;
+      --color-warning-container: #4a3300;
+      --color-on-warning-container: #ffd48a;
+      --color-danger-container: #5c1712;
+      --color-on-danger-container: #ffb4ab;
 
-    --color-outline-variant: #43494a;
+      --color-on-success: #0d4d21;
+      --color-on-warning: #4a3300;
+      --color-on-danger: #690005;
 
-    --color-inverse-surface: #e7ebec;
-    --color-inverse-on-surface: #262b2c;
+      --color-inverse-surface: #e7ebec;
+      --color-inverse-on-surface: #262b2c;
 
-    --color-badge-bg: #e7ebec;
-    --color-badge-fg: #14181a;
-    --color-badge-alert-bg: #fca5a5;
-    --color-badge-alert-fg: #7f1d1d;
+      --color-badge-bg: #e7ebec;
+      --color-badge-fg: #14181a;
+      --color-badge-alert-bg: #fca5a5;
+      --color-badge-alert-fg: #7f1d1d;
 
-    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
-    --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
-    --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
-    --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
-    --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
-    --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
-  }
+      --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 6px -1px rgba(0, 0, 0, 0.20);
+      --elevation-2: 0 4px 8px -2px rgba(0, 0, 0, 0.38), 0 2px 4px -1px rgba(0, 0, 0, 0.22);
+      --elevation-3: 0 8px 16px -4px rgba(0, 0, 0, 0.46), 0 4px 6px -2px rgba(0, 0, 0, 0.26);
+      --elevation-4: 0 12px 22px -4px rgba(0, 0, 0, 0.52), 0 6px 10px -3px rgba(0, 0, 0, 0.30);
+      --elevation-5: 0 18px 28px -6px rgba(0, 0, 0, 0.58), 0 8px 14px -4px rgba(0, 0, 0, 0.34);
+      --elevation-sticky-top: 0 -4px 16px rgba(0, 0, 0, 0.30), 0 -1px 2px rgba(0, 0, 0, 0.16);
+      --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      --shadow-recessed: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-recessed-strong: inset 0 1.5px 3px rgba(0, 0, 0, 0.42);
+   }
 }
 
 :root[data-theme="dark"] {
-  --color-surface: #121516;
-  --color-surface-container-lowest: #0d1011;
-  --color-surface-container-low: #171b1c;
-  --color-surface-container: #1c2022;
-  --color-surface-container-high: #272c2e;
-  --color-surface-container-highest: #32383a;
-  --color-on-surface: #e7ebec;
-  --color-on-surface-muted: #a4adaf;
-  --color-border: #33393a;
-  --color-brand-accent-active: #4ade80;
+   --color-surface: #121516;
+   --color-surface-container-lowest: #0d1011;
+   --color-surface-container-low: #171b1c;
+   --color-surface-container: #1c2022;
+   --color-surface-container-high: #272c2e;
+   --color-surface-container-highest: #32383a;
+   --color-on-surface: #e7ebec;
+   --color-on-surface-muted: #a4adaf;
+   --color-border: #33393a;
+   --color-outline: #8c9388;
+   --color-outline-variant: #43494a;
 
-  --color-success: #4ade80;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-stock-alert: #fb7185;
+   --color-brand-accent: #4ade80 !important;
+   --color-brand-accent-contrast: #052e16 !important;
+   --color-brand-accent-active: #38c86d !important;
 
-  --color-success-container: #0f3d20;
-  --color-on-success-container: #a6e6b8;
-  --color-warning-container: #4a3300;
-  --color-on-warning-container: #ffd48a;
-  --color-danger-container: #5c1712;
-  --color-on-danger-container: #ffb4ab;
+   --color-success: #4ade80;
+   --color-warning: #fbbf24;
+   --color-danger: #f87171;
+   --color-stock-alert: #fb7185;
 
-  --color-on-success: #0d4d21;
-  --color-on-warning: #4a3300;
-  --color-on-danger: #690005;
+   --color-brand-container: #0f3d20;
+   --color-on-brand-container: #a6e6b8;
+   --color-success-container: #0f3d20;
+   --color-on-success-container: #a6e6b8;
+   --color-warning-container: #4a3300;
+   --color-on-warning-container: #ffd48a;
+   --color-danger-container: #5c1712;
+   --color-on-danger-container: #ffb4ab;
 
-  --color-outline-variant: #43494a;
+   --color-on-success: #0d4d21;
+   --color-on-warning: #4a3300;
+   --color-on-danger: #690005;
 
-  --color-inverse-surface: #e7ebec;
-  --color-inverse-on-surface: #262b2c;
+   --color-inverse-surface: #e7ebec;
+   --color-inverse-on-surface: #262b2c;
 
-  --color-badge-bg: #e7ebec;
-  --color-badge-fg: #14181a;
-  --color-badge-alert-bg: #fca5a5;
-  --color-badge-alert-fg: #7f1d1d;
+   --color-badge-bg: #e7ebec;
+   --color-badge-fg: #14181a;
+   --color-badge-alert-bg: #fca5a5;
+   --color-badge-alert-fg: #7f1d1d;
 
-  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
-  --elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
-  --elevation-4: 0 6px 12px rgba(0, 0, 0, 0.50);
-  --elevation-5: 0 8px 16px rgba(0, 0, 0, 0.55);
-  --elevation-sticky-top: 0 -2px 4px rgba(0, 0, 0, 0.35);
+   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 6px -1px rgba(0, 0, 0, 0.20);
+   --elevation-2: 0 4px 8px -2px rgba(0, 0, 0, 0.38), 0 2px 4px -1px rgba(0, 0, 0, 0.22);
+   --elevation-3: 0 8px 16px -4px rgba(0, 0, 0, 0.46), 0 4px 6px -2px rgba(0, 0, 0, 0.26);
+   --elevation-4: 0 12px 22px -4px rgba(0, 0, 0, 0.52), 0 6px 10px -3px rgba(0, 0, 0, 0.30);
+   --elevation-5: 0 18px 28px -6px rgba(0, 0, 0, 0.58), 0 8px 14px -4px rgba(0, 0, 0, 0.34);
+   --elevation-sticky-top: 0 -4px 16px rgba(0, 0, 0, 0.30), 0 -1px 2px rgba(0, 0, 0, 0.16);
+   --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+   --shadow-recessed: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+   --shadow-recessed-strong: inset 0 1.5px 3px rgba(0, 0, 0, 0.42);
 }

@@ -17,32 +17,57 @@ function generateCode() {
   return (new DataView(bytes.buffer).getUint32(0) % 1_000_000).toString().padStart(6, "0");
 }
 
-export async function sendVerificationCode(db: SupabaseClient, actor: User) {
-  const { data: profile, error } = await db.from("users").select("id, full_name, account_type, email_verified, email_verification_expires_at").eq("id", actor.id).maybeSingle();
-  if (error) throw new HttpError(500, "PROFILE_QUERY_FAILED", error.message);
-  if (!profile || profile.account_type !== "BUSINESS_OWNER") throw new HttpError(403, "FORBIDDEN", "Only a business owner may verify email");
-  if (profile.email_verified) throw new HttpError(409, "ALREADY_VERIFIED", "Email is already verified");
-  if (profile.email_verification_expires_at && Date.now() - (new Date(profile.email_verification_expires_at).getTime() - CODE_TTL_MS) < RESEND_COOLDOWN_MS) throw new HttpError(429, "RATE_LIMITED", "Wait before requesting another code");
-
+export async function issueVerificationCode(
+  db: SupabaseClient,
+  userId: string,
+  fullName: string,
+  email: string,
+  options: { suppressEmailError?: boolean } = {}
+) {
   const code = generateCode();
-  const { error: updateError } = await db.from("users").update({ email_verification_code_hash: await sha256(code), email_verification_expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(), email_verification_attempts: 0 }).eq("id", actor.id);
+  const { error: updateError } = await db.from("users").update({
+    email_verification_code_hash: await sha256(code),
+    email_verification_expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
+    email_verification_attempts: 0,
+  }).eq("id", userId);
   if (updateError) throw new HttpError(500, "UPDATE_FAILED", "Could not store verification code");
 
   if (process.env.NODE_ENV !== "production" && process.env.DEV_LOG_VERIFICATION_CODES === "true") {
     console.warn("[DEV ONLY] Verification-code logging is enabled. Disable DEV_LOG_VERIFICATION_CODES outside local development.");
-    console.log(`[DEV ONLY] Verification code for user ${actor.id}: ${code}`);
+    console.log(`[DEV ONLY] Verification code for user ${userId}: ${code}`);
   }
 
-  const rendered = renderVerificationEmail(profile.full_name, code);
+  const rendered = renderVerificationEmail(fullName, code);
   try {
-    await sendEmail({ to: actor.email ?? "", ...rendered });
+    await sendEmail({ to: email, ...rendered });
   } catch (error) {
     console.error("Verification email delivery failed", error instanceof Error ? error.message : "unknown error");
-    const cleanup = await db.from("users").update({ email_verification_code_hash: null, email_verification_expires_at: null, email_verification_attempts: 0 }).eq("id", actor.id);
-    if (cleanup.error) console.error("Verification-code cleanup failed", cleanup.error.message);
-    throw emailDeliveryHttpError(error);
+    if (!options.suppressEmailError) {
+      throw emailDeliveryHttpError(error);
+    }
   }
   return { status: "sent" };
+}
+
+export async function sendVerificationCode(db: SupabaseClient, actor: User) {
+  const { data: profile, error } = await db.from("users").select("id, full_name, account_type, email_verified, email_verification_expires_at, business_id").eq("id", actor.id).maybeSingle();
+  if (error) throw new HttpError(500, "PROFILE_QUERY_FAILED", error.message);
+  if (!profile || profile.account_type !== "BUSINESS_OWNER") throw new HttpError(403, "FORBIDDEN", "Only a business owner may verify email");
+  if (profile.email_verified) throw new HttpError(409, "ALREADY_VERIFIED", "Email is already verified");
+  // The verification code email may only go out after the business has been
+  // approved (business_status='verified'). It is dispatched by the admin
+  // approval action; resends are also gated here so no code can be requested
+  // while the account is still awaiting approval.
+  if (profile.business_id) {
+    const { data: business, error: bizError } = await db.from("business_profile").select("status").eq("id", profile.business_id).maybeSingle();
+    if (bizError) throw new HttpError(500, "BUSINESS_QUERY_FAILED", bizError.message);
+    if (business && business.status !== "verified" && business.status !== "active") {
+      throw new HttpError(403, "APPROVAL_REQUIRED", "Verification emails are sent once your account is approved.");
+    }
+  }
+  if (profile.email_verification_expires_at && Date.now() - (new Date(profile.email_verification_expires_at).getTime() - CODE_TTL_MS) < RESEND_COOLDOWN_MS) throw new HttpError(429, "RATE_LIMITED", "Wait before requesting another code");
+
+  return issueVerificationCode(db, actor.id, profile.full_name, actor.email ?? "");
 }
 
 export function emailDeliveryHttpError(error: unknown) {

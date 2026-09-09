@@ -2,34 +2,58 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Receipt, BarChart3, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  Receipt,
+  BarChart3,
+  Settings,
+  ClipboardCheck,
+  UserCircle,
+} from "lucide-react";
 
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import type { AccountType } from "@/features/auth/authorization";
 import { AlertBadge } from "@/components/ui/AlertBadge";
 
 /**
- * One UI's bottom interaction area: primary navigation stays within thumb
- * reach at all times. Prefetched links ensure instant sub-16ms page transitions.
+ * Samsung One UI bottom interaction area:
+ * Exactly 5 buttons keep touch targets roomy and thumb-reachable on mobile.
+ * Adapts dynamically:
+ * - Business Owner & Admin: Dashboard | Sell | Products | Reports | Settings
+ * - Worker: Dashboard | Sell | Products | Stock | Profile
  */
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, accountTypes: ["ADMIN", "BUSINESS_OWNER"] as AccountType[] },
-  { href: "/pos", label: "Sell", icon: Receipt, accountTypes: ["ADMIN", "BUSINESS_OWNER", "WORKER"] as AccountType[] },
-  { href: "/products", label: "Products", icon: Package, accountTypes: ["ADMIN", "BUSINESS_OWNER", "WORKER"] as AccountType[] },
-  { href: "/reports", label: "Reports", icon: BarChart3, accountTypes: ["ADMIN", "BUSINESS_OWNER"] as AccountType[] },
-  { href: "/settings", label: "Settings", icon: Settings, accountTypes: ["ADMIN", "BUSINESS_OWNER"] as AccountType[] },
+const OWNER_NAV = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
+  { href: "/pos", label: "Sell", icon: Receipt },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
+] as const;
+
+const WORKER_NAV = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
+  { href: "/pos", label: "Sell", icon: Receipt },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/stock-count", label: "Stock", icon: ClipboardCheck },
+  { href: "/profile", label: "Profile", icon: UserCircle },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
 
-  const allowedItems = NAV_ITEMS.filter((item) => item.accountTypes.includes(user.accountType ?? "WORKER"));
+  const isOwnerOrAdmin = user.accountType === "BUSINESS_OWNER" || user.accountType === "ADMIN";
+  const items = isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV;
 
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] gpu-layer">
-      {allowedItems.map((item) => {
-        const isActive = pathname.startsWith(item.href);
+    <nav
+      aria-label="Main navigation"
+      className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] gpu-layer"
+    >
+      {items.map((item) => {
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
         const Icon = item.icon;
         return (
           <Link
@@ -48,7 +72,7 @@ export function BottomNav() {
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
-              {item.href === "/dashboard" && <AlertBadge />}
+              {"badge" in item && item.badge && <AlertBadge />}
             </span>
             {item.label}
           </Link>

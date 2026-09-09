@@ -50,4 +50,19 @@ describe("callBackend", () => {
       message: "An account with this email already exists. Sign in instead.",
     }));
   });
+
+  it("surfaces ACCOUNT_NOT_APPROVED error when business is pending approval", async () => {
+    getSession.mockResolvedValue({ data: { session: { access_token: "token-1" } } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({
+      error: { code: "ACCOUNT_NOT_APPROVED", message: "Account is not approved. Please wait for approval." },
+    }, { status: 403 }));
+
+    const request = callBackend("account-context", {});
+
+    await expect(request).rejects.toEqual(expect.objectContaining<Partial<BackendError>>({
+      status: 403,
+      code: "ACCOUNT_NOT_APPROVED",
+      message: "Account is not approved. Please wait for approval.",
+    }));
+  });
 });

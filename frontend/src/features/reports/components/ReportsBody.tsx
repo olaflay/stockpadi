@@ -127,7 +127,7 @@ export function ReportsBody({
             {formatCurrency(periodNetProfit)}
           </p>
           {showProfitBreakdown && (
-            <div className="mt-3 space-y-1.5 border-t border-border pt-3 animate-step-in">
+            <div className="mt-3 space-y-2 rounded-xl bg-surface-container-high/50 p-3 animate-step-in">
               <div className="flex justify-between text-[length:var(--font-size-caption)]">
                 <span className="text-on-surface-muted">Revenue (sales)</span>
                 <span className="font-number tabular-nums text-on-surface">{formatCurrency(totalRevenue)}</span>
@@ -140,7 +140,7 @@ export function ReportsBody({
                 <span className="text-on-surface-muted">Expenses</span>
                 <span className="font-number tabular-nums text-danger">-{formatCurrency(totalExpenses)}</span>
               </div>
-              <div className="flex justify-between border-t border-border pt-1.5 text-[length:var(--font-size-body)] font-medium">
+              <div className="flex justify-between pt-1 text-[length:var(--font-size-body)] font-semibold">
                 <span className="text-on-surface">Net profit</span>
                 <span className={`font-number tabular-nums ${computedNetProfit >= 0 ? "text-success" : "text-danger"}`}>
                   {formatCurrency(computedNetProfit)}
@@ -173,7 +173,7 @@ export function ReportsBody({
             {formatCurrency(periodNetCashFlow)}
           </p>
           {showCashFlowBreakdown && (
-            <div className="mt-3 space-y-1.5 border-t border-border pt-3 animate-step-in">
+            <div className="mt-3 space-y-2 rounded-xl bg-surface-container-high/50 p-3 animate-step-in">
               <div className="flex justify-between text-[length:var(--font-size-caption)]">
                 <span className="text-on-surface-muted">Cash received (sales)</span>
                 <span className="font-number tabular-nums text-on-surface">{formatCurrency(totalRevenue)}</span>
@@ -186,7 +186,7 @@ export function ReportsBody({
                 <span className="text-on-surface-muted">Restock payments</span>
                 <span className="font-number tabular-nums text-danger">-{formatCurrency(totalRestocks)}</span>
               </div>
-              <div className="flex justify-between border-t border-border pt-1.5 text-[length:var(--font-size-body)] font-medium">
+              <div className="flex justify-between pt-1 text-[length:var(--font-size-body)] font-semibold">
                 <span className="text-on-surface">Net cash flow</span>
                 <span className={`font-number tabular-nums ${computedNetCashFlow >= 0 ? "text-success" : "text-danger"}`}>
                   {formatCurrency(computedNetCashFlow)}
@@ -206,7 +206,7 @@ export function ReportsBody({
       <RippleLink
         href="/expenses"
         aria-label={`View expenses: ${formatCurrency(periodExpensesTotal)}`}
-        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left hover:bg-surface-container transition-colors"
+        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.warning}`}>
@@ -227,7 +227,7 @@ export function ReportsBody({
       <RippleLink
         href="/purchases"
         aria-label={`View restocks: ${formatCurrency(periodPurchasesTotal)}`}
-        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left hover:bg-surface-container transition-colors"
+        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONE_CLASSES.success}`}>
@@ -256,7 +256,7 @@ export function ReportsBody({
             {bestSellers.map(({ product, quantity }, idx) => (
               <li
                 key={product?.id ?? quantity}
-                className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3"
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <PerformancePill
@@ -288,7 +288,7 @@ export function ReportsBody({
         ) : (
           <ul className="flex flex-col gap-2">
             {lowStockProducts.map((product) => (
-              <li key={product.id} className="rounded-[var(--radius-card)] border border-border px-4 py-3">
+              <li key={product.id} className="rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-[length:var(--font-size-body)] text-on-surface">
                 {product.name}
               </li>
             ))}

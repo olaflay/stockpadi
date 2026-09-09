@@ -59,16 +59,14 @@ export default function ReportsPage() {
 
   if (result.sales.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Reports" hideBack={true} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            illustration={EmptySalesIllustration}
-            title="No sales yet"
-            description="Reports fill in once the first sale is recorded on any branch."
-            action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
-          />
-        </div>
+        <EmptyState
+          illustration={EmptySalesIllustration}
+          title="No sales yet"
+          description="Reports fill in once the first sale is recorded on any branch."
+          action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
+        />
       </div>
     );
   }

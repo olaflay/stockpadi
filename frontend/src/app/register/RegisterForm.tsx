@@ -14,11 +14,11 @@ import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { RegisterIllustration } from "@/components/illustrations/RegisterIllustration";
 import { TextInput } from "@/components/ui/TextInput";
 import { callBackend } from "@/features/auth/backend-client";
-import { sendVerificationEmail } from "@/features/auth/verification-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 import { sanitizeString } from "@/lib/sanitize";
+import { isPasswordPwned } from "@/lib/pwned-passwords";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -63,7 +63,7 @@ export default function RegisterForm() {
       });
       if (error) throw error;
     } catch {
-      setError("Could not register with Google.");
+      setError("Google sign-up didn't work. Check your connection and try again.");
       setBusy(false);
     }
   }
@@ -71,7 +71,7 @@ export default function RegisterForm() {
   async function handleSubmit() {
     setError(null);
     if (!formComplete) {
-      setError("Fill out every field before continuing — password needs at least 8 characters.");
+      setError("Fill in all fields. Password must have at least 8 characters.");
       return;
     }
     if (!isOnline) {
@@ -83,13 +83,23 @@ export default function RegisterForm() {
 
     setBusy(true);
     try {
+      if (await isPasswordPwned(password)) {
+        setError("This password has appeared in a data breach. Please choose a different one.");
+        setBusy(false);
+        return;
+      }
+
       const defaultTemplate = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") || BUSINESS_TYPE_TEMPLATES[0];
 
       const cleanFullName = sanitizeString(fullName);
       const cleanBusinessName = sanitizeString(businessName);
       const cleanEmail = email.trim().toLowerCase();
 
-      const registration = await callBackend<{ userId: string; businessId?: string }>("register-business", {
+      const registration = await callBackend<{
+        userId: string;
+        businessId?: string;
+        branch?: { id: string; name: string; isActive?: boolean };
+      }>("register-business", {
         email: cleanEmail,
         password,
         fullName: cleanFullName,
@@ -99,7 +109,7 @@ export default function RegisterForm() {
 
       // Sign in to establish local session JWT
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -111,6 +121,16 @@ export default function RegisterForm() {
 
       const userId = signInData.user.id;
       if (registration.businessId) await setLocalBusinessId(registration.businessId);
+
+      const branchRecord = registration.branch
+        ? { id: registration.branch.id, name: registration.branch.name, isActive: true }
+        : { id: crypto.randomUUID(), name: "Main branch", isActive: true };
+
+      // Ensure theme defaults to system theme for the new user
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("stockpadi-theme");
+        document.documentElement.removeAttribute("data-theme");
+      }
 
       // Seed local IndexedDB
       await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
@@ -124,7 +144,7 @@ export default function RegisterForm() {
         await db.categories.bulkPut(
           await withLocalBusinessIds(defaultTemplate.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })))
         );
-        await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
+        await db.branches.put(await withLocalBusinessId(branchRecord));
         await db.localUsers.put({
           id: userId,
           fullName: cleanFullName,
@@ -137,14 +157,13 @@ export default function RegisterForm() {
 
       await startSession(userId);
 
-      const verification = await sendVerificationEmail();
-      if (!verification.ok) {
-        showToast("Account created, but the verification email could not be sent. Use Resend from the app.", "warning");
-      }
-
-      if (verification.ok) showToast("Account created. Welcome to StockPadi!", "success");
-      // Seamlessly transition into the interactive Onboarding walk
-      router.replace("/onboarding");
+      showToast(
+        "Account created. We'll review your store and email a verification code once it's approved.",
+        "success"
+      );
+      // Admin approval gate — the verification email is sent only after an
+      // admin approves the account, so the user waits on /pending-approval.
+      router.replace("/pending-approval");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
@@ -217,7 +236,7 @@ export default function RegisterForm() {
             </>
           )}
 
-          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low p-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
                 Full name
@@ -255,7 +274,7 @@ export default function RegisterForm() {
                 id="register-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@domain.com"
+                placeholder="johnsonaimus@gmail.com"
                 type="email"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -306,7 +325,7 @@ export default function RegisterForm() {
         </form>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-border px-6 py-4 shrink-0">
+      <div className="flex flex-col gap-3 px-6 py-4 shrink-0">
         <RippleButton
           id="register-submit"
           type="button"

@@ -13,7 +13,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
-import { parseProductCsv, buildSampleCsv, type CsvImportResult } from "@/features/inventory/csv-import";
+import { parseProductFile, buildSampleExcel, buildErrorReportCsv, type ImportResult } from "@/features/inventory/product-import";
 import { importProducts } from "@/features/inventory/import-products";
 import { countActiveProducts } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP, PRODUCT_CAP_WARN_AT } from "@/config/limits";
@@ -22,7 +22,7 @@ const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: boolean }> = [
   { key: "name", label: "Product name", note: "What your customers call it.", required: true },
-  { key: "sku", label: "SKU / code", note: "Your own short code, e.g. SMP-001. Must be unique.", required: true },
+  { key: "sku", label: "SKU / code", note: "Optional. Leave blank and we'll make one from the product name." },
   { key: "barcode", label: "Barcode", note: "Leave blank if you don't scan barcodes." },
   { key: "costPrice", label: "Cost price", note: "Numbers only, no currency symbol, e.g. 1200.", required: true },
   { key: "sellPrice", label: "Selling price", note: "What the customer pays. Numbers only, e.g. 1500.", required: true },
@@ -57,7 +57,7 @@ export default function ImportProductsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [result, setResult] = useState<CsvImportResult | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [willExceedCap, setWillExceedCap] = useState(false);
   const [willWarnCap, setWillWarnCap] = useState(false);
 
@@ -70,13 +70,24 @@ export default function ImportProductsPage() {
     );
   }
 
-  const handleDownloadSample = () => {
-    const csv = buildSampleCsv();
+  const handleDownloadSample = async () => {
+    const blob = await buildSampleExcel();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "stockpadi-products-template.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadErrorReport = () => {
+    if (!result || result.errors.length === 0) return;
+    const csv = buildErrorReportCsv(result.errors);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "stockpadi-products-template.csv";
+    a.download = "stockpadi-import-errors.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -90,7 +101,7 @@ export default function ImportProductsPage() {
     setWillExceedCap(false);
     setWillWarnCap(false);
     try {
-      const parsed = await parseProductCsv(selected);
+      const parsed = await parseProductFile(selected);
       setResult(parsed);
 
       if (parsed.validRows.length > 0) {
@@ -103,7 +114,7 @@ export default function ImportProductsPage() {
         setWillWarnCap(false);
       }
     } catch {
-      showToast("We couldn't read that file. Check it's a .csv and try again.", "danger");
+      showToast("We couldn't read that file. Check it's an .xlsx or .txt file and try again.", "danger");
       setResult(null);
     } finally {
       setIsParsing(false);
@@ -115,6 +126,10 @@ export default function ImportProductsPage() {
 
   const handleImport = async () => {
     if (!result || result.validRows.length === 0) return;
+    if (result.errors.length > 0) {
+      showToast("Fix every row first. Nothing is imported until the whole file is valid.", "warning");
+      return;
+    }
     if (hasInitialStock && !effectiveBranchId) {
       showToast("Choose which branch this starting stock is at first.", "warning");
       return;
@@ -127,7 +142,10 @@ export default function ImportProductsPage() {
     setIsImporting(true);
     try {
       await importProducts(result.validRows, user, effectiveBranchId);
-      showToast(`Imported ${result.validRows.length} products`, "success");
+      showToast(
+        `Imported ${result.validRows.length} product${result.validRows.length === 1 ? "" : "s"}. Syncing in the background.`,
+        "success"
+      );
       router.push("/products");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "We couldn't finish the import. Try again.", "danger");
@@ -153,7 +171,7 @@ export default function ImportProductsPage() {
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
         >
           <Download size={18} aria-hidden />
-          Download template file (Excel / CSV)
+          Download template file (Excel .xlsx)
         </RippleButton>
         <p className="mt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
           Opens in Excel, Google Sheets, or Numbers. Fill it in like a spreadsheet, save it, and upload it in the next step.
@@ -189,10 +207,10 @@ export default function ImportProductsPage() {
           </span>
           {!isParsing && (
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              {file ? file.name : ".csv file from the template above"}
+              {file ? file.name : ".xlsx file from the template above"}
             </span>
           )}
-          <input type="file" accept=".csv" onChange={handleFileSelect} className="sr-only" />
+          <input type="file" accept=".xlsx,.txt,.csv" onChange={handleFileSelect} className="sr-only" />
         </label>
 
         {result && (
@@ -201,7 +219,7 @@ export default function ImportProductsPage() {
               <div className="flex flex-1 items-center gap-2 rounded-[var(--radius-card)] bg-success/10 p-3 text-success">
                 <CheckCircle2 size={18} aria-hidden />
                 <span>
-                  <span className="block text-2xl font-bold tabular-nums">{result.validRows.length}</span>
+                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.validRows.length}</span>
                   <span className="text-[length:var(--font-size-caption)]">Ready to import</span>
                 </span>
               </div>
@@ -212,7 +230,7 @@ export default function ImportProductsPage() {
               >
                 <AlertCircle size={18} aria-hidden />
                 <span>
-                  <span className="block text-2xl font-bold tabular-nums">{result.errors.length}</span>
+                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.errors.length}</span>
                   <span className="text-[length:var(--font-size-caption)]">Need fixing</span>
                 </span>
               </div>
@@ -220,16 +238,28 @@ export default function ImportProductsPage() {
 
             {result.errors.length > 0 && (
               <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4">
-                <h3 className="mb-2 text-[length:var(--font-size-label)] font-semibold text-on-surface">
-                  Fix these rows, then choose the file again
+                <h3 className="mb-1 text-[length:var(--font-size-label)] font-semibold text-on-surface">
+                  {result.errors.length} {result.errors.length === 1 ? "row needs" : "rows need"} fixing
                 </h3>
+                <p className="mb-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
+                  Nothing is imported until every row is fixed. Download the error report, correct those rows in your
+                  file, and choose it again.
+                </p>
+                <RippleButton
+                  type="button"
+                  onClick={handleDownloadErrorReport}
+                  className="mb-3 flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+                >
+                  <Download size={18} aria-hidden />
+                  Download error report
+                </RippleButton>
                 <ul className="flex max-h-56 flex-col gap-2 overflow-y-auto">
                   {result.errors.map((err, i) => (
                     <li key={i} className="flex items-start gap-2 rounded-[var(--radius-card)] bg-surface-container px-3 py-2">
                       <AlertCircle size={16} aria-hidden className="mt-0.5 shrink-0 text-danger" />
                       <p className="text-[length:var(--font-size-caption)] text-on-surface">
                         <span className="font-semibold">Row {err.rowNum}</span>
-                        {err.field ? ` · ${err.field}` : ""} — {err.message}
+                        {err.field ? ` · ${err.field}: ` : ": "}{err.message}
                       </p>
                     </li>
                   ))}
@@ -239,7 +269,7 @@ export default function ImportProductsPage() {
 
             {willWarnCap && !willExceedCap && (
               <p className="rounded-[var(--radius-card)] bg-warning/10 px-4 py-3 text-[length:var(--font-size-caption)] text-on-surface">
-                Heads up: this file brings you close to the {PRODUCT_CAP}-product cap. That is fine — you can still import it.
+                Heads up: this file brings you close to the {PRODUCT_CAP}-product limit. You can still import it.
               </p>
             )}
             {willExceedCap && (
@@ -268,16 +298,32 @@ export default function ImportProductsPage() {
             </div>
           )}
 
+          {result.errors.length > 0 && (
+            <div role="alert" className="mb-4 rounded-[var(--radius-card)] bg-danger/10 px-4 py-3">
+              <p className="text-[length:var(--font-size-caption)] text-danger">
+                This file isn't valid yet. Fix the rows listed above and choose the file again. Nothing is imported
+                until every row is correct.
+              </p>
+            </div>
+          )}
+
           <RippleButton
             type="button"
             onClick={handleImport}
-            disabled={result.validRows.length === 0 || isImporting || willExceedCap}
+            disabled={
+              result.validRows.length === 0 || result.errors.length > 0 || isImporting || willExceedCap
+            }
             className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 transition-opacity"
           >
             {isImporting ? (
               <>
                 <Loader2 size={18} className="animate-spin" aria-hidden />
                 Importing…
+              </>
+            ) : result.errors.length > 0 ? (
+              <>
+                <AlertCircle size={18} aria-hidden />
+                Fix {result.errors.length} {result.errors.length === 1 ? "row" : "rows"} first
               </>
             ) : (
               <>

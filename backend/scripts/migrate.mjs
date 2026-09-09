@@ -45,6 +45,8 @@ async function runMigrations() {
         version TEXT PRIMARY KEY,
         applied_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE public._migrations ENABLE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE public._migrations FROM anon, authenticated;
     `);
 
     const { rows: supabaseRows } = await client.query(`SELECT version FROM supabase_migrations.schema_migrations`);
@@ -89,7 +91,7 @@ async function runMigrations() {
 
         // Handle case where migration statement was already partially applied / exists
         if (err.code === '42710' || err.code === '42P07' || err.message.includes('already exists')) {
-          console.warn(`[NOTICE] Object already exists in DB for ${file}, marking as applied.`);
+          console.warn(`[NOTICE] Object already exists during ${file}: (${err.code || 'ERR'}) ${err.message}. Recording version.`);
           await client.query(`INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [version, file]);
           await client.query(`INSERT INTO public._migrations (version) VALUES ($1) ON CONFLICT DO NOTHING`, [file]);
           count++;

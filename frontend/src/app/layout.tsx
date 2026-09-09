@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import { getBrandingConfig } from "@/config/branding";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -12,6 +14,8 @@ try {
   var t = localStorage.getItem("stockpadi-theme");
   if (t === "light" || t === "dark") {
     document.documentElement.setAttribute("data-theme", t);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
   }
 } catch (e) {}
 `;
@@ -28,9 +32,11 @@ if (typeof window !== "undefined" && typeof window.crypto !== "undefined" && !wi
 }
 `;
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const googleSansFlex = localFont({
+  src: "./fonts/google-sans-flex-latin.woff2",
+  variable: "--font-google-sans-flex",
+  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 const geistMono = Geist_Mono({
@@ -90,11 +96,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: branding.accentColor,
+  themeColor: "#0a6e4d",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  viewportFit: "cover" as const,
+  interactiveWidget: "overlays-content" as const,
 };
 
 const JSON_LD_SCHEMA = {
@@ -123,7 +130,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${googleSansFlex.variable} ${geistMono.variable} h-full antialiased`}
       style={{ "--color-brand-accent": branding.accentColor } as React.CSSProperties}
       suppressHydrationWarning
     >
@@ -137,6 +144,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
+          <ServiceWorkerRegister />
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

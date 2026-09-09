@@ -7,7 +7,7 @@ import type { Product } from "@/types/product";
 import type { RowState } from "@/features/purchases/use-update-stock";
 
 const inputClass =
-  "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
+  "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20";
 
 export function UpdateStockList({
   onBack,
@@ -44,10 +44,11 @@ export function UpdateStockList({
         />
         <input
           type="search"
+          aria-label="Search products"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search by name or SKU"
-          className={`${inputClass} pl-10`}
+          placeholder="Search products..."
+          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-10 text-center placeholder:text-center focus:text-left focus:placeholder:text-left text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all"
         />
       </div>
 
@@ -61,9 +62,8 @@ export function UpdateStockList({
             return (
               <li
                 key={product.id}
-                className={`rounded-[var(--radius-card)] border p-4 transition-colors ${
-                  dirty ? "border-brand-accent bg-brand-accent/5" : "border-border bg-surface"
-                }`}
+                className={`rounded-[var(--radius-card)] p-4 transition-colors ${dirty ? "bg-brand-accent/10" : "bg-surface-container-low"
+                  }`}
               >
                 <input
                   value={row.name}
@@ -119,7 +119,7 @@ export function UpdateStockList({
         </ul>
       )}
 
-      <div className="fixed bottom-16 left-0 right-0 z-10 border-t border-border bg-surface px-4 py-3">
+      <div className="fixed bottom-16 left-0 right-0 z-10 bg-surface/95 backdrop-blur-md px-4 py-3">
         <RippleButton
           type="button"
           onClick={onSave}

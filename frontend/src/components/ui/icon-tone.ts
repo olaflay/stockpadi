@@ -9,9 +9,9 @@ export type IconTone = "brand" | "success" | "warning" | "danger" | "neutral";
  * its active/inactive state is a selection signal, not a category label.
  */
 export const ICON_TONE_CLASSES: Record<IconTone, string> = {
-  brand: "bg-brand-accent/10 text-brand-accent",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  danger: "bg-danger/10 text-danger",
+  brand: "bg-brand-container text-on-brand-container",
+  success: "bg-success-container text-on-success-container",
+  warning: "bg-warning-container text-on-warning-container",
+  danger: "bg-danger-container text-on-danger-container",
   neutral: "bg-surface-container-high text-on-surface-muted",
 };

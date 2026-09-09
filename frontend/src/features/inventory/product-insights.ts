@@ -12,29 +12,35 @@ import { tenantArray } from "@/lib/local-tenant";
 export const LOW_STOCK_THRESHOLD = 5;
 export const EXPIRY_ALERT_WINDOW_DAYS = 7;
 
+/**
+ * Stock per product, computed from the append-only ledger. branchId null =
+ * consolidated across all branches (business-level view). Mirrors the ledger
+ * summation in use-dashboard-metrics.ts and pos/page.tsx so every screen
+ * reads quantity the same way — see .agents/rules/offline-sync-and-ledger.md.
+ */
+export async function getStockByProduct(
+  branchId: string | null = null
+): Promise<Map<string, number>> {
+  const stockByProduct = new Map<string, number>();
+  const movements =
+    branchId !== null
+      ? await tenantArray(db.stockMovements.where("branchId").equals(branchId))
+      : await tenantArray(db.stockMovements);
+  for (const movement of movements) {
+    stockByProduct.set(
+      movement.productId,
+      (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
+    );
+  }
+  return stockByProduct;
+}
+
 export async function getLowStockProductIds(
   defaultThreshold: number = LOW_STOCK_THRESHOLD,
   branchId: string | null = null
 ): Promise<Set<string>> {
   const products = await tenantArray(db.products);
-
-  const stockByProduct = new Map<string, number>();
-  if (branchId !== null) {
-    const movements = await tenantArray(db.stockMovements.where("branchId").equals(branchId));
-    for (const movement of movements) {
-      stockByProduct.set(
-        movement.productId,
-        (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
-      );
-    }
-  } else {
-    for (const movement of await tenantArray(db.stockMovements)) {
-      stockByProduct.set(
-        movement.productId,
-        (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
-      );
-    }
-  }
+  const stockByProduct = await getStockByProduct(branchId);
 
   return new Set(
     products

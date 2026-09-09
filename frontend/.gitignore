@@ -2,6 +2,14 @@ node_modules/
 .next/
 out/
 build/
+
+# Generated Service Worker & Workbox files
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/sw.js.LICENSE.txt
+
 coverage/
 .vitest/
 test-results/
@@ -9,6 +17,10 @@ playwright-report/
 *.tsbuildinfo
 next-env.d.ts
 *.log
+
+# Generated agent & tool files
+CLAUDE.md
+AGENTS.md
 
 # Private frontend configuration
 .env

@@ -8,13 +8,13 @@ import type { Product } from "@/types/product";
 import type { PurchaseLine } from "@/features/purchases/receive-purchase";
 
 const inputClass =
-  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface focus-visible:outline-none focus-visible:border-brand-accent focus-visible:ring-1 focus-visible:ring-brand-accent";
+  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20";
 
 const stepperClass =
-  "flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full border border-border bg-surface font-semibold text-[length:var(--font-size-title)] text-on-surface hover:bg-surface-container-high transition-colors";
+  "flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full bg-surface-container font-semibold text-[length:var(--font-size-title)] text-on-surface hover:bg-surface-container-high transition-colors";
 
 const stepperDisabledClass =
-  "border-border/40 bg-surface-container text-on-surface-muted opacity-40 cursor-not-allowed";
+  "bg-surface-container/40 text-on-surface-muted opacity-40 cursor-not-allowed";
 
 function sanitizeQuantity(raw: string): string {
   return raw.replace(/[^\d]/g, "").slice(0, 7);
@@ -73,11 +73,11 @@ export function RestockLineRow(props: {
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-[length:var(--font-size-body)] transition-colors">
+    <li className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-[length:var(--font-size-body)] transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-on-surface">{product.name}</p>
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+          <p className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
             {formatCurrency(line.unitCost)} / {product.unitLabel || "piece"}
           </p>
         </div>
@@ -151,7 +151,7 @@ export function RestockLineRow(props: {
         </label>
       </div>
 
-      <p className="text-right text-[length:var(--font-size-caption)] text-on-surface-muted">
+      <p className="text-right font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
         Line total: {formatCurrency(line.quantity * line.unitCost)}
       </p>
     </li>

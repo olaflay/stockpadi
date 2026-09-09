@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
-import { NairaIcon } from "@/components/ui/NairaIcon";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
@@ -51,7 +50,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   const [voiding, setVoiding] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
-  const sale = useLiveQuery(() => tenantGet<Sale>(db.sales, id), [id]);
+  const sale = useLiveQuery(async () => (await tenantGet<Sale>(db.sales, id)) ?? null, [id]);
   const products = useLiveQuery(() => tenantArray<Product>(db.products), [], []);
   const customer = useLiveQuery(
     async () => (sale?.customerId ? tenantGet<LocalCustomer>(db.customers, sale.customerId) : undefined),
@@ -154,7 +153,7 @@ export default function SaleDetailPage({ params }: PageProps) {
     setVoiding(true);
     try {
       await voidSale({ saleId: sale.id, branchId: sale.branchId });
-      showToast("Sale voided — stock has been restored.", "success");
+      showToast("Sale cancelled. Stock restored.", "success");
     } catch (err) {
       showToast(err instanceof VoidSaleError ? err.message : "Couldn't void this sale.", "danger");
     } finally {
@@ -181,57 +180,64 @@ export default function SaleDetailPage({ params }: PageProps) {
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="flex items-center justify-end gap-1 text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
-              <NairaIcon size={18} />
-              {formatCurrency(sale.total).replace(/[₦\s]/g, "")}
+            <p className="font-number text-[length:var(--font-size-title-lg)] font-semibold tabular-nums text-on-surface">
+              {formatCurrency(sale.total)}
             </p>
             {sale.voidedAt && <p className="text-[length:var(--font-size-caption)] font-medium text-danger">Cancelled</p>}
           </div>
         </section>
 
         <section>
-          <h2 className="mb-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Items</h2>
-          <ul className="divide-y divide-border">
-            {sale.items.map((item, index) => {
-              const product = products?.find((p) => p.id === item.productId);
-              return (
-                <li key={index} className="flex items-center justify-between gap-3 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[length:var(--font-size-body)] text-on-surface">
-                      <RippleLink
-                        href={`/products/${item.productId}`}
-                        className="inline-block hover:underline hover:text-brand-accent"
-                      >
-                        {product?.name ?? "Unknown product"}
-                      </RippleLink>
+          <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Items</h2>
+          {sale.items && sale.items.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {sale.items.map((item, index) => {
+                const product = products?.find((p) => p.id === item.productId);
+                return (
+                  <li key={index} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[length:var(--font-size-body)] text-on-surface">
+                        <RippleLink
+                          href={`/products/${item.productId}`}
+                          className="inline-block hover:underline hover:text-brand-accent"
+                        >
+                          {product?.name ?? "Unknown product"}
+                        </RippleLink>
+                      </p>
+                      <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                        {item.quantity} {item.unitLabel} × {formatCurrency(item.unitPrice)}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                      {formatCurrency(item.quantity * item.unitPrice - item.discount)}
                     </p>
-                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                      {item.quantity} {item.unitLabel} × {formatCurrency(item.unitPrice)}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
-                    {formatCurrency(item.quantity * item.unitPrice - item.discount)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="rounded-[var(--radius-card)] bg-surface-container-low px-3.5 py-3 text-center text-xs text-on-surface-muted">
+              No item breakdown recorded for this transaction.
+            </div>
+          )}
         </section>
 
         <section>
-          <h2 className="mb-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Payment</h2>
+          <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Payment</h2>
           {sale.payments.length === 1 ? (
-            <p className="text-[length:var(--font-size-body)] text-on-surface">
-              Paid: <span className="font-medium">{PAYMENT_LABELS[sale.payments[0].method]}</span>
-            </p>
+            <div className="rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
+              <p className="text-[length:var(--font-size-body)] text-on-surface">
+                Paid: <span className="font-medium">{PAYMENT_LABELS[sale.payments[0].method]}</span>
+              </p>
+            </div>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="flex flex-col gap-2">
               {sale.payments.map((payment, index) => (
-                <li key={index} className="flex items-center justify-between gap-3 py-2.5">
+                <li key={index} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
                   <span className="text-[length:var(--font-size-body)] text-on-surface">
                     {PAYMENT_LABELS[payment.method]}
                   </span>
-                  <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <span className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(payment.amount)}
                   </span>
                 </li>
@@ -252,7 +258,7 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-surface px-4 pt-3 pb-4 print:hidden">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4 print:hidden">
         <RippleButton
           type="button"
           onClick={shareReceipt}

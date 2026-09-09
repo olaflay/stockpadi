@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function StaffLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Staff & Access" />
+      <ScreenHeader title="Staff and access" />
       <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-20 w-full rounded-[var(--radius-card)]" />

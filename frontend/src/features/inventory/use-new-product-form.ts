@@ -18,6 +18,7 @@ import {
 import { writeNewProductOffline } from "@/features/inventory/product-offline-write";
 import { validateStartingStock } from "@/features/inventory/starting-stock";
 import { findProductReferenceConflict } from "@/features/inventory/product-references";
+import { generateFallbackSku } from "@/features/inventory/generate-sku";
 import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP } from "@/config/limits";
 
@@ -71,16 +72,6 @@ export function useNewProductForm(options?: { prefill?: string }) {
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
   const earlyInitialStockQty = Number(initialStock);
   const hasInitialStock = initialStock !== "" && Number.isFinite(earlyInitialStockQty) && earlyInitialStockQty > 0;
-
-  function generateFallbackSku(name: string): string {
-    const prefix = name
-      .trim()
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .slice(0, 4)
-      .toUpperCase() || "ITEM";
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}-${rand}`;
-  }
 
   // The live SKU-fill keeps its random tail stable while the user keeps
   // typing within the same name stem, so the field doesn't visibly jitter

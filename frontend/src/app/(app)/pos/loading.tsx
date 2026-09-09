@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function PosLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Sell" />
+      <ScreenHeader title="Sell" hideBack={true} />
       <Skeleton className="h-12 w-full" />
       <div className="flex gap-2">
         <Skeleton className="h-10 w-24 rounded-[var(--radius-control)]" />

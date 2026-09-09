@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { importProducts } from "@/features/inventory/import-products";
-import type { ParsedCsvRow } from "@/features/inventory/csv-import";
+import type { ParsedImportRow } from "@/features/inventory/product-import";
 import type { Product } from "@/types/product";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 
@@ -12,7 +12,7 @@ vi.mock("@/config/limits", () => ({
 
 const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner" };
 
-function row(num: number): ParsedCsvRow {
+function row(num: number): ParsedImportRow {
   return {
     rowNum: num,
     hasInitialStock: false,

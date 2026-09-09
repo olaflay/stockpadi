@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { formatCurrency } from "@/lib/format";
-import { fetchServerCustomers } from "@/features/customers/customer-client";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalCustomer } from "@/lib/db";
 
@@ -32,21 +31,11 @@ export default function CustomersPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const customersWithBalance = useLiveQuery(async () => {
-    let customers;
-    let balances;
-    let debtAges;
-    try {
-      const remote = await fetchServerCustomers();
-      customers = remote.customers.map((customer) => ({ id: customer.id, name: customer.name, phone: customer.phone, updatedAt: customer.updated_at }));
-      balances = new Map(remote.customers.map((customer) => [customer.id, customer.balance]));
-      debtAges = new Map<string, number>();
-    } catch {
-      [customers, balances, debtAges] = await Promise.all([
-        tenantArray<LocalCustomer>(db.customers),
-        getAllCustomerCreditBalances(),
-        getCustomerDebtAges(),
-      ]);
-    }
+    const [customers, balances, debtAges] = await Promise.all([
+      tenantArray<LocalCustomer>(db.customers),
+      getAllCustomerCreditBalances(),
+      getCustomerDebtAges(),
+    ]);
     const withBalances = customers.map((customer) => ({
       customer,
       balance: balances.get(customer.id) ?? 0,
@@ -84,7 +73,7 @@ export default function CustomersPage() {
   if (customersWithBalance === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -98,16 +87,14 @@ export default function CustomersPage() {
 
   if (customersWithBalance.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-[calc(100dvh-10rem)]">
-        <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
-        <div className="flex flex-1 items-center justify-center my-auto">
-          <EmptyState
-            icon={Users}
-            title="No customers yet"
-            description="Customers are added when you tag a sale as credit, at checkout."
-            action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
-          />
-        </div>
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
+        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
+        <EmptyState
+          icon={Users}
+          title="No customers yet"
+          description="Customers are added when you tag a sale as credit, at checkout."
+          action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
+        />
       </div>
     );
   }
@@ -118,17 +105,17 @@ export default function CustomersPage() {
     e.stopPropagation();
     if (!customer.phone) return;
     const shopName = businessProfile?.name ?? "StockPadi";
-    const message = `Hi ${customer.name}, this is a friendly reminder from ${shopName} — your outstanding balance is ${formatCurrency(Math.max(balance, 0))}. Please pay at your convenience. Thank you!`;
+    const message = `Hi ${customer.name}, gentle reminder from ${shopName}. Your balance is ${formatCurrency(Math.max(balance, 0))}. Please pay when convenient. Thank you.`;
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   };
 
   return (
     <div>
-      <ScreenHeader title="Customers Owing" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
 
       <div className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Total owed to you</p>
-        <p className="mt-1 text-[length:var(--font-size-display)] font-semibold text-on-surface">
+        <p className="mt-1 font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(totalOwed)}
         </p>
       </div>
@@ -141,7 +128,7 @@ export default function CustomersPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or phone"
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface"
+          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
         />
       </div>
 
@@ -155,7 +142,7 @@ export default function CustomersPage() {
               return (
                 <li
                   key={customer.id}
-                  className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 hover:bg-surface-container transition-colors"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 hover:bg-surface-container transition-colors"
                 >
                   <div
                     role="button"
@@ -177,9 +164,8 @@ export default function CustomersPage() {
                       </span>
                     )}
                     <p
-                      className={`text-[length:var(--font-size-body)] font-medium ${
-                        balance > 0 ? "text-on-surface" : "text-on-surface-muted"
-                      }`}
+                      className={`font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${balance > 0 ? "text-on-surface" : "text-on-surface-muted"
+                        }`}
                     >
                       {formatCurrency(Math.max(balance, 0))}
                     </p>

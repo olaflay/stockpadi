@@ -14,10 +14,15 @@
   --color-on-surface: var(--color-on-surface);
   --color-on-surface-muted: var(--color-on-surface-muted);
   --color-border: var(--color-border);
+  --color-outline: var(--color-outline);
+  --color-outline-variant: var(--color-outline-variant);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
+  --color-on-warning: var(--color-on-warning);
   --color-danger: var(--color-danger);
   --color-stock-alert: var(--color-stock-alert);
+  --color-brand-container: var(--color-brand-container);
+  --color-on-brand-container: var(--color-on-brand-container);
   --color-success-container: var(--color-success-container);
   --color-on-success-container: var(--color-on-success-container);
   --color-warning-container: var(--color-warning-container);
@@ -49,6 +54,10 @@
   --spacing-10: var(--space-10);
   --spacing-12: var(--space-12);
   --spacing-16: var(--space-16);
+  --spacing-gutter: var(--space-gutter);
+  --spacing-gutter-lg: var(--space-gutter-lg);
+  --spacing-section: var(--space-section);
+  --spacing-section-lg: var(--space-section-lg);
   --spacing-touch-target: var(--touch-target-min);
 
   --radius-xs: var(--radius-xs);
@@ -66,6 +75,9 @@
   --shadow-elevation-2: var(--elevation-2);
   --shadow-elevation-3: var(--elevation-3);
   --shadow-elevation-sticky-top: var(--elevation-sticky-top);
+  --shadow-inner-highlight: var(--shadow-inner-highlight);
+  --shadow-recessed: var(--shadow-recessed);
+  --shadow-recessed-strong: var(--shadow-recessed-strong);
 
   --motion-duration-short: var(--motion-duration-short);
   --motion-duration-medium: var(--motion-duration-medium);
@@ -75,7 +87,7 @@
   --easing-emphasized-decelerate: var(--easing-emphasized-decelerate);
   --easing-emphasized-accelerate: var(--easing-emphasized-accelerate);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-google-sans-flex);
   --font-mono: var(--font-geist-mono);
   --font-number: var(--font-family-number);
 }
@@ -89,9 +101,25 @@ a, button, input, select, textarea, [role="button"] {
   touch-action: manipulation;
 }
 
+/* Prevent iOS Safari from auto-zooming viewport on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 html,
 body {
-  max-width: 100vw;
+  width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
   background: var(--color-surface);
   color: var(--color-on-surface);
@@ -100,6 +128,20 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Eliminate browser scrollbar tracks on mobile from cutting in as side borders */
+@media (max-width: 768px) {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0px;
+    height: 0px;
+    background: transparent;
+  }
 }
 
 /* Typography & Numerals: Neue Helvetica for major number displays, prices, and stats */
@@ -168,6 +210,24 @@ body {
 
 .animate-step-in {
   animation: step-in var(--motion-duration-medium) var(--easing-standard);
+}
+
+/* Number "recount" pop — reaffirms a register change on the quantity badge,
+   line total, or cart total (POS tap, scan, or stepper press). Reuses the
+   motion tokens; transform-only so it stays on the compositor thread and
+   cannot cause layout shift (tabular-nums keeps glyph widths stable). */
+@keyframes count-pop {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-count-pop {
+  display: inline-block;
+  animation: count-pop var(--motion-duration-medium) var(--easing-emphasized-decelerate);
 }
 
 /* Toast entrance animation from top */
@@ -274,3 +334,40 @@ input:-webkit-autofill:active {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Tonal Container System (Google Tonal Fill — Zero Card Shadows) */
+.depth-card {
+  background-color: var(--color-surface-container);
+  box-shadow: none;
+}
+
+.depth-card-interactive {
+  background-color: var(--color-surface-container);
+  box-shadow: none;
+  transition: transform var(--motion-duration-short) var(--easing-standard),
+              background-color var(--motion-duration-short) var(--easing-standard);
+}
+
+.depth-card-interactive:hover {
+  background-color: var(--color-surface-container-high);
+  box-shadow: none;
+}
+
+.depth-card-interactive:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+.depth-bubble {
+  box-shadow: none;
+}
+
+.depth-recessed {
+  box-shadow: none;
+}
+
+/* Borderless tonal card variant */
+.depth-card-bordered {
+  background-color: var(--color-surface-container);
+  box-shadow: none;
+}

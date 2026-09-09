@@ -13,14 +13,14 @@ const USER_GUIDE_STEPS = [
   { title: "Add your products", body: "Products → the + button. Set a cost price and sell price; starting stock is optional." },
   { title: "Make a sale", body: "Sell tab → tap a product to add it to the cart → Complete sale. Works fully offline; it syncs once you're back online." },
   { title: "Track what's owed", body: "Tag a sale as Credit at checkout to link it to a customer. Their balance shows on the Customers screen." },
-  { title: "Close out your day", body: "Reports → Close day (guided) — counts your cash and shows what you made today." },
+  { title: "Close out your day", body: "Reports → Close day (cash count). Count your cash and see what you made today." },
 ];
 
 const FAQS = [
   { q: "Do I need the internet to make a sale?", a: "No. Sales, stock updates, and daily totals all work fully offline and sync automatically the next time you're online." },
-  { q: "Why is a product showing as low stock?", a: "Each product has a low-stock threshold — the default is 5, but you can set a custom one per product on its edit screen." },
-  { q: "How do I access the app?", a: "Sign in through the normal login screen with your email and password. Workers receive their generated password by email from the Business Owner." },
-  { q: "Can more than one person use the app?", a: "Yes — the Business Owner can add Workers under Staff & Access. Each Worker receives their own generated password and permissions." },
+  { q: "Why is a product showing as low stock?", a: "Each product has a low-stock level. The default is 5, but you can change it on the product edit screen." },
+  { q: "How do I access the app?", a: "Sign in with your email and password. Workers get their password directly from the shop owner." },
+  { q: "Can more than one person use the app?", a: "Yes. The shop owner can add staff under Staff & Access. Each worker gets their own password and role." },
 ];
 
 export default function HelpPage() {
@@ -49,7 +49,7 @@ export default function HelpPage() {
       <ScreenHeader title="Help & Support" onBack={() => router.back()} />
 
       {/* Review & Merchant Feedback Banner */}
-      <section className="flex flex-col gap-3 rounded-[var(--radius-focus-block)] border border-border bg-brand-accent/8 p-4">
+      <section className="flex flex-col gap-3 rounded-2xl bg-brand-accent/10 p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-accent/20 text-brand-accent">
             <HeartHandshake size={22} aria-hidden />
@@ -64,7 +64,7 @@ export default function HelpPage() {
         <RippleButton
           type="button"
           onClick={() => setReviewModalOpen(true)}
-          className="mt-1 flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body-sm)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity"
+          className="mt-1 flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body-sm)] font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 transition-opacity"
         >
           <Star size={16} className="fill-current" />
           <span>Leave a Review / Suggest Feature</span>
@@ -75,7 +75,7 @@ export default function HelpPage() {
         <h2 className="mb-3 px-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted uppercase tracking-wider">
           Resources
         </h2>
-        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
+        <div className="flex flex-col overflow-hidden rounded-2xl bg-surface-container">
           <button
             type="button"
             onClick={() => setUserGuideOpen((v) => !v)}
@@ -146,7 +146,7 @@ export default function HelpPage() {
         <h2 className="mb-3 px-1 text-[length:var(--font-size-label)] font-medium text-on-surface-muted uppercase tracking-wider">
           Contact Us
         </h2>
-        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
+        <div className="flex flex-col overflow-hidden rounded-2xl bg-surface-container">
           <a
             href={buildWhatsAppUrl(undefined, "Hi StockPadi Team, I have a question about my shop inventory...")}
             target="_blank"

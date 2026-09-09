@@ -84,7 +84,7 @@ export default function StockCountPage() {
   if (!hasAccountType(user, CAN_COUNT_STOCK)) {
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <PermissionDenied requiredAccountTypes={CAN_COUNT_STOCK} />
       </div>
     );
@@ -93,7 +93,7 @@ export default function StockCountPage() {
   if (branches === undefined || products === undefined) {
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <Skeleton className="h-40" />
       </div>
     );
@@ -104,34 +104,32 @@ export default function StockCountPage() {
   if (!effectiveBranchId) {
     if (branches.length === 0) {
       return (
-        <div className="flex min-h-[calc(100vh-140px)] flex-col">
-          <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
-          <div className="flex flex-1 items-center justify-center">
-            <EmptyState
-              icon={ClipboardList}
-              title="No branches yet"
-              description="Add a branch in Settings before counting stock."
-              action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
-            />
-          </div>
+        <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
+          <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+          <EmptyState
+            icon={ClipboardList}
+            title="No branches yet"
+            description="Add a branch in Settings before counting stock."
+            action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
+          />
         </div>
       );
     }
     return (
       <div>
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
         <div className="flex flex-col gap-2">
-            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch?</p>
-            {branches.map((branch) => (
-              <button
-                key={branch.id}
-                type="button"
-                onClick={() => setBranchId(branch.id)}
-                className="min-h-[var(--touch-target-min)] rounded-[var(--radius-card)] border border-border px-4 py-3 text-left text-[length:var(--font-size-body-lg)] text-on-surface hover:bg-surface-container transition-colors"
-              >
-                {branch.name}
-              </button>
-            ))}
+          <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch?</p>
+          {branches.map((branch) => (
+            <button
+              key={branch.id}
+              type="button"
+              onClick={() => setBranchId(branch.id)}
+              className="min-h-[var(--touch-target-min)] rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-left text-[length:var(--font-size-body-lg)] text-on-surface hover:bg-surface-container transition-colors"
+            >
+              {branch.name}
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -220,23 +218,21 @@ export default function StockCountPage() {
 
   if (products.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-140px)] flex-col">
-        <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
-        <div className="flex flex-1 items-center justify-center">
-          <EmptyState
-            icon={ClipboardList}
-            title="No products yet"
-            description="Add products before counting stock."
-            action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
-          />
-        </div>
+      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
+        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+        <EmptyState
+          icon={ClipboardList}
+          title="No products yet"
+          description="Add products before counting stock."
+          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+        />
       </div>
     );
   }
 
   return (
     <div>
-      <ScreenHeader title="Stock Count" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
 
       <div className="relative mb-3 w-full">
         <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted" aria-hidden />
@@ -246,7 +242,7 @@ export default function StockCountPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, SKU, or barcode"
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface"
+          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
         />
       </div>
 
@@ -261,7 +257,7 @@ export default function StockCountPage() {
                   type="button"
                   onClick={() => setActiveProduct(product)}
                   aria-label={`Count stock for ${product.name}`}
-                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left hover:bg-surface-container transition-colors"
+                  className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3 text-left hover:bg-surface-container transition-colors"
                 >
                   <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">{product.name}</p>
                   <p className="shrink-0 text-[length:var(--font-size-caption)] text-on-surface-muted">{product.sku}</p>

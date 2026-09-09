@@ -94,7 +94,7 @@ export default function PurchaseDetailPage({ params }: PageProps) {
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
+            <p className="font-number text-[length:var(--font-size-title-lg)] font-semibold tabular-nums text-on-surface">
               {formatCurrency(totalCost)}
             </p>
             {branch && (
@@ -116,11 +116,11 @@ export default function PurchaseDetailPage({ params }: PageProps) {
                     <p className="truncate text-[length:var(--font-size-body)] text-on-surface">
                       {product?.name ?? "Unknown Product"}
                     </p>
-                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                    <p className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
                       {item.quantity} {product?.unitLabel ?? "piece"} × {formatCurrency(item.unitCost)}
                     </p>
                   </div>
-                  <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(item.quantity * item.unitCost)}
                   </p>
                 </li>
