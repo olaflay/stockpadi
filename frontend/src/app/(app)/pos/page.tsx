@@ -54,7 +54,7 @@ function PosPageContent() {
 
   const stockByProduct = useLiveQuery(async () => {
     const branchId = resolveDefaultBranch(branches, user);
-    if (!branchId) return {};
+    if (!branchId) return undefined;
     const movements = await tenantArray<StockMovement>(
       db.stockMovements.where("branchId").equals(branchId)
     );
@@ -63,7 +63,7 @@ function PosPageContent() {
       map[m.productId] = (map[m.productId] ?? 0) + m.quantityDelta;
     }
     return map;
-  }, [branches], {});
+  }, [branches, user]);
 
   const result = useLiveQuery(async () => {
     try {
