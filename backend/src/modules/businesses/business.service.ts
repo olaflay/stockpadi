@@ -2,7 +2,6 @@ import type { User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { validateRegistration, type RegistrationRequest } from "./business.schema.js";
-import { issueVerificationCode } from "../auth/email-verification.service.js";
 
 export async function registerBusiness(request: RegistrationRequest, authenticatedUser?: User) {
   const db = supabaseAdmin();
@@ -28,20 +27,16 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (cleanup.error) console.error("Registration Auth compensation failed", cleanup.error);
     throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
   }
-  // Immediately generate initial verification token & attempt email dispatch
-  try {
-    await issueVerificationCode(db, created.data.user.id, request.fullName!, request.email!, { suppressEmailError: true });
-  } catch (err) {
-    console.error("Initial verification code generation warning", err);
-  }
-
+  // No verification email is sent at registration. The account is provisioned
+  // with business_status='pending'; the admin must approve it first, and the
+  // verification code email is dispatched from the approval action instead.
   const businessId = await findBusinessId(db, created.data.user.id);
   const branch = businessId ? await findDefaultBranch(db, businessId) : undefined;
   return {
     userId: created.data.user.id,
     businessId,
     branch,
-    accountState: "REGISTERED_UNVERIFIED",
+    accountState: "PENDING_ADMIN_APPROVAL",
     emailVerified: false,
   };
 }

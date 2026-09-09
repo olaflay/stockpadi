@@ -360,7 +360,7 @@ export default function NewPurchasePage() {
                               In list ×{added.quantity}
                             </span>
                           )}
-                          <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                          <span className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
                             {formatCurrency(p.costPrice)}
                           </span>
                         </span>
@@ -420,7 +420,7 @@ export default function NewPurchasePage() {
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex flex-col gap-3 border-t border-border bg-surface px-3.5 sm:px-5 pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
         <div className="flex items-end justify-between gap-3">
           <div className="flex flex-col">
             <span className="font-semibold text-on-surface">Total cost</span>

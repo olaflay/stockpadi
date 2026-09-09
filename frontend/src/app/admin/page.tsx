@@ -43,6 +43,7 @@ export default function SuperAdminTenantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "suspended" | "pending">("all");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchTenants = useCallback(async (isSilent = false) => {
@@ -109,6 +110,34 @@ export default function SuperAdminTenantsPage() {
     }
   }
 
+  async function approveTenant(tenantId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setApprovingId(tenantId);
+    try {
+      await callBackend("platform-api", {
+        action: "set_business_status",
+        businessId: tenantId,
+        status: "verified",
+      });
+      showToast(
+        "Store verified. Verification email sent to the owner.",
+        "success"
+      );
+      setTenants((prev) =>
+        prev.map((t) =>
+          t.id === tenantId
+            ? { ...t, is_active: true, status: "verified" }
+            : t
+        )
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to approve store.", "danger");
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
   function handleCopyId(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -121,8 +150,9 @@ export default function SuperAdminTenantsPage() {
   // Summary Metrics
   const metrics = useMemo(() => {
     const total = tenants.length;
-    const verified = tenants.filter((t) => t.is_active && t.status !== "suspended").length;
-    const suspended = tenants.filter((t) => !t.is_active || t.status === "suspended").length;
+    // Status is the source of truth; is_active is also true for 'pending'.
+    const verified = tenants.filter((t) => t.status === "verified").length;
+    const suspended = tenants.filter((t) => t.status === "suspended" || (!t.is_active && t.status !== "pending")).length;
     const pending = tenants.filter((t) => t.status === "pending").length;
     return { total, verified, suspended, pending };
   }, [tenants]);
@@ -138,8 +168,8 @@ export default function SuperAdminTenantsPage() {
 
       if (!matchesSearch) return false;
 
-      if (statusFilter === "verified") return t.is_active && t.status !== "suspended";
-      if (statusFilter === "suspended") return !t.is_active || t.status === "suspended";
+      if (statusFilter === "verified") return t.status === "verified";
+      if (statusFilter === "suspended") return t.status === "suspended" || (!t.is_active && t.status !== "pending");
       if (statusFilter === "pending") return t.status === "pending";
       return true;
     });
@@ -305,8 +335,9 @@ export default function SuperAdminTenantsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {filteredTenants.map((tenant) => {
-            const isVerified = tenant.is_active && tenant.status !== "suspended";
-            const isSuspended = !tenant.is_active || tenant.status === "suspended";
+            const isVerified = tenant.status === "verified";
+            const isSuspended = tenant.status === "suspended" || (!tenant.is_active && tenant.status !== "pending");
+            const isPending = tenant.status === "pending";
 
             return (
               <div
@@ -395,21 +426,34 @@ export default function SuperAdminTenantsPage() {
                     <ExternalLink size={13} />
                   </Link>
 
-                  {/* Status Toggle Button */}
-                  <RippleButton
-                    type="button"
-                    onClick={(e) => toggleTenantStatus(tenant.id, tenant.is_active, e)}
-                    disabled={togglingId === tenant.id}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-                      tenant.is_active
-                        ? "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20"
-                        : "border-success/40 bg-success/10 text-success hover:bg-success/20"
-                    }`}
-                    title={tenant.is_active ? "Suspend this business" : "Activate this business"}
-                  >
-                    <Power size={13} />
-                    <span>{tenant.is_active ? "Suspend" : "Activate"}</span>
-                  </RippleButton>
+                  {/* Status Toggle / Approve Button */}
+                  {isPending ? (
+                    <RippleButton
+                      type="button"
+                      onClick={(e) => approveTenant(tenant.id, e)}
+                      disabled={approvingId === tenant.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold border border-success/40 bg-success/10 text-success hover:bg-success/20 transition-all cursor-pointer shadow-xs"
+                      title="Verify this store and send the owner a verification code email"
+                    >
+                      <CheckCircle2 size={13} />
+                      <span>{approvingId === tenant.id ? "Approving…" : "Approve"}</span>
+                    </RippleButton>
+                  ) : (
+                    <RippleButton
+                      type="button"
+                      onClick={(e) => toggleTenantStatus(tenant.id, tenant.is_active, e)}
+                      disabled={togglingId === tenant.id}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
+                        tenant.is_active
+                          ? "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20"
+                          : "border-success/40 bg-success/10 text-success hover:bg-success/20"
+                      }`}
+                      title={tenant.is_active ? "Suspend this business" : "Activate this business"}
+                    >
+                      <Power size={13} />
+                      <span>{tenant.is_active ? "Suspend" : "Activate"}</span>
+                    </RippleButton>
+                  )}
                 </div>
               </div>
             );

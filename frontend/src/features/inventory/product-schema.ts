@@ -20,7 +20,7 @@ export const productFormSchema = z
     lowStockThreshold: z.coerce
       .number({ error: "Enter a stock alert number" })
       .min(0, "Alert number cannot be negative")
-      .default(5),
+      .optional(),
     unitLabel: z.string().trim().min(1, "Unit is required").default("piece"),
     altUnitLabel: z.string().trim().optional(),
     altUnitConversionFactor: z.coerce.number().optional(),

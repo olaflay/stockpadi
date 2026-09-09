@@ -181,7 +181,7 @@ export default function SaleDetailPage({ params }: PageProps) {
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="flex items-center justify-end gap-1 text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">
+            <p className="flex items-center justify-end gap-1 font-number text-[length:var(--font-size-title-lg)] font-semibold tabular-nums text-on-surface">
               <NairaIcon size={18} />
               {formatCurrency(sale.total).replace(/[₦\s]/g, "")}
             </p>
@@ -210,7 +210,7 @@ export default function SaleDetailPage({ params }: PageProps) {
                         {item.quantity} {item.unitLabel} × {formatCurrency(item.unitPrice)}
                       </p>
                     </div>
-                    <p className="shrink-0 text-[length:var(--font-size-body)] font-medium text-on-surface">
+                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                       {formatCurrency(item.quantity * item.unitPrice - item.discount)}
                     </p>
                   </li>
@@ -237,7 +237,7 @@ export default function SaleDetailPage({ params }: PageProps) {
                   <span className="text-[length:var(--font-size-body)] text-on-surface">
                     {PAYMENT_LABELS[payment.method]}
                   </span>
-                  <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
+                  <span className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
                     {formatCurrency(payment.amount)}
                   </span>
                 </li>
@@ -258,7 +258,7 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex flex-col gap-3 border-t border-border bg-surface px-3.5 sm:px-5 pt-3 pb-4 print:hidden">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4 print:hidden">
         <RippleButton
           type="button"
           onClick={shareReceipt}

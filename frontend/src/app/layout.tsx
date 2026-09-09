@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import { getBrandingConfig } from "@/config/branding";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
@@ -31,9 +32,11 @@ if (typeof window !== "undefined" && typeof window.crypto !== "undefined" && !wi
 }
 `;
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const googleSansFlex = localFont({
+  src: "./fonts/google-sans-flex-latin.woff2",
+  variable: "--font-google-sans-flex",
+  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 const geistMono = Geist_Mono({
@@ -127,7 +130,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${googleSansFlex.variable} ${geistMono.variable} h-full antialiased`}
       style={{ "--color-brand-accent": branding.accentColor } as React.CSSProperties}
       suppressHydrationWarning
     >

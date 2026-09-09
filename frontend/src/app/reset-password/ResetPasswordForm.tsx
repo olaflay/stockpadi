@@ -8,6 +8,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { getSupabase } from "@/lib/supabase";
+import { isPasswordPwned } from "@/lib/pwned-passwords";
 
 export default function ResetPasswordForm() {
   const isOnline = useOnlineStatus();
@@ -33,6 +34,12 @@ export default function ResetPasswordForm() {
 
     setBusy(true);
     try {
+      if (await isPasswordPwned(password)) {
+        setError("This password has appeared in a data breach. Please choose a different one.");
+        setBusy(false);
+        return;
+      }
+
       const supabase = getSupabase();
       if (!supabase) throw new Error("Supabase is not configured.");
       const { data: { session } } = await supabase.auth.getSession();

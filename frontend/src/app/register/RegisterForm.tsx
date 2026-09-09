@@ -14,11 +14,11 @@ import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { RegisterIllustration } from "@/components/illustrations/RegisterIllustration";
 import { TextInput } from "@/components/ui/TextInput";
 import { callBackend } from "@/features/auth/backend-client";
-import { sendVerificationEmail } from "@/features/auth/verification-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 import { sanitizeString } from "@/lib/sanitize";
+import { isPasswordPwned } from "@/lib/pwned-passwords";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -83,6 +83,12 @@ export default function RegisterForm() {
 
     setBusy(true);
     try {
+      if (await isPasswordPwned(password)) {
+        setError("This password has appeared in a data breach. Please choose a different one.");
+        setBusy(false);
+        return;
+      }
+
       const defaultTemplate = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") || BUSINESS_TYPE_TEMPLATES[0];
 
       const cleanFullName = sanitizeString(fullName);
@@ -151,19 +157,13 @@ export default function RegisterForm() {
 
       await startSession(userId);
 
-      try {
-        const verification = await sendVerificationEmail();
-        if (!verification.ok) {
-          showToast("Account created, but the verification email could not be sent. Use Resend from the verification page.", "warning");
-        } else {
-          showToast("Account created. A 6-digit verification code has been sent to your email.", "success");
-        }
-      } catch (mailErr) {
-        console.warn("Verification email dispatch warning", mailErr);
-        showToast("Account created. You can resend the code from the verification page.", "warning");
-      }
-      // Mandatory account verification gate
-      router.replace("/verify-email");
+      showToast(
+        "Account created. We'll review your store and email a verification code once it's approved.",
+        "success"
+      );
+      // Admin approval gate — the verification email is sent only after an
+      // admin approves the account, so the user waits on /pending-approval.
+      router.replace("/pending-approval");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {

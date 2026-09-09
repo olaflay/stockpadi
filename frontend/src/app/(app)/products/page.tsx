@@ -14,7 +14,7 @@ const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").th
 
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
-import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds } from "@/features/inventory/product-insights";
+import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds, getStockByProduct, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { EmptyShelfIllustration } from "@/components/illustrations";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -136,6 +136,16 @@ export default function ProductsPage() {
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
   const hasBranch = (branches?.length ?? 0) > 0;
 
+  // Consolidated stock across all branches (business-level view, matching the
+  // filter chips which run with branchId null). One read of the ledger per
+  // live-query refresh; the figures below are derived from it, never from a
+  // mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
+  const stockByProduct = useLiveQuery(
+    () => getStockByProduct(null),
+    [],
+    new Map<string, number>()
+  );
+
   const byFilter = result
     ? result.products.filter((product) => {
         if (product.archived) return false;
@@ -148,6 +158,9 @@ export default function ProductsPage() {
 
   const { exact, suggestions } = searchProductsFuzzy(byFilter, debouncedQuery);
   const filtered = [...exact, ...suggestions];
+
+  // Ledger-derived current stock for a product (see getStockByProduct above).
+  const stockFor = (product: Product) => stockByProduct.get(product.id) ?? 0;
 
   useEffect(() => {
     if (filtered.length <= visibleLimit) return;
@@ -218,10 +231,10 @@ export default function ProductsPage() {
 
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
       <ScreenHeader title="Products" hideBack={true} />
 
-      <div className="mb-3">
+      <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-3 border-b border-border bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
         <div className="flex gap-2">
           <div className="relative flex-1 min-w-0">
             <Search
@@ -271,7 +284,7 @@ export default function ProductsPage() {
               type="button"
               aria-pressed={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] transition-colors ${
+              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-full px-4 text-[length:var(--font-size-body)] transition-colors ${
                 filter === key
                   ? "bg-brand-accent text-brand-accent-contrast"
                   : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
@@ -402,9 +415,24 @@ export default function ProductsPage() {
                         {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                       </p>
                     </div>
-                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                      {formatCurrency(product.sellPrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                        {formatCurrency(product.sellPrice)}
+                      </p>
+                      <p
+                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${
+                          stockFor(product) === 0
+                            ? "text-danger"
+                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
+                              ? "text-warning"
+                              : "text-on-surface-muted"
+                        }`}
+                      >
+                        {stockFor(product) === 0
+                          ? "Out of stock"
+                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
+                      </p>
+                    </div>
                   </button>
                 ) : (
                   <RippleLink
@@ -417,9 +445,24 @@ export default function ProductsPage() {
                         {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
                       </p>
                     </div>
-                    <p className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                      {formatCurrency(product.sellPrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                        {formatCurrency(product.sellPrice)}
+                      </p>
+                      <p
+                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${
+                          stockFor(product) === 0
+                            ? "text-danger"
+                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
+                              ? "text-warning"
+                              : "text-on-surface-muted"
+                        }`}
+                      >
+                        {stockFor(product) === 0
+                          ? "Out of stock"
+                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
+                      </p>
+                    </div>
                   </RippleLink>
                 )}
               </li>

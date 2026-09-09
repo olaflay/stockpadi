@@ -140,7 +140,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
       <div className="rounded-[var(--radius-focus-block)] bg-surface-container p-5 text-center">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Balance owed</p>
-        <p className="mt-1 text-[length:var(--font-size-display)] font-semibold text-on-surface">
+        <p className="mt-1 font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(Math.max(balance, 0))}
         </p>
         {customer.phone && <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>}
@@ -186,7 +186,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
         <div className="flex flex-col gap-4">
           <div className="rounded-[var(--radius-card)] bg-surface-container p-3.5 text-center">
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Current balance owed</span>
-            <p className="text-[length:var(--font-size-title)] font-bold text-on-surface">
+            <p className="font-number text-[length:var(--font-size-title)] font-bold tabular-nums text-on-surface">
               {formatCurrency(Math.max(balance, 0))}
             </p>
           </div>
@@ -242,7 +242,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                     </p>
                   </div>
                   <p
-                    className={`shrink-0 text-[length:var(--font-size-body)] font-medium ${
+                    className={`shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${
                       movement.amountDelta > 0 ? "text-on-surface" : "text-success"
                     }`}
                   >

@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <GuidedTour />
             <BannerStrip />
             <SideDrawer />
-            <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">{children}</main>
+            <main className="flex-1 flex flex-col overflow-y-auto px-gutter sm:px-gutter-lg pt-4 sm:pt-5 pb-24 w-full max-w-lg mx-auto">{children}</main>
             <BottomNav />
           </div>
         </DrawerProvider>

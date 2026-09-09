@@ -298,16 +298,16 @@ export default function CloseDayPage() {
         )}
         <div className="flex justify-between items-center">
           <span className="text-on-surface-muted text-[length:var(--font-size-body)]">Today&apos;s total sales</span>
-          <span className="text-[length:var(--font-size-title)] font-bold text-on-surface">{formatCurrency(todaySalesTotal)}</span>
+          <span className="font-number text-[length:var(--font-size-title)] font-bold tabular-nums text-on-surface">{formatCurrency(todaySalesTotal)}</span>
         </div>
         <div className="flex justify-between text-[length:var(--font-size-caption)] text-on-surface-muted">
-          <span>Transactions: {todaySales.length}</span>
-          <span>Expenses: −{formatCurrency(todayExpensesTotal)}</span>
+          <span>Transactions: <span className="font-number tabular-nums">{todaySales.length}</span></span>
+          <span>Expenses: −<span className="font-number tabular-nums">{formatCurrency(todayExpensesTotal)}</span></span>
         </div>
         <hr className="border-border/60" />
         <div className="flex justify-between items-center">
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">Estimated net profit</span>
-          <span className={`text-[length:var(--font-size-body-lg)] font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
+          <span className={`font-number text-[length:var(--font-size-body-lg)] font-bold tabular-nums ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
             {formatCurrency(netProfit)}
           </span>
         </div>

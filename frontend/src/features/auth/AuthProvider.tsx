@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
         businessId: user.businessId,
         branchIds: user.branchIds ?? [],
+        businessStatus: user.businessStatus,
       },
     };
   }, []);
@@ -65,8 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     if (resolved.kind === "active" && resolved.user.accountType === "BUSINESS_OWNER") {
-      if (!resolved.user.emailVerified) {
+      // Approved but email not yet verified → the code email was sent by the
+      // approval action, so route to the OTP page.
+      const approved = resolved.user.businessStatus === "verified";
+      if (approved && !resolved.user.emailVerified) {
         router.replace("/verify-email");
+      }
+      // Not approved yet → hold in the admin review lobby regardless of
+      // email state. (Direct deep-link into the app shell while pending.)
+      if (!approved) {
+        router.replace("/pending-approval");
       }
     }
     // Slide the 30-day expiry forward on every active visit so the session

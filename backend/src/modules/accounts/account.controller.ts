@@ -7,6 +7,7 @@ import { logger } from "../../shared/logging/logger.js";
 type AccountState =
   | "REGISTERED_UNVERIFIED"
   | "EMAIL_VERIFIED_PENDING_ADMIN"
+  | "PENDING_ADMIN_APPROVAL"
   | "FULLY_ACTIVATED"
   | "SUSPENDED"
   | "REJECTED";
@@ -99,7 +100,11 @@ export async function handleAccountContext(request: globalThis.Request) {
 
     if (businessStatus !== "pending") throw firstError;
 
-    // Pending business — fetch profile to determine email_verified
+    // Pending business — fetch profile to determine email_verified. Under the
+    // current flow no verification email is sent until the admin approves, so
+    // a new account is PENDING_ADMIN_APPROVAL (route to /pending-approval).
+    // Legacy accounts that verified email while pending stay
+    // EMAIL_VERIFIED_PENDING_ADMIN and also route to /pending-approval.
     const { data: profile, error: profileError } = await db
       .from("users")
       .select("id, full_name, role, account_type, is_active, business_id, email_verified")
@@ -109,7 +114,7 @@ export async function handleAccountContext(request: globalThis.Request) {
 
     const accountState: AccountState = profile.email_verified
       ? "EMAIL_VERIFIED_PENDING_ADMIN"
-      : "REGISTERED_UNVERIFIED";
+      : "PENDING_ADMIN_APPROVAL";
 
     logger.info("account-context: pending owner classified", {
       userId: auth.user.id,

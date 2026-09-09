@@ -29,6 +29,7 @@ import type { StockMovement } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
+import { getBestSellingProductIds } from "@/features/inventory/product-insights";
 import { feedbackSaleComplete } from "@/lib/feedback";
 
 function PosPageContent() {
@@ -72,6 +73,10 @@ function PosPageContent() {
       return { products: [], error: err instanceof Error ? err.message : "Could not load products." };
     }
   }, []);
+
+  // Top sellers over the last 30 days, ranked by unit volume. Insertion order
+  // of the returned Set is the rank order — see getBestSellingProductIds.
+  const bestSellerIds = useLiveQuery(() => getBestSellingProductIds(10), [], new Set<string>());
 
   useEffect(() => {
     if (addProductId && result?.products && result.products.length > 0) {
@@ -292,6 +297,7 @@ function PosPageContent() {
       onSelectCategory={setSelectedCategoryId}
       filteredProducts={filtered}
       allProducts={result.products}
+      bestSellerIds={bestSellerIds}
       cart={cart.cart}
       onAddToCart={cart.addToCart}
       onIncrementLine={cart.incrementLine}

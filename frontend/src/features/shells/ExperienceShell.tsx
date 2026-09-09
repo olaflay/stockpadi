@@ -20,6 +20,7 @@ import { DrawerProvider } from "@/components/ui/DrawerContext";
 import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { AlertBadge } from "@/components/ui/AlertBadge";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 
 type Shell = "business" | "work";
 
@@ -49,6 +50,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
   const pathname = usePathname();
   const router = useRouter();
   const user = useCurrentUser();
+  const keyboardOpen = useKeyboardOpen();
   const accountType = user.accountType ?? "WORKER";
   const navItems = shell === "business" ? BUSINESS_NAV : WORKER_NAV;
 
@@ -65,12 +67,14 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <SyncEngine />
         <BannerStrip />
         <SideDrawer />
-        <main className="flex-1 flex flex-col overflow-y-auto px-3.5 sm:px-5 pt-3 sm:pt-4 pb-24 w-full max-w-lg mx-auto">
+        <main className="flex-1 flex flex-col overflow-y-auto px-gutter sm:px-gutter-lg pt-4 sm:pt-5 pb-24 w-full max-w-lg mx-auto">
           {children}
         </main>
         <nav
           aria-label={`${shell} navigation`}
-          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/80 bg-surface/95 backdrop-blur-md shadow-[var(--shadow-elevation-sticky-top)] pb-[env(safe-area-inset-bottom)] gpu-layer"
+          className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/80 bg-surface/95 backdrop-blur-md shadow-[var(--shadow-elevation-sticky-top)] pb-[env(safe-area-inset-bottom)] gpu-layer transition-transform duration-[var(--motion-duration-short)] ${
+            keyboardOpen ? "translate-y-full" : "translate-y-0"
+          }`}
         >
           {navItems.map((item) => {
             const Icon = item.icon;

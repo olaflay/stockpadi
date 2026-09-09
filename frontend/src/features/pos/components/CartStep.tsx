@@ -152,7 +152,7 @@ export function CartStep(props: {
         })}
       </ul>
 
-      <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex flex-col gap-3 border-t border-border bg-surface px-3.5 sm:px-5 pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
         {hasOutOfStockItem && (
           <div className="rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger flex items-center justify-between">
             <span>

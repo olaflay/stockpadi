@@ -55,7 +55,7 @@ export function TopStoreHeader() {
 
   return (
     <header
-      className="sticky top-0 left-0 right-0 z-40 flex h-13 sm:h-14 w-full items-center justify-between px-3.5 sm:px-5 text-brand-accent-contrast shadow-sm select-none gpu-layer"
+      className="sticky top-0 left-0 right-0 z-40 flex h-13 sm:h-14 w-full items-center justify-between px-gutter sm:px-gutter-lg text-brand-accent-contrast shadow-sm select-none gpu-layer"
       style={{
         background: "linear-gradient(180deg, var(--color-brand-accent) 0%, #064e3b 100%)",
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",

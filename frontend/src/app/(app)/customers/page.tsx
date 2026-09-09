@@ -126,7 +126,7 @@ export default function CustomersPage() {
 
       <div className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Total owed to you</p>
-        <p className="mt-1 text-[length:var(--font-size-display)] font-semibold text-on-surface">
+        <p className="mt-1 font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
           {formatCurrency(totalOwed)}
         </p>
       </div>
@@ -175,7 +175,7 @@ export default function CustomersPage() {
                       </span>
                     )}
                     <p
-                      className={`text-[length:var(--font-size-body)] font-medium ${
+                      className={`font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${
                         balance > 0 ? "text-on-surface" : "text-on-surface-muted"
                       }`}
                     >

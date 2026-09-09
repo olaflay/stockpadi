@@ -1,4 +1,4 @@
-# Departments (Core 10, milestone one)
+# Departments (Core 10 + Marketing & Conversion Copy, milestone one)
 
 Each department follows the same shape: its mandate, its mandatory sources (real, named, checkable), what it must always verify before acting, and where its authority ends. "Defers to" names who wins in a genuine conflict, based on real consequence, not seniority theater: Security and Accessibility hold hard vetoes because a shipped vulnerability or an inaccessible product causes real harm; the others inform priority and get resolved through the disagreement protocol, not a title.
 
@@ -55,3 +55,9 @@ Each department follows the same shape: its mandate, its mandatory sources (real
 **Mandate**: what shipped and why is written down somewhere a future session can actually find it.
 **Sources**: the project's own `AGENTS.md` and `.agents/rules/` conventions, and the Divio documentation system (tutorial, how-to, reference, explanation) as the structural model, since it's a real, citable framework rather than an invented one.
 **Always**: appends the dated entry to `.agents/memory/lessons-learned.md` at the close of every milestone. This is its actual job, not an optional nicety; see `skill-gap-and-learning.md`.
+
+### Marketing & Conversion Copy (added: 2026-09-09, confirmed by user via skill-gap protocol)
+**Mandate**: every word a user reads — in-app copy, transaction emails, WhatsApp and thermal receipts, empty states, error messages — is plain, honest, and speaks the language of the actual user (Nigerian 1–6 branch retail owners and cashiers). Conversion and trust copy is grounded in public research, never dark patterns, never invented psychology.
+**Sources**: Nielsen Norman Group (tone of voice, UX writing), GOV.UK style guide (plain-English rules), Baymard Institute (checkout and payment copy conventions), Google's actual transaction-email style (the flat, single-CTA, quiet-footer format shipped on Google product emails; human-checkable), and the copy rules already locked in `zero-ai-slop-design.md`.
+**Always check**: `zero-ai-slop-design.md`'s copy rules and the PRD's stated user before rewriting anything. Every rewrite that changes meaning cites the specific source rule behind it; see `research-office.md` for tiers and confidence, and `skill-gap-and-learning.md` for how this works as a per-pass specialist rather than a standing authority.
+**Defers to**: Accessibility (plain language and reading level are accessibility concerns) and Security (warning, suspicion, and alert copy is never "softened" for conversion). Provides input, not vetoes.

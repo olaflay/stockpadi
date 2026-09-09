@@ -88,7 +88,7 @@ export function EditProductForm({
               Edit the number directly to adjust on-shelf quantity.
             </p>
           </div>
-          <p className={`text-[length:var(--font-size-title)] font-semibold ${stockValueClass}`}>{totalStock ?? "…"}</p>
+          <p className={`font-number text-[length:var(--font-size-title)] font-semibold tabular-nums ${stockValueClass}`}>{totalStock ?? "…"}</p>
         </div>
 
         {onStockInputChange && (

@@ -77,7 +77,7 @@ export function RestockLineRow(props: {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-on-surface">{product.name}</p>
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+          <p className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
             {formatCurrency(line.unitCost)} / {product.unitLabel || "piece"}
           </p>
         </div>
@@ -151,7 +151,7 @@ export function RestockLineRow(props: {
         </label>
       </div>
 
-      <p className="text-right text-[length:var(--font-size-caption)] text-on-surface-muted">
+      <p className="text-right font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
         Line total: {formatCurrency(line.quantity * line.unitCost)}
       </p>
     </li>

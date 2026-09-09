@@ -14,6 +14,7 @@ import {
 
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { AlertBadge } from "@/components/ui/AlertBadge";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 
 /**
  * Samsung One UI bottom interaction area:
@@ -41,6 +42,7 @@ const WORKER_NAV = [
 export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
+  const keyboardOpen = useKeyboardOpen();
 
   const isOwnerOrAdmin = user.accountType === "BUSINESS_OWNER" || user.accountType === "ADMIN";
   const items = isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV;
@@ -48,7 +50,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/80 bg-surface/95 backdrop-blur-md shadow-[var(--shadow-elevation-sticky-top)] pb-[env(safe-area-inset-bottom)] gpu-layer"
+      className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/80 bg-surface/95 backdrop-blur-md shadow-[var(--shadow-elevation-sticky-top)] pb-[env(safe-area-inset-bottom)] gpu-layer transition-transform duration-[var(--motion-duration-short)] ${
+        keyboardOpen ? "translate-y-full" : "translate-y-0"
+      }`}
     >
       {items.map((item) => {
         const isActive =

@@ -31,6 +31,7 @@ export function BrowseStep(props: {
   onSelectCategory: (id: string | null) => void;
   filteredProducts: Product[];
   allProducts: Product[];
+  bestSellerIds?: Set<string>;
   cart: Record<string, CartLine>;
   onAddToCart: (productId: string, unitPrice: number, unitLabel: string, conversionFactor: number, qty?: number) => void;
   onIncrementLine: (key: string) => void;
@@ -50,6 +51,7 @@ export function BrowseStep(props: {
     onSelectCategory,
     filteredProducts,
     allProducts,
+    bestSellerIds,
     cart,
     onAddToCart,
     onIncrementLine,
@@ -82,6 +84,16 @@ export function BrowseStep(props: {
   const [prevProductsLength, setPrevProductsLength] = useState(0);
   const [prevCategoryId, setPrevCategoryId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+
+  // Best-seller products in rank order (Set insertion order is the rank).
+  // Only shown when browsing the full catalog — never during a search or
+  // while a category filter is active, so the strip never competes with
+  // the query the cashier is actively working.
+  const bestSellerProducts = bestSellerIds
+    ? Array.from(bestSellerIds)
+        .map((id) => allProducts.find((p) => p.id === id))
+        .filter((p: Product | undefined): p is Product => p != null && !p.archived)
+    : [];
 
   if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
     setPrevProductsLength(filteredProducts.length);
@@ -134,6 +146,17 @@ export function BrowseStep(props: {
     requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
+  /**
+   * Add from the Best-sellers strip: same cart add and feedback as a fresh
+   * add, but never clears the (already empty) query or re-focuses the search
+   * input. Tapping through frequent items shouldn't pop the keyboard open
+   * between every tap. One tap per unit, stepper-free.
+   */
+  function handleBestSellerAdd(product: Product) {
+    feedbackAddToCart();
+    onAddToCart(product.id, product.sellPrice, product.unitLabel, 1);
+  }
+
   return (
     <div key="browse" className="flex flex-col gap-4 animate-step-in">
       <ScreenHeader title="Sell" />
@@ -164,64 +187,66 @@ export function BrowseStep(props: {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search
-            size={18}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
-            aria-hidden
-          />
-          <input
-            ref={searchInputRef}
-            type="search"
-            aria-label="Search products"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            onKeyDown={(e) => {
-              // Enter → immediately add the first visible single-unit result.
-              // Dual-unit products are skipped: the cashier must still pick
-              // a unit, so Enter would guess wrong. H7: expert accelerator.
-              if (
-                e.key === "Enter" &&
-                !hasNoBranches &&
-                filteredProducts.length > 0
-              ) {
-                const first = filteredProducts[0];
-                if (!first.altUnitLabel) {
-                  const { qty } = parsePosQuery(query);
-                  handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
-                  e.preventDefault();
+      <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-1 border-b border-border bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
+        <div className="flex gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
+              aria-hidden
+            />
+            <input
+              ref={searchInputRef}
+              type="search"
+              aria-label="Search products"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              onKeyDown={(e) => {
+                // Enter → immediately add the first visible single-unit result.
+                // Dual-unit products are skipped: the cashier must still pick
+                // a unit, so Enter would guess wrong. H7: expert accelerator.
+                if (
+                  e.key === "Enter" &&
+                  !hasNoBranches &&
+                  filteredProducts.length > 0
+                ) {
+                  const first = filteredProducts[0];
+                  if (!first.altUnitLabel) {
+                    const { qty } = parsePosQuery(query);
+                    handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
+                    e.preventDefault();
+                  }
                 }
-              }
-            }}
+              }}
+              disabled={hasNoBranches}
+              placeholder={hasNoBranches ? "Configure branch in settings to search" : "Search products"}
+              className={`min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface pl-10 text-[length:var(--font-size-body)] text-on-surface disabled:opacity-50 ${
+                itemCount > 0 ? "pr-16" : "pr-3"
+              }`}
+            />
+            {/* Live cart count badge — always visible even when the sticky
+                footer is scrolled out of view during a large order. H1:
+                visibility of system status. WCAG 4.1.3: status messages. */}
+            {itemCount > 0 && (
+              <span
+                aria-live="polite"
+                aria-label={`${itemCount} item${itemCount === 1 ? "" : "s"} in cart`}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-brand-accent/15 px-2 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-brand-accent"
+              >
+                ×{itemCount}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
             disabled={hasNoBranches}
-            placeholder={hasNoBranches ? "Configure branch in settings to search" : "Search products"}
-            className={`min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface pl-10 text-[length:var(--font-size-body)] text-on-surface disabled:opacity-50 ${
-              itemCount > 0 ? "pr-16" : "pr-3"
-            }`}
-          />
-          {/* Live cart count badge — always visible even when the sticky
-              footer is scrolled out of view during a large order. H1:
-              visibility of system status. WCAG 4.1.3: status messages. */}
-          {itemCount > 0 && (
-            <span
-              aria-live="polite"
-              aria-label={`${itemCount} item${itemCount === 1 ? "" : "s"} in cart`}
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-brand-accent/15 px-2 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-brand-accent"
-            >
-              ×{itemCount}
-            </span>
-          )}
+            onClick={() => setScanning(true)}
+            aria-label="Scan barcode"
+            className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface text-on-surface hover:bg-surface-container disabled:opacity-50 transition-colors"
+          >
+            <Camera size={18} aria-hidden />
+          </button>
         </div>
-        <button
-          type="button"
-          disabled={hasNoBranches}
-          onClick={() => setScanning(true)}
-          aria-label="Scan barcode"
-          className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface text-on-surface hover:bg-surface-container disabled:opacity-50 transition-colors"
-        >
-          <Camera size={18} aria-hidden />
-        </button>
       </div>
 
       {scanning && (
@@ -297,8 +322,73 @@ export function BrowseStep(props: {
         </div>
       )}
 
+      {/* Best sellers — quick-add strip shown only on the untouched catalog
+          (no query, no category filter). DoorDash "Buy it again" / Gopuff
+          pattern: the items a cashier rings up most, one tap per unit, no
+          search needed for the frequencies they actually sell. */}
+      {query === "" && selectedCategoryId === null && bestSellerProducts.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-[length:var(--font-size-caption)] font-semibold uppercase tracking-wide text-on-surface-muted">
+            Best sellers
+          </h2>
+          <ul className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {bestSellerProducts.map((product) => {
+              const baseKey = cartLineKey(product.id, product.unitLabel);
+              const baseQty = cart[baseKey]?.quantity ?? 0;
+              const stock = stockByProduct?.[product.id] ?? 0;
+              const isStockTracked = stockByProduct !== undefined;
+              const isOutOfStock = isStockTracked && stock <= 0;
+              return (
+                <li key={product.id} className="shrink-0">
+                  <RippleButton
+                    type="button"
+                    onClick={() =>
+                      isOutOfStock
+                        ? handleOutOfStockAttempt(product)
+                        : handleBestSellerAdd(product)
+                    }
+                    disabled={hasNoBranches}
+                    aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
+                    className={`flex w-36 flex-col items-start gap-1 rounded-[var(--radius-card)] border px-3 py-2.5 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
+                      isOutOfStock ? "border-danger/30 bg-danger/5" : "border-border bg-surface"
+                    }`}
+                  >
+                    <span className="w-full truncate text-[length:var(--font-size-body)] font-medium text-on-surface">
+                      {product.name}
+                    </span>
+                    <span className="flex w-full items-center justify-between gap-1">
+                      <span
+                        className={`font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${
+                          isOutOfStock ? "text-on-surface-muted line-through" : "text-brand-accent"
+                        }`}
+                      >
+                        {formatCurrency(product.sellPrice)}
+                      </span>
+                      {baseQty > 0 && (
+<span
+                        key={baseQty}
+                        className="animate-count-pop rounded-full bg-brand-accent/15 px-1.5 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-brand-accent"
+                        aria-label={`${baseQty} in cart`}
+                      >
+                          ×{baseQty}
+                        </span>
+                      )}
+                      {isOutOfStock && (
+                        <span className="rounded-full border border-danger/40 bg-danger/10 px-1.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-danger">
+                          Out
+                        </span>
+                      )}
+                    </span>
+                  </RippleButton>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {filteredProducts.length === 0 ? (
-        <NoResultsState query={query} />
+        <NoResultsState query={query} onClear={() => onQueryChange("")} />
       ) : (
         <div>
           <ul className="flex flex-col gap-2">
@@ -370,7 +460,7 @@ export function BrowseStep(props: {
                       }
                       disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium transition-colors disabled:opacity-50 ${
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
                         isOutOfStock
                           ? "border border-danger/40 bg-danger/5 text-danger hover:bg-danger/10"
                           : "bg-surface-container text-on-surface hover:bg-surface-container-high"
@@ -422,7 +512,7 @@ export function BrowseStep(props: {
                       }
                       disabled={hasNoBranches}
                       aria-label={`Add ${product.name} (${product.altUnitLabel}) for ${formatCurrency(product.altUnitSellPrice)} to cart`}
-                      className="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                      className="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface transition-[background-color,transform] active:scale-[0.98] hover:bg-surface-container-high disabled:opacity-50"
                     >
                       {product.altUnitLabel} · {formatCurrency(product.altUnitSellPrice)}
                     </RippleButton>
@@ -468,7 +558,7 @@ export function BrowseStep(props: {
                     }
                     disabled={hasNoBranches}
                     aria-label={`Add ${product.name} for ${formatCurrency(product.sellPrice)} to cart`}
-                    className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left disabled:opacity-50 ${
+                    className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
                       isOutOfStock ? "border-danger/30 bg-danger/5" : "border-border"
                     }`}
                   >
@@ -486,7 +576,7 @@ export function BrowseStep(props: {
                         </span>
                       ) : null}
                     </div>
-                    <span className="shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
+                    <span className={`shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${isOutOfStock ? "text-on-surface-muted line-through" : "text-on-surface"}`}>
                       {formatCurrency(product.sellPrice)}
                     </span>
                   </RippleButton>
@@ -505,15 +595,15 @@ export function BrowseStep(props: {
       )}
 
       {itemCount > 0 && (
-        <div className="sticky bottom-0 -mx-3.5 sm:-mx-5 flex items-center justify-between gap-3 border-t border-border bg-surface px-3.5 sm:px-5 py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
+        <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
           <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
-            {itemCount} item{itemCount === 1 ? "" : "s"} · <span className="font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
+            {itemCount} item{itemCount === 1 ? "" : "s"} · <span key={total} className="animate-count-pop font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
           </span>
           <RippleButton
             id="tour-pos-cart"
             type="button"
             onClick={onReviewCart}
-            className="flex min-h-[var(--touch-target-min)] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+            className="flex min-h-[var(--touch-target-min)] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast transition-[opacity,transform] active:scale-[0.98] hover:opacity-95"
           >
             Review cart →
           </RippleButton>
@@ -552,12 +642,13 @@ function InlineStepper({
         onClick={onDecrement}
         disabled={disabled}
         aria-label={`Decrease ${label} quantity`}
-        className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full border border-border bg-surface text-on-surface font-semibold text-[length:var(--font-size-title)] hover:bg-surface-container-high transition-colors disabled:opacity-50"
+        className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full border border-border bg-surface text-on-surface font-semibold text-[length:var(--font-size-title)] transition-[background-color,transform] active:scale-95 hover:bg-surface-container-high disabled:opacity-50"
       >
         −
       </button>
       <span
-        className="w-6 text-center font-number font-semibold tabular-nums text-[length:var(--font-size-body)] text-brand-accent"
+        key={qty}
+        className="animate-count-pop w-6 text-center font-number font-semibold tabular-nums text-[length:var(--font-size-body)] text-brand-accent"
         aria-live="polite"
         aria-label={`${label} quantity: ${qty}`}
       >

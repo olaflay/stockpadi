@@ -52,6 +52,10 @@
   --spacing-10: var(--space-10);
   --spacing-12: var(--space-12);
   --spacing-16: var(--space-16);
+  --spacing-gutter: var(--space-gutter);
+  --spacing-gutter-lg: var(--space-gutter-lg);
+  --spacing-section: var(--space-section);
+  --spacing-section-lg: var(--space-section-lg);
   --spacing-touch-target: var(--touch-target-min);
 
   --radius-xs: var(--radius-xs);
@@ -71,6 +75,7 @@
   --shadow-elevation-sticky-top: var(--elevation-sticky-top);
   --shadow-inner-highlight: var(--shadow-inner-highlight);
   --shadow-recessed: var(--shadow-recessed);
+  --shadow-recessed-strong: var(--shadow-recessed-strong);
 
   --motion-duration-short: var(--motion-duration-short);
   --motion-duration-medium: var(--motion-duration-medium);
@@ -80,7 +85,7 @@
   --easing-emphasized-decelerate: var(--easing-emphasized-decelerate);
   --easing-emphasized-accelerate: var(--easing-emphasized-accelerate);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-google-sans-flex);
   --font-mono: var(--font-geist-mono);
   --font-number: var(--font-family-number);
 }
@@ -203,6 +208,24 @@ body {
 
 .animate-step-in {
   animation: step-in var(--motion-duration-medium) var(--easing-standard);
+}
+
+/* Number "recount" pop — reaffirms a register change on the quantity badge,
+   line total, or cart total (POS tap, scan, or stepper press). Reuses the
+   motion tokens; transform-only so it stays on the compositor thread and
+   cannot cause layout shift (tabular-nums keeps glyph widths stable). */
+@keyframes count-pop {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-count-pop {
+  display: inline-block;
+  animation: count-pop var(--motion-duration-medium) var(--easing-emphasized-decelerate);
 }
 
 /* Toast entrance animation from top */

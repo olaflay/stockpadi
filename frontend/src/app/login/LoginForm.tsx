@@ -71,7 +71,7 @@ export default function LoginForm() {
       }
       const context = await callBackend<{
         accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
-        accountState?: "REGISTERED_UNVERIFIED" | "EMAIL_VERIFIED_PENDING_ADMIN" | "FULLY_ACTIVATED" | "SUSPENDED" | "REJECTED";
+        accountState?: "REGISTERED_UNVERIFIED" | "EMAIL_VERIFIED_PENDING_ADMIN" | "PENDING_ADMIN_APPROVAL" | "FULLY_ACTIVATED" | "SUSPENDED" | "REJECTED";
         businessId?: string;
         businessStatus?: string;
         branchIds?: string[];
@@ -110,6 +110,10 @@ export default function LoginForm() {
         return;
       }
       if (state === "EMAIL_VERIFIED_PENDING_ADMIN") {
+        router.replace("/pending-approval");
+        return;
+      }
+      if (state === "PENDING_ADMIN_APPROVAL") {
         router.replace("/pending-approval");
         return;
       }
