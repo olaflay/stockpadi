@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -42,12 +42,10 @@ export function useEditProductForm(id: string) {
   const [stockBranchId, setStockBranchId] = useState<string | null>(null);
   const [stockInitialized, setStockInitialized] = useState(false);
 
-  useEffect(() => {
-    if (totalStock !== undefined && !stockInitialized) {
-      setStockInput(String(totalStock));
-      setStockInitialized(true);
-    }
-  }, [totalStock, stockInitialized]);
+  if (totalStock !== undefined && !stockInitialized) {
+    setStockInput(String(totalStock));
+    setStockInitialized(true);
+  }
 
   // Starts open only if this product already uses a second unit, so
   // existing data is never hidden; otherwise stays collapsed like Add
@@ -59,14 +57,25 @@ export function useEditProductForm(id: string) {
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
   });
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, setValue, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
-  // Load existing values into form when product has loaded
+  // Only initialize product form values once per product load
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
+
+  if (product && product.id !== prevProductId) {
+    setPrevProductId(product.id);
+    setCategoryId(product.categoryId || "");
+    if (product.altUnitLabel) setShowUnitConversion(true);
+  }
+
   useEffect(() => {
-    if (product) {
+    if (product && product.id === prevProductId) {
+      // Use effect only for the hook form side effects (setValue)
+      // Since this effect depends on product.id instead of the full product object,
+      // it won't reset the user's typed inputs if the product gets a background update.
       setValue("name", product.name);
       setValue("sku", product.sku);
       setValue("sellPrice", product.sellPrice);
@@ -74,15 +83,14 @@ export function useEditProductForm(id: string) {
       setValue("barcode", product.barcode || "");
       setValue("expiryTracking", product.expiryTracking);
       setValue("expiryDate", product.expiryDate || "");
-      setCategoryId(product.categoryId || "");
       setValue("unitLabel", product.unitLabel || "piece");
       setValue("altUnitLabel", product.altUnitLabel || "");
       if (product.altUnitConversionFactor !== null) setValue("altUnitConversionFactor", product.altUnitConversionFactor);
       if (product.altUnitSellPrice !== null) setValue("altUnitSellPrice", product.altUnitSellPrice);
       if (product.lowStockThreshold !== null) setValue("lowStockThreshold", product.lowStockThreshold);
-      if (product.altUnitLabel) setShowUnitConversion(true);
     }
-  }, [product, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, prevProductId, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
 
