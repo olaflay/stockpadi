@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Search, Camera, GitBranch, Plus } from "lucide-react";
+import { Search, Camera } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
@@ -11,7 +11,6 @@ import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/fee
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
 });
-import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { RippleButton } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
@@ -38,7 +37,6 @@ export function BrowseStep(props: {
   itemCount: number;
   total: number;
   onReviewCart: () => void;
-  onGoToSettings: () => void;
   stockByProduct?: Record<string, number>;
 }) {
   const {
@@ -57,7 +55,6 @@ export function BrowseStep(props: {
     itemCount,
     total,
     onReviewCart,
-    onGoToSettings,
     stockByProduct,
   } = props;
 
@@ -93,14 +90,11 @@ export function BrowseStep(props: {
         .filter((p: Product | undefined): p is Product => p != null && !p.archived)
     : [];
 
-  // Reset visible limit when products or category changes
-  useEffect(() => {
-    if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
-      setPrevProductsLength(filteredProducts.length);
-      setPrevCategoryId(selectedCategoryId);
-      setVisibleLimit(50);
-    }
-  }, [filteredProducts.length, selectedCategoryId, prevProductsLength, prevCategoryId]);
+  if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
+    setPrevProductsLength(filteredProducts.length);
+    setPrevCategoryId(selectedCategoryId);
+    setVisibleLimit(50);
+  }
 
   useEffect(() => {
     if (filteredProducts.length <= visibleLimit) return;
