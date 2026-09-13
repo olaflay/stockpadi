@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X, GitBranch } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -65,14 +65,11 @@ export default function ProductsPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset visible limit when query or filter changes
-  useEffect(() => {
-    if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-      setPrevQuery(debouncedQuery);
-      setPrevFilter(filter);
-      setVisibleLimit(50);
-    }
-  }, [debouncedQuery, filter, prevQuery, prevFilter]);
+  if (debouncedQuery !== prevQuery || filter !== prevFilter) {
+    setPrevQuery(debouncedQuery);
+    setPrevFilter(filter);
+    setVisibleLimit(50);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -135,9 +132,6 @@ export default function ProductsPage() {
       };
     }
   }, [filter]);
-
-  const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
-  const hasBranch = (branches?.length ?? 0) > 0;
 
   // Consolidated stock across all branches (business-level view, matching the
   // filter chips which run with branchId null). One read of the ledger per
