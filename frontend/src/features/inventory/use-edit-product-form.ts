@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -59,10 +59,10 @@ export function useEditProductForm(id: string) {
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
   });
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, setValue, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   // Load existing values into form when product has loaded
   useEffect(() => {
