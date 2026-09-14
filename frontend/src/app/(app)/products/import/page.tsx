@@ -301,7 +301,7 @@ export default function ImportProductsPage() {
           {result.errors.length > 0 && (
             <div role="alert" className="mb-4 rounded-[var(--radius-card)] bg-danger/10 px-4 py-3">
               <p className="text-[length:var(--font-size-caption)] text-danger">
-                This file isn't valid yet. Fix the rows listed above and choose the file again. Nothing is imported
+                This file isn&apos;t valid yet. Fix the rows listed above and choose the file again. Nothing is imported
                 until every row is correct.
               </p>
             </div>
