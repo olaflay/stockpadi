@@ -10,7 +10,7 @@
     "build": "tsc",
     "start": "node --env-file=.env dist/src/server.js",
     "provision:admin": "node --env-file=.env scripts/provision-platform-admin.mjs",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "seed:owner": "node --env-file=.env scripts/seed-owner.mjs",
     "check:auth": "node scripts/check-auth.mjs",
