@@ -66,13 +66,11 @@ export default function ProductsPage() {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Reset visible limit when query or filter changes
-  useEffect(() => {
-    if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-      setPrevQuery(debouncedQuery);
-      setPrevFilter(filter);
-      setVisibleLimit(50);
-    }
-  }, [debouncedQuery, filter, prevQuery, prevFilter]);
+  if (debouncedQuery !== prevQuery || filter !== prevFilter) {
+    setPrevQuery(debouncedQuery);
+    setPrevFilter(filter);
+    setVisibleLimit(50);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;
