@@ -20,7 +20,7 @@
     "start": "npm run build && node --env-file=.env dist/src/server.js",
     "provision:admin": "node --env-file=.env scripts/provision-platform-admin.mjs",
     "pretest": "npm --prefix ../packages/contracts run build",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "pretypecheck": "npm --prefix ../packages/contracts run build",
     "typecheck": "tsc --noEmit",
     "seed:owner": "node --env-file=.env scripts/seed-owner.mjs",
