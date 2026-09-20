@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/check-secrets.mjs",
+    "prebuild": "npm --prefix ../packages/contracts run build && node scripts/check-secrets.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -16,6 +16,7 @@
     "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
+    "@stockpadi/contracts": "file:../packages/contracts",
     "@hookform/resolvers": "^5.7.1",
     "@serwist/next": "^9.5.12",
     "@supabase/ssr": "^0.12.4",

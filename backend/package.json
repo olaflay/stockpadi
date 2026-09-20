@@ -5,7 +5,14 @@
   "type": "module",
   "description": "StockPadi backend: Postgres migrations, RLS policies, and Supabase Edge Functions. Split from the original monorepo's supabase/ directory — see docs/BACKEND-SPLIT.md.",
   "engines": {
-    "node": ">=20.9.0"
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@stockpadi/contracts": "file:../packages/contracts",
+    "@supabase/supabase-js": "^2.112.2",
+    "@types/nodemailer": "^8.0.1",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0"
   },
   "scripts": {
     "prebuild": "npm --prefix ../packages/contracts run build",
@@ -22,12 +29,6 @@
     "confirm:users": "node scripts/confirm-users.mjs",
     "check:confirmation": "node scripts/check-confirmation.mjs",
     "db:migrate": "node --env-file=.env scripts/migrate.mjs"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.112.2",
-    "@types/nodemailer": "^8.0.1",
-    "nodemailer": "^9.0.5",
-    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.4",
