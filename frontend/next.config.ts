@@ -2,11 +2,16 @@ import path from "node:path";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
+const configuredDevOrigins = (process.env.NEXT_PUBLIC_DEV_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname, ".."),
   },
-  allowedDevOrigins: ["192.168.1.179", "localhost:3000"],
+  allowedDevOrigins: ["localhost:3000", ...configuredDevOrigins],
   experimental: {
     optimizePackageImports: ["lucide-react", "dexie-react-hooks", "dexie"],
   },

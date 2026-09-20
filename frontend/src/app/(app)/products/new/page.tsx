@@ -2,20 +2,20 @@
 
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Upload } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
-import { hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { hasCapability } from "@/features/auth/authorization";
 import { useNewProductForm } from "@/features/inventory/use-new-product-form";
 import { NewProductForm } from "@/features/inventory/components/NewProductForm";
-
-const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 function NewProductContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefill = searchParams.get("prefill") || undefined;
+  const prefillName = searchParams.get("name") || undefined;
+  const prefillBarcode = searchParams.get("barcode") || undefined;
   const {
     user,
     categories,
@@ -44,13 +44,13 @@ function NewProductContent() {
     hasInitialStock,
     onSubmit,
     setValue,
-  } = useNewProductForm({ prefill });
+  } = useNewProductForm({ prefillName, prefillBarcode });
 
-  if (!hasAccountType(user, CAN_EDIT_PRODUCTS)) {
+  if (!hasCapability(user, "MANAGE_PRODUCTS")) {
     return (
       <div>
         <ScreenHeader title="Add product" onBack={() => router.push("/products")} />
-        <PermissionDenied requiredAccountTypes={CAN_EDIT_PRODUCTS} />
+        <PermissionDenied requiredCapabilities={["MANAGE_PRODUCTS"]} />
       </div>
     );
   }
@@ -70,6 +70,18 @@ function NewProductContent() {
           </button>
         }
       />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container px-4 py-3">
+        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+          Adding many products?
+        </p>
+        <Link
+          href="/products/import"
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-2 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/10 transition-colors"
+        >
+          <Upload size={16} aria-hidden />
+          Import products instead
+        </Link>
+      </div>
       <NewProductForm
         onSubmit={onSubmit}
         onCancel={() => router.push("/products")}

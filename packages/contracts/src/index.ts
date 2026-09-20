@@ -1,0 +1,124 @@
+export const WORKER_CAPABILITIES = [
+  "POS_SELL",
+  "VIEW_PRODUCTS",
+  "VIEW_BRANCH_STOCK",
+  "VIEW_STOCK_MOVEMENTS",
+  "SUBMIT_STOCK_COUNT",
+  "SUBMIT_RECONCILIATION",
+  "VIEW_CUSTOMERS",
+  "USE_CUSTOMER_CREDIT",
+  "VIEW_OWN_SALES",
+  "VIEW_RECEIPTS",
+  "VIEW_ALERTS",
+  "RECEIVE_STOCK",
+  "RECORD_REPAYMENT",
+  "VIEW_BRANCH_RECONCILIATION",
+  "CREATE_CUSTOMERS",
+  "MANAGE_PRODUCTS",
+  "ADJUST_STOCK",
+  "MANAGE_EXPENSES",
+  "VIEW_REPORTS",
+  "MANAGE_BRANCHES",
+  "MANAGE_BRANCH_WORKERS",
+] as const;
+export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
+
+export const SYNC_ENTITY_TYPES = [
+  "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt",
+  "customer", "product", "credit_payment", "expense", "supplier", "branch", "category",
+] as const;
+export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];
+
+export const API_ERROR_CODES = [
+  "UNAUTHENTICATED", "FORBIDDEN", "BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED",
+  "MISSING_CONTEXT", "BRANCH_NOT_ALLOWED", "VALIDATION_ERROR", "VERSION_CONFLICT",
+  "DEPENDENCY_NOT_READY", "NOT_FOUND", "DUPLICATE_MUTATION", "TEMPORARY_UNAVAILABLE",
+  "NETWORK_UNAVAILABLE", "SERVER_ERROR",
+] as const;
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number] | (string & {});
+
+export interface ApiError {
+  code: ApiErrorCode;
+  message: string;
+  details?: unknown;
+  requestId?: string;
+}
+
+export interface ApiErrorEnvelope {
+  ok: false;
+  error: ApiError;
+}
+
+export interface SyncMutation {
+  mutationId: string;
+  entityId: string;
+  idempotencyKey: string;
+  entityType: SyncEntityType;
+  operation: "upsert" | "append";
+  businessId: string;
+  branchId?: string | null;
+  payload: Record<string, unknown>;
+  expectedVersion?: number;
+  createdAt: string;
+}
+
+export interface SyncMutationResult {
+  clientId: string;
+  mutationId: string;
+  entityId?: string;
+  submittedEntityId?: string;
+  authoritativeEntityId?: string;
+  canonicalized?: boolean;
+  status: "applied" | "skipped" | "conflict" | "retryable_error" | "permanent_failure";
+  version?: number;
+  error?: ApiError;
+}
+
+export interface SyncPushResponse {
+  ok: true;
+  results: SyncMutationResult[];
+}
+
+export interface PullEntityPage {
+  entity: string;
+  success: boolean;
+  records: unknown[];
+  lastSuccessfulPullAt: string | null;
+  error: ApiError | null;
+}
+
+export interface SyncPullResponse {
+  ok: true;
+  businessId: string;
+  serverTime: string;
+  cursor: string | null;
+  nextCursor: string | null;
+  hasMore: boolean;
+  entities: PullEntityPage[];
+}
+
+export interface SyncHealthResponse {
+  ok: true;
+  serverReachable: true;
+  authenticated: true;
+  businessId: string;
+  businessStatus: string | null;
+  serverTime: string;
+  syncContractVersion: string;
+  activeBranchCount: number;
+  totalBranchCount: number;
+}
+
+export interface AccountContextContract {
+  userId: string;
+  accountType: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+  businessId: string | null;
+  businessStatus: string | null;
+  membershipStatus: string | null;
+  branchIds: string[];
+  permissions: WorkerCapability[];
+}
+
+export function isSyncEntityType(value: unknown): value is SyncEntityType {
+  return typeof value === "string" && (SYNC_ENTITY_TYPES as readonly string[]).includes(value);
+}

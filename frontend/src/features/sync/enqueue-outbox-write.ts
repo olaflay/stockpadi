@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
 import type { SyncEntityType } from "@/types/sync";
 import { getCachedLocalBusinessId, getLocalBusinessId } from "@/lib/local-tenant";
+import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
 
 let drainTimer: ReturnType<typeof setTimeout> | null = null;
+const MUTABLE_ENTITY_TYPES: SyncEntityType[] = ["product", "customer", "supplier", "branch", "category"];
 
 /**
  * Debounced drain trigger: when an outbox row is written while online,
@@ -36,22 +38,83 @@ export async function enqueueOutboxWrite(
   clientId: string,
   type: SyncEntityType,
   payload: unknown,
-  createdAtLocal: string
+  createdAtLocal: string,
+  options: { dependsOn?: string[]; entityId?: string } = {}
 ): Promise<void> {
   const businessId = getCachedLocalBusinessId() ?? (await getLocalBusinessId());
-  await db.outbox.add({
-    clientId,
-    businessId,
-    type,
-    payload,
-    createdAtLocal,
-    status: "pending",
-    attemptCount: 0,
-    lastError: null,
-  });
+  if (!businessId && !(typeof process !== "undefined" && process.env.NODE_ENV === "test")) {
+    throw new Error("A signed-in business context is required before queueing a local change.");
+  }
+  await assertHighRiskWriteAllowed(type);
+  const existing = await db.outbox.get(clientId);
+  const lastSequence = (await db.outbox.orderBy("sequence").last())?.sequence ?? 0;
+  const canonicalPayload = type === "product" && isRecord(payload)
+    ? { ...payload, archived: typeof payload.archived === "boolean" ? payload.archived : false }
+    : payload;
+  const entityId = options.entityId ?? (isRecord(canonicalPayload) && typeof canonicalPayload.id === "string" ? canonicalPayload.id : clientId);
+  const mutable = MUTABLE_ENTITY_TYPES.includes(type);
+  const operation = mutable ? "upsert" as const : "append" as const;
+  const expectedVersion = isRecord(canonicalPayload) && typeof canonicalPayload.version === "number" ? canonicalPayload.version : undefined;
+
+  // Product edits are snapshots, not immutable ledger events. Coalescing a
+  // still-pending product row prevents a duplicate-primary-key abort while
+  // retaining the original client idempotency key for a product create.
+  if (existing && MUTABLE_ENTITY_TYPES.includes(type) && existing.status !== "syncing") {
+    await db.outbox.put({
+      ...existing,
+      businessId,
+      mutationId: existing.mutationId ?? existing.clientId,
+      idempotencyKey: existing.idempotencyKey ?? existing.clientId,
+      payload: canonicalPayload,
+      operation,
+      expectedVersion,
+      createdAtLocal,
+      status: "pending",
+      lastError: null,
+      errorCode: null,
+      lastErrorCode: null,
+      lastErrorMessage: null,
+      nextAttemptAt: null,
+      sequence: lastSequence + 1,
+      entityId,
+      dependsOn: options.dependsOn ?? existing.dependsOn,
+      dependsOnMutationIds: options.dependsOn ?? existing.dependsOnMutationIds,
+    });
+  } else {
+    const eventId = existing && existing.status === "syncing" ? `${clientId}:${crypto.randomUUID()}` : clientId;
+    const dependencies = existing && existing.status === "syncing"
+      ? [...new Set([...(options.dependsOn ?? []), existing.entityId ?? existing.mutationId ?? existing.clientId])]
+      : options.dependsOn;
+    await db.outbox.put({
+      clientId: eventId,
+      mutationId: eventId,
+      idempotencyKey: eventId,
+      businessId,
+      type,
+      operation,
+      expectedVersion,
+      payload: canonicalPayload,
+      createdAtLocal,
+      status: "pending",
+      attemptCount: existing && existing.status === "syncing" ? 0 : existing?.attemptCount ?? 0,
+      lastError: null,
+      errorCode: null,
+      lastErrorCode: null,
+      lastErrorMessage: null,
+      nextAttemptAt: null,
+      sequence: lastSequence + 1,
+      entityId,
+      dependsOn: dependencies,
+      dependsOnMutationIds: dependencies,
+    });
+  }
 
   // Trigger a debounced drain if the device is online
   if (typeof navigator !== "undefined" && navigator.onLine) {
     scheduleDebouncedDrain();
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

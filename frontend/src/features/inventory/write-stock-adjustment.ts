@@ -4,7 +4,8 @@ import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
-import { serverPost } from "@/features/operations/server-client";
+import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
+import { assertCapability, hasCapability } from "@/features/auth/authorization";
 
 export interface StockAdjustmentPayload {
   businessId?: string;
@@ -22,11 +23,10 @@ export interface StockAdjustmentPayload {
 /**
  * A stock count never writes the counted quantity itself, only the delta
  * between it and the current computed stock, as a new "adjustment" ledger
- * row, per .agents/rules/offline-sync-and-ledger.md. Allowed offline: the
- * delta is computed from this device's own local ledger, no server round
- * trip is needed, per .agents/skills/add-stock-movement-type.md Step 4
- * ("decide its offline behavior explicitly"). Mirrors completeSale's
- * single-transaction, data-plus-outbox write shape.
+ * row, per .agents/rules/offline-sync-and-ledger.md. The delta is computed
+ * from this device's own local ledger, then the local movement and outbox
+ * mutation are committed together. The same path is used online and offline
+ * so there is one retry/idempotency authority.
  */
 export async function writeStockAdjustment(params: {
   branchId: string;
@@ -36,7 +36,13 @@ export async function writeStockAdjustment(params: {
   note: string | null;
   createdByUserId: string;
   actor: CurrentUser;
+  operation?: "stock_count" | "adjustment";
 }): Promise<StockMovement> {
+  const operation = params.operation ?? (
+    params.actor.accountType === "WORKER" && !hasCapability(params.actor, "ADJUST_STOCK") ? "stock_count" : "adjustment"
+  );
+  assertCapability(params.actor, operation === "stock_count" ? "SUBMIT_STOCK_COUNT" : "ADJUST_STOCK");
+  await assertHighRiskWriteAllowed(operation === "stock_count" ? "stock_count_submission" : "stock_adjustment");
   const now = new Date().toISOString();
   const adjustmentId = crypto.randomUUID();
 
@@ -44,7 +50,7 @@ export async function writeStockAdjustment(params: {
   // rapid double-tap firing this function twice before the disabling
   // re-render lands can't have both calls read the same stale baseline and
   // apply the correction delta twice.
-  return db.transaction("rw", db.stockMovements, db.outbox, async () => {
+  return db.transaction("rw", db.stockMovements, db.outbox, db.inventoryStock, async () => {
     const currentStock = await getCurrentStock(params.productId, params.branchId);
     const quantityDelta = params.countedQuantity - currentStock;
 
@@ -76,21 +82,7 @@ export async function writeStockAdjustment(params: {
 
     const tenantPayload = await withLocalBusinessId(payload);
     const tenantMovement = await withLocalBusinessId(movement);
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      try {
-        await serverPost(params.actor.accountType === "WORKER" ? "/api/inventory/stock-count" : "/api/inventory/adjust", tenantPayload);
-        if (params.actor.accountType === "WORKER") return { ...movement, quantityDelta: 0 };
-        // The server already applied this adjustment; mirror it into the
-        // local ledger so this device's computed stock matches the server
-        // (no outbox entry — that would re-apply an already-committed row).
-        await db.stockMovements.add(tenantMovement);
-        return tenantMovement;
-      } catch {
-        // fall through to the durable local+outbox write below on any
-        // network or server failure rather than dropping the adjustment.
-      }
-    }
-    if (params.actor.accountType === "WORKER") {
+    if (operation === "stock_count") {
       await enqueueOutboxWrite(adjustmentId, "stock_count_submission", tenantPayload, now);
       return { ...movement, quantityDelta: 0 };
     }

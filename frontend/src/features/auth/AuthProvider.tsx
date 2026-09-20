@@ -9,6 +9,7 @@ import type { CurrentUser } from "@/features/auth/use-current-user";
 import { removeLegacyTestUser } from "@/features/auth/legacy-cleanup";
 import { refreshSession } from "@/features/auth/session";
 import { setLocalBusinessId } from "@/lib/local-tenant";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
 
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
@@ -41,11 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fullName: user.fullName,
         emailVerified: user.emailVerified,
         accountType: user.accountType,
-        permissions: (user.permissions ?? []).filter((permission): permission is import("@/features/auth/authorization").WorkerCapability => permission in {
-          POS_SELL: true, VIEW_PRODUCTS: true, VIEW_BRANCH_STOCK: true, VIEW_STOCK_MOVEMENTS: true,
-          SUBMIT_STOCK_COUNT: true, SUBMIT_RECONCILIATION: true, VIEW_CUSTOMERS: true,
-          USE_CUSTOMER_CREDIT: true, VIEW_OWN_SALES: true, VIEW_RECEIPTS: true, VIEW_ALERTS: true,
-        }),
+        permissions: (user.permissions ?? []).filter((permission): permission is WorkerCapability =>
+          (WORKER_CAPABILITIES as readonly string[]).includes(permission)
+        ),
         businessId: user.businessId,
         branchIds: user.branchIds ?? [],
         businessStatus: user.businessStatus,

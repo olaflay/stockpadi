@@ -38,15 +38,17 @@ export async function issueVerificationCode(
   }
 
   const rendered = renderVerificationEmail(fullName, code);
+  let emailSent = true;
   try {
     await sendEmail({ to: email, ...rendered });
   } catch (error) {
+    emailSent = false;
     console.error("Verification email delivery failed", error instanceof Error ? error.message : "unknown error");
     if (!options.suppressEmailError) {
       throw emailDeliveryHttpError(error);
     }
   }
-  return { status: "sent" };
+  return { status: "sent", emailSent };
 }
 
 export async function sendVerificationCode(db: SupabaseClient, actor: User) {
@@ -54,17 +56,6 @@ export async function sendVerificationCode(db: SupabaseClient, actor: User) {
   if (error) throw new HttpError(500, "PROFILE_QUERY_FAILED", error.message);
   if (!profile || profile.account_type !== "BUSINESS_OWNER") throw new HttpError(403, "FORBIDDEN", "Only a business owner may verify email");
   if (profile.email_verified) throw new HttpError(409, "ALREADY_VERIFIED", "Email is already verified");
-  // The verification code email may only go out after the business has been
-  // approved (business_status='verified'). It is dispatched by the admin
-  // approval action; resends are also gated here so no code can be requested
-  // while the account is still awaiting approval.
-  if (profile.business_id) {
-    const { data: business, error: bizError } = await db.from("business_profile").select("status").eq("id", profile.business_id).maybeSingle();
-    if (bizError) throw new HttpError(500, "BUSINESS_QUERY_FAILED", bizError.message);
-    if (business && business.status !== "verified" && business.status !== "active") {
-      throw new HttpError(403, "APPROVAL_REQUIRED", "Verification emails are sent once your account is approved.");
-    }
-  }
   if (profile.email_verification_expires_at && Date.now() - (new Date(profile.email_verification_expires_at).getTime() - CODE_TTL_MS) < RESEND_COOLDOWN_MS) throw new HttpError(429, "RATE_LIMITED", "Wait before requesting another code");
 
   return issueVerificationCode(db, actor.id, profile.full_name, actor.email ?? "");

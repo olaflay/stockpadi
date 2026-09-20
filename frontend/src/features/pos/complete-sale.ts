@@ -6,6 +6,8 @@ import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { tenantGet, withLocalBusinessId } from "@/lib/local-tenant";
+import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
+import { assertCapability } from "@/features/auth/authorization";
 
 export interface CartLine {
   productId: string;
@@ -34,6 +36,8 @@ export async function completeSale(params: {
   createdByUserId: string;
   actor: CurrentUser;
 }): Promise<Sale> {
+  assertCapability(params.actor, "POS_SELL");
+  await assertHighRiskWriteAllowed("sale");
   const now = new Date().toISOString();
   const saleId = crypto.randomUUID();
 
@@ -120,6 +124,8 @@ export async function completeSale(params: {
     .filter((payment) => payment.method === "credit")
     .reduce((sum, payment) => sum + payment.amount, 0);
 
+  if (creditAmount > 0) assertCapability(params.actor, "USE_CUSTOMER_CREDIT");
+
   if (creditAmount > 0 && !params.customerId) {
     // Never let a credit-tagged amount become debt owed by nobody — the
     // exact bug this file was rewritten to close. The UI must enforce this
@@ -148,11 +154,7 @@ export async function completeSale(params: {
 
   await db.transaction(
     "rw",
-    db.sales,
-    db.stockMovements,
-    db.customerCreditMovements,
-    db.outbox,
-    db.products,
+    [db.sales, db.stockMovements, db.customerCreditMovements, db.outbox, db.products, db.inventoryStock],
     async () => {
       // A sale must never silently drive stock negative — see
       // .agents/rules/offline-sync-and-ledger.md. Checked inside this

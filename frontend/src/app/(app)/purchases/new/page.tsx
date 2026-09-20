@@ -13,13 +13,11 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { addSupplier } from "@/features/purchases/add-supplier";
 import { receivePurchase, type PurchaseLine } from "@/features/purchases/receive-purchase";
 import { RestockLineRow } from "@/features/purchases/components/RestockLineRow";
-
-const CAN_ADD_PURCHASES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface focus-visible:outline-none focus-visible:border-brand-accent focus-visible:ring-1 focus-visible:ring-brand-accent";
@@ -43,11 +41,11 @@ export default function NewPurchasePage() {
   const [lines, setLines, clearLinesDraft] = useDraft<Record<string, PurchaseLine>>("stockpadi-draft-restock-lines", {});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!hasAccountType(user, CAN_ADD_PURCHASES)) {
+  if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
         <ScreenHeader title="Record restock" onBack={() => router.push("/purchases")} />
-        <PermissionDenied requiredAccountTypes={CAN_ADD_PURCHASES} />
+        <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
   }

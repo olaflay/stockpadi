@@ -4,12 +4,11 @@
  * /pending-approval — Pending admin review lobby.
  *
  * Shown when the business is awaiting admin approval (accountState
- * PENDING_ADMIN_APPROVAL or legacy EMAIL_VERIFIED_PENDING_ADMIN).
+ * EMAIL_VERIFIED_PENDING_ADMIN or legacy PENDING_ADMIN_APPROVAL).
  * NOT wrapped in AuthProvider — operates outside the authenticated app shell.
  *
- * Under the current flow NO verification email is sent at registration. The
- * admin approves (business_status='verified') and the backend dispatches the
- * verification code email server-side. So this page's job is purely to wait:
+ * Email verification is issued during registration. This page is shown after
+ * the owner has verified their email and is waiting for business approval:
  *
  * Guard logic:
  *   - No local session → redirect to /login
@@ -26,7 +25,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { CheckCircle2, Clock, Mail, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, Mail } from "lucide-react";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { RippleButton } from "@/components/ui/Ripple";
 import { signOut } from "@/features/auth/logout";
@@ -51,9 +50,8 @@ export default function PendingApprovalPage() {
   }, []);
 
   // Poll the backend for status change and update IndexedDB on approval.
-  // The approval action sends the verification code email on the backend, so
-  // once businessStatus flips to 'verified' the user is routed to /verify-email
-  // (or straight to /dashboard if the email was already verified, e.g. legacy).
+  // Once businessStatus flips to 'verified', route based on the server's
+  // email status. The normal flow verifies email before reaching this page.
   const checkApprovalStatus = useCallback(async () => {
     try {
       const context = await callBackend<{
@@ -100,9 +98,8 @@ export default function PendingApprovalPage() {
     }
     const { user } = resolved;
     // Already approved — move forward based on email status.
-    // The approval flow itself sends the verification code email, so an
-    // unverified email now means "go verify code from your inbox", not
-    // "go back to email verification before approval".
+    // The normal flow verifies email before approval. Keep the legacy route
+    // for accounts that were created under the previous ordering.
     if (user.businessStatus === "verified") {
       router.replace(user.emailVerified ? "/dashboard" : "/verify-email");
       return;
@@ -143,7 +140,7 @@ export default function PendingApprovalPage() {
     <div className="flex min-h-dvh w-full flex-col items-center justify-center p-6 bg-surface-container/20">
       <div className="w-full max-w-md flex flex-col gap-6">
 
-        {/* Progress indicator — approval precedes email verification */}
+        {/* Progress indicator — email verification precedes approval */}
         <div className="flex items-center gap-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
           <div className="flex items-center gap-1.5 opacity-50">
             <span className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center text-brand-accent-contrast text-[10px]">
@@ -179,8 +176,8 @@ export default function PendingApprovalPage() {
               Under Review
             </h1>
             <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
-              We are reviewing your store profile. Once approved we will email
-              you a verification code. This usually takes under 24 hours.
+              Your email is verified. We are reviewing your store profile now.
+              Approval usually takes under 24 hours.
             </p>
           </div>
 
@@ -191,12 +188,12 @@ export default function PendingApprovalPage() {
               <span className="text-on-surface">Account created</span>
             </div>
             <div className="flex items-center gap-2 text-[length:var(--font-size-body)]">
-              <RefreshCw size={16} className="text-warning shrink-0 animate-spin" style={{ animationDuration: "3s" }} aria-hidden />
-              <span className="text-on-surface-muted">Waiting for admin approval…</span>
+              <CheckCircle2 size={16} className="text-success shrink-0" aria-hidden />
+              <span className="text-on-surface">Email verified</span>
             </div>
             <div className="flex items-center gap-2 text-[length:var(--font-size-body)]">
               <span className="h-4 w-4 rounded-full border border-border flex items-center justify-center text-[10px] font-bold text-on-surface-muted" aria-hidden>3</span>
-              <span className="text-on-surface-muted">Email you a verification code</span>
+              <span className="text-on-surface-muted">Waiting for admin approval</span>
             </div>
           </div>
 

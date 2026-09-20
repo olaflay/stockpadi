@@ -13,8 +13,8 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { deleteExpense } from "@/features/expenses/add-expense";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 import { tenantArray } from "@/lib/local-tenant";
@@ -22,9 +22,6 @@ import type { LocalBranch, LocalUser } from "@/lib/db";
 import type { Expense } from "@/types/expense";
 
 import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
-
-const CAN_VIEW_EXPENSES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-const CAN_DELETE_EXPENSES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 type Period = ReportPeriod;
 const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
@@ -68,11 +65,11 @@ export default function ExpensesPage() {
     };
   }, [periodExpenses.length, visibleLimit]);
 
-  if (!hasAccountType(user, CAN_VIEW_EXPENSES)) {
+  if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
         <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
-        <PermissionDenied requiredAccountTypes={CAN_VIEW_EXPENSES} />
+        <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
   }
@@ -117,7 +114,7 @@ export default function ExpensesPage() {
   }
 
   const periodTotal = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const canDelete = hasAccountType(user, CAN_DELETE_EXPENSES);
+  const canDelete = hasCapability(user, "MANAGE_EXPENSES");
 
   async function handleDelete(id: string, category: string) {
     if (!confirm(`Delete this ${category} expense? This cannot be undone.`)) return;

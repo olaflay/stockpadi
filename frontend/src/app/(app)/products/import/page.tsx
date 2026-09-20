@@ -11,14 +11,12 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { SelectInput } from "@/components/ui/SelectInput";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { parseProductFile, buildSampleExcel, buildErrorReportCsv, type ImportResult } from "@/features/inventory/product-import";
 import { importProducts } from "@/features/inventory/import-products";
 import { countActiveProducts } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP, PRODUCT_CAP_WARN_AT } from "@/config/limits";
-
-const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: boolean }> = [
   { key: "name", label: "Product name", note: "What your customers call it.", required: true },
@@ -29,6 +27,7 @@ const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: 
   { key: "unitLabel", label: "Unit", note: "How you sell it: piece, bag, bottle, tin…" },
   { key: "lowStockThreshold", label: "Low-stock alert", note: "Get warned when stock drops to this number. Leave blank to skip." },
   { key: "expiryTracking", label: "Expiry tracking", note: "off, optional, or mandatory." },
+  { key: "expiryDate", label: "Expiry date", note: "ISO YYYY-MM-DD, or an Excel date cell. Required when expiry tracking is mandatory." },
   { key: "initialStock", label: "Starting stock", note: "How many you have now. Leave blank or 0 to start at zero." },
 ];
 
@@ -61,11 +60,11 @@ export default function ImportProductsPage() {
   const [willExceedCap, setWillExceedCap] = useState(false);
   const [willWarnCap, setWillWarnCap] = useState(false);
 
-  if (!hasAccountType(user, CAN_EDIT_PRODUCTS)) {
+  if (!hasCapability(user, "MANAGE_PRODUCTS")) {
     return (
       <div>
         <ScreenHeader title="Import products" onBack={() => router.back()} />
-        <PermissionDenied requiredAccountTypes={CAN_EDIT_PRODUCTS} />
+        <PermissionDenied requiredCapabilities={["MANAGE_PRODUCTS"]} />
       </div>
     );
   }
@@ -114,7 +113,7 @@ export default function ImportProductsPage() {
         setWillWarnCap(false);
       }
     } catch {
-      showToast("We couldn't read that file. Check it's an .xlsx or .txt file and try again.", "danger");
+      showToast("We couldn't read that file. Check it's an .xlsx, .csv, or .txt file and try again.", "danger");
       setResult(null);
     } finally {
       setIsParsing(false);
@@ -123,6 +122,8 @@ export default function ImportProductsPage() {
 
   const effectiveBranchId = branchId ?? (branches?.length === 1 ? branches[0].id : null);
   const hasInitialStock = result?.validRows.some((r) => r.hasInitialStock) ?? false;
+  const invalidRowCount = result ? new Set(result.errors.filter((error) => error.rowNum > 1).map((error) => error.rowNum)).size : 0;
+  const selectedBranch = effectiveBranchId ? branches?.find((branch) => branch.id === effectiveBranchId)?.name ?? effectiveBranchId : null;
 
   const handleImport = async () => {
     if (!result || result.validRows.length === 0) return;
@@ -207,7 +208,7 @@ export default function ImportProductsPage() {
           </span>
           {!isParsing && (
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              {file ? file.name : ".xlsx file from the template above"}
+              {file ? file.name : ".xlsx, .csv, or .txt file from the template above"}
             </span>
           )}
           <input type="file" accept=".xlsx,.txt,.csv" onChange={handleFileSelect} className="sr-only" />
@@ -215,25 +216,43 @@ export default function ImportProductsPage() {
 
         {result && (
           <div role="status" aria-live="polite" className="mt-4 flex flex-col gap-3">
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="flex items-center gap-2 rounded-[var(--radius-card)] bg-surface-container p-3 text-on-surface">
+                <span>
+                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.totalRows}</span>
+                  <span className="text-[length:var(--font-size-caption)]">Total rows</span>
+                </span>
+              </div>
               <div className="flex flex-1 items-center gap-2 rounded-[var(--radius-card)] bg-success/10 p-3 text-success">
                 <CheckCircle2 size={18} aria-hidden />
                 <span>
                   <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.validRows.length}</span>
-                  <span className="text-[length:var(--font-size-caption)]">Ready to import</span>
+                  <span className="text-[length:var(--font-size-caption)]">Valid rows</span>
                 </span>
               </div>
               <div
-                className={`flex flex-1 items-center gap-2 rounded-[var(--radius-card)] p-3 ${
-                  result.errors.length > 0 ? "bg-danger/10 text-danger" : "bg-surface-container text-on-surface-muted"
+                className={`flex items-center gap-2 rounded-[var(--radius-card)] p-3 ${
+                  invalidRowCount > 0 ? "bg-danger/10 text-danger" : "bg-surface-container text-on-surface-muted"
                 }`}
               >
                 <AlertCircle size={18} aria-hidden />
                 <span>
-                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.errors.length}</span>
-                  <span className="text-[length:var(--font-size-caption)]">Need fixing</span>
+                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{invalidRowCount}</span>
+                  <span className="text-[length:var(--font-size-caption)]">Invalid rows</span>
                 </span>
               </div>
+              <div className="flex items-center gap-2 rounded-[var(--radius-card)] bg-brand-accent/10 p-3 text-brand-accent">
+                <span>
+                  <span className="block font-number text-[length:var(--font-size-title)] font-bold tabular-nums">{result.validRows.length}</span>
+                  <span className="text-[length:var(--font-size-caption)]">Products to create</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-2 rounded-[var(--radius-card)] bg-surface-container p-4 text-[length:var(--font-size-caption)] text-on-surface sm:grid-cols-3">
+              <p><span className="font-semibold">Opening-stock units:</span> <span className="font-number tabular-nums">{result.totalOpeningStockUnits}</span></p>
+              <p><span className="font-semibold">Selected branch:</span> {selectedBranch ?? (hasInitialStock ? "Choose a branch" : "Not needed")}</p>
+              <p><span className="font-semibold">Duplicate warnings:</span> <span className="font-number tabular-nums">{result.duplicateWarnings.length}</span></p>
             </div>
 
             {result.errors.length > 0 && (
@@ -301,7 +320,7 @@ export default function ImportProductsPage() {
           {result.errors.length > 0 && (
             <div role="alert" className="mb-4 rounded-[var(--radius-card)] bg-danger/10 px-4 py-3">
               <p className="text-[length:var(--font-size-caption)] text-danger">
-                This file isn't valid yet. Fix the rows listed above and choose the file again. Nothing is imported
+                This file isn&apos;t valid yet. Fix the rows listed above and choose the file again. Nothing is imported
                 until every row is correct.
               </p>
             </div>

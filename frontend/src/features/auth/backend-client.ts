@@ -1,4 +1,4 @@
-import { getSupabase } from "@/lib/supabase";
+import { BackendConfigurationError, BackendRequestError, serverPost, serverPostPublic } from "@/features/operations/server-client";
 
 export class BackendError extends Error {
   constructor(message: string, readonly status?: number, readonly code?: string) {
@@ -8,17 +8,12 @@ export class BackendError extends Error {
 }
 
 export async function callBackend<T>(functionName: string, body: unknown): Promise<T> {
-  const supabase = getSupabase();
-  if (!supabase) throw new BackendError("The app is not connected to Supabase.");
-  const { data: { session } } = await supabase.auth.getSession();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
   const backendPath = functionName === "platform-api" ? "/api/admin" : functionName === "account-context" ? "/api/account-context" : functionName === "register-business" ? "/api/businesses/register" : null;
-  if (!backendUrl || !backendPath) throw new BackendError("The application backend is not configured.");
-  const url = `${backendUrl}${backendPath}`;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-  const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
-  const result = await response.json();
-  if (!response.ok) throw new BackendError(result?.error?.message ?? "The server rejected the request.", response.status, result?.error?.code);
-  return result as T;
+  if (!backendPath) throw new BackendError("Unsupported backend operation.");
+  try {
+    return await (functionName === "register-business" ? serverPostPublic<T>(backendPath, body) : serverPost<T>(backendPath, body));
+  } catch (error) {
+    if (error instanceof BackendRequestError || error instanceof BackendConfigurationError) throw new BackendError(error.message, error instanceof BackendRequestError ? error.status : undefined, error.code);
+    throw error;
+  }
 }

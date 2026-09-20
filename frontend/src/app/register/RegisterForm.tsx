@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff, Check } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -19,6 +19,7 @@ import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 import { sanitizeString } from "@/lib/sanitize";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
+import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function RegisterForm() {
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const hydrated = typeof window !== "undefined";
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
@@ -69,6 +71,8 @@ export default function RegisterForm() {
   }
 
   async function handleSubmit() {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
     setError(null);
     if (!formComplete) {
       setError("Fill in all fields. Password must have at least 8 characters.");
@@ -99,6 +103,10 @@ export default function RegisterForm() {
         userId: string;
         businessId?: string;
         branch?: { id: string; name: string; isActive?: boolean };
+        accountState?: string;
+        businessStatus?: string;
+        emailVerified?: boolean;
+        verificationEmailSent?: boolean;
       }>("register-business", {
         email: cleanEmail,
         password,
@@ -123,8 +131,8 @@ export default function RegisterForm() {
       if (registration.businessId) await setLocalBusinessId(registration.businessId);
 
       const branchRecord = registration.branch
-        ? { id: registration.branch.id, name: registration.branch.name, isActive: true }
-        : { id: crypto.randomUUID(), name: "Main branch", isActive: true };
+        ? { id: registration.branch.id, name: registration.branch.name, isActive: true, isPrimary: true }
+        : { id: crypto.randomUUID(), name: "Main branch", isActive: true, isPrimary: true };
 
       // Ensure theme defaults to system theme for the new user
       if (typeof window !== "undefined") {
@@ -133,7 +141,7 @@ export default function RegisterForm() {
       }
 
       // Seed local IndexedDB
-      await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
+      await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, db.outbox, async () => {
         await db.businessProfile.put({
           id: BUSINESS_PROFILE_SINGLETON_ID,
           businessId: registration.businessId,
@@ -141,16 +149,20 @@ export default function RegisterForm() {
           businessTypeId: defaultTemplate.id,
           currency: "NGN",
         });
-        await db.categories.bulkPut(
-          await withLocalBusinessIds(defaultTemplate.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })))
-        );
+        const categoryRecords = await withLocalBusinessIds(defaultTemplate.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })));
+        await db.categories.bulkPut(categoryRecords);
+        for (const category of categoryRecords) {
+          await enqueueOutboxWrite(category.id, "category", category, new Date().toISOString(), { entityId: category.id });
+        }
         await db.branches.put(await withLocalBusinessId(branchRecord));
         await db.localUsers.put({
-          id: userId,
-          fullName: cleanFullName,
+           id: userId,
+           businessId: registration.businessId,
+           fullName: cleanFullName,
           accountType: "BUSINESS_OWNER",
           isActive: true,
-          emailVerified: false,
+          emailVerified: registration.emailVerified ?? false,
+          businessStatus: registration.businessStatus ?? "pending",
           updatedAt: new Date().toISOString(),
         });
       });
@@ -158,10 +170,12 @@ export default function RegisterForm() {
       await startSession(userId);
 
       showToast(
-        "Account created! Start managing your inventory right away. Cloud sync will activate once approved.",
-        "success"
+        registration.verificationEmailSent === false
+          ? "Account created, but the verification email could not be delivered. Use Resend code on the next screen."
+          : "Account created. Check your email for the verification code.",
+        registration.verificationEmailSent === false ? "warning" : "success"
       );
-      router.replace("/dashboard");
+      router.replace(registration.accountState === "REGISTERED_UNVERIFIED" ? "/verify-email" : "/pending-approval");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
@@ -208,6 +222,8 @@ export default function RegisterForm() {
         )}
 
         <form
+          id="register-form"
+          ref={formRef}
           onSubmit={(e) => {
             e.preventDefault();
             void handleSubmit();
@@ -326,8 +342,8 @@ export default function RegisterForm() {
       <div className="flex flex-col gap-3 px-6 py-4 shrink-0">
         <RippleButton
           id="register-submit"
-          type="button"
-          onClick={handleSubmit}
+          type="submit"
+          form="register-form"
           disabled={!hydrated || busy || !formComplete}
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
         >

@@ -14,8 +14,8 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Supplier, Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
@@ -24,8 +24,6 @@ import type { Product } from "@/types/product";
 // supabase/migrations/20260807054734_rls_policies.sql — accountant gets
 // read-only visibility for supplier-balance context, everyone else on this
 // list can also write.
-const CAN_VIEW_PURCHASES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-const CAN_ADD_PURCHASES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 export default function PurchasesPage() {
   const user = useCurrentUser();
@@ -66,11 +64,11 @@ export default function PurchasesPage() {
     };
   }, [purchaseCount, visibleLimit]);
 
-  if (!hasAccountType(user, CAN_VIEW_PURCHASES)) {
+  if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
         <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
-        <PermissionDenied requiredAccountTypes={CAN_VIEW_PURCHASES} />
+        <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
   }
@@ -97,7 +95,7 @@ export default function PurchasesPage() {
     );
   }
 
-  const canAdd = hasAccountType(user, CAN_ADD_PURCHASES);
+  const canAdd = hasCapability(user, "RECEIVE_STOCK");
 
   if (result.purchases.length === 0) {
     return (

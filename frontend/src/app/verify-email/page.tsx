@@ -4,9 +4,7 @@
  * /verify-email — Email verification of an approved account.
  *
  * Reached AFTER the admin approves the account (business_status='verified'),
- * when the email is not yet verified. The verification code email is dispatched
- * by the admin approval action server-side, so this page does NOT auto-send
- * anything on mount — the code is already in the owner's inbox. A manual
+ * The verification code email is issued during registration. A manual
  * "Send again" inside the OTP card is available if it was lost.
  *
  * Guard logic:
@@ -46,7 +44,7 @@ export default function VerifyEmailPage() {
       return;
     }
     if (resolved.user.emailVerified) {
-      router.replace("/dashboard");
+      router.replace(resolved.user.businessStatus === "pending" ? "/pending-approval" : "/dashboard");
     }
   }, [resolved, router]);
 
@@ -74,7 +72,7 @@ export default function VerifyEmailPage() {
         <EmailVerificationCard
           userId={resolved.user.id}
           onSuccess={() => {
-            router.replace("/dashboard");
+            router.replace(resolved.user.businessStatus === "pending" ? "/pending-approval" : "/dashboard");
           }}
         />
 

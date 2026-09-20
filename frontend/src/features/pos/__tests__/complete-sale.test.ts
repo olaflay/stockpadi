@@ -15,8 +15,20 @@ import type { SalePayment } from "@/types/sale";
 
 const BRANCH_ID = "branch-1";
 const PRODUCT_ID = "product-1";
-const CASHIER: CurrentUser = { id: "user-cashier", fullName: "Cashier", role: "cashier" };
-const INVENTORY_STAFF: CurrentUser = { id: "user-inv", fullName: "Inventory", role: "inventory_staff" };
+const CASHIER: CurrentUser = {
+  id: "user-cashier",
+  fullName: "Cashier",
+  role: "cashier",
+  accountType: "WORKER",
+  permissions: ["POS_SELL", "USE_CUSTOMER_CREDIT"],
+};
+const INVENTORY_STAFF: CurrentUser = {
+  id: "user-inv",
+  fullName: "Inventory",
+  role: "inventory_staff",
+  accountType: "WORKER",
+  permissions: ["ADJUST_STOCK"],
+};
 
 function line(overrides: Partial<CartLine> = {}): CartLine {
   return {
@@ -72,6 +84,28 @@ describe("completeSale", () => {
     expect(outboxEntries[0].type).toBe("sale");
 
     expect(await db.customerCreditMovements.count()).toBe(0);
+  });
+
+  it("rolls back the sale and ledger when the outbox append fails", async () => {
+    const failOutboxCreate = (_key: string, value: unknown) => {
+      if ((value as { type?: string }).type === "sale") throw new Error("simulated outbox failure");
+    };
+    db.outbox.hook("creating").subscribe(failOutboxCreate);
+    try {
+      await expect(completeSale({
+        branchId: BRANCH_ID,
+        customerId: null,
+        payments: [{ method: "cash", amount: 1000 }],
+        lines: [line()],
+        createdByUserId: CASHIER.id,
+        actor: CASHIER,
+      })).rejects.toThrow("simulated outbox failure");
+    } finally {
+      db.outbox.hook("creating").unsubscribe(failOutboxCreate);
+    }
+    expect(await db.sales.count()).toBe(0);
+    expect(await db.outbox.count()).toBe(0);
+    expect(await getCurrentStock(PRODUCT_ID, BRANCH_ID)).toBe(100);
   });
 
   it("moves stock by the base-unit quantity, not the sold-unit quantity", async () => {
@@ -131,18 +165,18 @@ describe("completeSale", () => {
     expect(await db.outbox.count()).toBe(0);
   });
 
-  it("keeps the offline write path backend-authorized", async () => {
-    await completeSale({
+  it("rejects a worker without POS_SELL before writing the offline sale", async () => {
+    await expect(completeSale({
         branchId: BRANCH_ID,
         customerId: null,
         payments: [{ method: "cash", amount: 1000 }],
         lines: [line()],
         createdByUserId: INVENTORY_STAFF.id,
         actor: INVENTORY_STAFF,
-      });
+      })).rejects.toThrow("pos sell permission");
 
-    expect(await db.sales.count()).toBe(1);
-    expect(await db.outbox.count()).toBe(1);
+    expect(await db.sales.count()).toBe(0);
+    expect(await db.outbox.count()).toBe(0);
   });
 
   it("persists cash tendered and transfer note as audit metadata on the sale and its outbox payload (§9.1, §9.3)", async () => {

@@ -121,7 +121,7 @@ export default function SuperAdminTenantsPage() {
         status: "verified",
       });
       showToast(
-        "Store verified. Verification email sent to the owner.",
+        "Store approved. The owner can continue after email verification.",
         "success"
       );
       setTenants((prev) =>
@@ -433,7 +433,7 @@ export default function SuperAdminTenantsPage() {
                       onClick={(e) => approveTenant(tenant.id, e)}
                       disabled={approvingId === tenant.id}
                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold border border-success/40 bg-success/10 text-success hover:bg-success/20 transition-all cursor-pointer shadow-xs"
-                      title="Verify this store and send the owner a verification code email"
+                      title="Approve this store"
                     >
                       <CheckCircle2 size={13} />
                       <span>{approvingId === tenant.id ? "Approving…" : "Approve"}</span>

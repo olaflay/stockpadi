@@ -3,9 +3,10 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { parseCreditPayment, parseCustomer } from "./customer.schema.js";
 import { requireCapability } from "../authorization/capabilities.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export async function createCustomer(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireCapability(context, "CREATE_CUSTOMERS");
   const customer = parseCustomer(input);
@@ -15,7 +16,7 @@ export async function createCustomer(db: SupabaseClient, actor: User, input: unk
 }
 
 export async function listCustomers(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireCapability(context, "VIEW_CUSTOMERS");
   const { data: customers, error } = await db.from("customers").select("id, name, phone, updated_at").eq("business_id", context.businessId).order("name");
@@ -39,7 +40,7 @@ export async function recordCreditPayment(db: SupabaseClient, actor: User, input
 }
 
 export async function getCustomerDetail(db: SupabaseClient, actor: User, customerId: string) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireCapability(context, "VIEW_CUSTOMERS");
   const { data: customer, error } = await db.from("customers").select("id, name, phone, updated_at").eq("id", customerId).eq("business_id", context.businessId).maybeSingle();

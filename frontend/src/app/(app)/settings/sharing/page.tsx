@@ -11,12 +11,15 @@ import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { normalizeNigerianPhone } from "@/lib/whatsapp";
+import { renderOwingMessage } from "@/lib/whatsapp";
+import { serverPatch } from "@/features/operations/server-client";
 
 export default function SharingSettingsPage() {
   const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [whatsappInput, setWhatsappInput] = useState<string | null>(null);
+  const [templateInput, setTemplateInput] = useState<string | null>(null);
   const profile = useLiveQuery(() => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID), []);
 
   if (user.accountType !== "BUSINESS_OWNER") {
@@ -54,6 +57,18 @@ export default function SharingSettingsPage() {
     showToast("WhatsApp number saved", "success");
   }
 
+  async function saveTemplate() {
+    if (!profile) return;
+    const template = (templateInput ?? profile.owingMessageTemplate ?? "").trim();
+    if (!template) { showToast("Message template cannot be empty", "danger"); return; }
+    if (!navigator.onLine) { showToast("Connect to the internet to save this template", "warning"); return; }
+    try {
+      const saved = await serverPatch<{ owing_message_template?: string }>("/api/business/profile", { name: profile.name, businessTypeId: profile.businessTypeId, owingMessageTemplate: template });
+      await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { owingMessageTemplate: saved.owing_message_template ?? template });
+      showToast("Owing message saved", "success");
+    } catch (error) { showToast(error instanceof Error ? error.message : "Could not save message", "danger"); }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <ScreenHeader title="Sharing" onBack={() => router.push("/settings")} />
@@ -79,6 +94,13 @@ export default function SharingSettingsPage() {
             Save
           </RippleButton>
         </div>
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Owing message template</span>
+        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Use {"{{customerName}}"}, {"{{businessName}}"}, and {"{{amountOwed}}"}.</p>
+        <textarea value={templateInput ?? profile?.owingMessageTemplate ?? "Hi {{customerName}}, gentle reminder from {{businessName}}. Your balance is {{amountOwed}}. Please pay when convenient. Thank you."} onChange={(event) => setTemplateInput(event.target.value)} rows={4} className="rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2 text-[length:var(--font-size-body)] text-on-surface" />
+        <p className="rounded-[var(--radius-control)] bg-surface-container-low p-3 text-[length:var(--font-size-caption)] text-on-surface-muted">Preview: {renderOwingMessage(templateInput ?? profile?.owingMessageTemplate, { customerName: "Ada", businessName: profile?.name ?? "Your shop", amountOwed: "₦12,500" })}</p>
+        <RippleButton type="button" onClick={saveTemplate} className="min-h-[var(--touch-target-min)] self-start rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast">Save template</RippleButton>
       </label>
     </div>
   );

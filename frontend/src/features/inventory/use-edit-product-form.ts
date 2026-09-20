@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import { markCategoryUsed } from "@/lib/last-used-category";
@@ -38,31 +39,27 @@ export function useEditProductForm(id: string) {
     undefined
   );
 
-  const [stockInput, setStockInput] = useState("");
+  const [stockInputOverride, setStockInputOverride] = useState<string | undefined>(undefined);
   const [stockBranchId, setStockBranchId] = useState<string | null>(null);
-  const [stockInitialized, setStockInitialized] = useState(false);
-
-  useEffect(() => {
-    if (totalStock !== undefined && !stockInitialized) {
-      setStockInput(String(totalStock));
-      setStockInitialized(true);
-    }
-  }, [totalStock, stockInitialized]);
 
   // Starts open only if this product already uses a second unit, so
   // existing data is never hidden; otherwise stays collapsed like Add
   // Product's simple-by-default form.
-  const [showUnitConversion, setShowUnitConversion] = useState(false);
-  const [categoryId, setCategoryId] = useState("");
+  const [showUnitConversionOverride, setShowUnitConversionOverride] = useState<boolean | undefined>(undefined);
+  const [categoryIdOverride, setCategoryIdOverride] = useState<string | null>(null);
   const [categoryInputName, setCategoryInputName] = useState("");
+
+  const stockInput = stockInputOverride ?? (totalStock === undefined ? "" : String(totalStock));
+  const showUnitConversion = showUnitConversionOverride ?? Boolean(product?.altUnitLabel);
+  const categoryId = categoryIdOverride ?? product?.categoryId ?? "";
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productFormSchema),
   });
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, setValue, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   // Load existing values into form when product has loaded
   useEffect(() => {
@@ -74,23 +71,39 @@ export function useEditProductForm(id: string) {
       setValue("barcode", product.barcode || "");
       setValue("expiryTracking", product.expiryTracking);
       setValue("expiryDate", product.expiryDate || "");
-      setCategoryId(product.categoryId || "");
       setValue("unitLabel", product.unitLabel || "piece");
       setValue("altUnitLabel", product.altUnitLabel || "");
       if (product.altUnitConversionFactor !== null) setValue("altUnitConversionFactor", product.altUnitConversionFactor);
       if (product.altUnitSellPrice !== null) setValue("altUnitSellPrice", product.altUnitSellPrice);
       if (product.lowStockThreshold !== null) setValue("lowStockThreshold", product.lowStockThreshold);
-      if (product.altUnitLabel) setShowUnitConversion(true);
     }
   }, [product, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
 
+    const newStockQty = Number(stockInput.trim());
+    const stockChanges =
+      stockInput.trim() !== "" &&
+      Number.isFinite(newStockQty) &&
+      newStockQty >= 0 &&
+      totalStock !== undefined &&
+      newStockQty !== totalStock;
+    if (stockChanges && !hasCapability(user, "ADJUST_STOCK") && !hasCapability(user, "SUBMIT_STOCK_COUNT")) {
+      showToast("Your account cannot change stock quantities.", "danger");
+      return;
+    }
+
     let resolvedCategoryId: string | null = categoryId || null;
+    let newCategory: { id: string; name: string } | null = null;
     const newCategoryName = categoryInputName.trim();
     if (!resolvedCategoryId && newCategoryName) {
-      resolvedCategoryId = crypto.randomUUID();
-      await db.categories.add({ id: resolvedCategoryId, name: newCategoryName });
+      const existingCategory = categories?.find((category) => category.name.trim().toLocaleLowerCase() === newCategoryName.toLocaleLowerCase());
+      if (existingCategory) {
+        resolvedCategoryId = existingCategory.id;
+      } else {
+        resolvedCategoryId = crypto.randomUUID();
+        newCategory = { id: resolvedCategoryId, name: newCategoryName };
+      }
     }
 
     const hasAltUnit = Boolean(values.altUnitLabel?.trim());
@@ -121,10 +134,9 @@ export function useEditProductForm(id: string) {
     // device's cached copy stale until a pull that didn't exist; routing every
     // edit through the outbox also gives the last-write-wins merge its version
     // handling. See .agents/rules/offline-sync-and-ledger.md.
-    await writeProductEditOffline(id, update);
+    await writeProductEditOffline(id, update, newCategory, user);
 
     // If stock quantity was changed on the edit screen, record the ledger adjustment
-    const newStockQty = Number(stockInput.trim());
     if (
       stockInput.trim() !== "" &&
       Number.isFinite(newStockQty) &&
@@ -152,12 +164,12 @@ export function useEditProductForm(id: string) {
   });
 
   async function handleDelete(prod: Product) {
-    if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
-      showToast("Only the store owner can delete products.", "danger");
+    if (!hasCapability(user, "MANAGE_PRODUCTS")) {
+      showToast("Your account cannot archive products.", "danger");
       return;
     }
-    await db.products.delete(id);
-    showToast(`${prod.name} deleted`, "success");
+    await writeProductEditOffline(id, { archived: true }, null, user);
+    showToast(`${prod.name} archived`, "success");
     router.push("/products");
   }
 
@@ -169,13 +181,13 @@ export function useEditProductForm(id: string) {
     product,
     totalStock,
     stockInput,
-    setStockInput,
+    setStockInput: (value: string) => setStockInputOverride(value),
     stockBranchId,
     setStockBranchId,
     showUnitConversion,
-    setShowUnitConversion,
+    toggleShowUnitConversion: () => setShowUnitConversionOverride(!showUnitConversion),
     categoryId,
-    setCategoryId,
+    setCategoryId: setCategoryIdOverride,
     categoryInputName,
     setCategoryInputName,
     register,

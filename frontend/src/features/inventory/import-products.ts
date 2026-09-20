@@ -7,6 +7,7 @@ import type { CurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
 import type { ParsedImportRow } from "./product-import";
+import { assertCapability } from "@/features/auth/authorization";
 
 // Matches every other write-path function (completeSale, writeStockAdjustment,
 // etc.) — CurrentUser, not LocalUser. The two were previously mismatched
@@ -16,6 +17,14 @@ export async function importProducts(
   user: CurrentUser,
   branchId: string | null
 ): Promise<void> {
+  assertCapability(user, "MANAGE_PRODUCTS");
+  if (rows.some((row) => row.hasInitialStock)) assertCapability(user, "ADJUST_STOCK");
+  if (rows.some((row) => row.hasInitialStock && !branchId)) {
+    throw new Error("Choose a branch before importing opening stock.");
+  }
+  if (rows.some((row) => row.initialStockQty < 0 || !Number.isInteger(row.initialStockQty))) {
+    throw new Error("Opening stock must be a non-negative whole number.");
+  }
   const products: Product[] = [];
   const movements: StockMovement[] = [];
   const now = new Date().toISOString();
@@ -43,8 +52,9 @@ export async function importProducts(
       costPrice: data.costPrice,
       sellPrice: data.sellPrice,
       expiryTracking: data.expiryTracking,
-      expiryDate: null,
+      expiryDate: data.expiryTracking === "off" ? null : data.expiryDate || null,
       lowStockThreshold: data.lowStockThreshold ?? null,
+      archived: false,
       version: 1,
       updatedAt: now,
     };
@@ -95,7 +105,7 @@ export async function importProducts(
         reasonCode: "initial_stock" as const,
         note: null,
         createdAtLocal: now,
-      }, now);
+      }, now, { dependsOn: [movement.branchId, movement.productId] });
     }
   });
 }

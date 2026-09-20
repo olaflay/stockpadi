@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db, BUSINESS_PROFILE_SINGLETON_ID, SESSION_SINGLETON_ID } from "@/lib/db";
+import { db, BUSINESS_PROFILE_SINGLETON_ID, SESSION_SINGLETON_ID, type LocalCategory } from "@/lib/db";
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -28,6 +28,20 @@ const STEPS: OnboardingStep[] = [
   "first_product",
   "education",
 ];
+
+function categoryKey(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+function prepareDefaultCategories(template: (typeof BUSINESS_TYPE_TEMPLATES)[number], businessId: string, existing: LocalCategory[]) {
+  const existingByName = new Map(existing.map((category) => [categoryKey(category.name), category]));
+  const records = template.defaultCategories.map((name) => existingByName.get(categoryKey(name)) ?? {
+    id: crypto.randomUUID(),
+    businessId,
+    name,
+  });
+  return { records, created: records.filter((category) => !existing.some((candidate) => candidate.id === category.id)) };
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -102,9 +116,12 @@ export default function OnboardingPage() {
       const session = await db.session.get(SESSION_SINGLETON_ID);
       const user = session?.userId ? await db.localUsers.get(session.userId) : null;
       const businessId = existingProfile?.businessId ?? user?.businessId ?? (await getLocalBusinessId());
+      if (!businessId) throw new Error("Your business account is not ready yet. Please reconnect and try again.");
 
       const existingBranches = await tenantArray(db.branches);
-      const branchId = existingBranches[0]?.id || crypto.randomUUID();
+      const existingCategories = await tenantArray(db.categories);
+      const primaryBranch = existingBranches.find((branch) => branch.isActive && branch.isPrimary) ?? existingBranches.find((branch) => branch.isActive);
+      const branchId = primaryBranch?.id || crypto.randomUUID();
 
       await db.transaction(
         "rw",
@@ -127,22 +144,23 @@ export default function OnboardingPage() {
           });
 
           // 2. Categories
-          const categoryRecords = template.defaultCategories.map((name) => ({
-            id: crypto.randomUUID(),
-            businessId,
-            name,
-          }));
+          const { records: categoryRecords, created: newCategories } = prepareDefaultCategories(template, businessId, existingCategories);
           await db.categories.bulkPut(categoryRecords);
+          for (const category of newCategories) {
+            await enqueueOutboxWrite(category.id, "category", category, now, { entityId: category.id });
+          }
           const defaultCategoryId = categoryRecords[0]?.id || null;
 
           // 3. Main Branch (Only create if no branch exists yet; reuse registered branch)
-          if (existingBranches.length === 0) {
+          if (!primaryBranch) {
             await db.branches.add({
               id: branchId,
               businessId,
               name: "Main branch",
               isActive: true,
+              isPrimary: true,
             });
+            await enqueueOutboxWrite(branchId, "branch", { id: branchId, name: "Main branch", isActive: true, isPrimary: true }, now, { entityId: branchId });
           }
 
           // 4. Starter Pack Products (if enabled) — queued to outbox for cloud sync
@@ -170,7 +188,7 @@ export default function OnboardingPage() {
                 updatedAt: now,
               };
               await db.products.put(product);
-              await enqueueOutboxWrite(productId, "product", product, now);
+              await enqueueOutboxWrite(productId, "product", product, now, { entityId: productId, dependsOn: defaultCategoryId ? [defaultCategoryId] : undefined });
 
               // Initial stock movement
               const movementId = crypto.randomUUID();
@@ -189,7 +207,7 @@ export default function OnboardingPage() {
                 createdByUserId: user?.id || "owner",
               };
               await db.stockMovements.put(movement);
-              await enqueueOutboxWrite(movementId, "stock_adjustment", movement, now);
+              await enqueueOutboxWrite(movementId, "stock_adjustment", movement, now, { dependsOn: [branchId, productId] });
             }
           }
 
@@ -224,7 +242,7 @@ export default function OnboardingPage() {
               updatedAt: now,
             };
             await db.products.put(firstProduct);
-            await enqueueOutboxWrite(firstProdId, "product", firstProduct, now);
+            await enqueueOutboxWrite(firstProdId, "product", firstProduct, now, { entityId: firstProdId, dependsOn: defaultCategoryId ? [defaultCategoryId] : undefined });
 
             const firstMovementId = crypto.randomUUID();
             const firstMovement = {
@@ -242,7 +260,7 @@ export default function OnboardingPage() {
               createdByUserId: user?.id || "owner",
             };
             await db.stockMovements.put(firstMovement);
-            await enqueueOutboxWrite(firstMovementId, "stock_adjustment", firstMovement, now);
+            await enqueueOutboxWrite(firstMovementId, "stock_adjustment", firstMovement, now, { dependsOn: [branchId, firstProdId] });
           }
         }
       );
@@ -267,12 +285,19 @@ export default function OnboardingPage() {
       const session = await db.session.get(SESSION_SINGLETON_ID);
       const user = session?.userId ? await db.localUsers.get(session.userId) : null;
       const businessId = existingProfile?.businessId ?? user?.businessId ?? (await getLocalBusinessId());
+      if (!businessId) throw new Error("Your business account is not ready yet. Please reconnect and try again.");
+
+      const existingBranches = await tenantArray(db.branches);
+      const existingCategories = await tenantArray(db.categories);
+      const primaryBranch = existingBranches.find((branch) => branch.isActive && branch.isPrimary) ?? existingBranches.find((branch) => branch.isActive);
+      const branchId = primaryBranch?.id || crypto.randomUUID();
 
       await db.transaction(
         "rw",
         db.businessProfile,
         db.categories,
         db.branches,
+        db.outbox,
         async () => {
           await db.businessProfile.put({
             id: BUSINESS_PROFILE_SINGLETON_ID,
@@ -281,19 +306,19 @@ export default function OnboardingPage() {
             businessTypeId: template.id,
             currency: "NGN",
           });
-          await db.categories.bulkPut(
-            template.defaultCategories.map((name) => ({
-              id: crypto.randomUUID(),
+          const { records: categoryRecords, created: newCategories } = prepareDefaultCategories(template, businessId, existingCategories);
+          await db.categories.bulkPut(categoryRecords);
+          for (const category of newCategories) await enqueueOutboxWrite(category.id, "category", category, new Date().toISOString(), { entityId: category.id });
+          if (!primaryBranch) {
+            await db.branches.add({
+              id: branchId,
               businessId,
-              name,
-            }))
-          );
-          await db.branches.add({
-            id: crypto.randomUUID(),
-            businessId,
-            name: "Main branch",
-            isActive: true,
-          });
+              name: "Main branch",
+              isActive: true,
+              isPrimary: true,
+            });
+            await enqueueOutboxWrite(branchId, "branch", { id: branchId, name: "Main branch", isActive: true, isPrimary: true }, new Date().toISOString(), { entityId: branchId });
+          }
         }
       );
 

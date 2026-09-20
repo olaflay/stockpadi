@@ -40,3 +40,8 @@ export function buildWhatsAppUrl(phone: string | null | undefined, message: stri
   const text = encodeURIComponent(message);
   return normalized ? `https://wa.me/${normalized}?text=${text}` : `https://wa.me/?text=${text}`;
 }
+
+export function renderOwingMessage(template: string | undefined, values: { customerName: string; businessName: string; amountOwed: string }): string {
+  const source = template?.trim() || "Hi {{customerName}}, gentle reminder from {{businessName}}. Your balance is {{amountOwed}}. Please pay when convenient. Thank you.";
+  return source.replaceAll("{{customerName}}", values.customerName).replaceAll("{{businessName}}", values.businessName).replaceAll("{{amountOwed}}", values.amountOwed);
+}

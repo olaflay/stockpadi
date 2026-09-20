@@ -1,13 +1,14 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { BackgroundSyncPlugin, NetworkOnly, Serwist } from "serwist";
+import { ExpirationPlugin, NetworkFirst, Serwist } from "serwist";
 
 /**
  * Precaches the app shell so cold start on a cached 2G connection stays
- * under 3s (PRD Section 8). Background Sync drains the sync outbox on
- * reconnect per the lifecycle in .agents/rules/offline-sync-and-ledger.md
- * and PRD Section 10.1, even if the app isn't in the foreground.
+ * under 3s (PRD Section 8). The application owns outbox retries so that
+ * IndexedDB is the only retry authority. A service-worker replay queue for
+ * /api/sync/push would create duplicate ownership and can replay mutations
+ * after the UI has already classified them as blocked or conflicted.
  */
 
 declare global {
@@ -18,25 +19,24 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-const SYNC_QUEUE_NAME = "stockpadi-outbox";
-
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    ...defaultCache,
+    // Next's default HTML matcher keys off a request Content-Type header,
+    // which navigations do not send. Explicitly cache document navigations so
+    // already-warmed authenticated routes can boot without a network.
     {
-      matcher: ({ url }) => url.pathname.startsWith("/functions/v1/sync-push"),
-      handler: new NetworkOnly({
-        plugins: [
-          new BackgroundSyncPlugin(SYNC_QUEUE_NAME, {
-            maxRetentionTime: 24 * 60, // minutes; matches the 24h "needs attention" threshold in PRD 10.1
-          }),
-        ],
+      matcher: ({ request, sameOrigin }) => sameOrigin && (request.mode === "navigate" || request.headers.get("accept")?.includes("text/html") === true),
+      handler: new NetworkFirst({
+        cacheName: "stockpadi-navigation",
+        networkTimeoutSeconds: 3,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
       }),
     },
+    ...defaultCache,
   ],
   fallbacks: {
     entries: [

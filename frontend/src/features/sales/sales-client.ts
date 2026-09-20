@@ -1,14 +1,8 @@
-import { getSupabase } from "@/lib/supabase";
+import { serverGet } from "@/features/operations/server-client";
 import type { Sale } from "@/types/sale";
 
 export async function fetchServerSales(): Promise<Sale[]> {
-  const supabase = getSupabase();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  const { data: { session } } = await supabase!.auth.getSession();
-  if (!session || !backendUrl) throw new Error("The application backend is not configured.");
-  const response = await fetch(`${backendUrl}/api/sales`, { headers: { Authorization: `Bearer ${session.access_token}` } });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result?.error?.message ?? "Could not load sales.");
+  const result = await serverGet<{ sales?: Record<string, unknown>[] }>("/api/sales");
   return (result.sales ?? []).map((sale: Record<string, unknown>) => ({
     id: sale.id, clientId: sale.client_id, branchId: sale.branch_id, customerId: sale.customer_id ?? null,
     subtotal: Number(sale.subtotal), discount: Number(sale.discount), total: Number(sale.total),

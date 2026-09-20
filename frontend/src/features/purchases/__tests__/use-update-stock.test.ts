@@ -15,7 +15,7 @@ import type { Product } from "@/types/product";
  */
 
 const BRANCH_ID = "branch-1";
-const OWNER: CurrentUser = { id: "user-owner", fullName: "Owner", role: "owner" };
+const OWNER: CurrentUser = { id: "user-owner", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" };
 // Cashier has neither edit_products nor stock_adjustments in PERMISSION_MATRIX.
 const CASHIER: CurrentUser = { id: "user-cashier", fullName: "Cashier", role: "cashier" };
 
@@ -140,7 +140,7 @@ describe("useUpdateStockRows", () => {
     expect(movements[0].reasonCode).toBe("recount");
   });
 
-  it("allows the offline write and leaves final authorization to the backend", async () => {
+  it("rejects a worker without product-management capability before mutating local state", async () => {
     const p = product();
     await db.products.add(p);
     const showToast = vi.fn();
@@ -159,9 +159,9 @@ describe("useUpdateStockRows", () => {
       await result.current.handleSave();
     });
 
-    expect(showToast).toHaveBeenCalledWith("1 product updated", "success");
-    expect(router.push).toHaveBeenCalledWith("/purchases");
+    expect(showToast).toHaveBeenCalledWith("Couldn't save some updates. Try again.", "danger");
+    expect(router.push).not.toHaveBeenCalled();
     const updated = await db.products.get(p.id);
-    expect(updated?.sellPrice).toBe(1500);
+    expect(updated?.sellPrice).toBe(1000);
   });
 });

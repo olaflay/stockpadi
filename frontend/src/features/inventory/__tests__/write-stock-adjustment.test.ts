@@ -8,7 +8,7 @@ import type { CurrentUser } from "@/features/auth/use-current-user";
 const PRODUCT_ID = "product-1";
 const BRANCH_ID = "branch-1";
 
-const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner" };
+const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" };
 
 describe("writeStockAdjustment", () => {
   beforeEach(async () => {

@@ -13,6 +13,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import { callBackend } from "@/features/auth/backend-client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
+import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 
 export default function RegisterCallbackPage() {
   const router = useRouter();
@@ -31,11 +32,11 @@ export default function RegisterCallbackPage() {
         return;
       }
       try {
-        const context = await callBackend<{ profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean }; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {});
+        const context = await callBackend<{ accountState?: string; businessStatus?: string; profile: { id: string; full_name: string; role: string; account_type: "ADMIN" | "BUSINESS_OWNER" | "WORKER"; is_active: boolean; email_verified?: boolean }; permissions?: string[]; branchIds?: string[]; businessId?: string }>("account-context", {});
         const profile = context.profile;
-        await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: profile.account_type, permissions: context.permissions ?? [], isActive: profile.is_active, emailVerified: false, updatedAt: new Date().toISOString() });
+        await db.localUsers.put({ id: profile.id, businessId: context.businessId, branchIds: context.branchIds ?? [], fullName: profile.full_name, accountType: profile.account_type, permissions: context.permissions ?? [], isActive: profile.is_active, emailVerified: profile.email_verified ?? false, businessStatus: context.businessStatus, updatedAt: new Date().toISOString() });
         await startSession(profile.id);
-        router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
+        router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : context.accountState === "EMAIL_VERIFIED_PENDING_ADMIN" ? "/pending-approval" : "/dashboard");
         return;
       } catch {
         setLoading(false);
@@ -57,38 +58,51 @@ export default function RegisterCallbackPage() {
       if (authError || !authData.user) throw new Error("Your sign-in session has expired.");
       
       const defaultTemplate = BUSINESS_TYPE_TEMPLATES.find((t) => t.id === "general_retail") || BUSINESS_TYPE_TEMPLATES[0];
-      const registration = await callBackend<{ businessId?: string }>("register-business", {
+      const registration = await callBackend<{
+        businessId?: string;
+        branch?: { id: string; name: string; isActive?: boolean };
+        accountState?: string;
+        businessStatus?: string;
+        emailVerified?: boolean;
+      }>("register-business", {
         action: "complete_oauth",
         businessName: businessName.trim(),
         businessTypeId: defaultTemplate.id,
       });
 
-      if (registration.businessId) await setLocalBusinessId(registration.businessId);
+       if (!registration.businessId) throw new Error("The server did not return a business account.");
+       await setLocalBusinessId(registration.businessId);
 
-      await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, async () => {
-        await db.businessProfile.put({
-          id: BUSINESS_PROFILE_SINGLETON_ID,
-          name: businessName.trim(),
+      await db.transaction("rw", db.businessProfile, db.categories, db.branches, db.localUsers, db.outbox, async () => {
+         await db.businessProfile.put({
+           id: BUSINESS_PROFILE_SINGLETON_ID,
+           businessId: registration.businessId,
+           name: businessName.trim(),
           businessTypeId: defaultTemplate.id,
           currency: "NGN",
         });
-        await db.categories.bulkPut(
-          await withLocalBusinessIds(defaultTemplate.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name })))
-        );
-        await db.branches.add(await withLocalBusinessId({ id: crypto.randomUUID(), name: "Main branch", isActive: true }));
-        await db.localUsers.put({
-          id: authData.user.id,
+        const categoryRecords = await withLocalBusinessIds(defaultTemplate.defaultCategories.map((name) => ({ id: crypto.randomUUID(), name })));
+        await db.categories.bulkPut(categoryRecords);
+        for (const category of categoryRecords) {
+          await enqueueOutboxWrite(category.id, "category", category, new Date().toISOString(), { entityId: category.id });
+        }
+        if (!registration.branch) throw new Error("The server did not return the primary branch.");
+        await db.branches.put(await withLocalBusinessId({ id: registration.branch.id, name: registration.branch.name, isActive: registration.branch.isActive !== false, isPrimary: true }));
+         await db.localUsers.put({
+           id: authData.user.id,
+           businessId: registration.businessId,
           fullName: authData.user.user_metadata?.full_name ?? authData.user.email?.split("@")[0] ?? "Owner",
           accountType: "BUSINESS_OWNER",
           isActive: true,
-          emailVerified: true,
+          emailVerified: registration.emailVerified ?? true,
+          businessStatus: registration.businessStatus ?? "pending",
           updatedAt: new Date().toISOString(),
         });
       });
 
       await startSession(authData.user.id);
       showToast("Shop account created.", "success");
-      router.replace("/business");
+      router.replace(registration.accountState === "EMAIL_VERIFIED_PENDING_ADMIN" ? "/pending-approval" : "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish registration.");
     } finally {

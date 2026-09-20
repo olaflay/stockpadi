@@ -9,7 +9,7 @@ This guide explains how to run, test, update the database, and deploy StockPadi 
 ```text
 frontend/  The screens, PWA, offline cache, and local queue
 backend/   The secure application server
-supabase/  The database, login system, security rules, migrations, and Edge Functions
+supabase/  The database, login system, security rules, migrations, and compatibility functions
 ```
 
 Normal online traffic is:
@@ -357,7 +357,8 @@ Deploy database changes and specialized functions separately:
 ```powershell
 npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
-npx supabase functions deploy sync-push
+# sync push/pull are served by the Node backend; sync-push is only a temporary
+# compatibility proxy and is not part of the browser runtime.
 npx supabase functions deploy verify-email
 npx supabase functions deploy send-verification
 ```
@@ -370,7 +371,7 @@ Keep compatibility functions only while they receive traffic. Remove them only a
 - `BUSINESS_OWNER` manages their own business.
 - `WORKER` performs assigned operational work.
 - Workers are restricted to assigned branches.
-- Workers cannot manage products, Staff, branches, expenses, settings, full reports, or data restore.
+- Workers cannot manage products, Staff, expenses, settings, full reports, or data restore. A worker may manage branches only when the owner explicitly grants `MANAGE_BRANCHES`; branch assignment remains owner-only.
 - Worker stock counts are pending submissions; they are not unrestricted stock corrections.
 - Owners can reset Worker passwords; Workers cannot change their own passwords.
 - Stock and credit history are append-only ledgers.
@@ -397,6 +398,6 @@ Do not edit a deployed migration. Check `npx supabase migration list` and use a 
 
 ## Architecture reference
 
-PostgreSQL is the source of truth. RLS and backend authorization enforce tenant and branch isolation. Dexie and IndexedDB are frontend offline storage only. `sync-push` is the intentional specialized Edge Function for queued offline operations. The main application API lives in `backend/`.
+PostgreSQL is the source of truth. RLS and backend authorization enforce tenant and branch isolation. Dexie and IndexedDB are frontend offline storage only. The Node backend is the single authoritative sync engine for queued offline operations and pull convergence.
 
 See `AGENTS.md`, `docs/PRD.md`, and `.agents/rules/` for the detailed engineering rules.

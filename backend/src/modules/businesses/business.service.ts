@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { issueVerificationCode } from "../auth/email-verification.service.js";
 import { validateRegistration, type RegistrationRequest } from "./business.schema.js";
 
 export async function registerBusiness(request: RegistrationRequest, authenticatedUser?: User) {
@@ -10,12 +11,24 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (!request.businessName || !request.businessTypeId) throw new HttpError(400, "INVALID_BODY", "Business details are required");
     const existing = await db.from("users").select("id").eq("id", authenticatedUser.id).maybeSingle();
     if (existing.error) throw new HttpError(500, "PROFILE_LOOKUP_FAILED", existing.error.message);
-    if (existing.data) return { userId: authenticatedUser.id };
-    const result = await provision(db, authenticatedUser.id, authenticatedUser.user_metadata?.full_name ?? authenticatedUser.email?.split("@")[0] ?? "Owner", request.businessName, request.businessTypeId);
-    if (result.error) throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
+    if (!existing.data) {
+      const result = await provision(db, authenticatedUser.id, authenticatedUser.user_metadata?.full_name ?? authenticatedUser.email?.split("@")[0] ?? "Owner", request.businessName, request.businessTypeId);
+      if (result.error) throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
+      const verified = await db.from("users").update({ email_verified: true }).eq("id", authenticatedUser.id);
+      if (verified.error) throw new HttpError(500, "PROFILE_UPDATE_FAILED", verified.error.message);
+    }
     const businessId = await findBusinessId(db, authenticatedUser.id);
-    const branch = businessId ? await findDefaultBranch(db, businessId) : undefined;
-    return { userId: authenticatedUser.id, businessId, branch };
+    if (!businessId) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The OAuth business account was not provisioned.");
+    const branch = await findDefaultBranch(db, businessId);
+    const businessStatus = await findBusinessStatus(db, businessId);
+    return {
+      userId: authenticatedUser.id,
+      businessId,
+      branch,
+      accountState: businessStatus === "verified" ? "FULLY_ACTIVATED" : "EMAIL_VERIFIED_PENDING_ADMIN",
+      businessStatus,
+      emailVerified: true,
+    };
   }
   validateRegistration(request);
   const created = await db.auth.admin.createUser({ email: request.email!, password: request.password!, email_confirm: true, user_metadata: { full_name: request.fullName, business_name: request.businessName, business_type_id: request.businessTypeId, account_type: "BUSINESS_OWNER" } });
@@ -27,17 +40,22 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (cleanup.error) console.error("Registration Auth compensation failed", cleanup.error);
     throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
   }
-  // No verification email is sent at registration. The account is provisioned
-  // with business_status='pending'; the admin must approve it first, and the
-  // verification code email is dispatched from the approval action instead.
+  // Email verification starts immediately after account provisioning. Business
+  // approval remains a separate server-side gate for cloud sync and operations.
+  // The code hash is stored before delivery, so the owner can request a resend
+  // if the first message is delayed or lost.
+  const verification = await issueVerificationCode(db, created.data.user.id, request.fullName!, request.email!, { suppressEmailError: true });
   const businessId = await findBusinessId(db, created.data.user.id);
-  const branch = businessId ? await findDefaultBranch(db, businessId) : undefined;
+  if (!businessId) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The business account was not provisioned.");
+  const branch = await findDefaultBranch(db, businessId);
   return {
     userId: created.data.user.id,
     businessId,
     branch,
-    accountState: "PENDING_ADMIN_APPROVAL",
+    accountState: "REGISTERED_UNVERIFIED",
+    businessStatus: "pending",
     emailVerified: false,
+    verificationEmailSent: verification.emailSent,
   };
 }
 
@@ -63,12 +81,19 @@ async function findBusinessId(db: ReturnType<typeof supabaseAdmin>, userId: stri
   return result.data?.business_id;
 }
 
+async function findBusinessStatus(db: ReturnType<typeof supabaseAdmin>, businessId: string): Promise<string> {
+  const result = await db.from("business_profile").select("status").eq("id", businessId).maybeSingle();
+  if (result.error || !result.data) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The business profile was not found.");
+  return result.data.status;
+}
+
 function provision(db: ReturnType<typeof supabaseAdmin>, userId: string, fullName: string, businessName: string, businessTypeId: string) {
   return db.rpc("provision_business_owner", { p_user_id: userId, p_full_name: fullName, p_business_name: businessName, p_business_type: businessTypeId });
 }
 
 async function findDefaultBranch(db: ReturnType<typeof supabaseAdmin>, businessId: string) {
-  const result = await db.from("branches").select("id, name, is_active").eq("business_id", businessId).limit(1).maybeSingle();
-  if (result.error || !result.data) return undefined;
+  const result = await db.from("branches").select("id, name, is_active, is_primary").eq("business_id", businessId).eq("is_primary", true).eq("is_active", true).maybeSingle();
+  if (result.error) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", result.error.message);
+  if (!result.data) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The business has no active primary branch.");
   return { id: result.data.id, name: result.data.name, isActive: result.data.is_active };
 }

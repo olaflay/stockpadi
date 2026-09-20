@@ -1,10 +1,16 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
+import { requireCapability } from "../authorization/capabilities.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export async function listSales(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
+  if (context.accountType === "WORKER") {
+    requireCapability(context, "VIEW_OWN_SALES");
+    requireCapability(context, "VIEW_RECEIPTS");
+  }
   let query = db.from("sales").select("id, client_id, branch_id, customer_id, subtotal, discount, total, created_at_local, created_at, created_by_user_id, voided_at").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(200);
   if (context.accountType === "WORKER") query = query.eq("created_by_user_id", actor.id).in("branch_id", context.branchIds);
   const { data: sales, error } = await query;

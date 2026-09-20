@@ -23,6 +23,7 @@ export interface LocalBranch {
   businessId?: string;
   name: string;
   isActive: boolean;
+  isPrimary?: boolean;
 }
 
 export const BUSINESS_PROFILE_SINGLETON_ID = "singleton";
@@ -41,6 +42,7 @@ export interface LocalBusinessProfile {
    * created before this field existed simply have it undefined.
    */
   whatsappNumber?: string | null;
+  owingMessageTemplate?: string;
 }
 
 export interface LocalCategory {
@@ -134,6 +136,58 @@ export interface LocalAuditLog {
   createdAtLocal: string;
 }
 
+export interface SyncDiagnostic {
+  id: string;
+  businessId: string;
+  endpoint: string;
+  entity: string;
+  success: boolean;
+  lastAttemptedAt: string;
+  lastSuccessfulPullAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  recordsApplied: number;
+}
+
+export interface SyncQuarantineRow {
+  id: string;
+  businessId: string;
+  entity: string;
+  entityId: string;
+  record: unknown;
+  reason: string;
+  createdAt: string;
+}
+
+export interface LocalInventoryStock {
+  id: string;
+  businessId: string;
+  productId: string;
+  branchId: string;
+  quantity: number;
+  updatedAt: string;
+}
+
+export interface SyncPullState {
+  id: string;
+  businessId: string;
+  cursor: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  pagesFetched: number;
+  entityCounts: Record<string, number>;
+  partialErrors: string[];
+  lastCompletePullAt: string | null;
+  /** The last automatic/manual event that initiated a pull. Safe diagnostics only. */
+  lastPullTrigger?: string | null;
+  /** Set when connectivity/foreground/auth caused an immediate pull attempt. */
+  lastInvalidationReceivedAt?: string | null;
+  /** Last time the backend returned a pull response. */
+  lastServerContactAt?: string | null;
+  /** Last time at least one push mutation was durably accepted. */
+  lastSuccessfulPushAt?: string | null;
+}
+
 class StockPadiDB extends Dexie {
   businessProfile!: EntityTable<LocalBusinessProfile, "id">;
   branches!: EntityTable<LocalBranch, "id">;
@@ -150,6 +204,10 @@ class StockPadiDB extends Dexie {
   expenses!: EntityTable<Expense, "id">;
   suppliers!: EntityTable<Supplier, "id">;
   purchases!: EntityTable<Purchase, "id">;
+  syncDiagnostics!: EntityTable<SyncDiagnostic, "id">;
+  syncQuarantine!: EntityTable<SyncQuarantineRow, "id">;
+  inventoryStock!: EntityTable<LocalInventoryStock, "id">;
+  syncPullState!: EntityTable<SyncPullState, "id">;
 
   constructor() {
     super("stockpadi");
@@ -240,18 +298,11 @@ class StockPadiDB extends Dexie {
         purchases: "id, businessId, clientId, branchId, supplierId, createdAtLocal",
       })
       .upgrade(async (tx) => {
-        const profile = await tx.table("businessProfile").get(BUSINESS_PROFILE_SINGLETON_ID);
-        const businessId = profile?.businessId as string | undefined;
-        if (!businessId) return;
-        for (const tableName of [
-          "branches", "products", "categories", "customers",
-          "customerCreditMovements", "stockMovements", "sales", "outbox",
-          "localUsers", "auditLogs", "expenses", "suppliers", "purchases",
-        ]) {
-          await tx.table(tableName).toCollection().modify((row) => {
-            if (!row.businessId) row.businessId = businessId;
-          });
-        }
+        // Do not infer tenant ownership from the profile singleton. Older
+        // browsers may contain rows from an unknown account; setLocalBusinessId
+        // performs relationship-aware repair and quarantines the rest once the
+        // authenticated business context is known.
+        void tx;
       });
 
     // Repair databases created by the first tenant migration if a test/browser
@@ -278,6 +329,60 @@ class StockPadiDB extends Dexie {
     // (verify-email, pending-approval) without a backend round-trip.
     // No schema change needed — businessStatus is plain data, not an index.
     this.version(10).stores({});
+
+    // Durable outbox ordering/dependency metadata. Existing rows are kept and
+    // receive a sequence lazily when they are next written or drained.
+    this.version(11)
+      .stores({
+        outbox: "clientId, businessId, type, status, createdAtLocal, sequence, entityId",
+      })
+      .upgrade(async (tx) => {
+        const table = tx.table("outbox");
+        const rows = await table.toArray();
+        rows.sort((a, b) => String(a.createdAtLocal ?? "").localeCompare(String(b.createdAtLocal ?? "")) || String(a.clientId).localeCompare(String(b.clientId)));
+        for (const [index, row] of rows.entries()) await table.put({ ...row, sequence: index + 1 });
+      });
+
+    // Canonical mutation/idempotency metadata. The legacy clientId primary key
+    // is retained so existing offline rows remain addressable; new writes use
+    // explicit mutationId/idempotencyKey fields and old rows are backfilled.
+    this.version(12)
+      .stores({
+        outbox: "clientId, businessId, type, status, createdAtLocal, sequence, entityId, mutationId, idempotencyKey",
+      })
+      .upgrade(async (tx) => {
+        const table = tx.table("outbox");
+        const rows = await table.toArray();
+        for (const row of rows) {
+          const mutable = ["product", "customer", "supplier", "branch", "category"].includes(String(row.type));
+          await table.put({
+            ...row,
+            mutationId: row.mutationId ?? row.clientId,
+            idempotencyKey: row.idempotencyKey ?? row.clientId,
+            operation: row.operation ?? (mutable ? "upsert" : "append"),
+            lastErrorCode: row.lastErrorCode ?? row.errorCode ?? null,
+            lastErrorMessage: row.lastErrorMessage ?? row.lastError ?? null,
+            dependsOnMutationIds: row.dependsOnMutationIds ?? row.dependsOn ?? [],
+          });
+        }
+      });
+
+    // Pull diagnostics are durable so the UI can distinguish a healthy
+    // offline cache from a partially refreshed session after a reload.
+    this.version(13).stores({
+      syncDiagnostics: "id, businessId, entity, success, lastAttemptedAt",
+    });
+
+    // Ambiguous legacy references are retained for explicit recovery instead
+    // of being silently reassigned to an arbitrary branch.
+    this.version(14).stores({
+      syncQuarantine: "id, businessId, entity, entityId, createdAt",
+    });
+
+    this.version(15).stores({
+      inventoryStock: "id, businessId, productId, branchId, updatedAt",
+      syncPullState: "id, businessId, completedAt",
+    });
   }
 }
 

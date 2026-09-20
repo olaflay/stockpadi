@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
+import type { WorkerCapability } from "@/features/auth/authorization";
 import { AlertBadge } from "@/components/ui/AlertBadge";
 
 /**
@@ -24,17 +26,17 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
  */
 const OWNER_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
-  { href: "/pos", label: "Sell", icon: Receipt },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
+  { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
+  { href: "/reports", label: "Reports", icon: BarChart3, capability: "VIEW_REPORTS" as const },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 const WORKER_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
-  { href: "/pos", label: "Sell", icon: Receipt },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/stock-count", label: "Stock", icon: ClipboardCheck },
+  { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
+  { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
+  { href: "/stock-count", label: "Stock", icon: ClipboardCheck, capability: "SUBMIT_STOCK_COUNT" as const },
   { href: "/profile", label: "Profile", icon: UserCircle },
 ] as const;
 
@@ -43,7 +45,9 @@ export function BottomNav() {
   const user = useCurrentUser();
 
   const isOwnerOrAdmin = user.accountType === "BUSINESS_OWNER" || user.accountType === "ADMIN";
-  const items = isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV;
+  const items = (isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV).filter(
+    (item) => !("capability" in item) || hasCapability(user, item.capability as WorkerCapability),
+  );
 
   return (
     <nav

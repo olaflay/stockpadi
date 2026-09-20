@@ -64,7 +64,7 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } });
 
   await db.exec(`create schema if not exists auth;`);
-  await db.exec(`create table auth.users (id uuid primary key default gen_random_uuid(), raw_user_meta_data jsonb default '{}'::jsonb);`);
+  await db.exec(`create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);`);
   await db.exec(`
     create or replace function auth.uid() returns uuid as $$
       select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid
@@ -113,6 +113,7 @@ beforeAll(async () => {
   cashierId = cashier.rows[0].id;
   await db.query(`insert into users (id, business_id, full_name, role, account_type) values ($1, $2, 'Test Cashier', 'cashier', 'WORKER');`, [cashierId, bizId]);
   await db.query(`insert into business_memberships (user_id, business_id, role, type, account_type) values ($1, $2, 'owner', 'owner', 'BUSINESS_OWNER'), ($3, $2, 'cashier', 'worker', 'WORKER');`, [ownerId, bizId, cashierId]);
+  await db.query(`insert into worker_permissions (user_id, business_id, permission, enabled) values ($1, $2, 'VIEW_OWN_SALES', true), ($1, $2, 'VIEW_RECEIPTS', true);`, [cashierId, bizId]);
 
   const branch = await db.query<{ id: string }>(`insert into branches (business_id, name) values ($1, 'Main') returning id;`, [bizId]);
   branchId = branch.rows[0].id;

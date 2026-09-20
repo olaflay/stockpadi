@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { usePendingSyncCount, useFailedSyncCount } from "@/lib/use-pending-sync-count";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useOnlineStatus } from "@/lib/use-online-status";
 import { retryFailedOutboxItems } from "@/features/sync/drain-outbox";
 import { buildProductsCsv, buildSalesCsv } from "@/features/reports/csv-export";
 
@@ -19,6 +21,13 @@ export default function DataSettingsPage() {
   const { showToast } = useToast();
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
+  const online = useOnlineStatus();
+  const businessId = user.businessId;
+  const pullState = useLiveQuery(
+    () => businessId ? db.syncPullState.get(`${businessId}:session`) : undefined,
+    [businessId],
+  );
+  const fullySynced = online && pendingCount === 0 && failedCount === 0 && Boolean(pullState?.lastCompletePullAt);
 
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
@@ -199,9 +208,15 @@ export default function DataSettingsPage() {
       <section className="rounded-2xl bg-surface-container p-4">
         <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Sync status</h2>
         <p className="text-[length:var(--font-size-body)] text-on-surface">
-          {pendingCount > 0
+          {!online
+            ? "Offline — changes stay safely on this device"
+            : pendingCount > 0
             ? `${pendingCount} change${pendingCount === 1 ? "" : "s"} waiting to sync`
-            : "Everything is synced"}
+            : failedCount > 0
+              ? "Sync needs attention"
+              : fullySynced
+                ? "Everything is synced"
+                : "Cloud pull has not completed yet"}
         </p>
         {failedCount > 0 && (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container px-3 py-2">

@@ -6,6 +6,7 @@ import { getLowStockProductIds, getExpiringProductIds } from "@/features/invento
 import { tenantArray } from "@/lib/local-tenant";
 import { getStartOfTodayIso } from "@/lib/date";
 import type { Purchase } from "@/types/purchase";
+import { getStockByProduct } from "@/features/inventory/product-insights";
 
 export interface DashboardMetrics {
   hasAnyProducts: boolean;
@@ -64,26 +65,7 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
           (viewerId === null || sale.createdByUserId === viewerId)
       );
 
-      const stockByProduct = new Map<string, number>();
-      if (branchId !== null) {
-        const movements = await tenantArray(db.stockMovements
-          .where("branchId")
-          .equals(branchId)
-          );
-        for (const movement of movements) {
-          stockByProduct.set(
-            movement.productId,
-            (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
-          );
-        }
-      } else {
-        for (const movement of await tenantArray(db.stockMovements)) {
-          stockByProduct.set(
-            movement.productId,
-            (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
-          );
-        }
-      }
+      const stockByProduct = await getStockByProduct(branchId);
 
       // Hero figure: cost value of all stock on hand, plus how many products
       // actually carry stock. Counted only from the ledger-derived stock map,

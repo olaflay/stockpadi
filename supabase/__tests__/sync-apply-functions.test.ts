@@ -91,7 +91,7 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } });
 
   await db.exec(`create schema if not exists auth;`);
-  await db.exec(`create table auth.users (id uuid primary key default gen_random_uuid(), raw_user_meta_data jsonb default '{}'::jsonb);`);
+  await db.exec(`create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);`);
   await db.exec(`
     create or replace function auth.uid() returns uuid as $$
       select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid
@@ -285,8 +285,8 @@ describe("sync_apply_stock_adjustment: idempotent retry", () => {
   });
 });
 
-describe("sync_apply_product: last-write-wins with a conflict flag", () => {
-  it("applies the incoming write either way, but flags conflict when the device's starting version is stale", async () => {
+describe("sync_apply_product: optimistic concurrency and canonical fields", () => {
+  it("returns a deterministic conflict and preserves the newer remote snapshot", async () => {
     const snapshot = await db.query<{ version: number }>(`select version from products where id = $1;`, [
       productId,
     ]);
@@ -301,7 +301,10 @@ describe("sync_apply_product: last-write-wins with a conflict flag", () => {
       brandId: null,
       unitLabel: "piece",
       costPrice: 100,
-      expiryTracking: "off",
+      expiryTracking: "optional",
+      expiryDate: "2027-01-02",
+      lowStockThreshold: 5,
+      archived: false,
     };
 
     const first = await db.query<{ result: { conflict: boolean } }>(
@@ -310,6 +313,13 @@ describe("sync_apply_product: last-write-wins with a conflict flag", () => {
     );
     expect(first.rows[0].result.conflict).toBe(false);
 
+    const firstStored = await db.query<{ sku: string; low_stock_threshold: number; expiry_date: string | null; version: number }>(
+      `select sku, low_stock_threshold, expiry_date, version from products where id = $1`, [productId]
+    );
+    expect(firstStored.rows[0].sku).toBe("SKU-1");
+    expect(firstStored.rows[0].low_stock_threshold).toBe(5);
+    expect(new Date(firstStored.rows[0].expiry_date ?? "").toISOString()).toContain("2027-01-02");
+
     // A second device that started from the same original version, but
     // syncs after the first device already bumped it.
     const second = await db.query<{ result: { conflict: boolean } }>(
@@ -317,6 +327,57 @@ describe("sync_apply_product: last-write-wins with a conflict flag", () => {
       [JSON.stringify({ ...basePayload, sellPrice: 160, version: startVersion }), actorId]
     );
     expect(second.rows[0].result.conflict).toBe(true);
+    expect((second.rows[0].result as { status: string }).status).toBe("conflict");
+    const afterConflict = await db.query<{ sell_price: string }>(`select sell_price from products where id = $1`, [productId]);
+    expect(afterConflict.rows[0].sell_price).toBe("175.00");
+  });
+
+  it("classifies a missing category dependency as retryable foreign-key failure, not cross-tenant forbidden", async () => {
+    const missingCategoryPayload = {
+      id: crypto.randomUUID(),
+      sku: "IMPORT-DEPENDENCY",
+      barcode: null,
+      name: "Imported dependency probe",
+      categoryId: crypto.randomUUID(),
+      brandId: null,
+      unitLabel: "piece",
+      altUnitLabel: null,
+      altUnitConversionFactor: null,
+      altUnitSellPrice: null,
+      costPrice: 100,
+      sellPrice: 150,
+      expiryTracking: "off",
+      expiryDate: null,
+      lowStockThreshold: null,
+      archived: false,
+      version: 1,
+    };
+
+    await expect(
+      db.query(`select sync_apply_product($1::jsonb, $2::uuid);`, [JSON.stringify(missingCategoryPayload), actorId])
+    ).rejects.toMatchObject({ code: "23503" });
+  });
+});
+
+describe("sync_apply_branch and sync_apply_category: first-class dependencies", () => {
+  it("creates tenant-owned branch/category rows idempotently and deterministically skips duplicate category names", async () => {
+    const categoryId = crypto.randomUUID();
+    const branch = await db.query<{ result: { status: string; id: string } }>(
+      `select sync_apply_branch($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: crypto.randomUUID(), name: "Outlet" }), actorId]
+    );
+    expect(branch.rows[0].result.status).toBe("applied");
+
+    const category = await db.query<{ result: { status: string; id: string } }>(
+      `select sync_apply_category($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: categoryId, name: "Dry Goods" }), actorId]
+    );
+    expect(category.rows[0].result).toMatchObject({ status: "applied", id: categoryId });
+    const duplicate = await db.query<{ result: { status: string; duplicate: boolean } }>(
+      `select sync_apply_category($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: crypto.randomUUID(), name: "dry goods" }), actorId]
+    );
+    expect(duplicate.rows[0].result).toMatchObject({ status: "skipped", duplicate: true });
   });
 });
 
@@ -447,7 +508,7 @@ describe("tenant-ownership isolation across sync_apply_*", () => {
   it("rejects a product upsert that would overwrite another business's product", async () => {
     await expectRejected(async () => {
       await db.query(`select sync_apply_product(($1::jsonb), $2::uuid);`, [
-        JSON.stringify({ id: foreignProductId, sku: "FOREIGN-SKU", barcode: null, name: "Hijacked", categoryId: null, brandId: null, unitLabel: "piece", costPrice: 100, sellPrice: 150, expiryTracking: "off", version: 1 }),
+        JSON.stringify({ id: foreignProductId, sku: "FOREIGN-SKU", barcode: null, name: "Hijacked", categoryId: null, brandId: null, unitLabel: "piece", costPrice: 100, sellPrice: 150, expiryTracking: "off", expiryDate: null, lowStockThreshold: null, archived: false, version: 1 }),
         actorId,
       ]);
     }, "42501");

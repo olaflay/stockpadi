@@ -14,8 +14,8 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import type { PaymentMethod } from "@/types/sale";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Sale } from "@/types/sale";
@@ -36,12 +36,11 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 export default function SalesPage() {
   const user = useCurrentUser();
   const router = useRouter();
+  const [range, setRange] = useState<"all" | "today" | "7days">("all");
 
   const result = useLiveQuery(async () => {
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const sales = await tenantArray<Sale>(db.sales.where("createdAtLocal").aboveOrEqual(todayStart.toISOString()));
+      const sales = await tenantArray<Sale>(db.sales);
       sales.sort((a, b) => b.createdAtLocal.localeCompare(a.createdAtLocal));
       return { sales, error: null as string | null };
     } catch (err) {
@@ -55,9 +54,13 @@ export default function SalesPage() {
   const visibleSales =
     result?.sales.filter((sale) => {
       if (user.accountType === "WORKER") {
-        return sale.createdByUserId === user.id;
+        if (sale.createdByUserId !== user.id) return false;
       }
-      return true;
+      if (range === "all") return true;
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      if (range === "7days") start.setDate(start.getDate() - 6);
+      return sale.createdAtLocal >= start.toISOString();
     }) ?? [];
 
   const [visibleLimit, setVisibleLimit] = useState(25);
@@ -81,7 +84,7 @@ export default function SalesPage() {
     };
   }, [visibleLimit, visibleSales.length]);
 
-  const reportsAction = user.accountType !== "WORKER" ? (
+  const reportsAction = hasCapability(user, "VIEW_REPORTS") ? (
     <Link
       href="/reports"
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-accent-active bg-brand-accent/10 hover:bg-brand-accent/20 rounded-full transition-colors"
@@ -91,11 +94,11 @@ export default function SalesPage() {
     </Link>
   ) : undefined;
 
-  if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
+  if (!hasCapability(user, "VIEW_OWN_SALES")) {
     return (
       <div>
         <ScreenHeader title="Sales history" hideBack={true} />
-        <PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} />
+        <PermissionDenied requiredCapabilities={["VIEW_OWN_SALES"]} />
       </div>
     );
   }
@@ -122,7 +125,7 @@ export default function SalesPage() {
     return (
       <div>
         <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
-        <ErrorState message="Couldn't load today's sales." onRetry={() => window.location.reload()} />
+        <ErrorState message="Couldn't load sales history." onRetry={() => window.location.reload()} />
       </div>
     );
   }
@@ -133,10 +136,10 @@ export default function SalesPage() {
         <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
         <EmptyState
           icon={Receipt}
-          title="No sales yet today"
-          description="Completed sales show up here, tap any one to see its full receipt."
+          title={range === "all" ? "No sales yet" : "No sales in this period"}
+          description="Completed sales show up here. Tap any one to see its full receipt."
           action={
-            hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)
+            hasCapability(user, "POS_SELL")
               ? { label: "Make a sale", onClick: () => router.push("/pos") }
               : undefined
           }
@@ -148,6 +151,22 @@ export default function SalesPage() {
   return (
     <div>
       <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs text-on-surface-muted">{visibleSales.length} recorded sale{visibleSales.length === 1 ? "" : "s"}</p>
+        <label className="flex items-center gap-2 text-xs font-semibold text-on-surface-muted">
+          Period
+          <select
+            aria-label="Sales history period"
+            value={range}
+            onChange={(event) => { setRange(event.target.value as "all" | "today" | "7days"); setVisibleLimit(25); }}
+            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-2.5 text-xs font-semibold text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
+          >
+            <option value="all">All time</option>
+            <option value="7days">Last 7 days</option>
+            <option value="today">Today</option>
+          </select>
+        </label>
+      </div>
       <div>
         <ul className="flex flex-col gap-2">
           {visibleSales.slice(0, visibleLimit).map((sale) => {
@@ -189,7 +208,7 @@ export default function SalesPage() {
           </div>
         )}
       </div>
-      {hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES) && (
+      {hasCapability(user, "POS_SELL") && (
         <FAB href="/pos" label="New sale">
           <Plus size={26} aria-hidden />
         </FAB>

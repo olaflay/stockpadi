@@ -1,12 +1,13 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
-import { requireBusinessOwner, requireAssignedBranch } from "../authorization/capabilities.js";
+import { requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export async function createExpense(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
-  requireBusinessOwner(context);
+  requireCapability(context, "MANAGE_EXPENSES");
   if (!input || typeof input !== "object") throw new HttpError(400, "INVALID_BODY", "Expense payload is required");
   const payload = input as Record<string, unknown>;
   if (typeof payload.id !== "string" || typeof payload.amount !== "number" || payload.amount <= 0 || typeof payload.category !== "string" || !payload.category.trim()) throw new HttpError(400, "INVALID_BODY", "Expense id, category and positive amount are required");
@@ -17,9 +18,9 @@ export async function createExpense(db: SupabaseClient, actor: User, input: unkn
 }
 
 export async function listExpenses(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
-  requireBusinessOwner(context);
+  requireCapability(context, "MANAGE_EXPENSES");
   const { data, error } = await db.from("expenses").select("id, branch_id, category, amount, note, created_at, created_by_user_id").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(500);
   if (error) throw new HttpError(500, "EXPENSES_LOAD_FAILED", error.message);
   return { expenses: data ?? [] };

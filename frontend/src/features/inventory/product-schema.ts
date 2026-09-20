@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { EXPIRY_TRACKING_MODES } from "@/types/product";
 
+function isValidIsoDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.getUTCFullYear() === Number(match[1]) && date.getUTCMonth() === Number(match[2]) - 1 && date.getUTCDate() === Number(match[3]);
+}
+
 /**
  * Validation for the product create/edit form. Mirrors the shape of
  * src/types/product.ts; kept as its own schema (rather than z.infer driving
@@ -28,6 +35,14 @@ export const productFormSchema = z
   })
   .refine((values) => values.expiryTracking !== "mandatory" || Boolean(values.expiryDate), {
     message: "Expiry date is required when expiry tracking is mandatory",
+    path: ["expiryDate"],
+  })
+  .refine((values) => !values.expiryDate || isValidIsoDate(values.expiryDate), {
+    message: "Enter a valid expiry date (YYYY-MM-DD)",
+    path: ["expiryDate"],
+  })
+  .refine((values) => values.expiryTracking !== "off" || !values.expiryDate, {
+    message: "Expiry date is only available when expiry tracking is optional or mandatory",
     path: ["expiryDate"],
   })
   .refine((values) => !values.altUnitLabel?.trim() || (values.altUnitConversionFactor ?? 0) > 0, {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X, GitBranch } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -21,18 +21,18 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { RippleButton } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
+import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { formatCurrency } from "@/lib/format";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { tenantArray } from "@/lib/local-tenant";
 import { PRODUCT_CAP } from "@/config/limits";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
-
-const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 type ProductFilter = "all" | "low-stock" | "best-sellers" | "expiring";
 
@@ -52,6 +52,10 @@ export default function ProductsPage() {
     filterParam !== null && filterParam in FILTER_LABELS ? (filterParam as ProductFilter) : "all"
   );
   const user = useCurrentUser();
+  const canViewProducts = hasCapability(user, "VIEW_PRODUCTS");
+  const canEditProducts = hasCapability(user, "MANAGE_PRODUCTS");
+  const stockBranchScope = user.accountType === "WORKER" ? (user.branchIds ?? []) : null;
+  const stockBranchKey = stockBranchScope?.join(",") ?? "all";
   const [visibleLimit, setVisibleLimit] = useState(50);
   const [prevQuery, setPrevQuery] = useState("");
   const [prevFilter, setPrevFilter] = useState<ProductFilter>("all");
@@ -68,9 +72,12 @@ export default function ProductsPage() {
   // Reset visible limit when query or filter changes
   useEffect(() => {
     if (debouncedQuery !== prevQuery || filter !== prevFilter) {
-      setPrevQuery(debouncedQuery);
-      setPrevFilter(filter);
-      setVisibleLimit(50);
+      const reset = window.setTimeout(() => {
+        setPrevQuery(debouncedQuery);
+        setPrevFilter(filter);
+        setVisibleLimit(50);
+      }, 0);
+      return () => window.clearTimeout(reset);
     }
   }, [debouncedQuery, filter, prevQuery, prevFilter]);
 
@@ -98,16 +105,14 @@ export default function ProductsPage() {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`Archive ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? They won't appear in searches but historical data is preserved.`)) return;
     try {
-      await db.products.bulkUpdate(
-        Array.from(selectedIds).map((id) => ({ key: id, changes: { archived: true } as Partial<Product> }))
-      );
+      for (const id of selectedIds) await writeProductEditOffline(id, { archived: true }, null, user);
       showToast(`${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} archived`, "success");
       setSelectedIds(new Set());
       setDeleteMode(false);
     } catch {
       showToast("Couldn't archive products. Try again.", "danger");
     }
-  }, [selectedIds, showToast]);
+  }, [selectedIds, showToast, user]);
 
   const result = useLiveQuery(async () => {
     try {
@@ -117,11 +122,11 @@ export default function ProductsPage() {
       let expiringIds = new Set<string>();
 
       if (filter === "low-stock") {
-        lowStockIds = await getLowStockProductIds();
+        lowStockIds = await getLowStockProductIds(LOW_STOCK_THRESHOLD, stockBranchScope);
       } else if (filter === "best-sellers") {
         bestSellerIds = await getBestSellingProductIds();
       } else if (filter === "expiring") {
-        expiringIds = await getExpiringProductIds();
+        expiringIds = await getExpiringProductIds(7, stockBranchScope);
       }
 
       return { products, lowStockIds, bestSellerIds, expiringIds, error: null as string | null };
@@ -134,18 +139,15 @@ export default function ProductsPage() {
         error: err instanceof Error ? err.message : "Could not load products.",
       };
     }
-  }, [filter]);
-
-  const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
-  const hasBranch = (branches?.length ?? 0) > 0;
+  }, [filter, stockBranchKey]);
 
   // Consolidated stock across all branches (business-level view, matching the
   // filter chips which run with branchId null). One read of the ledger per
   // live-query refresh; the figures below are derived from it, never from a
   // mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
   const stockByProduct = useLiveQuery(
-    () => getStockByProduct(null),
-    [],
+    () => getStockByProduct(stockBranchScope),
+    [stockBranchKey],
     new Map<string, number>()
   );
 
@@ -179,6 +181,15 @@ export default function ProductsPage() {
       if (el) observer.unobserve(el);
     };
   }, [filtered.length, visibleLimit]);
+
+  if (!canViewProducts) {
+    return (
+      <div>
+        <ScreenHeader title="Products" hideBack={true} />
+        <PermissionDenied requiredCapabilities={["VIEW_PRODUCTS"]} />
+      </div>
+    );
+  }
 
   if (result === undefined) {
     return (
@@ -222,11 +233,22 @@ export default function ProductsPage() {
           title="Your shelf is empty"
           description="Add your first product to start selling and tracking stock."
           action={
-            hasAccountType(user, CAN_EDIT_PRODUCTS)
+            canEditProducts
               ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
               : undefined
           }
         />
+        {canEditProducts && (
+          <div className="mx-auto mt-3 w-full max-w-md text-center">
+            <Link
+              href="/products/import"
+              className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent hover:bg-brand-accent/10 transition-colors"
+            >
+              <Upload size={17} aria-hidden />
+              Import products instead
+            </Link>
+          </div>
+        )}
       </div>
     );
   }
@@ -236,6 +258,25 @@ export default function ProductsPage() {
   return (
     <div className="overflow-x-clip">
       <ScreenHeader title="Products" hideBack={true} />
+
+      {canEditProducts && (
+        <div className="mb-3 grid grid-cols-2 gap-2" aria-label="Add products">
+          <Link
+            href="/products/new"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-3 text-center text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+          >
+            <Plus size={17} aria-hidden />
+            Add product
+          </Link>
+          <Link
+            href="/products/import"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent/10 px-3 text-center text-[length:var(--font-size-body)] font-medium text-brand-accent hover:bg-brand-accent/15 transition-colors"
+          >
+            <Upload size={17} aria-hidden />
+            Import products
+          </Link>
+        </div>
+      )}
 
       <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-3 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
         <div className="flex gap-2">
@@ -297,7 +338,7 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
+        {canEditProducts && (
           <div ref={menuRef} className="relative shrink-0">
             <button
               type="button"
@@ -314,15 +355,6 @@ export default function ProductsPage() {
                 role="menu"
                 className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-elevation-2)] animate-step-in"
               >
-                <Link
-                  href="/products/import"
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-                >
-                  <Upload size={16} aria-hidden />
-                  Import
-                </Link>
                 <Link
                   href="/purchases"
                   role="menuitem"
@@ -350,7 +382,19 @@ export default function ProductsPage() {
       {filtered.length === 0 ? (
         <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
           {debouncedQuery ? (
-            <NoResultsState query={debouncedQuery} />
+            <>
+              <NoResultsState query={debouncedQuery} />
+              {canEditProducts && (
+                <div className="mt-4 flex justify-center">
+                  <Link
+                    href={`/products/new?barcode=${encodeURIComponent(debouncedQuery)}`}
+                    className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast"
+                  >
+                    Create product with barcode
+                  </Link>
+                </div>
+              )}
+            </>
           ) : (
             <EmptyState
               icon={Package}
@@ -491,7 +535,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {hasAccountType(user, CAN_EDIT_PRODUCTS) && !deleteMode && (
+      {canEditProducts && !deleteMode && (
         <FAB
           id="tour-add-product"
           href="/products/new"

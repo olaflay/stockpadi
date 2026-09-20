@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { useReportsData } from "@/features/reports/use-reports-data";
 import { ReportsBody } from "@/features/reports/components/ReportsBody";
 
@@ -30,11 +31,11 @@ export default function ReportsPage() {
     periodNetCashFlow,
   } = useReportsData();
 
-  if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
+  if (!hasCapability(user, "VIEW_REPORTS")) {
     return (
       <div>
         <ScreenHeader title="Reports" hideBack={true} />
-        <PermissionDenied requiredAccountTypes={["ADMIN", "BUSINESS_OWNER"]} />
+        <PermissionDenied requiredCapabilities={["VIEW_REPORTS"]} />
       </div>
     );
   }

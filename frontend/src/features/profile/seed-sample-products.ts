@@ -3,6 +3,7 @@ import { withLocalBusinessIds } from "@/lib/local-tenant";
 import { getBusinessTypeTemplate } from "@/config/business-types";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
+import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 
 export async function seedSampleProducts(
   businessTypeId: string,
@@ -60,8 +61,14 @@ export async function seedSampleProducts(
     });
   }
 
-  await db.transaction("rw", db.products, db.stockMovements, async () => {
-    await db.products.bulkAdd(await withLocalBusinessIds(products));
-    await db.stockMovements.bulkAdd(await withLocalBusinessIds(movements));
+  const tenantProducts = await withLocalBusinessIds(products);
+  const tenantMovements = await withLocalBusinessIds(movements);
+  await db.transaction("rw", db.products, db.stockMovements, db.outbox, async () => {
+    await db.products.bulkAdd(tenantProducts);
+    await db.stockMovements.bulkAdd(tenantMovements);
+    for (const product of tenantProducts) await enqueueOutboxWrite(product.id, "product", product, now);
+    for (const movement of tenantMovements) {
+      await enqueueOutboxWrite(movement.id, "stock_adjustment", { ...movement, reasonCode: "initial_stock", note: null }, now, { dependsOn: [movement.branchId, movement.productId] });
+    }
   });
 }

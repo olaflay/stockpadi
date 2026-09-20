@@ -5,6 +5,7 @@ import { getBrandingConfig } from "@/config/branding";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { PwaReadiness } from "@/components/pwa/PwaReadiness";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -148,6 +149,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <ServiceWorkerRegister />
+          <PwaReadiness />
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

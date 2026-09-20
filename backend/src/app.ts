@@ -3,16 +3,18 @@ import { handleAdminRequest } from "./modules/admin/admin.controller.js";
 import { handleSalesList, handleVoidSale } from "./modules/sales/sales.controller.js";
 import { handleWorkerAudit, handleWorkerList, handleWorkerMember, handleWorkerRequest } from "./modules/workers/worker.controller.js";
 import { handleBusinessRegistration } from "./modules/businesses/business.controller.js";
-import { handleBranchCreate, handleBranchList } from "./modules/businesses/branch.controller.js";
+import { handleBranchCreate, handleBranchList, handleBranchMutation } from "./modules/businesses/branch.controller.js";
+import { handleBusinessProfileGet, handleBusinessProfileUpdate } from "./modules/businesses/profile.controller.js";
 import { businessRoutes } from "./modules/businesses/business.routes.js";
 import { branchRoutes } from "./modules/businesses/branch.routes.js";
+import { profileRoutes } from "./modules/businesses/profile.routes.js";
 import { handleCreditPaymentRequest, handleCustomerDetail, handleCustomerList, handleCustomerRequest } from "./modules/customers/customer.controller.js";
 import { customerRoutes } from "./modules/customers/customer.routes.js";
 import { handlePurchase, handlePurchaseList } from "./modules/purchases/purchase.controller.js";
 import { purchaseRoutes } from "./modules/purchases/purchase.routes.js";
 import { handleExpense, handleExpenseList } from "./modules/expenses/expense.controller.js";
 import { expenseRoutes } from "./modules/expenses/expense.routes.js";
-import { handleInventoryList, handleProduct, handleProductList, handleStockAdjustment, handleStockCount } from "./modules/inventory/inventory.controller.js";
+import { handleCategoryList, handleInventoryList, handleProduct, handleProductList, handleStockAdjustment, handleStockCount } from "./modules/inventory/inventory.controller.js";
 import { inventoryRoutes } from "./modules/inventory/inventory.routes.js";
 import { handleReportSummary, handleReportSummaryGet } from "./modules/reports/report.controller.js";
 import { reportRoutes } from "./modules/reports/report.routes.js";
@@ -28,11 +30,15 @@ import { emailVerificationRoutes } from "./modules/auth/email-verification.route
 import { logger } from "./shared/logging/logger.js";
 import { passwordRoutes } from "./modules/auth/password.routes.js";
 import { handlePasswordUpdate } from "./modules/auth/password.controller.js";
+import { handleSyncPush } from "./modules/sync/sync.controller.js";
+import { handleSyncPull } from "./modules/sync/sync-pull.controller.js";
+import { handleSyncHealth } from "./modules/sync/sync-health.controller.js";
+import { syncRoutes } from "./modules/sync/sync.routes.js";
 
 // Cap request bodies to bound memory use on a raw http server with no
 // framework-level body size guard. 1 MiB is ample for every endpoint here
 // (the largest payloads are sync batches / close-day submissions, which the
-// sync-push Edge Function additionally caps per-batch).
+// sync API additionally caps per-batch).
 const MAX_BODY_BYTES = 1024 * 1024;
 
 async function readBody(request: Request): Promise<unknown> {
@@ -72,6 +78,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
   const startedAt = Date.now();
   const pathname = pathnameOverride ?? new URL(request.url).pathname;
   const workerActionMatch = pathname.match(/^\/api\/workers\/([^/]+)\/action$/);
+  const branchDetailMatch = pathname.match(/^\/api\/businesses\/branches\/([^/]+)$/);
   const requestOrigin = request.headers.get("origin") ?? undefined;
   logger.info("request started", { method: request.method, path: pathname });
 
@@ -80,10 +87,18 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: "stockpadi-backend" }, requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
+    if (request.method === "GET" && pathname === inventoryRoutes.categories) return jsonResponse(200, await handleCategoryList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.stock) return jsonResponse(200, await handleInventoryList(request), requestOrigin);
     if (request.method === "GET" && pathname === salesRoutes.list) return jsonResponse(200, await handleSalesList(request), requestOrigin);
     if (request.method === "GET" && pathname === expenseRoutes.list) return jsonResponse(200, await handleExpenseList(request), requestOrigin);
     if (request.method === "GET" && pathname === branchRoutes.list) return jsonResponse(200, await handleBranchList(request), requestOrigin);
+    if (request.method === "GET" && pathname === profileRoutes.path) return jsonResponse(200, await handleBusinessProfileGet(request), requestOrigin);
+    if (branchDetailMatch && (request.method === "PATCH" || request.method === "DELETE")) {
+      const body = request.method === "PATCH" ? await readBody(request) : {};
+      return jsonResponse(200, await handleBranchMutation(request, decodeURIComponent(branchDetailMatch[1]), body), requestOrigin);
+    }
+    if (request.method === "GET" && pathname === syncRoutes.pull) return jsonResponse(200, await handleSyncPull(request), requestOrigin);
+    if (request.method === "GET" && pathname === syncRoutes.health) return jsonResponse(200, await handleSyncHealth(request), requestOrigin);
     if (request.method === "GET" && pathname === purchaseRoutes.list) return jsonResponse(200, await handlePurchaseList(request), requestOrigin);
     if (request.method === "GET" && pathname === reportRoutes.summary) return jsonResponse(200, await handleReportSummaryGet(request), requestOrigin);
     if (request.method === "GET" && pathname === reconciliationRoutes.summary) return jsonResponse(200, await handleCloseDaySummaryGet(request), requestOrigin);
@@ -91,7 +106,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (request.method === "GET" && pathname.startsWith(customerRoutes.detailPrefix) && pathname !== customerRoutes.list) return jsonResponse(200, await handleCustomerDetail(request, pathname.slice(customerRoutes.detailPrefix.length)), requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.audit.path) return jsonResponse(200, await handleWorkerAudit(request), requestOrigin);
     if (request.method === "GET" && pathname.startsWith("/api/workers/") && pathname !== workerRoutes.audit.path) return jsonResponse(200, await handleWorkerMember(request, pathname.split("/").pop()!), requestOrigin);
-    if (request.method !== "POST" && request.method !== "GET") return jsonResponse(404, { error: { code: "NOT_FOUND", message: "Route not found" } }, requestOrigin);
+    if (request.method !== "POST" && request.method !== "GET" && request.method !== "PATCH") return jsonResponse(404, { error: { code: "NOT_FOUND", message: "Route not found" } }, requestOrigin);
 
     const body = await readBody(request);
     if (pathname === emailVerificationRoutes.send) return jsonResponse(200, await handleSendVerification(request), requestOrigin);
@@ -106,6 +121,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (pathname === salesRoutes.path) return jsonResponse(200, await handleVoidSale(request, body), requestOrigin);
     if (pathname === accountRoutes.path) return jsonResponse(200, await handleAccountContext(request), requestOrigin);
     if (pathname === businessRoutes.path) return jsonResponse(200, await handleBusinessRegistration(request, body), requestOrigin);
+    if (pathname === profileRoutes.path && request.method === "PATCH") return jsonResponse(200, await handleBusinessProfileUpdate(request, body), requestOrigin);
     if (pathname === branchRoutes.create) return jsonResponse(200, await handleBranchCreate(request, body), requestOrigin);
     if (request.method === "GET" && pathname === customerRoutes.list) return jsonResponse(200, await handleCustomerList(request), requestOrigin);
     if (pathname === customerRoutes.create) return jsonResponse(200, await handleCustomerRequest(request, body), requestOrigin);
@@ -118,6 +134,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (pathname === reportRoutes.summary) return jsonResponse(200, await handleReportSummary(request, body), requestOrigin);
     if (pathname === reconciliationRoutes.summary) return jsonResponse(200, await handleCloseDaySummary(request, body), requestOrigin);
     if (pathname === reconciliationRoutes.submit) return jsonResponse(200, await handleReconciliationSubmit(request, body), requestOrigin);
+    if (pathname === syncRoutes.push) return jsonResponse(200, await handleSyncPush(request, body), requestOrigin);
     return jsonResponse(404, { error: { code: "NOT_FOUND", message: "Route not found" } }, requestOrigin);
   } catch (cause) {
     if (cause instanceof HttpError) {

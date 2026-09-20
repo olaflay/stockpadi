@@ -1,14 +1,16 @@
 import { getSupabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
+import { serverGet, serverPost } from "@/features/operations/server-client";
+import type { WorkerCapability } from "@/features/auth/authorization";
 
 /**
- * Thin client for the manage-staff Edge Function (supabase/functions/manage-staff).
+ * Thin client for the Node manage-staff API.
  * Every call is online-required — worker creation, password rotation, and
  * deactivation need a live server round trip, unlike the rest of this app's
  * offline-first writes. See docs/RESEARCH-AND-PLAN.md Phase 2 item 15.
  */
 
-type ManageStaffAction = "create" | "reset_password" | "deactivate" | "reactivate";
+type ManageStaffAction = "create" | "reset_password" | "deactivate" | "reactivate" | "update_permissions" | "assign_branches" | "designate_manager";
 
 interface ManageStaffPayload {
   action: ManageStaffAction;
@@ -17,41 +19,34 @@ interface ManageStaffPayload {
   phone?: string | null;
   email?: string;
   branchId?: string | null;
+  capabilities?: WorkerCapability[];
+  branchIds?: string[];
+  isManager?: boolean;
 }
 
 export interface StaffListItem {
   id: string;
   fullName: string;
+  email: string | null;
   accountType: "BUSINESS_OWNER" | "WORKER";
   status: string;
   isActive: boolean;
+  deactivatedAt: string | null;
   branchIds: string[];
+  capabilities: WorkerCapability[];
+  managerBranchIds: string[];
 }
 
 export class ManageStaffError extends Error {}
 
 export async function fetchStaff(): Promise<StaffListItem[]> {
-  const supabase = getSupabase();
-  if (!supabase) throw new ManageStaffError("This device isn't connected to a server yet.");
-  const { data: { session } } = await supabase.auth.getSession();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  if (!session) throw new ManageStaffError("Your session has expired. Sign in again.");
-  if (!backendUrl && process.env.NODE_ENV !== "test") throw new ManageStaffError("The application backend is not configured.");
-  const response = await fetch(`${backendUrl ?? "http://backend.test"}/api/workers`, { headers: { Authorization: `Bearer ${session.access_token}` } });
-  const json = await response.json();
-  if (!response.ok) throw new ManageStaffError(json?.error?.message ?? "Could not load staff.");
-  return json.staff as StaffListItem[];
+  try { return (await serverGet<{ staff: StaffListItem[] }>("/api/workers")).staff; }
+  catch (error) { throw new ManageStaffError(error instanceof Error ? error.message : "Could not load staff."); }
 }
 
 async function authenticatedBackendGet<T>(path: string): Promise<T> {
-  const supabase = getSupabase();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  const { data: { session } } = await supabase!.auth.getSession();
-  if (!session || !backendUrl) throw new ManageStaffError("Your session or application backend is unavailable.");
-  const response = await fetch(`${backendUrl}${path}`, { headers: { Authorization: `Bearer ${session.access_token}` } });
-  const json = await response.json();
-  if (!response.ok) throw new ManageStaffError(json?.error?.message ?? "Could not load staff data.");
-  return json as T;
+  try { return await serverGet<T>(path); }
+  catch (error) { throw new ManageStaffError(error instanceof Error ? error.message : "Could not load staff data."); }
 }
 
 export function fetchStaffMember(userId: string) {
@@ -67,27 +62,13 @@ export async function callManageStaff(payload: ManageStaffPayload): Promise<{ us
   const supabase = getSupabase();
   if (!supabase) throw new ManageStaffError("This device isn't connected to a server yet.");
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new ManageStaffError("Your session has expired. Sign in again.");
+  let json: { userId?: string; password?: string };
+  try { json = await serverPost<{ userId?: string; password?: string }>("/api/workers", payload); }
+  catch (error) { throw new ManageStaffError(error instanceof Error ? error.message : "That didn't work. Try again."); }
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  if (!backendUrl && process.env.NODE_ENV !== "test") throw new ManageStaffError("The application backend is not configured.");
-  const url = `${backendUrl ?? "http://backend.test"}/api/workers`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify(payload),
-  });
-
-  const json = await response.json();
-  if (!response.ok) {
-    throw new ManageStaffError(json?.error?.message ?? "That didn't work. Try again.");
-  }
-
-  // Server already wrote the authoritative audit_logs row (manage-staff
-  // Edge Function). This local mirror is only so Staff & Access has
+  // Server already wrote the authoritative audit_logs row. This local mirror is only so Staff & Access has
   // something to render immediately/offline without a round trip, per
   // docs/RESEARCH-AND-PLAN.md Phase 2 item 15.
   await db.auditLogs.add({

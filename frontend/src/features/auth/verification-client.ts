@@ -1,39 +1,11 @@
-import { getSupabase } from "@/lib/supabase";
-
-async function getAccessToken(): Promise<string | null> {
-  const supabase = getSupabase();
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
-}
+import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/features/operations/server-client";
 
 export async function sendVerificationEmail(): Promise<{ ok: boolean; message?: string }> {
-  const token = await getAccessToken();
-  if (!token) return { ok: false, message: "Session expired. Refresh and try again." };
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  if (!backendUrl) return { ok: false, message: "The application backend is not configured." };
-  const response = await fetch(`${backendUrl}/api/auth/email-verification/send`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-  });
-  let result: { error?: { message?: string } } | null = null;
-  try { result = await response.json(); } catch { /* ignore non-JSON */ }
-  if (!response.ok) return { ok: false, message: result?.error?.message ?? "Could not send the verification email." };
-  return { ok: true };
+  try { await serverPost("/api/auth/email-verification/send", {}); return { ok: true }; }
+  catch (error) { return { ok: false, message: error instanceof BackendRequestError || error instanceof NetworkUnavailableError ? error.message : "Could not send the verification email." }; }
 }
 
 export async function verifyEmailCode(code: string): Promise<{ ok: boolean; message?: string }> {
-  const token = await getAccessToken();
-  if (!token) return { ok: false, message: "Session expired. Refresh and try again." };
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  if (!backendUrl) return { ok: false, message: "The application backend is not configured." };
-  const response = await fetch(`${backendUrl}/api/auth/email-verification/verify`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ code }),
-  });
-  let result: { error?: { message?: string } } | null = null;
-  try { result = await response.json(); } catch { /* ignore non-JSON */ }
-  if (!response.ok) return { ok: false, message: result?.error?.message ?? "That code did not work." };
-  return { ok: true };
+  try { await serverPost("/api/auth/email-verification/verify", { code }); return { ok: true }; }
+  catch (error) { return { ok: false, message: error instanceof BackendRequestError || error instanceof NetworkUnavailableError ? error.message : "That code did not work." }; }
 }

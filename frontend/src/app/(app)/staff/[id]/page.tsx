@@ -11,6 +11,10 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
+import { tenantArray } from "@/lib/local-tenant";
+import type { LocalBranch } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -24,9 +28,12 @@ export default function StaffDetailPage({ params }: PageProps) {
   const [staffMember, setStaffMember] = useState<StaffListItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<WorkerCapability[]>([]);
+  const [branchId, setBranchId] = useState<string>("");
+  const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   useEffect(() => {
     let cancelled = false;
-    fetchStaffMember(id).then((member) => { if (!cancelled) setStaffMember(member); }).catch(() => { if (!cancelled) setStaffMember(null); }).finally(() => { if (!cancelled) setLoading(false); });
+    fetchStaffMember(id).then((member) => { if (!cancelled) { setStaffMember(member); setCapabilities(member.capabilities); } }).catch(() => { if (!cancelled) setStaffMember(null); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -72,6 +79,25 @@ export default function StaffDetailPage({ params }: PageProps) {
     finally { setBusy(false); }
   }
 
+  async function savePermissions() {
+    setBusy(true);
+    try {
+      await callManageStaff({ action: "update_permissions", userId: member.id, capabilities });
+      showToast("Permissions updated", "success");
+    } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not update permissions."); }
+    finally { setBusy(false); }
+  }
+
+  async function saveManagerAssignment() {
+    if (!branchId) return;
+    setBusy(true);
+    try {
+      await callManageStaff({ action: "designate_manager", userId: member.id, branchId, isManager: true });
+      showToast("Branch manager assignment updated", "success");
+    } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not update branch manager assignment."); }
+    finally { setBusy(false); }
+  }
+
   return <div className="flex flex-col gap-6">
     <ScreenHeader title={staffMember.fullName} onBack={() => router.push("/staff")} />
     {error && <div className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-on-danger-container">{error}</div>}
@@ -95,6 +121,12 @@ export default function StaffDetailPage({ params }: PageProps) {
           {busy ? "Generating…" : "Generate new password"}
         </RippleButton>
       </div>
+    </section>}
+    {memberAccountType === "WORKER" && <section className="flex flex-col gap-2">
+      <h2 className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">Capabilities</h2>
+      {WORKER_CAPABILITIES.map((capability) => <label key={capability} className="flex min-h-[var(--touch-target-min)] items-center gap-3 text-on-surface"><input type="checkbox" checked={capabilities.includes(capability)} onChange={(event) => setCapabilities((current) => event.target.checked ? [...current, capability] : current.filter((item) => item !== capability))} />{capability.replaceAll("_", " ").toLowerCase()}</label>)}
+      <RippleButton type="button" onClick={savePermissions} disabled={busy} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast">Save permissions</RippleButton>
+      <div className="mt-3 flex gap-2"><select value={branchId} onChange={(event) => setBranchId(event.target.value)} className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-on-surface"><option value="">Choose manager branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><RippleButton type="button" onClick={saveManagerAssignment} disabled={busy || !branchId} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-3 text-brand-accent">Assign</RippleButton></div>
     </section>}
     {memberAccountType === "WORKER" && staffMember.isActive && <button type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-danger px-4 text-danger disabled:opacity-50">Deactivate</button>}
     {memberAccountType === "WORKER" && !staffMember.isActive && <button type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-4 text-brand-accent disabled:opacity-50">Reactivate</button>}

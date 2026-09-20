@@ -5,10 +5,13 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { useAlertCenter } from "@/features/alerts/use-alert-center";
 import { Bell, AlertTriangle, CloudOff, PackageMinus } from "lucide-react";
 import type { AlertType } from "@/features/alerts/get-alerts";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 
 const ALERT_ICONS: Record<AlertType, React.ElementType> = {
   low_stock: PackageMinus,
@@ -18,7 +21,12 @@ const ALERT_ICONS: Record<AlertType, React.ElementType> = {
 
 export default function AlertsPage() {
   const router = useRouter();
+  const user = useCurrentUser();
   const { alerts, isLoading, error, acknowledgeAlert } = useAlertCenter();
+
+  if (!hasCapability(user, "VIEW_ALERTS")) {
+    return <PermissionDenied requiredCapabilities={["VIEW_ALERTS"]} />;
+  }
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 justify-between">

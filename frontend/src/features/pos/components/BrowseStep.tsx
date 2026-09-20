@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Search, Camera, GitBranch, Plus } from "lucide-react";
+import { Search, Camera } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
@@ -11,7 +11,6 @@ import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/fee
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
 });
-import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { RippleButton } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
@@ -57,7 +56,6 @@ export function BrowseStep(props: {
     itemCount,
     total,
     onReviewCart,
-    onGoToSettings,
     stockByProduct,
   } = props;
 
@@ -74,11 +72,6 @@ export function BrowseStep(props: {
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  // Programmatic focus ref — lets handleFreshAdd re-focus the search
-  // input after each add so the mobile keyboard never collapses between
-  // products. H7: accelerator for expert cashiers building large orders.
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
   const [prevProductsLength, setPrevProductsLength] = useState(0);
   const [prevCategoryId, setPrevCategoryId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -96,9 +89,12 @@ export function BrowseStep(props: {
   // Reset visible limit when products or category changes
   useEffect(() => {
     if (filteredProducts.length !== prevProductsLength || selectedCategoryId !== prevCategoryId) {
-      setPrevProductsLength(filteredProducts.length);
-      setPrevCategoryId(selectedCategoryId);
-      setVisibleLimit(50);
+      const reset = window.setTimeout(() => {
+        setPrevProductsLength(filteredProducts.length);
+        setPrevCategoryId(selectedCategoryId);
+        setVisibleLimit(50);
+      }, 0);
+      return () => window.clearTimeout(reset);
     }
   }, [filteredProducts.length, selectedCategoryId, prevProductsLength, prevCategoryId]);
 
@@ -121,9 +117,10 @@ export function BrowseStep(props: {
    * Fresh add — called when a product with qty 0 is added for the first time
    * (tap-to-add, Enter key, or barcode scan-to-add).
    *
-   * After adding: clears the search query immediately (cashier needs to find
-   * the NEXT product, not re-read the last one) and re-focuses the input so
-   * the mobile keyboard stays open for instant typing. No extra tap needed.
+   * The query intentionally remains visible after an add. This keeps the
+   * result set stable for quantity adjustments and lets a cashier choose a
+   * second matching result without losing context. Selection buttons do not
+   * programmatically focus the input, so mobile keyboards do not reopen.
    *
    * Stepper +/− handlers intentionally do NOT go through here — adjusting
    * an existing line quantity is not a "new product search" action, so
@@ -138,13 +135,6 @@ export function BrowseStep(props: {
   ) {
     feedbackAddToCart();
     onAddToCart(productId, unitPrice, unitLabel, conversionFactor, qty);
-    // Clear query only when there was one — avoids a no-op state update
-    // and the associated re-render when browsing without a search term.
-    if (query) onQueryChange("");
-    // requestAnimationFrame lets React flush the query-clear state update
-    // first so the input is already in its empty, ready state when the
-    // focus lands — prevents a brief flash of the old query value.
-    requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
   /**
@@ -171,7 +161,6 @@ export function BrowseStep(props: {
               aria-hidden
             />
             <input
-              ref={searchInputRef}
               type="search"
               aria-label="Search products"
               value={query}

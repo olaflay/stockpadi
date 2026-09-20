@@ -14,6 +14,13 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string>("");
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const deliveredRef = useRef(false);
+  const onResultRef = useRef(onResult);
+  const onCancelRef = useRef(onCancel);
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onCancelRef.current = onCancel;
+  }, [onResult, onCancel]);
 
   useEffect(() => {
     let mounted = true;
@@ -37,9 +44,10 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
 
         if (videoRef.current && mounted) {
           await reader.decodeFromVideoDevice(deviceId, videoRef.current, (result, err) => {
-            if (result && mounted) {
+            if (result && mounted && !deliveredRef.current) {
+              deliveredRef.current = true;
               if (navigator.vibrate) navigator.vibrate(100);
-              onResult(result.getText());
+              onResultRef.current(result.getText());
             }
             if (err && !(err instanceof NotFoundException)) {
               console.error(err);
@@ -59,7 +67,7 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
       mounted = false;
       reader.reset();
     };
-  }, [onResult]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-surface">
@@ -76,7 +84,7 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
         <h2 className="text-[length:var(--font-size-title)] font-semibold text-on-surface">Scan Barcode</h2>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={() => onCancelRef.current()}
           aria-label="Close scanner"
           className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container"
         >

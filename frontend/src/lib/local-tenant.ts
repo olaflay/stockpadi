@@ -1,4 +1,4 @@
-import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
+import { db, BUSINESS_PROFILE_SINGLETON_ID, type SyncQuarantineRow } from "@/lib/db";
 
 let activeBusinessId: string | undefined;
 const allowLegacyRowsForTests = typeof process !== "undefined" && process.env.NODE_ENV === "test";
@@ -50,46 +50,63 @@ export async function setLocalBusinessId(businessId: string | null | undefined):
       currency: "NGN",
     });
   }
-  // Repair legacy unscoped data so offline rows created before businessId
-  // was available get stamped with the authenticated tenant.
-  await db.transaction("rw", db.branches, db.categories, db.products, db.stockMovements, db.outbox, async () => {
-    await db.branches.toCollection().modify((row) => {
-      if (!row.businessId) row.businessId = businessId;
-    });
-    await db.categories.toCollection().modify((row) => {
-      if (!row.businessId) row.businessId = businessId;
-    });
-    await db.products.toCollection().modify((row) => {
-      if (!row.businessId) row.businessId = businessId;
-    });
-    await db.stockMovements.toCollection().modify((row) => {
-      if (!row.businessId) row.businessId = businessId;
-    });
-    await db.outbox.toCollection().modify((row) => {
-      if (!row.businessId) row.businessId = businessId;
-    });
-
-    // An account is always at least one branch. Guarantee a primary branch exists.
-    const branchCount = await db.branches.where("businessId").equals(businessId).count();
-    if (branchCount === 0) {
-      await db.branches.put({
-        id: `${businessId}-main`,
-        businessId,
-        name: "Main Branch",
-        isActive: true,
+  // Legacy rows without a tenant are ambiguous. Never silently attach them to
+  // whichever account happens to log in on this browser: retain them in the
+  // recovery store and remove them from operational tables.
+  const tables = [
+    ["branches", db.branches], ["categories", db.categories], ["products", db.products],
+    ["customers", db.customers], ["customerCreditMovements", db.customerCreditMovements],
+    ["stockMovements", db.stockMovements], ["sales", db.sales], ["outbox", db.outbox],
+    ["localUsers", db.localUsers], ["auditLogs", db.auditLogs], ["expenses", db.expenses],
+    ["suppliers", db.suppliers], ["purchases", db.purchases], ["inventoryStock", db.inventoryStock],
+  ] as const;
+  await db.transaction("rw", [db.syncQuarantine, ...tables.map(([, table]) => table)], async () => {
+    // A legacy sale can be repaired without guessing when its sale-sourced
+    // stock movements all point to exactly one tenant. Preserve that durable
+    // linkage; quarantine only when it is absent or contradictory.
+    const legacySales = (await db.sales.toArray()).filter((row) => !(row as { businessId?: string }).businessId);
+    for (const row of legacySales) {
+      const sale = row as { id: string; businessId?: string };
+      const linked = (await db.stockMovements.toArray()).filter((movement) => {
+        const candidate = movement as { source?: string; sourceReferenceId?: string | null; businessId?: string };
+        return candidate.source === "sale" && candidate.sourceReferenceId === sale.id && candidate.businessId;
       });
+      const tenantIds = [...new Set(linked.map((movement) => (movement as { businessId: string }).businessId))];
+      if (tenantIds.length === 1) {
+        await db.sales.put({ ...row, businessId: tenantIds[0] });
+      }
+    }
+    for (const [entity, table] of tables) {
+      const legacyRows = (await table.toArray()).filter((row) => !(row as { businessId?: string }).businessId);
+      for (const row of legacyRows) {
+        const record = row as { id?: string; clientId?: string };
+        const quarantine: SyncQuarantineRow = {
+          id: `legacy-${entity}-${record.id ?? record.clientId ?? crypto.randomUUID()}`,
+          businessId,
+          entity,
+          entityId: String(record.id ?? record.clientId ?? "unknown"),
+          record,
+          reason: "missing_business_id_ambiguous_legacy_record",
+          createdAt: new Date().toISOString(),
+        };
+        await db.syncQuarantine.put(quarantine);
+        const key = record.id ?? record.clientId;
+        if (key) await table.delete(key);
+      }
     }
   });
 }
 
-export async function withLocalBusinessId<T extends object>(row: T): Promise<T & { businessId?: string }> {
+export async function withLocalBusinessId<T extends object>(row: T): Promise<T & { businessId: string }> {
   const businessId = await getLocalBusinessId();
-  return businessId ? { ...row, businessId } : row;
+  if (!businessId && !allowLegacyRowsForTests) throw new Error("A signed-in business context is required before writing local data.");
+  return { ...row, businessId: businessId ?? "test-business" };
 }
 
-export async function withLocalBusinessIds<T extends object>(rows: T[]): Promise<Array<T & { businessId?: string }>> {
+export async function withLocalBusinessIds<T extends object>(rows: T[]): Promise<Array<T & { businessId: string }>> {
   const businessId = await getLocalBusinessId();
-  return businessId ? rows.map((row) => ({ ...row, businessId })) : rows;
+  if (!businessId && !allowLegacyRowsForTests) throw new Error("A signed-in business context is required before writing local data.");
+  return rows.map((row) => ({ ...row, businessId: businessId ?? "test-business" }));
 }
 
 export async function tenantRows<T extends { businessId?: string }>(rows: T[]): Promise<T[]> {

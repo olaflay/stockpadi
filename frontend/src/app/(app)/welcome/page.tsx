@@ -14,6 +14,7 @@ import { useOnlineStatus } from "@/lib/use-online-status";
 import { OfflineIllustration } from "@/components/illustrations";
 import type { Product } from "@/types/product";
 import { seedSampleProducts } from "@/features/profile/seed-sample-products";
+import { writeNewProductOffline } from "@/features/inventory/product-offline-write";
 
 const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
@@ -82,7 +83,7 @@ export default function WelcomePage() {
         version: 1,
         updatedAt: new Date().toISOString(),
       };
-      await db.products.add(product);
+      await writeNewProductOffline(product, null, null, user);
       showToast(`${product.name} added, now try selling it`, "success");
       // Deep-links into POS with the product pre-added to cart
       // (src/app/(app)/pos/page.tsx reads ?add=), so the very next thing

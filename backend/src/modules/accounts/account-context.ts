@@ -26,14 +26,20 @@ export async function resolveAccountContext(db: SupabaseClient, user: User, opti
     // Check if the account belongs to a business or membership that is pending approval
     const { data: pendingRaw } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: true }).maybeSingle();
     const pendingData = pendingRaw as { user_id: string; business_status: string | null; membership_status: string | null } | null;
-    if (pendingData && (pendingData.business_status === "pending" || pendingData.membership_status === "pending")) {
+    if (pendingData?.business_status === "pending") {
+      throw new HttpError(403, "BUSINESS_UNAVAILABLE", "This business is awaiting approval. Cloud sync will resume automatically once it is verified.");
+    }
+    if (pendingData?.membership_status === "pending") {
       logger.warn("account context pending approval", { userId: user.id, email: user.email });
       throw new HttpError(403, "ACCOUNT_NOT_APPROVED", "Account is not approved. Please wait for approval.");
     }
     logger.warn("account context missing", { userId: user.id, email: user.email });
     throw new HttpError(403, "FORBIDDEN", "No active account context found");
   }
-  if (data.business_status === "pending" || data.membership_status === "pending") {
+  if (data.business_status === "pending") {
+    if (!options.allowPendingOwner) throw new HttpError(403, "BUSINESS_UNAVAILABLE", "This business is awaiting approval. Cloud sync will resume automatically once it is verified.");
+  }
+  if (data.membership_status === "pending") {
     if (!options.allowPendingOwner) {
       throw new HttpError(403, "ACCOUNT_NOT_APPROVED", "Account is not approved. Please wait for approval.");
     }

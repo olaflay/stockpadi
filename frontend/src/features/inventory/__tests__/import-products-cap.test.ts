@@ -4,13 +4,16 @@ import { importProducts } from "@/features/inventory/import-products";
 import type { ParsedImportRow } from "@/features/inventory/product-import";
 import type { Product } from "@/types/product";
 import type { CurrentUser } from "@/features/auth/use-current-user";
+import { tenantArray } from "@/lib/local-tenant";
 
 vi.mock("@/config/limits", () => ({
   PRODUCT_CAP: 5,
   PRODUCT_CAP_WARN_AT: 4,
+  SYNC_REQUIRED_MAX_AGE_MS: 24 * 60 * 60 * 1000,
+  SYNC_REQUIRED_QUEUE_THRESHOLD: 100,
 }));
 
-const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner" };
+const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" };
 
 function row(num: number): ParsedImportRow {
   return {
@@ -81,5 +84,33 @@ describe("importProducts cap enforcement", () => {
     await importProducts([row(2), row(3)], OWNER, null);
 
     expect(await db.products.where("businessId").equals("test-business").count()).toBe(3);
+  });
+
+  it("makes imported products visible to the tenant-filtered stock list", async () => {
+    await importProducts([row(2), row(3)], OWNER, null);
+
+    const visibleProducts = await tenantArray<Product>(db.products.orderBy("name"));
+
+    expect(visibleProducts.map((item) => item.name)).toEqual(["Product 2", "Product 3"]);
+    expect(visibleProducts.every((item) => item.businessId === "test-business")).toBe(true);
+    expect(await db.outbox.where("type").equals("product").count()).toBe(2);
+  });
+
+  it("requires a branch for opening stock and leaves the transaction empty", async () => {
+    await expect(importProducts([{ ...row(2), hasInitialStock: true, initialStockQty: 4 }], OWNER, null)).rejects.toThrow("branch");
+    expect(await db.products.count()).toBe(0);
+    expect(await db.stockMovements.count()).toBe(0);
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it("writes products before opening stock and records the dependency in the outbox", async () => {
+    await importProducts([{ ...row(2), hasInitialStock: true, initialStockQty: 4 }], OWNER, "branch-1");
+
+    const queued = await db.outbox.orderBy("sequence").toArray();
+    expect(queued).toHaveLength(2);
+    expect(queued[0].type).toBe("product");
+    expect(queued[1].type).toBe("stock_adjustment");
+    expect(queued[1].dependsOn).toEqual(["branch-1", queued[0].entityId]);
+    expect(queued[1].payload).toMatchObject({ productId: queued[0].entityId, quantityDelta: 4 });
   });
 });

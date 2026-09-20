@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus } from "lucide-react";
-import { db } from "@/lib/db";
-import { tenantArray, withLocalBusinessId } from "@/lib/local-tenant";
+import { Plus, Archive, Check, Pencil, RotateCcw } from "lucide-react";
+import { db, type LocalBranch } from "@/lib/db";
+import { tenantArray } from "@/lib/local-tenant";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
@@ -13,7 +13,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import { serverGet, serverPost, NetworkUnavailableError } from "@/features/operations/server-client";
+import { writeBranchOffline, setPrimaryBranchOffline } from "@/features/branches/write-branch-offline";
 
 export default function BranchesSettingsPage() {
   const router = useRouter();
@@ -22,18 +22,9 @@ export default function BranchesSettingsPage() {
   const [newBranchName, setNewBranchName] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const branches = useLiveQuery(async () => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.onLine) {
-        const remote = await serverGet<{ branches: Array<{ id: string; name: string; is_active: boolean; business_id: string }> }>("/api/businesses/branches");
-        return remote.branches.map((branch) => ({ id: branch.id, name: branch.name, isActive: branch.is_active, businessId: branch.business_id }));
-      }
-      const result = await tenantArray(db.branches);
-      setLoadError(null);
-      return result;
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load branches.");
-      return [];
-    }
+    const result = await tenantArray(db.branches);
+    setLoadError(null);
+    return result;
   }, []);
 
   if (user.accountType !== "BUSINESS_OWNER") {
@@ -64,17 +55,35 @@ export default function BranchesSettingsPage() {
   }
 
   async function addBranch() {
-    if (!newBranchName.trim() || branches!.length === 6) return;
-    const branch = { id: crypto.randomUUID(), name: newBranchName.trim(), isActive: true };
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      try {
-        const created = await serverPost<{ id: string; name: string; is_active: boolean; business_id: string }>("/api/businesses/branches", { name: branch.name });
-        await db.branches.put({ id: created.id, name: created.name, isActive: created.is_active, businessId: created.business_id });
-      }
-      catch (error) { if (!(error instanceof NetworkUnavailableError)) throw error; await db.branches.add(await withLocalBusinessId(branch)); }
-    } else await db.branches.add(await withLocalBusinessId(branch));
+    if (!newBranchName.trim() || branches!.filter((branch) => branch.isActive).length === 6) return;
+    const branch = { id: crypto.randomUUID(), name: newBranchName.trim(), isActive: true, isPrimary: branches!.every((candidate) => !candidate.isPrimary) };
+    await writeBranchOffline(branch);
     showToast(`${newBranchName.trim()} added`, "success");
     setNewBranchName("");
+  }
+
+  async function renameBranch(branch: LocalBranch) {
+    const name = window.prompt("Branch name", branch.name)?.trim();
+    if (name && name !== branch.name) await writeBranchOffline({ ...branch, name });
+  }
+
+  async function setPrimary(branch: LocalBranch) {
+    if (branch.isPrimary || !branch.isActive) return;
+    await setPrimaryBranchOffline(branch, branches!);
+    showToast(`${branch.name} is now primary`, "success");
+  }
+
+  async function toggleArchive(branch: LocalBranch) {
+    if (branch.isActive && branch.isPrimary) {
+      showToast("Choose another primary branch before archiving this one.", "warning");
+      return;
+    }
+    if (branch.isActive && branches!.filter((candidate) => candidate.isActive).length <= 1) {
+      showToast("Keep one active branch for this business.", "warning");
+      return;
+    }
+    await writeBranchOffline({ ...branch, isActive: !branch.isActive });
+    showToast(branch.isActive ? `${branch.name} archived` : `${branch.name} reactivated`, "success");
   }
 
   return (
@@ -82,15 +91,28 @@ export default function BranchesSettingsPage() {
       <ScreenHeader title={`Branches (${branches.length}/6)`} onBack={() => router.push("/settings")} />
 
       <ul className="flex flex-col gap-2">
-        {branches.map((branch) => (
+        {branches.filter((branch) => branch.isActive).map((branch) => (
           <li
             key={branch.id}
             className="rounded-2xl bg-surface-container px-4 py-3 text-[length:var(--font-size-body)] text-on-surface"
           >
-            {branch.name}
+            <div className="flex items-center justify-between gap-3">
+              <div><p>{branch.name}</p>{branch.isPrimary && <span className="text-xs text-brand-accent">Primary branch</span>}</div>
+              <div className="flex items-center gap-1">
+                {!branch.isPrimary && <RippleButton type="button" onClick={() => setPrimary(branch)} aria-label={`Set ${branch.name} as primary`} className="rounded-full p-2 text-brand-accent"><Check size={16} aria-hidden /></RippleButton>}
+                <RippleButton type="button" onClick={() => renameBranch(branch)} aria-label={`Rename ${branch.name}`} className="rounded-full p-2 text-on-surface-muted"><Pencil size={16} aria-hidden /></RippleButton>
+                {!branch.isPrimary && <RippleButton type="button" onClick={() => toggleArchive(branch)} aria-label={`Archive ${branch.name}`} className="rounded-full p-2 text-danger"><Archive size={16} aria-hidden /></RippleButton>}
+              </div>
+            </div>
           </li>
         ))}
       </ul>
+      {branches.some((branch) => !branch.isActive) && (
+        <section className="rounded-2xl bg-surface-container p-3">
+          <h2 className="mb-2 text-sm font-semibold text-on-surface">Archived branches</h2>
+          {branches.filter((branch) => !branch.isActive).map((branch) => <div key={branch.id} className="flex items-center justify-between gap-2 border-b border-border py-2 text-sm text-on-surface-muted"><span>{branch.name}</span><RippleButton type="button" onClick={() => toggleArchive(branch)} className="flex items-center gap-1 rounded-full px-2 py-1 text-brand-accent"><RotateCcw size={14} aria-hidden /> Reactivate</RippleButton></div>)}
+        </section>
+      )}
 
       {branches.length < 6 && (
         <div className="flex gap-2">

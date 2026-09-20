@@ -3,12 +3,21 @@ import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
 import { parseProductFile, buildErrorReportCsv, IMPORT_HEADERS } from "./product-import";
 import { generateFallbackSku, generateUniqueFallbackSku } from "./generate-sku";
+import { PRODUCT_IMPORT_MAX_ROWS } from "@/config/limits";
 
 const HEADER = IMPORT_HEADERS.join(",");
 
 function csvFromRows(rows: Array<Array<string | number | null>>): File {
-  const body = rows.map((r) => r.map((v) => v ?? "").join(",")).join("\n");
+  const body = rows.map((r) => {
+    const values = r.length === IMPORT_HEADERS.length - 1 ? [...r.slice(0, 8), "", ...r.slice(8)] : r;
+    return values.map((v) => v ?? "").join(",");
+  }).join("\n");
   return new File([`${HEADER}\n${body}`], "products.csv", { type: "text/csv" });
+}
+
+function csvWithHeaders(headers: string[], rows: Array<Array<string | number | null>>): File {
+  const body = rows.map((row) => row.map((value) => value ?? "").join(",")).join("\n");
+  return new File([`${headers.join(",")}\n${body}`], "products.csv", { type: "text/csv" });
 }
 
 function seedProduct(overrides: Partial<Product> & Pick<Product, "id" | "sku" | "name">): ReturnType<typeof db.products.add> {
@@ -166,6 +175,66 @@ describe("parseProductFile", () => {
     expect(result.validRows).toHaveLength(0);
     expect(result.errors[0]).toMatchObject({ rowNum: 2, field: "costPrice" });
   });
+
+  it("reports missing required headers before parsing rows", async () => {
+    const result = await parseProductFile(csvWithHeaders(["name", "sku", "sellPrice"], [["Rice", "RICE-1", "100"]]));
+    expect(result.validRows).toHaveLength(0);
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rowNum: 1, field: "costPrice", message: expect.stringContaining("missing") }),
+    ]));
+  });
+
+  it("suggests the canonical header for a misspelling", async () => {
+    const result = await parseProductFile(csvWithHeaders(
+      ["name", "costPrice", "sellingPrice"],
+      [["Rice", "100", "150"]],
+    ));
+    expect(result.errors.map((error) => error.message).join(" ")).toContain("Unknown column 'sellingPrice'. Did you mean 'sellPrice'?");
+    expect(result.errors.some((error) => error.message.includes("No recognized product columns"))).toBe(false);
+  });
+
+  it("does not silently accept a file with no recognized columns", async () => {
+    const result = await parseProductFile(csvWithHeaders(["product", "sellingPrice"], [["Rice", "150"]]));
+    expect(result.validRows).toHaveLength(0);
+    expect(result.errors.map((error) => error.message).join(" ")).toContain("No recognized product columns");
+  });
+
+  it("requires a mandatory expiry date and round-trips optional ISO dates", async () => {
+    const missing = await parseProductFile(csvFromRows([["Rice", "RICE-1", "", "100", "150", "bag", "", "mandatory", "", "0"]]));
+    expect(missing.errors[0]).toMatchObject({ rowNum: 2, field: "expiryDate" });
+
+    const optional = await parseProductFile(csvFromRows([["Rice", "RICE-2", "", "100", "150", "bag", "", "optional", "2027-04-05", "0"]]));
+    expect(optional.errors).toHaveLength(0);
+    expect(optional.validRows[0].data.expiryDate).toBe("2027-04-05");
+  });
+
+  it("rejects invalid expiry dates and accepts a blank optional/off date", async () => {
+    const invalid = await parseProductFile(csvFromRows([["Rice", "RICE-1", "", "100", "150", "bag", "", "optional", "2027-02-30", "0"]]));
+    expect(invalid.errors[0]).toMatchObject({ rowNum: 2, field: "expiryDate" });
+
+    const blank = await parseProductFile(csvFromRows([["Rice", "RICE-2", "", "100", "150", "bag", "", "off", "", "0"]]));
+    expect(blank.errors).toHaveLength(0);
+    expect(blank.validRows[0].data.expiryDate).toBe("");
+  });
+
+  it("rejects decimal opening stock but accepts zero", async () => {
+    const decimal = await parseProductFile(csvFromRows([["Rice", "RICE-1", "", "100", "150", "bag", "", "off", "", "1.5"]]));
+    expect(decimal.errors[0]).toMatchObject({ rowNum: 2, field: "initialStock" });
+
+    const zero = await parseProductFile(csvFromRows([["Rice", "RICE-2", "", "100", "150", "bag", "", "off", "", "0"]]));
+    expect(zero.errors).toHaveLength(0);
+    expect(zero.validRows[0].hasInitialStock).toBe(false);
+    expect(zero.totalOpeningStockUnits).toBe(0);
+  });
+
+  it("stops parsing above the bounded row limit", async () => {
+    const rows = Array.from({ length: PRODUCT_IMPORT_MAX_ROWS + 1 }, (_, index) => [
+      `Product ${index}`, `SKU-${index}`, "", "100", "150", "piece", "", "off", "", "0",
+    ]);
+    const result = await parseProductFile(csvFromRows(rows));
+    expect(result.validRows).toHaveLength(0);
+    expect(result.errors[0].message).toContain(`more than ${PRODUCT_IMPORT_MAX_ROWS}`);
+  });
 });
 
 describe("parseProductFile — Excel (.xlsx)", () => {
@@ -173,12 +242,12 @@ describe("parseProductFile — Excel (.xlsx)", () => {
     await db.products.clear();
   });
 
-  async function xlsxFromRows(rows: Array<Array<string | number | null | "">>): Promise<File> {
+  async function xlsxFromRows(rows: Array<Array<string | number | Date | null | "">>): Promise<File> {
     const { Workbook } = await import("exceljs");
     const wb = new Workbook();
     const ws = wb.addWorksheet("Products");
     ws.addRow([...IMPORT_HEADERS]);
-    rows.forEach((row) => ws.addRow(row));
+    rows.forEach((row) => ws.addRow(row.length === IMPORT_HEADERS.length - 1 ? [...row.slice(0, 8), "", ...row.slice(8)] : row));
     const buffer = await wb.xlsx.writeBuffer();
     return new File([buffer], "products.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   }
@@ -218,6 +287,16 @@ describe("parseProductFile — Excel (.xlsx)", () => {
     expect(result.validRows[0].initialStockQty).toBe(40);
   });
 
+  it("reads an Excel date cell and a numeric barcode", async () => {
+    const file = await xlsxFromRows([
+      ["Medicine", "MED-1", 6900001234567, 120, 180, "box", 12, "mandatory", new Date(Date.UTC(2027, 0, 15)), 4],
+    ]);
+    const result = await parseProductFile(file);
+    expect(result.errors).toHaveLength(0);
+    expect(result.validRows[0].data.barcode).toBe("6900001234567");
+    expect(result.validRows[0].data.expiryDate).toBe("2027-01-15");
+  });
+
   it("blocks the whole workbook when a required cell is blank", async () => {
     const file = await xlsxFromRows([
       ["Tomato paste", "", "", 120, 180, "tin", 12, "off", 40],
@@ -240,6 +319,16 @@ describe("buildSampleExcel", () => {
     expect(buf[1]).toBe(0x4b);
     expect(buf[2]).toBe(0x03);
     expect(buf[3]).toBe(0x04);
+  });
+
+  it("generates a workbook that the parser accepts without column drift", async () => {
+    const { buildSampleExcel } = await import("./product-import");
+    const blob = await buildSampleExcel();
+    const result = await parseProductFile(new File([await blob.arrayBuffer()], "template.xlsx"));
+    expect(result.errors).toHaveLength(0);
+    expect(result.totalRows).toBe(2);
+    expect(result.validRows).toHaveLength(2);
+    expect(result.totalOpeningStockUnits).toBe(65);
   });
 });
 

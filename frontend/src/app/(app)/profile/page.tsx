@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { UserCircle, LogOut } from "lucide-react";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { signOut } from "@/features/auth/logout";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { getSupabase } from "@/lib/supabase";
 
 const ACCOUNT_LABELS = {
   ADMIN: "Platform Admin",
@@ -15,6 +17,15 @@ const ACCOUNT_LABELS = {
 export default function ProfilePage() {
   const router = useRouter();
   const user = useCurrentUser();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getSupabase()?.auth.getUser().then(({ data }) => {
+      if (active) setEmail(data.user?.email ?? null);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function handleLogout() {
     await signOut();
@@ -33,6 +44,7 @@ export default function ProfilePage() {
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
             {ACCOUNT_LABELS[user.accountType ?? "WORKER"]}
           </p>
+          {email && <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{email}</p>}
         </div>
       </div>
       <section className="rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">

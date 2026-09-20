@@ -13,8 +13,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { completeSale } from "@/features/pos/complete-sale";
 import { useCart } from "@/features/pos/use-cart";
 import { parsePosQuery } from "@/lib/parse-pos-query";
@@ -25,11 +25,10 @@ import { PaymentStep } from "@/features/pos/components/PaymentStep";
 import { formatCurrency } from "@/lib/format";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { tenantArray } from "@/lib/local-tenant";
-import type { StockMovement } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
-import { getBestSellingProductIds } from "@/features/inventory/product-insights";
+import { getBestSellingProductIds, getStockByProduct } from "@/features/inventory/product-insights";
 import { feedbackSaleComplete } from "@/lib/feedback";
 
 function PosPageContent() {
@@ -55,14 +54,7 @@ function PosPageContent() {
   const stockByProduct = useLiveQuery(async () => {
     const branchId = resolveDefaultBranch(branches, user);
     if (!branchId) return undefined;
-    const movements = await tenantArray<StockMovement>(
-      db.stockMovements.where("branchId").equals(branchId)
-    );
-    const map: Record<string, number> = {};
-    for (const m of movements) {
-      map[m.productId] = (map[m.productId] ?? 0) + m.quantityDelta;
-    }
-    return map;
+    return Object.fromEntries((await getStockByProduct(branchId)).entries());
   }, [branches, user]);
 
   const result = useLiveQuery(async () => {
@@ -95,11 +87,11 @@ function PosPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addProductId, result, router]);
 
-  if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
+  if (!hasCapability(user, "POS_SELL")) {
     return (
       <div>
         <ScreenHeader title="Sell" hideBack={true} />
-        <PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} />
+        <PermissionDenied requiredCapabilities={["POS_SELL"]} />
       </div>
     );
   }
@@ -152,16 +144,10 @@ function PosPageContent() {
 
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;
-    let branchId = resolveDefaultBranch(branches, user);
+    const branchId = resolveDefaultBranch(branches, user);
     if (!branchId && user.accountType !== "WORKER") {
-      const fallbackId = user.businessId ? `${user.businessId}-main` : "main-branch";
-      await db.branches.put({
-        id: fallbackId,
-        businessId: user.businessId || undefined,
-        name: "Main Branch",
-        isActive: true,
-      });
-      branchId = fallbackId;
+      showToast("No primary branch is available. Ask the owner to configure one.", "warning");
+      return;
     }
     if (!branchId) {
       showToast(

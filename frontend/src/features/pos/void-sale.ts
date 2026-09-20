@@ -2,9 +2,10 @@ import { getSupabase } from "@/lib/supabase";
 import { db, type CustomerCreditMovement } from "@/lib/db";
 import type { StockMovement } from "@/types/stock-movement";
 import { tenantArray, tenantGet, withLocalBusinessIds } from "@/lib/local-tenant";
+import { serverPost } from "@/features/operations/server-client";
 
 /**
- * Thin client for the void-sale Edge Function. Online-required by locked
+ * Thin client for the Node void-sale API. Online-required by locked
  * decision (.agents/rules/payment-and-pci-scope.md item 4) — this does NOT
  * go through the outbox like every other write in this app. The server is
  * the source of truth: local IndexedDB is only updated after it confirms
@@ -22,18 +23,10 @@ export async function voidSale(params: { saleId: string; branchId: string; reaso
   } = await supabase.auth.getSession();
   if (!session) throw new VoidSaleError("Your session has expired. Sign in again.");
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-  if (!backendUrl && process.env.NODE_ENV !== "test") throw new VoidSaleError("The application backend is not configured.");
-  const url = `${backendUrl ?? "http://backend.test"}/api/sales/void`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ saleId: params.saleId, reason: params.reason }),
-  });
-
-  const json = await response.json();
-  if (!response.ok) {
-    throw new VoidSaleError(json?.error?.message ?? "Couldn't void this sale. Try again.");
+  try {
+    await serverPost("/api/sales/void", { saleId: params.saleId, reason: params.reason });
+  } catch (error) {
+    throw new VoidSaleError(error instanceof Error ? error.message : "Couldn't void this sale. Try again.");
   }
 
   // Mirror the server's result locally so the receipt screen and stock

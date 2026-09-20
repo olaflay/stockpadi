@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Serwist emits this minified worker during `next build`; lint source TS instead.
+    "public/sw.js",
   ]),
 ]);
 

@@ -19,7 +19,6 @@ import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { setLocalBusinessId } from "@/lib/local-tenant";
-import { seedSampleProducts } from "@/features/profile/seed-sample-products";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -109,6 +108,10 @@ export default function LoginForm() {
         router.replace("/verify-email");
         return;
       }
+      if (state === "EMAIL_VERIFIED_PENDING_ADMIN" || state === "PENDING_ADMIN_APPROVAL") {
+        router.replace("/pending-approval");
+        return;
+      }
       // Unverified business owners can enter /dashboard immediately; cloud sync will await verification
       router.replace(profile.account_type === "ADMIN" ? "/admin" : "/dashboard");
     } catch (error) {
@@ -155,64 +158,6 @@ export default function LoginForm() {
       if (error) throw error;
     } catch {
       setError("Google sign-in didn't work. Check your connection and try again.");
-      setBusy(false);
-    }
-  }
-
-  async function handleDemoSignIn() {
-    setBusy(true);
-    setError(null);
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("stockpadi-theme");
-        document.documentElement.removeAttribute("data-theme");
-      }
-      const demoUserId = "demo-owner-" + Math.random().toString(36).substring(2, 8);
-      const demoBizId = "biz-demo-001";
-      const demoBranchId = "branch-demo-001";
-
-      await db.localUsers.put({
-        id: demoUserId,
-        businessId: demoBizId,
-        branchIds: [demoBranchId],
-        fullName: "Demo Store Owner",
-        accountType: "BUSINESS_OWNER",
-        permissions: [],
-        isActive: true,
-        emailVerified: true,
-        businessStatus: "verified",
-        updatedAt: new Date().toISOString(),
-      });
-      await db.businessProfile.put({
-        id: BUSINESS_PROFILE_SINGLETON_ID,
-        businessId: demoBizId,
-        name: "StockPadi Retail Demo",
-        businessTypeId: "general_retail",
-        currency: "NGN",
-      });
-      await setLocalBusinessId(demoBizId);
-
-      const existingBranch = await db.branches.get(demoBranchId);
-      if (!existingBranch) {
-        await db.branches.put({
-          id: demoBranchId,
-          businessId: demoBizId,
-          name: "Main Shop",
-          isActive: true,
-        });
-      }
-
-      const count = await db.products.count();
-      if (count === 0) {
-        await seedSampleProducts("general_retail", demoUserId, demoBranchId);
-      }
-
-      await startSession(demoUserId);
-      router.replace("/dashboard");
-    } catch (err) {
-      console.error("Demo login error:", err);
-      setError("Something went wrong. Please try again.");
-    } finally {
       setBusy(false);
     }
   }
@@ -369,16 +314,6 @@ export default function LoginForm() {
           Create a business account
         </button>
 
-        {process.env.NODE_ENV === "development" && (
-          <button
-            type="button"
-            id="btn-dev-demo-login"
-            onClick={handleDemoSignIn}
-            className="w-full rounded-[var(--radius-control)] border border-dashed border-brand-accent/50 bg-brand-accent/5 py-2.5 text-center text-xs font-semibold text-brand-accent hover:bg-brand-accent/10 transition-colors min-h-[var(--touch-target-min)] flex items-center justify-center"
-          >
-            ⚡ Demo / Offline Test Login (Dev)
-          </button>
-        )}
       </form>
 
       {isApprovalModalOpen && (

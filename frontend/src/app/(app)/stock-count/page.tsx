@@ -18,13 +18,11 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch } from "@/lib/db";
-
-const CAN_COUNT_STOCK = WORKER_EXPERIENCE_ACCOUNT_TYPES;
 
 const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
@@ -81,11 +79,11 @@ export default function StockCountPage() {
     };
   }, [filtered.length, visibleLimit]);
 
-  if (!hasAccountType(user, CAN_COUNT_STOCK)) {
+  if (!hasCapability(user, "SUBMIT_STOCK_COUNT")) {
     return (
       <div>
         <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
-        <PermissionDenied requiredAccountTypes={CAN_COUNT_STOCK} />
+        <PermissionDenied requiredCapabilities={["SUBMIT_STOCK_COUNT"]} />
       </div>
     );
   }
@@ -153,6 +151,7 @@ export default function StockCountPage() {
         note: note.trim() || null,
         createdByUserId: user.id,
         actor: user,
+        operation: "stock_count",
       });
       showToast(user.accountType === "WORKER" ? `${activeProduct.name} count submitted for Owner review` : `${activeProduct.name} updated`, "success");
       setActiveProduct(null);

@@ -124,7 +124,7 @@ export function useUpdateStockRows(
           // Same offline-first path as the Edit Product screen: upsert local +
           // outbox in one transaction so this device's cache is never stale on
           // a successful online save. See .agents/rules/offline-sync-and-ledger.md.
-          await writeProductEditOffline(product.id, update);
+          await writeProductEditOffline(product.id, update, null, user);
         }
 
         if (Number.isFinite(newStock) && newStock !== currentStockFor(product.id)) {

@@ -19,6 +19,8 @@ import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getBrandingConfig } from "@/config/branding";
 import { useSideDrawer } from "@/components/ui/DrawerContext";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
+import type { WorkerCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { AlertBadge } from "@/components/ui/AlertBadge";
@@ -29,6 +31,7 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
   badge?: React.ReactNode;
   ownerOnly?: boolean;
+  capability?: WorkerCapability;
 }
 
 export function SideDrawer() {
@@ -99,34 +102,38 @@ export function SideDrawer() {
       label: "Customers",
       href: "/customers",
       icon: UserCircle,
+      capability: "VIEW_CUSTOMERS",
     },
     {
       label: "Sales & Receipts",
       href: "/sales",
       icon: ReceiptText,
+      capability: "VIEW_OWN_SALES",
     },
     {
       label: "Stock Count",
       href: "/stock-count",
       icon: ClipboardCheck,
+      capability: "SUBMIT_STOCK_COUNT",
     },
     {
       label: "Restock",
       href: "/purchases",
       icon: Truck,
-      ownerOnly: true,
+      capability: "RECEIVE_STOCK",
     },
     {
       label: "Expenses",
       href: "/expenses",
       icon: Wallet,
-      ownerOnly: true,
+      capability: "MANAGE_EXPENSES",
     },
     {
       label: "Stock & Alerts",
       href: "/alerts",
       icon: Bell,
       badge: <AlertBadge inline />,
+      capability: "VIEW_ALERTS",
     },
   ];
 
@@ -187,7 +194,7 @@ export function SideDrawer() {
             Operations
           </p>
           {navItems
-            .filter((item) => !item.ownerOnly || isOwnerOrAdmin)
+            .filter((item) => (!item.ownerOnly || isOwnerOrAdmin) && (!item.capability || hasCapability(user, item.capability)))
             .map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
@@ -218,21 +225,23 @@ export function SideDrawer() {
         </nav>
 
         {/* Core Action: Close Day (Clean tonal/solid button without border strokes) */}
-        <div className="px-3.5 py-3 bg-surface-container-low/60">
-          <Link
-            href={closeDayHref}
-            onClick={closeDrawer}
-            prefetch={true}
-            className={`flex items-center justify-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-[var(--motion-duration-short)] ${
-              isCloseDayActive
-                ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
-                : "bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/20 active:scale-[0.98]"
-            }`}
-          >
-            <CalendarCheck size={18} aria-hidden />
-            <span>Close Day</span>
-          </Link>
-        </div>
+        {hasCapability(user, "SUBMIT_RECONCILIATION") && (
+          <div className="px-3.5 py-3 bg-surface-container-low/60">
+            <Link
+              href={closeDayHref}
+              onClick={closeDrawer}
+              prefetch={true}
+              className={`flex items-center justify-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-[var(--motion-duration-short)] ${
+                isCloseDayActive
+                  ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
+                  : "bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/20 active:scale-[0.98]"
+              }`}
+            >
+              <CalendarCheck size={18} aria-hidden />
+              <span>Close Day</span>
+            </Link>
+          </div>
+        )}
 
         {/* Drawer Footer: Appearance Row & Sign Out with comfortable breathing room */}
         <div className="px-3.5 py-3 bg-surface-container-low space-y-2.5">

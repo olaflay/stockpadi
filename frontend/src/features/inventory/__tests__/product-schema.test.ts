@@ -63,4 +63,18 @@ describe("productFormSchema", () => {
       expect(result.error.issues.some((issue) => issue.message === "Enter a valid price")).toBe(true);
     }
   });
+
+  it("rejects an invalid expiry date and accepts a valid optional date", () => {
+    const invalid = productFormSchema.safeParse({
+      name: "Widget", sku: "SKU-1", sellPrice: 150, costPrice: 100,
+      expiryTracking: "optional", expiryDate: "2027-02-30",
+    });
+    expect(invalid.success).toBe(false);
+
+    const valid = productFormSchema.safeParse({
+      name: "Widget", sku: "SKU-1", sellPrice: 150, costPrice: 100,
+      expiryTracking: "optional", expiryDate: "2027-02-28",
+    });
+    expect(valid.success).toBe(true);
+  });
 });

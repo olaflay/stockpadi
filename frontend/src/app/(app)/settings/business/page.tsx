@@ -12,6 +12,7 @@ import { SelectInput } from "@/components/ui/SelectInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
+import { serverPatch } from "@/features/operations/server-client";
 
 const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
@@ -66,10 +67,11 @@ export default function BusinessSettingsPage() {
     if (!profile) return;
     setIsSubmitting(true);
     try {
-      await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, {
-        name: (name ?? profile.name).trim() || profile.name,
-        businessTypeId: businessTypeId ?? profile.businessTypeId,
-      });
+      const nextName = (name ?? profile.name).trim() || profile.name;
+      const nextType = businessTypeId ?? profile.businessTypeId;
+      if (typeof navigator === "undefined" || !navigator.onLine) throw new Error("Business profile changes require an internet connection.");
+      await serverPatch("/api/business/profile", { name: nextName, businessTypeId: nextType });
+      await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { name: nextName, businessTypeId: nextType });
       showToast("Business profile updated", "success");
     } finally {
       setIsSubmitting(false);

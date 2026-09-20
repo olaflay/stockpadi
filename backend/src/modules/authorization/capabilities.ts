@@ -1,33 +1,37 @@
 import type { AccountContext } from "../accounts/account-context.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@stockpadi/contracts";
 
-export const WORKER_CAPABILITIES = [
-  "POS_SELL",
-  "VIEW_PRODUCTS",
-  "VIEW_BRANCH_STOCK",
-  "VIEW_STOCK_MOVEMENTS",
-  "SUBMIT_STOCK_COUNT",
-  "SUBMIT_RECONCILIATION",
-  "VIEW_CUSTOMERS",
-  "USE_CUSTOMER_CREDIT",
-  "VIEW_OWN_SALES",
-  "VIEW_RECEIPTS",
-  "VIEW_ALERTS",
-] as const;
-
-export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
-export type Capability = WorkerCapability | "RECEIVE_STOCK" | "RECORD_REPAYMENT" | "VIEW_BRANCH_RECONCILIATION" | "CREATE_CUSTOMERS";
+export { WORKER_CAPABILITIES };
+export type { WorkerCapability };
+export type Capability = WorkerCapability;
 
 const OWNER_CAPABILITIES = new Set<Capability>([
   "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS",
   "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_BRANCH_RECONCILIATION",
   "VIEW_CUSTOMERS", "USE_CUSTOMER_CREDIT", "RECORD_REPAYMENT", "RECEIVE_STOCK", "CREATE_CUSTOMERS",
-  "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS",
+  "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS", "MANAGE_PRODUCTS", "ADJUST_STOCK",
+  "MANAGE_EXPENSES", "VIEW_REPORTS", "MANAGE_BRANCHES", "MANAGE_BRANCH_WORKERS",
 ]);
 
+const IMPLIED_CAPABILITIES: Partial<Record<Capability, readonly Capability[]>> = {
+  POS_SELL: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
+  MANAGE_PRODUCTS: ["VIEW_PRODUCTS", "VIEW_STOCK_MOVEMENTS"],
+  ADJUST_STOCK: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS"],
+  SUBMIT_STOCK_COUNT: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
+  RECEIVE_STOCK: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
+  USE_CUSTOMER_CREDIT: ["VIEW_CUSTOMERS"],
+  CREATE_CUSTOMERS: ["VIEW_CUSTOMERS"],
+  RECORD_REPAYMENT: ["VIEW_CUSTOMERS"],
+};
+
 export function hasCapability(context: { accountType: AccountContext["accountType"]; permissions: readonly WorkerCapability[] }, capability: Capability): boolean {
+  if (context.accountType === "ADMIN") return true;
   if (context.accountType === "BUSINESS_OWNER") return OWNER_CAPABILITIES.has(capability);
-  if (context.accountType === "WORKER") return context.permissions.includes(capability as WorkerCapability);
+  if (context.accountType === "WORKER") {
+    return context.permissions.includes(capability as WorkerCapability)
+      || context.permissions.some((granted) => IMPLIED_CAPABILITIES[granted]?.includes(capability));
+  }
   return false;
 }
 

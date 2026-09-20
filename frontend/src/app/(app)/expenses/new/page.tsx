@@ -10,14 +10,12 @@ import { SelectInput } from "@/components/ui/SelectInput";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 import { addExpense } from "@/features/expenses/add-expense";
 import { EXPENSE_CATEGORY_SUGGESTIONS } from "@/types/expense";
-
-const CAN_ADD_EXPENSES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 export default function NewExpensePage() {
   const user = useCurrentUser();
@@ -32,11 +30,11 @@ export default function NewExpensePage() {
   const [branchId, setBranchId, clearBranch] = useDraft("stockpadi-draft-expense-branch", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!hasAccountType(user, CAN_ADD_EXPENSES)) {
+  if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
         <ScreenHeader title="Add expense" onBack={() => router.push("/expenses")} />
-        <PermissionDenied requiredAccountTypes={CAN_ADD_EXPENSES} />
+        <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
   }

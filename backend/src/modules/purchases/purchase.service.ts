@@ -1,10 +1,11 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
-import { requireAssignedBranch, requireBusinessOwner, requireCapability } from "../authorization/capabilities.js";
+import { requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export async function receivePurchase(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   if (!input || typeof input !== "object") throw new HttpError(400, "INVALID_BODY", "Purchase payload is required");
   const payload = input as Record<string, unknown>;
@@ -17,10 +18,13 @@ export async function receivePurchase(db: SupabaseClient, actor: User, input: un
 }
 
 export async function listPurchases(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
-  requireBusinessOwner(context);
+  requireCapability(context, "RECEIVE_STOCK");
   const { data, error } = await db.from("purchases").select("id, client_id, branch_id, supplier_id, status, created_at, created_by_user_id").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(500);
+  if (context.accountType === "WORKER") {
+    requireCapability(context, "RECEIVE_STOCK");
+  }
   const purchases = data ?? [];
   const ids = purchases.map((purchase) => purchase.id as string);
   if (!ids.length) return { purchases: [] };

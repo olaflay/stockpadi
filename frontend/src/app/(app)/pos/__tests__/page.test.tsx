@@ -43,11 +43,11 @@ describe("POS page role gating", () => {
     renderAs({ id: "user-1", fullName: "Unknown", role: "cashier" });
 
     expect(await screen.findByText("You don't have access to this screen")).toBeInTheDocument();
-    expect(screen.queryByText(/Ask someone with the/)).toHaveTextContent("account type");
+    expect(screen.queryByText(/Ask the business owner/)).toHaveTextContent("pos sell permission");
   });
 
   it("does not render PermissionDenied for a Worker account", async () => {
-    renderAs({ id: "user-3", fullName: "Worker", role: "cashier", accountType: "WORKER" });
+    renderAs({ id: "user-3", fullName: "Worker", role: "cashier", accountType: "WORKER", permissions: ["POS_SELL"] });
 
     // Give the product useLiveQuery a tick to resolve to its empty-state.
     await screen.findByText("Sell");

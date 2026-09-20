@@ -3,6 +3,7 @@ import type { Supplier } from "@/types/purchase";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
+import { assertCapability } from "@/features/auth/authorization";
 
 /**
  * Same shape as the inline "New customer" add during checkout
@@ -15,6 +16,7 @@ export async function addSupplier(params: {
   phone: string | null;
   actor: CurrentUser;
 }): Promise<Supplier> {
+  assertCapability(params.actor, "RECEIVE_STOCK");
   const supplier: Supplier = {
     id: crypto.randomUUID(),
     name: params.name,

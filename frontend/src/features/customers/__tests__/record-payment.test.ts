@@ -5,7 +5,13 @@ import { recordCreditPayment } from "@/features/customers/record-payment";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 
 const CUSTOMER_ID = "customer-1";
-const CASHIER: CurrentUser = { id: "user-1", fullName: "Cashier", role: "cashier" };
+const CASHIER: CurrentUser = {
+  id: "user-1",
+  fullName: "Cashier",
+  role: "cashier",
+  accountType: "WORKER",
+  permissions: ["RECORD_REPAYMENT"],
+};
 
 describe("recordCreditPayment", () => {
   beforeEach(async () => {

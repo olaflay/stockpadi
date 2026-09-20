@@ -13,21 +13,21 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { getStartOfTodayIso } from "@/lib/date";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { BalancedIllustration } from "@/components/illustrations";
 import { computeGrossProfit, computeNetProfit } from "@/features/reports/compute-profit";
 import type { PaymentMethod } from "@/types/sale";
-import { BackendRequestError } from "@/features/operations/server-client";
+import { BackendRequestError, serverGet } from "@/features/operations/server-client";
 import { fetchReconciliationHistory, submitReconciliation, type ReconciliationRecord } from "@/features/reconciliation/reconciliation-client";
+import { drainOutbox } from "@/features/sync/drain-outbox";
+import { preloadSessionData } from "@/features/sync/preload-session-data";
 import { tenantArray } from "@/lib/local-tenant";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import type { Expense } from "@/types/expense";
 import type { Product } from "@/types/product";
 import type { Sale } from "@/types/sale";
 import { Banknote, Smartphone, CreditCard, Check, AlertTriangle } from "lucide-react";
-
-const CAN_CLOSE_DAY = WORKER_EXPERIENCE_ACCOUNT_TYPES;
 
 export default function CloseDayPage() {
   const user = useCurrentUser();
@@ -41,14 +41,7 @@ export default function CloseDayPage() {
   const [reconciliationBusy, setReconciliationBusy] = useState(false);
   const [reconciliationMessage, setReconciliationMessage] = useState<string | null>(null);
   const [reconciliationOk, setReconciliationOk] = useState(false);
-  const [history, setHistory] = useState<ReconciliationRecord[]>(() => {
-    try {
-      const cached = localStorage.getItem("stockpadi_reconciliation_history");
-      return cached ? (JSON.parse(cached) as ReconciliationRecord[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState<ReconciliationRecord[]>([]);
   const [closeBranchId, setCloseBranchId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,7 +50,6 @@ export default function CloseDayPage() {
       .then((result) => {
         if (result?.records) {
           setHistory(result.records);
-          try { localStorage.setItem("stockpadi_reconciliation_history", JSON.stringify(result.records)); } catch {}
         }
       })
       .catch(() => undefined);
@@ -97,11 +89,11 @@ export default function CloseDayPage() {
     }
   }, [user.id, user.accountType]);
 
-  if (!hasAccountType(user, CAN_CLOSE_DAY)) {
+  if (!hasCapability(user, "SUBMIT_RECONCILIATION")) {
     return (
       <div>
         <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
-        <PermissionDenied requiredAccountTypes={CAN_CLOSE_DAY} />
+        <PermissionDenied requiredCapabilities={["SUBMIT_RECONCILIATION"]} />
       </div>
     );
   }
@@ -189,23 +181,58 @@ export default function CloseDayPage() {
       setReconciliationMessage("No branch is assigned to this account.");
       return;
     }
+    if (typeof navigator === "undefined" || !navigator.onLine) {
+      setReconciliationMessage("Close day requires an internet connection. Reconnect before submitting.");
+      setReconciliationOk(false);
+      return;
+    }
     setReconciliationBusy(true);
     setReconciliationMessage(null);
     setReconciliationOk(false);
     try {
+      const drainResult = await drainOutbox();
+      const queued = (await db.outbox.toArray()).filter((item) =>
+        item.businessId === user.businessId && ["pending", "syncing", "blocked", "failed", "conflict"].includes(item.status),
+      );
+      if (drainResult.pendingRemaining > 0 || queued.length > 0) {
+        throw new Error("There are unsynced or unresolved changes. Sync them before closing the day.");
+      }
+      const pullResult = await preloadSessionData(true);
+      const pullState = user.businessId ? await db.syncPullState.get(`${user.businessId}:session`) : undefined;
+      if (!pullResult.fullySynced || !pullState?.lastCompletePullAt) {
+        throw new Error("The latest server totals are not fully available. Try again after sync completes.");
+      }
+      const from = new Date(todayIso);
+      const to = new Date();
+      const summary = await serverGet<{
+        sales?: Array<{ payments?: Array<{ method: PaymentMethod; amount: number }> }>;
+        expenses?: Array<{ amount: number }>;
+      }>(`/api/reconciliation/summary?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}&branchId=${encodeURIComponent(branchId)}`);
+      const authoritativeSales = summary.sales ?? [];
+      const authoritativeExpenses = summary.expenses ?? [];
+      const authoritativeTotal = (method: PaymentMethod) => authoritativeSales.reduce(
+        (sum, sale) => sum + (sale.payments ?? []).filter((payment) => payment.method === method).reduce((total, payment) => total + Number(payment.amount), 0),
+        0,
+      );
+      const authoritativeCash = Math.max(authoritativeTotal("cash") - authoritativeExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0), 0);
+      const authoritativeTransfer = authoritativeTotal("transfer");
+      const authoritativePos = authoritativeTotal("pos_terminal");
+      const authoritativeCredit = authoritativeTotal("credit");
+      const authoritativeVariance = (hasCashCount ? countedCash - authoritativeCash : 0)
+        + (hasTransferCount ? verifiedTransfer - authoritativeTransfer : 0)
+        + (hasPosCount ? countedPos - authoritativePos : 0);
       const record = await submitReconciliation({
         branchId,
-        actualCash: hasCashCount ? countedCash : expectedNetCash,
-        expectedCash: expectedNetCash,
-        expectedTransfer,
-        expectedPos,
-        expectedCredit: creditTotal,
-        discrepancy: totalNetVariance,
+        actualCash: hasCashCount ? countedCash : authoritativeCash,
+        expectedCash: authoritativeCash,
+        expectedTransfer: authoritativeTransfer,
+        expectedPos: authoritativePos,
+        expectedCredit: authoritativeCredit,
+        discrepancy: authoritativeVariance,
         note: null,
       });
       setHistory((current) => {
         const next = [record, ...current.filter((r) => r.id !== record.id)];
-        try { localStorage.setItem("stockpadi_reconciliation_history", JSON.stringify(next)); } catch {}
         return next;
       });
       setReconciliationMessage("Close day saved.");
@@ -215,28 +242,8 @@ export default function CloseDayPage() {
         setReconciliationMessage("Today's close-day for this branch is already saved. See recent close days below.");
         fetchReconciliationHistory().then((result) => setHistory(result.records)).catch(() => undefined);
       } else {
-        // Offline / server unreachable fallback: save locally so cashier work is never lost!
-        const localRecord: ReconciliationRecord = {
-          id: `local-${Date.now()}`,
-          branch_id: branchId,
-          actor_user_id: user.id,
-          business_date: new Date().toISOString().slice(0, 10),
-          expected_cash: expectedNetCash,
-          expected_transfer: expectedTransfer,
-          expected_pos: expectedPos,
-          expected_credit: creditTotal,
-          actual_cash: hasCashCount ? countedCash : expectedNetCash,
-          discrepancy: totalNetVariance,
-          note: null,
-          created_at: new Date().toISOString(),
-        };
-        setHistory((current) => {
-          const next = [localRecord, ...current];
-          try { localStorage.setItem("stockpadi_reconciliation_history", JSON.stringify(next)); } catch {}
-          return next;
-        });
-        setReconciliationMessage("Saved on this device. It'll sync when you're back online.");
-        setReconciliationOk(true);
+        setReconciliationMessage(error instanceof Error ? error.message : "Close day could not be submitted. Check your connection and try again.");
+        setReconciliationOk(false);
       }
     } finally {
       setReconciliationBusy(false);

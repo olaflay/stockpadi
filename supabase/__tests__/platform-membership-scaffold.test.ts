@@ -41,7 +41,7 @@ beforeAll(async () => {
 
   await db.exec("create schema if not exists auth;");
   await db.exec(
-    "create table auth.users (id uuid primary key default gen_random_uuid(), raw_user_meta_data jsonb default '{}'::jsonb);"
+    "create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);"
   );
   await db.exec(`
     create or replace function auth.uid() returns uuid as $$

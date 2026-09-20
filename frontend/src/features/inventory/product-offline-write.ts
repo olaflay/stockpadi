@@ -3,6 +3,9 @@ import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
+import type { LocalCategory } from "@/lib/db";
+import type { CurrentUser } from "@/features/auth/use-current-user";
+import { assertCapability } from "@/features/auth/authorization";
 
 interface InitialStockInput {
   branchId: string;
@@ -21,8 +24,12 @@ interface InitialStockInput {
  */
 export async function writeNewProductOffline(
   productInput: Product,
-  initialStock: InitialStockInput | null
+  initialStock: InitialStockInput | null,
+  category: LocalCategory | null = null,
+  actor: CurrentUser,
 ): Promise<void> {
+  assertCapability(actor, "MANAGE_PRODUCTS");
+  if (initialStock) assertCapability(actor, "ADJUST_STOCK");
   const now = new Date().toISOString();
 
   if (initialStock) {
@@ -50,22 +57,30 @@ export async function writeNewProductOffline(
       note: null,
       createdAtLocal: now,
     };
-    await db.transaction("rw", db.products, db.stockMovements, db.outbox, async () => {
+    await db.transaction("rw", db.products, db.categories, db.stockMovements, db.outbox, async () => {
+      if (category) {
+        await db.categories.put(await withLocalBusinessId(category));
+        await enqueueOutboxWrite(category.id, "category", await withLocalBusinessId(category), now, { entityId: category.id });
+      }
       const tenantProduct = await withLocalBusinessId(productInput);
       const tenantMovement = await withLocalBusinessId(movement);
       const tenantPayload = await withLocalBusinessId(movementPayload);
       await db.products.add(tenantProduct);
       await db.stockMovements.add(tenantMovement);
-      await enqueueOutboxWrite(productInput.id, "product", tenantProduct, now);
-      await enqueueOutboxWrite(movementId, "stock_adjustment", tenantPayload, now);
+      await enqueueOutboxWrite(productInput.id, "product", tenantProduct, now, { entityId: productInput.id, dependsOn: category ? [category.id] : undefined });
+      await enqueueOutboxWrite(movementId, "stock_adjustment", tenantPayload, now, { dependsOn: [initialStock.branchId, productInput.id] });
     });
     return;
   }
 
-  await db.transaction("rw", db.products, db.outbox, async () => {
+  await db.transaction("rw", db.products, db.categories, db.outbox, async () => {
+    if (category) {
+      await db.categories.put(await withLocalBusinessId(category));
+      await enqueueOutboxWrite(category.id, "category", await withLocalBusinessId(category), now, { entityId: category.id });
+    }
     const tenantProduct = await withLocalBusinessId(productInput);
     await db.products.add(tenantProduct);
-    await enqueueOutboxWrite(productInput.id, "product", tenantProduct, now);
+    await enqueueOutboxWrite(productInput.id, "product", tenantProduct, now, { entityId: productInput.id, dependsOn: category ? [category.id] : undefined });
   });
 }
 
@@ -76,17 +91,45 @@ export async function writeNewProductOffline(
  * tenant-stamps it, and queues the server merge through sync_apply_product.
  * Data + outbox in a single Dexie transaction.
  */
-export async function writeProductEditOffline(id: string, update: Partial<Product>): Promise<void> {
+export async function writeProductEditOffline(id: string, update: Partial<Product>, category: LocalCategory | null = null, actor: CurrentUser): Promise<void> {
+  assertCapability(actor, "MANAGE_PRODUCTS");
   const now = new Date().toISOString();
-  await db.transaction("rw", db.products, db.outbox, async () => {
+  await db.transaction("rw", db.products, db.categories, db.outbox, async () => {
     const existing = await db.products.get(id);
-    const payload = { id, ...update };
-    const tenantPayload = await withLocalBusinessId(payload);
+    // The server RPC accepts a complete canonical snapshot. Merging here is
+    // what prevents a partial UI patch from turning omitted fields into NULL.
+    const merged: Product = existing
+      ? { ...existing, ...update, id, updatedAt: update.updatedAt ?? now }
+      : {
+          id,
+          sku: update.sku ?? "",
+          barcode: update.barcode ?? null,
+          name: update.name ?? "Unnamed product",
+          categoryId: update.categoryId ?? null,
+          brandId: update.brandId ?? null,
+          unitLabel: update.unitLabel ?? "piece",
+          altUnitLabel: update.altUnitLabel ?? null,
+          altUnitConversionFactor: update.altUnitConversionFactor ?? null,
+          altUnitSellPrice: update.altUnitSellPrice ?? null,
+          costPrice: update.costPrice ?? 0,
+          sellPrice: update.sellPrice ?? 0,
+          expiryTracking: update.expiryTracking ?? "off",
+          expiryDate: update.expiryDate ?? null,
+          lowStockThreshold: update.lowStockThreshold ?? null,
+          archived: update.archived ?? false,
+          version: update.version ?? 1,
+          updatedAt: update.updatedAt ?? now,
+        };
+    if (category) {
+      await db.categories.put(await withLocalBusinessId(category));
+      await enqueueOutboxWrite(category.id, "category", await withLocalBusinessId(category), now, { entityId: category.id });
+    }
+    const tenantPayload = await withLocalBusinessId(merged);
     if (existing) {
-      await db.products.update(id, update);
+      await db.products.put(tenantPayload as Product);
     } else {
       await db.products.add({ ...tenantPayload, version: 1 } as Product);
     }
-    await enqueueOutboxWrite(id, "product", tenantPayload, now);
+    await enqueueOutboxWrite(id, "product", tenantPayload, now, { entityId: id, dependsOn: category ? [category.id] : undefined });
   });
 }

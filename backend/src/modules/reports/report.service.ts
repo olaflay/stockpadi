@@ -1,7 +1,8 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
-import { requireAssignedBranch } from "../authorization/capabilities.js";
+import { requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 function dateRange(input: unknown) {
   const body = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
@@ -12,9 +13,9 @@ function dateRange(input: unknown) {
 }
 
 export async function reportSummary(db: SupabaseClient, actor: User, input: unknown, options: { operational?: boolean } = {}) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
-  if (context.accountType === "WORKER" && !options.operational) throw new HttpError(403, "FORBIDDEN", "Workers do not have access to full business reports");
+  if (context.accountType === "WORKER" && !options.operational) requireCapability(context, "VIEW_REPORTS");
   const range = dateRange(input);
   if (range.branchId) requireAssignedBranch(context, range.branchId);
   const [sales, expenses, purchases] = await Promise.all([

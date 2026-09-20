@@ -15,16 +15,14 @@ import { useToast } from "@/components/ui/Toast";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { formatCurrency } from "@/lib/format";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import type { LocalCustomer, CustomerCreditMovement } from "@/lib/db";
 
 // Matches customer_credit_movements_insert RLS policy — see the comment on
 // ROLES_ALLOWED_TO_RECORD_PAYMENT in src/features/customers/record-payment.ts.
-const CAN_VIEW_CUSTOMER_DETAIL = WORKER_EXPERIENCE_ACCOUNT_TYPES;
-
 const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
 
@@ -36,6 +34,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const user = useCurrentUser();
+  const canRecordPayment = hasCapability(user, "RECORD_REPAYMENT");
   const { showToast } = useToast();
 
   const [recording, setRecording] = useState(false);
@@ -59,11 +58,11 @@ export default function CustomerDetailPage({ params }: PageProps) {
     }
   }, [id]);
 
-  if (!hasAccountType(user, CAN_VIEW_CUSTOMER_DETAIL)) {
+  if (!hasCapability(user, "VIEW_CUSTOMERS")) {
     return (
       <div>
         <ScreenHeader title="Customer" onBack={() => router.push("/customers")} />
-        <PermissionDenied requiredAccountTypes={CAN_VIEW_CUSTOMER_DETAIL} />
+        <PermissionDenied requiredCapabilities={["VIEW_CUSTOMERS"]} />
       </div>
     );
   }
@@ -148,13 +147,15 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
       <div className="flex flex-col gap-2 print:hidden">
         <div className="flex gap-2">
-          <RippleButton
-            type="button"
-            onClick={() => setRecording((v) => !v)}
-            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
-          >
-            Record payment
-          </RippleButton>
+          {canRecordPayment && (
+            <RippleButton
+              type="button"
+              onClick={() => setRecording((v) => !v)}
+              className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+            >
+              Record payment
+            </RippleButton>
+          )}
           <button
             type="button"
             onClick={handleRemind}

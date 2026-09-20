@@ -3,8 +3,8 @@
 import { use } from "react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { PermissionDenied } from "@/components/ui/PermissionDenied";
+import { hasCapability } from "@/features/auth/authorization";
 import { LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { useEditProductForm } from "@/features/inventory/use-edit-product-form";
 import { ProductReadOnlyDetails } from "@/features/inventory/components/ProductReadOnlyDetails";
@@ -13,8 +13,6 @@ import type { Product } from "@/types/product";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
-
-const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -29,7 +27,7 @@ export default function EditProductPage({ params }: PageProps) {
     product,
     totalStock,
     showUnitConversion,
-    setShowUnitConversion,
+    toggleShowUnitConversion,
     categoryId,
     setCategoryId,
     categoryInputName,
@@ -51,7 +49,9 @@ export default function EditProductPage({ params }: PageProps) {
     setValue,
   } = useEditProductForm(id);
 
-  const canEdit = hasAccountType(user, CAN_EDIT_PRODUCTS);
+  const canViewProducts = hasCapability(user, "VIEW_PRODUCTS");
+  const canEdit = hasCapability(user, "MANAGE_PRODUCTS");
+  const canViewMovements = hasCapability(user, "VIEW_STOCK_MOVEMENTS");
 
   const stockData = useLiveQuery(async () => {
     const [movements, branches] = await Promise.all([
@@ -78,6 +78,10 @@ export default function EditProductPage({ params }: PageProps) {
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Product not found.</p>
       </div>
     );
+  }
+
+  if (!canViewProducts) {
+    return <PermissionDenied requiredCapabilities={["VIEW_PRODUCTS"]} />;
   }
 
   const prod = product as Product;
@@ -139,7 +143,7 @@ export default function EditProductPage({ params }: PageProps) {
       <div className="flex flex-col gap-6">
         <ScreenHeader title={prod.name} onBack={() => router.push("/products")} />
         <ProductReadOnlyDetails product={prod} totalStock={totalStock} stockValueClass={stockValueClass} />
-        {renderStockMovements()}
+        {canViewMovements && renderStockMovements()}
       </div>
     );
   }
@@ -168,14 +172,14 @@ export default function EditProductPage({ params }: PageProps) {
           setCategoryInputName(name);
         }}
         showUnitConversion={showUnitConversion}
-        onToggleUnitConversion={() => setShowUnitConversion((v) => !v)}
+        onToggleUnitConversion={toggleShowUnitConversion}
         unitLabel={unitLabel}
         altUnitLabel={altUnitLabel}
         expiryTracking={expiryTracking}
         isSubmitting={isSubmitting}
         onDelete={() => handleDelete(prod)}
       />
-      {renderStockMovements()}
+      {canViewMovements && renderStockMovements()}
     </div>
   );
 }

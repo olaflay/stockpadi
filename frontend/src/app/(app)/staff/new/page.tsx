@@ -3,7 +3,7 @@
 /**
  * Lead system: Samsung One UI — bottom-interaction layout.
  * Business Owner adds a Worker: name, email and optional branch.
- * Online-required: creates an auth.users row via the manage-staff Edge Function.
+ * Online-required: creates an auth.users row via the Node manage-staff API.
  * StockPadi generates the worker password and emails it after creation.
  * See .agents/rules/design-system.md and zero-ai-slop-design.md.
  */
@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
 
 export default function NewStaffPage() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function NewStaffPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<WorkerCapability[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export default function NewStaffPage() {
         phone: phone.trim() || null,
         email: email.trim(),
         branchId: assignedBranchId,
+        capabilities,
       });
       setCreatedPassword(result.password ?? null);
       showToast(`${fullName.trim()} added.`, "success");
@@ -237,6 +240,16 @@ export default function NewStaffPage() {
               <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Every worker is assigned to one branch.</span>
             </label>
           )}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">Capabilities</legend>
+            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Choose only the access this worker needs. You can change it later.</p>
+            {WORKER_CAPABILITIES.map((capability) => (
+              <label key={capability} className="flex min-h-[var(--touch-target-min)] items-center gap-3 text-[length:var(--font-size-body)] text-on-surface">
+                <input type="checkbox" checked={capabilities.includes(capability)} onChange={(event) => setCapabilities((current) => event.target.checked ? [...current, capability] : current.filter((item) => item !== capability))} />
+                {capability.replaceAll("_", " ").toLowerCase()}
+              </label>
+            ))}
+          </fieldset>
         </div>
 
         <RippleButton

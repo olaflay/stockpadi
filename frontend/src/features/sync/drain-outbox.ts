@@ -1,14 +1,14 @@
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
+import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/features/operations/server-client";
 import type { SyncQueueItem } from "@/types/sync";
 import { matchesActiveTenant, getLocalBusinessId } from "@/lib/local-tenant";
-import { reconcileLocalBranches } from "@/features/branches/reconcile-branches";
+import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 
 /**
- * Pushes every pending outbox item to the sync-push Edge Function in
- * FIFO order, in batches of at most DRAIN_BATCH_SIZE, and reconciles each
- * batch's result back into IndexedDB. See
- * .agents/skills/write-edge-function.md and PRD 10.1.
+ * Pushes every pending outbox item to the Node sync API in deterministic
+ * dependency/sequence order, in batches of at most DRAIN_BATCH_SIZE, and
+ * reconciles each batch's result back into IndexedDB. See PRD 10.1.
  *
  * No-ops if there is no signed-in Supabase session: auth screens haven't
  * landed yet (see src/features/auth/use-current-user.ts), so there is no
@@ -21,7 +21,13 @@ import { reconcileLocalBranches } from "@/features/branches/reconcile-branches";
 
 interface SyncPushItemResult {
   clientId: string;
-  status: "applied" | "skipped" | "error";
+  mutationId?: string;
+  entityId?: string;
+  submittedEntityId?: string;
+  authoritativeEntityId?: string;
+  canonicalized?: boolean;
+  status: "applied" | "skipped" | "conflict" | "error" | "retryable_error" | "permanent_failure";
+  version?: number;
   conflict?: boolean;
   error?: { code: string; message: string };
 }
@@ -49,7 +55,7 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
   await getLocalBusinessId();
 
   const getPendingCount = async () =>
-    (await db.outbox.where("status").anyOf("pending", "syncing").toArray()).filter(matchesActiveTenant).length;
+    (await db.outbox.where("status").anyOf("pending", "blocked", "syncing").toArray()).filter(matchesActiveTenant).length;
 
   const initialCount = await getPendingCount();
   if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
@@ -76,47 +82,161 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
 }
 
 async function drainOnce(): Promise<void> {
-  const supabase = getSupabase();
-  if (!supabase) return;
-
   await getLocalBusinessId();
-  await reconcileLocalBranches();
+  await refreshActiveAccountContext();
+  await resumeAccountBlockedWrites();
+  const restoredCategoryIds = new Set<string>();
 
-  const pending = (await db.outbox.where("status").equals("pending").sortBy("createdAtLocal"))
-    .filter(matchesActiveTenant);
-  if (pending.length === 0) return;
+  for (;;) {
+    let queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant);
+    if (queued.length === 0) return;
 
-  for (let offset = 0; offset < pending.length; offset += DRAIN_BATCH_SIZE) {
-    const slice = pending.slice(offset, offset + DRAIN_BATCH_SIZE);
-    await drainSlice(slice, supabase);
+    // Older product mutations can outlive their category mutation (for
+    // example after a crash, an interrupted import, or local outbox repair).
+    // The server must reject a product that references a category it has not
+    // received yet, but the client can safely restore that dependency from
+    // the same tenant's local category row. Never invent a category or use a
+    // row from another business.
+    await restoreMissingProductCategoryDependencies(queued, restoredCategoryIds);
+    queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant);
+    const allActive = (await db.outbox.toArray()).filter(matchesActiveTenant);
+
+    const ready: SyncQueueItem[] = [];
+    const byDependency = new Map<string, SyncQueueItem[]>();
+    for (const item of queued) {
+      if (item.nextAttemptAt && item.nextAttemptAt > new Date().toISOString()) continue;
+      let waiting = false;
+      let failedDependency = false;
+      for (const dependency of item.dependsOn ?? []) {
+        const rows = allActive.filter((candidate) => candidate.clientId !== item.clientId && (candidate.clientId === dependency || candidate.entityId === dependency));
+        const dependencyRow = rows[0];
+        if (!dependencyRow) continue;
+        if (dependencyRow.status === "failed" || dependencyRow.status === "conflict") failedDependency = true;
+        else waiting = true;
+      }
+      if (failedDependency) {
+        byDependency.set(item.clientId, [item]);
+        continue;
+      }
+      if (!waiting) ready.push(item);
+    }
+
+    if (byDependency.size > 0) {
+      await db.outbox.bulkUpdate([...byDependency.values()].flat().map((item) => ({
+        key: item.clientId,
+        changes: {
+           status: "blocked" as const,
+           errorCode: "DEPENDENCY_FAILED",
+           lastError: "A prerequisite change could not be synced.",
+           lastErrorCode: "DEPENDENCY_FAILED",
+           lastErrorMessage: "A prerequisite change could not be synced.",
+        },
+      })));
+    }
+    if (ready.length === 0) return;
+
+    ready.sort((a, b) => {
+      const priority = (item: SyncQueueItem) => item.type === "product" ? 0 : 1;
+      return priority(a) - priority(b) || (a.sequence ?? Number.MAX_SAFE_INTEGER) - (b.sequence ?? Number.MAX_SAFE_INTEGER) || a.createdAtLocal.localeCompare(b.createdAtLocal) || a.clientId.localeCompare(b.clientId);
+    });
+    const progressed = await drainSlice(ready.slice(0, DRAIN_BATCH_SIZE));
+    if (!progressed) return;
   }
 }
 
-async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof getSupabase>): Promise<void> {
-  if (!supabase) return;
+async function restoreMissingProductCategoryDependencies(items: SyncQueueItem[], restoredCategoryIds: Set<string>): Promise<void> {
+  const activeOutbox = (await db.outbox.toArray()).filter(matchesActiveTenant);
+  const queuedCategoryIds = new Set(
+    activeOutbox
+      .filter((item) => item.type === "category")
+      .flatMap((item) => [item.clientId, item.mutationId, item.entityId].filter((id): id is string => Boolean(id)))
+  );
 
-  let {
-    data: { session },
-  } = await supabase.auth.getSession();
+  for (const item of items) {
+    if (item.type !== "product" || !isRecord(item.payload)) continue;
+    if (item.errorCode !== "DEPENDENCY_NOT_READY" && item.lastErrorCode !== "DEPENDENCY_NOT_READY") continue;
+    const categoryId = item.payload.categoryId;
+    if (typeof categoryId !== "string" || !categoryId) continue;
 
-  // If token is near expiration or missing, attempt refresh if client supports it
-  if (
-    session &&
-    session.expires_at &&
-    session.expires_at * 1000 < Date.now() + 60000 &&
-    typeof supabase.auth.refreshSession === "function"
-  ) {
-    try {
-      const refreshed = await supabase.auth.refreshSession();
-      if (refreshed.data.session) {
-        session = refreshed.data.session;
-      }
-    } catch {
-      // Continue with existing session or let network call authenticate
+    const category = await db.categories.get(categoryId);
+    if (!category || category.businessId !== item.businessId || queuedCategoryIds.has(categoryId) || restoredCategoryIds.has(categoryId)) continue;
+
+    await enqueueOutboxWrite(category.id, "category", category, new Date().toISOString(), { entityId: category.id });
+    queuedCategoryIds.add(category.id);
+    restoredCategoryIds.add(category.id);
+
+    if (!(item.dependsOn ?? []).includes(categoryId)) {
+      await db.outbox.update(item.clientId, {
+        dependsOn: [...(item.dependsOn ?? []), categoryId],
+        dependsOnMutationIds: [...(item.dependsOnMutationIds ?? []), categoryId],
+      });
     }
   }
+}
 
-  if (!session) return;
+/**
+ * Refresh the local account mirror before sync. Worker capabilities and branch
+ * assignments are owner-managed server state, so leaving them frozen at the
+ * last login can make the server pull products successfully while the worker
+ * UI still hides Products (or keeps showing access that was revoked).
+ *
+ * This is presentation/cache state only. Every backend read and write still
+ * authorizes from the live access token and server-side account context.
+ */
+export async function refreshActiveAccountContext(): Promise<boolean> {
+  const sessionRow = await db.session.get("current");
+  if (!sessionRow?.userId) return false;
+  const localUser = await db.localUsers.get(sessionRow.userId);
+  if (!localUser) return false;
+  try {
+    const context = await serverPost<{
+      accountType?: "ADMIN" | "BUSINESS_OWNER" | "WORKER";
+      businessId?: string;
+      businessStatus?: string;
+      permissions?: string[];
+      branchIds?: string[];
+      profile?: { email_verified?: boolean; is_active?: boolean };
+    }>("/api/account-context", {});
+    await db.localUsers.update(sessionRow.userId, {
+      ...(context.accountType ? { accountType: context.accountType } : {}),
+      ...(context.businessId !== undefined ? { businessId: context.businessId } : {}),
+      ...(context.businessStatus ? { businessStatus: context.businessStatus } : {}),
+      ...(context.permissions ? { permissions: context.permissions } : {}),
+      ...(context.branchIds ? { branchIds: context.branchIds } : {}),
+      ...(context.profile?.email_verified !== undefined ? { emailVerified: context.profile.email_verified } : {}),
+      ...(context.profile?.is_active !== undefined ? { isActive: context.profile.is_active } : {}),
+      updatedAt: new Date().toISOString(),
+    });
+    return true;
+  } catch (error) {
+    // A disconnected or temporarily unavailable account refresh must not stop
+    // the durable local sync loop. The next interval retries the probe.
+    if (error instanceof BackendRequestError || error instanceof NetworkUnavailableError) return false;
+    return false;
+  }
+}
+
+async function resumeAccountBlockedWrites(): Promise<void> {
+  const sessionRow = await db.session.get("current");
+  if (!sessionRow?.userId) return;
+  const localUser = await db.localUsers.get(sessionRow.userId);
+  if (!localUser || localUser.accountType !== "BUSINESS_OWNER" || !["verified", "active"].includes(localUser.businessStatus ?? "")) return;
+  const blocked = (await db.outbox.where("status").equals("blocked").toArray())
+    .filter((item) => matchesActiveTenant(item) && ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(item.errorCode ?? ""));
+  if (blocked.length === 0) return;
+  await db.outbox.bulkUpdate(blocked.map((item) => ({
+    key: item.clientId,
+    changes: { status: "pending" as const, errorCode: null, lastError: null, lastErrorCode: null, lastErrorMessage: null, nextAttemptAt: null },
+  })));
+}
+
+async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
+  // Auth SDK access is intentionally the only Supabase SDK use here. The
+  // business request itself goes through the Node application API.
+  const supabase = getSupabase();
+  if (!supabase) return false;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return false;
 
   const sessionRow = await db.session.get("current");
   if (sessionRow?.userId) {
@@ -128,83 +248,53 @@ async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof ge
       localUser.businessStatus !== "verified" &&
       localUser.businessStatus !== "active"
     ) {
-      await db.outbox.bulkUpdate(
-        slice.map((item) => ({
-          key: item.clientId,
-          changes: {
-            status: "failed" as const,
-            attemptCount: item.attemptCount + 1,
-            lastError: "Account pending verification. Products and data will sync once approved by admin.",
-          },
-        }))
-      );
-      return;
+      await parkRetryable(slice, "BUSINESS_UNAVAILABLE", "Account pending verification. Products and data will sync once approved by admin.", true);
+      return false;
     }
   }
 
   await db.outbox.bulkUpdate(
-    slice.map((item) => ({ key: item.clientId, changes: { status: "syncing" as const } }))
+    slice.map((item) => ({ key: item.clientId, changes: { status: "syncing" as const, lastAttemptAt: new Date().toISOString() } }))
   );
 
   let results: SyncPushItemResult[];
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-push`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
+    const response = await serverPost<{ results: SyncPushItemResult[] }>("/api/sync/push", {
         device_id: null,
         batch: slice.map((item) => ({
-          client_id: item.clientId,
+          client_id: item.mutationId ?? item.clientId,
+          mutation_id: item.mutationId ?? item.clientId,
+          idempotency_key: item.idempotencyKey ?? item.clientId,
+          entity_id: item.entityId ?? item.clientId,
+          operation: item.operation ?? (["product", "customer", "supplier", "branch", "category"].includes(item.type) ? "upsert" : "append"),
+          expected_version: item.expectedVersion,
           type: item.type,
           payload: item.payload,
           created_at_local: item.createdAtLocal,
         })),
-      }),
     });
-
-    if (!response.ok) {
-      if (response.status === 403) {
-        let errMessage = "Account pending verification. Products and data will sync once approved by admin.";
-        try {
-          const errBody = await response.json();
-          if (errBody?.error?.code === "BUSINESS_UNAVAILABLE" || errBody?.error?.message?.includes("verified")) {
-            errMessage = "Account pending verification. Cloud sync activates once approved by admin.";
-          } else if (errBody?.error?.message) {
-            errMessage = errBody.error.message;
-          }
-        } catch {
-          // Keep default message
-        }
-        await db.outbox.bulkUpdate(
-          slice.map((item) => ({
-            key: item.clientId,
-            changes: {
-              status: "failed" as const,
-              attemptCount: item.attemptCount + 1,
-              lastError: errMessage,
-            },
-          }))
-        );
-        return;
-      }
-      await revertToPending(slice, `sync-push responded ${response.status}`);
-      return;
-    }
-
-    ({ results } = await response.json());
+    ({ results } = response);
   } catch (err) {
     // Network failure (including the case Background Sync will retry the
     // underlying fetch itself, see src/app/sw.ts): leave these items
     // retryable rather than marking them failed, a dropped connection is
     // not a rejection.
-    await revertToPending(slice, err instanceof Error ? err.message : "Network error during sync");
-    return;
+    if (err instanceof BackendRequestError) {
+      const retryable = err.status >= 500 || err.status === 429 || [
+        "BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED", "DEPENDENCY_NOT_READY", "TEMPORARY_UNAVAILABLE", "RATE_LIMITED", "NETWORK_UNAVAILABLE",
+      ].includes(err.code);
+      if (retryable) await parkRetryable(slice, err.code, err.message, ["BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED", "DEPENDENCY_NOT_READY"].includes(err.code));
+      else await markPermanentFailure(slice, err.code, err.message);
+    } else {
+      await revertToPending(slice, err instanceof Error ? err.message : "Network error during sync");
+    }
+    return false;
   }
 
-  const resultByClientId = new Map(results.map((result) => [result.clientId, result]));
+  const resultByClientId = new Map(results.flatMap((result) => [
+    [result.clientId, result] as const,
+    ...(result.mutationId ? [[result.mutationId, result] as const] : []),
+  ]));
   const toDelete: string[] = [];
   const toMarkFailed: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
   const toRequeue: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
@@ -212,7 +302,39 @@ async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof ge
   for (const item of slice) {
     const result = resultByClientId.get(item.clientId);
     if (result?.status === "applied" || result?.status === "skipped") {
+      if (result.canonicalized && result.authoritativeEntityId && result.authoritativeEntityId !== item.entityId) {
+        await reconcileAuthoritativeIdentity(item, result.authoritativeEntityId);
+      }
       toDelete.push(item.clientId);
+      if (item.type === "product" && result.version !== undefined) {
+        const productId = item.entityId ?? (item.payload as { id?: string }).id;
+        if (productId) await db.products.update(productId, { version: result.version });
+        const dependentProducts = (await db.outbox.toArray()).filter((candidate) =>
+          candidate.type === "product" &&
+          (candidate.dependsOn ?? []).some((dependency) => dependency === item.clientId || dependency === item.mutationId || dependency === productId)
+        );
+        for (const dependent of dependentProducts) {
+          const payload = dependent.payload as Record<string, unknown>;
+          await db.outbox.update(dependent.clientId, {
+            expectedVersion: result.version,
+            payload: { ...payload, version: result.version },
+          });
+        }
+      }
+      continue;
+    }
+    if (result?.status === "conflict" || result?.conflict) {
+      toMarkFailed.push({
+        key: item.clientId,
+        changes: {
+          status: "conflict",
+          errorCode: result.error?.code ?? "PRODUCT_CONFLICT",
+          lastErrorCode: result.error?.code ?? "PRODUCT_CONFLICT",
+          lastErrorMessage: result.error?.message ?? "This product changed on another device. Review it before retrying.",
+          attemptCount: item.attemptCount + 1,
+          lastError: result.error?.message ?? "This product changed on another device. Review it before retrying.",
+        },
+      });
       continue;
     }
     if (!result) {
@@ -227,23 +349,98 @@ async function drainSlice(slice: SyncQueueItem[], supabase: ReturnType<typeof ge
           status: "pending" as const,
           attemptCount: item.attemptCount + 1,
           lastError: "No per-item result returned by sync-push; will retry to confirm",
+          lastErrorCode: "MISSING_RESULT",
+          lastErrorMessage: "No per-item result returned by sync-push; will retry to confirm",
+          nextAttemptAt: nextAttemptAt(item.attemptCount),
         },
       });
       continue;
     }
-    toMarkFailed.push({
-      key: item.clientId,
-      changes: {
-        status: "failed",
-        attemptCount: item.attemptCount + 1,
-        lastError: result.error?.message ?? "Sync rejected by server",
-      },
-    });
+    const code = result.error?.code ?? (result.status === "retryable_error" ? "TEMPORARY_UNAVAILABLE" : "SYNC_REJECTED");
+    const message = result.error?.message ?? "Sync rejected by server";
+    if (code === "BUSINESS_UNAVAILABLE" || code === "ACCOUNT_NOT_APPROVED" || code === "ACCOUNT_PENDING" || code === "DEPENDENCY_NOT_READY" || code === "TEMPORARY_UNAVAILABLE" || code === "RATE_LIMITED") {
+      toRequeue.push({ key: item.clientId, changes: { status: "blocked", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message, nextAttemptAt: nextAttemptAt(item.attemptCount) } });
+    } else if (code.startsWith("HTTP_5") || code === "NETWORK_UNAVAILABLE") {
+      toRequeue.push({ key: item.clientId, changes: { status: "pending", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message, nextAttemptAt: nextAttemptAt(item.attemptCount) } });
+    } else {
+      toMarkFailed.push({ key: item.clientId, changes: { status: "failed", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message } });
+    }
   }
 
-  if (toDelete.length > 0) await db.outbox.bulkDelete(toDelete);
+  if (toDelete.length > 0) {
+    await db.outbox.bulkDelete(toDelete);
+    const businessId = slice.find((item) => item.businessId)?.businessId ?? await getLocalBusinessId();
+    if (businessId) await recordSuccessfulPush(businessId);
+  }
   if (toMarkFailed.length > 0) await db.outbox.bulkUpdate(toMarkFailed);
   if (toRequeue.length > 0) await db.outbox.bulkUpdate(toRequeue);
+  return true;
+}
+
+async function recordSuccessfulPush(businessId: string): Promise<void> {
+  const id = `${businessId}:session`;
+  const pushedAt = new Date().toISOString();
+  const existing = await db.syncPullState.get(id);
+  if (existing) {
+    await db.syncPullState.update(id, { lastSuccessfulPushAt: pushedAt });
+    return;
+  }
+  await db.syncPullState.put({
+    id,
+    businessId,
+    cursor: null,
+    startedAt: null,
+    completedAt: null,
+    pagesFetched: 0,
+    entityCounts: {},
+    partialErrors: [],
+    lastCompletePullAt: null,
+    lastSuccessfulPushAt: pushedAt,
+    lastPullTrigger: null,
+    lastInvalidationReceivedAt: null,
+    lastServerContactAt: null,
+  });
+}
+
+/**
+ * RPCs may canonicalize a local snapshot to an existing server entity. This
+ * must happen before the dependent outbox row is eligible, otherwise a local
+ * foreign-key reference can retry forever against an id the server will never
+ * create.
+ */
+async function reconcileAuthoritativeIdentity(item: SyncQueueItem, authoritativeId: string): Promise<void> {
+  const localId = item.entityId ?? (isRecord(item.payload) && typeof item.payload.id === "string" ? item.payload.id : undefined);
+  if (!localId || localId === authoritativeId) return;
+
+  if (item.type === "category") {
+    const local = await db.categories.get(localId);
+    await db.transaction("rw", db.categories, db.products, db.outbox, async () => {
+      if (local && !(await db.categories.get(authoritativeId))) {
+        await db.categories.put({ ...local, id: authoritativeId });
+      }
+      const products = await db.products.toArray();
+      for (const product of products) {
+        if (product.businessId === item.businessId && product.categoryId === localId) {
+          await db.products.update(product.id, { categoryId: authoritativeId });
+        }
+      }
+      const outbox = await db.outbox.toArray();
+      for (const dependent of outbox) {
+        if (dependent.businessId !== item.businessId) continue;
+        const payload = isRecord(dependent.payload) ? dependent.payload : null;
+        const changed = payload && payload.categoryId === localId ? { ...payload, categoryId: authoritativeId } : null;
+        const dependencies = (dependent.dependsOn ?? []).map((dependency) => dependency === localId ? authoritativeId : dependency);
+        if (changed || dependencies.length !== (dependent.dependsOn ?? []).length) {
+          await db.outbox.update(dependent.clientId, { ...(changed ? { payload: changed } : {}), dependsOn: dependencies, dependsOnMutationIds: dependencies });
+        }
+      }
+      await db.categories.delete(localId);
+    });
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 /**
@@ -258,7 +455,7 @@ export async function recoverStuckSyncingItems(): Promise<void> {
   const stuck = (await db.outbox.where("status").equals("syncing").toArray()).filter(matchesActiveTenant);
   if (stuck.length === 0) return;
   await db.outbox.bulkUpdate(
-    stuck.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
+    stuck.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, nextAttemptAt: null } }))
   );
 }
 
@@ -269,7 +466,7 @@ export async function recoverStuckSyncingItems(): Promise<void> {
 export async function recoverStaleSyncingItems(maxAgeMs = 30000): Promise<void> {
   const threshold = new Date(Date.now() - maxAgeMs).toISOString();
   const stale = (await db.outbox.where("status").equals("syncing").toArray())
-    .filter((item) => matchesActiveTenant(item) && item.createdAtLocal < threshold);
+    .filter((item) => matchesActiveTenant(item) && (item.lastAttemptAt ?? item.createdAtLocal) < threshold);
   if (stale.length === 0) return;
   await db.outbox.bulkUpdate(
     stale.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
@@ -277,16 +474,31 @@ export async function recoverStaleSyncingItems(maxAgeMs = 30000): Promise<void> 
 }
 
 async function revertToPending(items: SyncQueueItem[], message: string): Promise<void> {
-  await db.outbox.bulkUpdate(
-    items.map((item) => ({
-      key: item.clientId,
-      changes: {
-        status: "pending" as const,
-        attemptCount: item.attemptCount + 1,
-        lastError: message,
-      },
-    }))
-  );
+  await parkRetryable(items, "NETWORK_UNAVAILABLE", message);
+}
+
+function nextAttemptAt(attemptCount: number): string {
+  const delayMs = Math.min(5 * 60 * 1000, 1000 * 2 ** Math.min(attemptCount, 8));
+  return new Date(Date.now() + delayMs).toISOString();
+}
+
+async function parkRetryable(items: SyncQueueItem[], code: string, message: string, blocked = false): Promise<void> {
+  await db.outbox.bulkUpdate(items.map((item) => ({
+    key: item.clientId,
+    changes: {
+      status: blocked ? "blocked" : "pending",
+      errorCode: code,
+      lastErrorCode: code,
+      lastErrorMessage: message,
+      attemptCount: item.attemptCount + 1,
+      lastError: message,
+      nextAttemptAt: nextAttemptAt(item.attemptCount),
+    },
+  })));
+}
+
+async function markPermanentFailure(items: SyncQueueItem[], code: string, message: string): Promise<void> {
+  await db.outbox.bulkUpdate(items.map((item) => ({ key: item.clientId, changes: { status: "failed" as const, errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message } })));
 }
 
 /** Retries outbox items already marked failed, e.g. from a manual "retry" tap. */
@@ -294,7 +506,7 @@ export async function retryFailedOutboxItems(): Promise<void> {
   const failed = (await db.outbox.where("status").equals("failed").toArray()).filter(matchesActiveTenant);
   if (failed.length === 0) return;
   await db.outbox.bulkUpdate(
-    failed.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
+    failed.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, errorCode: null, lastErrorCode: null, lastErrorMessage: null, nextAttemptAt: null, lastError: null } }))
   );
   await drainOutbox();
 }

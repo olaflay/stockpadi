@@ -41,3 +41,19 @@ export function supabaseAdmin(): SupabaseClient {
   }
   return cachedClient;
 }
+
+/**
+ * Request-scoped PostgREST client. Ordinary reads use the caller's JWT so RLS
+ * remains an active defense in depth layer. The service-role client is kept
+ * for security-definer RPCs whose grants intentionally exclude users.
+ */
+export function supabaseForAccessToken(accessToken: string): SupabaseClient {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY are required");
+  ensureWebSocketForSupabase();
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}

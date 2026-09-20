@@ -31,9 +31,13 @@ export default function StaffPage() {
         users = remote.map((member) => ({
           id: member.id,
           fullName: member.fullName,
+          email: member.email,
           accountType: member.accountType,
           isActive: member.isActive,
+          deactivatedAt: member.deactivatedAt,
           updatedAt: new Date().toISOString(),
+          capabilities: member.capabilities,
+          managerBranchIds: member.managerBranchIds,
         }));
       } catch {
         // Cached staff is a display fallback only when the backend is unavailable.

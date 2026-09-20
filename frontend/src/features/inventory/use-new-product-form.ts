@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -29,8 +29,9 @@ import { PRODUCT_CAP } from "@/config/limits";
  * see product-schema.ts), and the product + stock-movement transaction on
  * submit.
  */
-export function useNewProductForm(options?: { prefill?: string }) {
-  const prefill = options?.prefill;
+export function useNewProductForm(options?: { prefillName?: string; prefillBarcode?: string }) {
+  const prefillName = options?.prefillName;
+  const prefillBarcode = options?.prefillBarcode;
   const user = useCurrentUser();
   const router = useRouter();
   const { showToast } = useToast();
@@ -61,13 +62,14 @@ export function useNewProductForm(options?: { prefill?: string }) {
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       ...PRODUCT_FORM_DEFAULTS,
-      name: prefill ?? "",
+      name: prefillName ?? "",
+      barcode: prefillBarcode ?? "",
     },
   });
-  const { register, handleSubmit, watch, control, formState } = form;
-  const expiryTracking = watch("expiryTracking");
-  const unitLabel = watch("unitLabel") || "piece";
-  const altUnitLabel = watch("altUnitLabel") || "";
+  const { register, handleSubmit, control, formState } = form;
+  const expiryTracking = useWatch({ control, name: "expiryTracking" });
+  const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
+  const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
   const earlyInitialStockQty = Number(initialStock);
@@ -135,10 +137,16 @@ export function useNewProductForm(options?: { prefill?: string }) {
         }
 
         let resolvedCategoryId: string | null = categoryId || null;
+        let newCategory: { id: string; name: string } | null = null;
         const newCategoryName = categoryInputName.trim();
         if (!resolvedCategoryId && newCategoryName) {
-          resolvedCategoryId = crypto.randomUUID();
-          await db.categories.add({ id: resolvedCategoryId, name: newCategoryName });
+          const existingCategory = categories?.find((category) => category.name.trim().toLocaleLowerCase() === newCategoryName.toLocaleLowerCase());
+          if (existingCategory) {
+            resolvedCategoryId = existingCategory.id;
+          } else {
+            resolvedCategoryId = crypto.randomUUID();
+            newCategory = { id: resolvedCategoryId, name: newCategoryName };
+          }
         }
 
         const finalSku = values.sku?.trim() || generateFallbackSku(values.name);
@@ -173,7 +181,7 @@ export function useNewProductForm(options?: { prefill?: string }) {
           branchId: effectiveStockBranchId!,
           quantity: stockResult.quantity!,
           createdByUserId: user.id,
-        });
+        }, newCategory, user);
 
         if (product.categoryId) markCategoryUsed(product.categoryId);
         showToast(`${product.name} added`, "success");

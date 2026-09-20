@@ -3,7 +3,12 @@ import { reportSummary } from "../reports/report.service.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability, requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
-export async function closeDaySummary(db: SupabaseClient, actor: User, input: unknown) { return reportSummary(db, actor, input, { operational: true }); }
+import { supabaseAdmin } from "../../shared/supabase/client.js";
+export async function closeDaySummary(db: SupabaseClient, actor: User, input: unknown) {
+  const context = await resolveAccountContext(db, actor);
+  if (context.accountType === "WORKER") requireCapability(context, "SUBMIT_RECONCILIATION");
+  return reportSummary(db, actor, input, { operational: true });
+}
 
 export async function submitReconciliation(db: SupabaseClient, actor: User, input: unknown) {
   const context = await resolveAccountContext(db, actor);
@@ -12,6 +17,9 @@ export async function submitReconciliation(db: SupabaseClient, actor: User, inpu
   if (typeof body.branchId !== "string" || typeof body.actualCash !== "number") throw new HttpError(400, "INVALID_BODY", "Branch and actual cash are required");
   requireCapability(context, "SUBMIT_RECONCILIATION");
   requireAssignedBranch(context, body.branchId);
+  const branch = await db.from("branches").select("id").eq("id", body.branchId).eq("business_id", context.businessId).maybeSingle();
+  if (branch.error) throw new HttpError(500, "BRANCH_LOOKUP_FAILED", "Could not verify the close-day branch.");
+  if (!branch.data) throw new HttpError(403, "FORBIDDEN", "That branch does not belong to this business.");
   const row = { business_id: context.businessId, branch_id: body.branchId, actor_user_id: actor.id, business_date: typeof body.businessDate === "string" ? body.businessDate : new Date().toISOString().slice(0, 10), expected_cash: Number(body.expectedCash ?? 0), expected_transfer: Number(body.expectedTransfer ?? 0), expected_pos: Number(body.expectedPos ?? 0), expected_credit: Number(body.expectedCredit ?? 0), actual_cash: body.actualCash, discrepancy: Number(body.discrepancy ?? 0), note: typeof body.note === "string" ? body.note : null };
   const { data, error } = await db.from("reconciliation_records").insert(row).select().single();
   if (error) {
@@ -26,7 +34,7 @@ export async function submitReconciliation(db: SupabaseClient, actor: User, inpu
 }
 
 export async function reconciliationHistory(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   let query = db.from("reconciliation_records").select("*").eq("business_id", context.businessId).order("created_at", { ascending: false }).limit(100);
   if (context.accountType === "WORKER") {

@@ -9,8 +9,8 @@ import type { CurrentUser } from "@/features/auth/use-current-user";
 const BRANCH_ID = "branch-1";
 const PRODUCT_ID = "product-1";
 const CUSTOMER_ID = "customer-1";
-const MANAGER: CurrentUser = { id: "user-manager", fullName: "Manager", role: "manager" };
-const CASHIER: CurrentUser = { id: "user-cashier", fullName: "Cashier", role: "cashier" };
+const MANAGER: CurrentUser = { id: "user-manager", fullName: "Manager", role: "manager", accountType: "BUSINESS_OWNER" };
+const CASHIER: CurrentUser = { id: "user-cashier", fullName: "Cashier", role: "cashier", accountType: "WORKER", permissions: ["POS_SELL", "USE_CUSTOMER_CREDIT"] };
 
 vi.mock("@/lib/supabase", () => {
   return {

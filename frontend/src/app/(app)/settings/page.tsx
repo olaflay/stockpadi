@@ -147,6 +147,11 @@ export default function SettingsPage() {
               onClick={() => router.push("/settings/data")}
             />
             <SettingsRow
+              label="Sync and system health"
+              description="Cloud connection, pull completeness and pending changes"
+              onClick={() => router.push("/settings/sync-health")}
+            />
+            <SettingsRow
               label="WhatsApp reports"
               description="Automated daily sales and register close summary"
               onClick={() => router.push("/settings/sharing")}

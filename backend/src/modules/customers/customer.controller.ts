@@ -1,15 +1,15 @@
 import { authenticateRequest } from "../../middleware/authenticate.js";
-import { supabaseAdmin } from "../../shared/supabase/client.js";
+import { supabaseAdmin, supabaseForAccessToken } from "../../shared/supabase/client.js";
 import { createCustomer, getCustomerDetail, listCustomers, recordCreditPayment } from "./customer.service.js";
 
 export async function handleCustomerList(request: globalThis.Request) {
   const auth = await authenticateRequest(request);
-  return listCustomers(supabaseAdmin(), auth.user);
+  return listCustomers(supabaseForAccessToken(auth.accessToken), auth.user);
 }
 
 export async function handleCustomerDetail(request: globalThis.Request, customerId: string) {
   const auth = await authenticateRequest(request);
-  return getCustomerDetail(supabaseAdmin(), auth.user, customerId);
+  return getCustomerDetail(supabaseForAccessToken(auth.accessToken), auth.user, customerId);
 }
 
 export async function handleCustomerRequest(request: globalThis.Request, body: unknown) {

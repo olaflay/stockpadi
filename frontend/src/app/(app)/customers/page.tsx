@@ -7,18 +7,22 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Search, Users, MessageCircle } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getAllCustomerCreditBalances, getCustomerDebtAges, getAgingBucket } from "@/features/customers/credit";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { buildWhatsAppUrl, renderOwingMessage } from "@/lib/whatsapp";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { formatCurrency } from "@/lib/format";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalCustomer } from "@/lib/db";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 
 /** Sorted by amount owed, descending, total owed on top. docs/RESEARCH-AND-PLAN.md Section 4.3. */
 export default function CustomersPage() {
   const router = useRouter();
+  const user = useCurrentUser();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 120);
 
@@ -70,6 +74,10 @@ export default function CustomersPage() {
     };
   }, [filtered.length, visibleLimit]);
 
+  if (!hasCapability(user, "VIEW_CUSTOMERS")) {
+    return <PermissionDenied requiredCapabilities={["VIEW_CUSTOMERS"]} />;
+  }
+
   if (customersWithBalance === undefined) {
     return (
       <div className="flex flex-col gap-4">
@@ -105,7 +113,7 @@ export default function CustomersPage() {
     e.stopPropagation();
     if (!customer.phone) return;
     const shopName = businessProfile?.name ?? "StockPadi";
-    const message = `Hi ${customer.name}, gentle reminder from ${shopName}. Your balance is ${formatCurrency(Math.max(balance, 0))}. Please pay when convenient. Thank you.`;
+    const message = renderOwingMessage(businessProfile?.owingMessageTemplate, { customerName: customer.name, businessName: shopName, amountOwed: formatCurrency(Math.max(balance, 0)) });
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   };
 

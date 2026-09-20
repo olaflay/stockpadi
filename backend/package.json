@@ -2,15 +2,19 @@
   "name": "stockpadi-backend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "StockPadi backend: Postgres migrations, RLS policies, and Supabase Edge Functions. Split from the original monorepo's supabase/ directory — see docs/BACKEND-SPLIT.md.",
   "engines": {
     "node": ">=20.9.0"
   },
   "scripts": {
+    "prebuild": "npm --prefix ../packages/contracts run build",
     "build": "tsc",
-    "start": "node --env-file=.env dist/src/server.js",
+    "start": "npm run build && node --env-file=.env dist/src/server.js",
     "provision:admin": "node --env-file=.env scripts/provision-platform-admin.mjs",
+    "pretest": "npm --prefix ../packages/contracts run build",
     "test": "vitest run",
+    "pretypecheck": "npm --prefix ../packages/contracts run build",
     "typecheck": "tsc --noEmit",
     "seed:owner": "node --env-file=.env scripts/seed-owner.mjs",
     "check:auth": "node scripts/check-auth.mjs",

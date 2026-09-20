@@ -13,7 +13,8 @@ export interface AccountContext {
   permissions: Set<string>;
 }
 
-type ContextResult = { context: AccountContext; error: null } | { context: null; error: string };
+export type AccountContextErrorCode = "ACCOUNT_CONTEXT_FAILED" | "ACCOUNT_NOT_APPROVED" | "BUSINESS_UNAVAILABLE" | "MISSING_CONTEXT" | "FORBIDDEN";
+type ContextResult = { context: AccountContext; error: null } | { context: null; error: { code: AccountContextErrorCode; message: string } };
 
 /**
  * Resolve the trusted account context used by privileged Edge Functions.
@@ -24,15 +25,18 @@ type ContextResult = { context: AccountContext; error: null } | { context: null;
  */
 export async function resolveAccountContext(db: SupabaseClient, user: User): Promise<ContextResult> {
   const { data: rawData, error } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: false }).maybeSingle();
-  if (error) return { context: null, error: error.message };
+  if (error) return { context: null, error: { code: "ACCOUNT_CONTEXT_FAILED", message: error.message } };
   const data = rawData as { user_id: string; account_type: string; business_id: string | null; business_status: string | null; membership_status: string | null; branch_ids: string[] | null } | null;
   if (!data || data.user_id !== user.id) {
     const { data: pendingRaw } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: true }).maybeSingle();
     const pendingData = pendingRaw as { business_status: string | null; membership_status: string | null } | null;
-    if (pendingData && (pendingData.business_status === "pending" || pendingData.membership_status === "pending")) {
-      return { context: null, error: "Account is not approved. Please wait for approval." };
+    if (pendingData?.business_status === "pending") {
+      return { context: null, error: { code: "BUSINESS_UNAVAILABLE", message: "This business is awaiting approval. Cloud sync will resume automatically once it is verified." } };
     }
-    return { context: null, error: "No active account context found" };
+    if (pendingData?.membership_status === "pending") {
+      return { context: null, error: { code: "ACCOUNT_NOT_APPROVED", message: "Account is not approved. Please wait for approval." } };
+    }
+    return { context: null, error: { code: "MISSING_CONTEXT", message: "No active account context found" } };
   }
   // A Worker is granted exactly the permissions an owner enabled for them —
   // never a full fallback set, so "disable everything" is honest. Owners and
@@ -40,7 +44,7 @@ export async function resolveAccountContext(db: SupabaseClient, user: User): Pro
   let permissions = new Set<string>();
   if (data.account_type === "WORKER") {
     const { data: grants, error: grantsError } = await db.from("worker_permissions").select("permission").eq("user_id", user.id).eq("business_id", data.business_id).eq("enabled", true);
-    if (grantsError) return { context: null, error: grantsError.message };
+    if (grantsError) return { context: null, error: { code: "ACCOUNT_CONTEXT_FAILED", message: grantsError.message } };
     permissions = new Set((grants as Array<{ permission: string }>).map((grant) => grant.permission));
   } else {
     permissions = new Set([

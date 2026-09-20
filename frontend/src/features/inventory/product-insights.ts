@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
+import { getPendingStockMovementIds } from "@/features/inventory/stock";
 
 /**
  * Shared read-only helpers for "which products need attention" — used by
@@ -18,14 +19,38 @@ export const EXPIRY_ALERT_WINDOW_DAYS = 7;
  * summation in use-dashboard-metrics.ts and pos/page.tsx so every screen
  * reads quantity the same way — see .agents/rules/offline-sync-and-ledger.md.
  */
+export type StockBranchScope = string | readonly string[] | null;
+
 export async function getStockByProduct(
-  branchId: string | null = null
+  branchScope: StockBranchScope = null
 ): Promise<Map<string, number>> {
-  const stockByProduct = new Map<string, number>();
+  const branchIds = Array.isArray(branchScope) ? new Set(branchScope) : null;
+  const branchId = typeof branchScope === "string" ? branchScope : null;
   const movements =
-    branchId !== null
-      ? await tenantArray(db.stockMovements.where("branchId").equals(branchId))
-      : await tenantArray(db.stockMovements);
+    branchIds
+      ? (await tenantArray(db.stockMovements)).filter((movement) => branchIds.has(movement.branchId))
+      : branchId !== null
+        ? await tenantArray(db.stockMovements.where("branchId").equals(branchId))
+        : await tenantArray(db.stockMovements);
+  const stockByProduct = new Map<string, number>();
+  if (db.tables.some((table) => table.name === "inventoryStock")) {
+    const projections = branchIds
+      ? (await tenantArray(db.inventoryStock)).filter((projection) => branchIds.has(projection.branchId))
+      : branchId === null
+        ? await tenantArray(db.inventoryStock)
+        : await tenantArray(db.inventoryStock.where("branchId").equals(branchId));
+    const products = await tenantArray(db.products);
+    const productIds = new Set(products.filter((product) => product.businessId).map((product) => product.id));
+    for (const projection of projections) if (productIds.has(projection.productId)) stockByProduct.set(projection.productId, (stockByProduct.get(projection.productId) ?? 0) + projection.quantity);
+    if (projections.length > 0) {
+      const pendingMovementIds = await getPendingStockMovementIds();
+      for (const movement of movements) {
+        if (!pendingMovementIds.has(movement.clientId)) continue;
+        stockByProduct.set(movement.productId, (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta);
+      }
+      return stockByProduct;
+    }
+  }
   for (const movement of movements) {
     stockByProduct.set(
       movement.productId,
@@ -37,10 +62,10 @@ export async function getStockByProduct(
 
 export async function getLowStockProductIds(
   defaultThreshold: number = LOW_STOCK_THRESHOLD,
-  branchId: string | null = null
+  branchScope: StockBranchScope = null
 ): Promise<Set<string>> {
   const products = await tenantArray(db.products);
-  const stockByProduct = await getStockByProduct(branchId);
+  const stockByProduct = await getStockByProduct(branchScope);
 
   return new Set(
     products
@@ -58,21 +83,14 @@ export async function getLowStockProductIds(
  */
 export async function getExpiringProductIds(
   windowDays: number = EXPIRY_ALERT_WINDOW_DAYS,
-  branchId: string | null = null
+  branchScope: StockBranchScope = null
 ): Promise<Set<string>> {
   let products = await tenantArray(db.products);
 
-  if (branchId !== null) {
+  if (branchScope !== null) {
     // If filtering by branch, only consider products that have some stock at this branch.
     // Expiring alerts only make sense if you actually have the product in stock.
-    const stockByProduct = new Map<string, number>();
-    const movements = await tenantArray(db.stockMovements.where("branchId").equals(branchId));
-    for (const movement of movements) {
-      stockByProduct.set(
-        movement.productId,
-        (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta
-      );
-    }
+    const stockByProduct = await getStockByProduct(branchScope);
     products = products.filter((product) => (stockByProduct.get(product.id) ?? 0) > 0);
   }
 

@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, RefreshCw, Zap } from "lucide-react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { retryFailedOutboxItems, drainOutbox } from "@/features/sync/drain-outbox";
 import { useToast } from "@/components/ui/Toast";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { db } from "@/lib/db";
+import { getLocalBusinessId } from "@/lib/local-tenant";
+import { useLiveQuery } from "dexie-react-hooks";
+import { preloadSessionData } from "@/features/sync/preload-session-data";
+import { useSyncSafety } from "@/lib/use-sync-safety";
 
 /**
  * Sync status indicator with manual "Force Sync Now" control.
@@ -22,6 +26,13 @@ export function SyncIndicator({
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const isOnline = useOnlineStatus();
+  const pullDiagnostics = useLiveQuery(async () => {
+    const businessId = await getLocalBusinessId();
+    return businessId ? db.syncDiagnostics.where("businessId").equals(businessId).toArray() : [];
+  }, [], []);
+  const pullFailure = pullDiagnostics?.some((diagnostic) => !diagnostic.success) ?? false;
+  const pullComplete = pullDiagnostics?.some((diagnostic) => diagnostic.entity === "session" && diagnostic.success) ?? false;
+  const syncSafety = useSyncSafety();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { showToast } = useToast();
@@ -44,8 +55,11 @@ export function SyncIndicator({
     }
     try {
       const result = await drainOutbox();
-      if (result.pendingRemaining === 0) {
+      const pullResult = await preloadSessionData(true);
+      if (result.pendingRemaining === 0 && pullResult.fullySynced) {
         showToast("Sync complete! All changes backed up.", "success");
+      } else if (result.pendingRemaining === 0 && !pullResult.fullySynced) {
+        showToast("Changes are backed up, but some cloud data could not refresh.", "warning");
       } else if (result.drained > 0) {
         showToast(`${result.drained} backed up, ${result.pendingRemaining} still uploading...`, "neutral");
       } else {
@@ -64,7 +78,8 @@ export function SyncIndicator({
     try {
       await retryFailedOutboxItems();
       const firstFailed = await db.outbox.where("status").equals("failed").first();
-      if (firstFailed?.lastError?.includes("verification") || firstFailed?.lastError?.includes("approved")) {
+      const firstBlocked = await db.outbox.where("status").equals("blocked").first();
+      if (["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") || ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")) {
         showToast("Account pending verification: products and sales are saved locally and will sync once approved.", "warning");
       } else if (compact) {
         showToast(`Retried sync for ${failedCount} change${failedCount === 1 ? "" : "s"}.`, "neutral");
@@ -73,6 +88,22 @@ export function SyncIndicator({
       setIsRetrying(false);
     }
   };
+
+  if (failedCount === 0 && syncSafety.required) {
+    return (
+      <button
+        type="button"
+        onClick={handleForceSync}
+        disabled={isSyncing || !isOnline}
+        role="status"
+        title="Sync is required before more high-risk offline operations"
+        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-amber-400 text-black" : "bg-warning-container text-on-warning-container"}`}
+      >
+        <AlertTriangle size={13} aria-hidden />
+        {compact ? `${syncSafety.queueCount} sync required` : "Sync required"}
+      </button>
+    );
+  }
 
   if (failedCount > 0) {
     if (compact) {
@@ -181,6 +212,25 @@ export function SyncIndicator({
     );
   }
 
+  if (pendingCount === 0 && pullFailure) {
+    if (compact) {
+      return (
+        <button type="button" onClick={handleForceSync} disabled={isSyncing} role="status" title="Some data could not refresh. Tap to retry." aria-label="Some data could not refresh. Tap to retry." className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning"}`}>
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
+          <span>Refresh needed</span>
+          <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
+        </button>
+      );
+    }
+    return (
+      <button type="button" onClick={handleForceSync} disabled={isSyncing} role="status" aria-label="Some cloud data could not refresh. Tap to retry." className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
+        Some cloud data couldn&apos;t refresh
+        <RefreshCw size={10} className={isSyncing ? "animate-spin" : ""} />
+      </button>
+    );
+  }
+
   if (pendingCount === 0) {
     if (compact) {
       return (
@@ -189,8 +239,8 @@ export function SyncIndicator({
           onClick={handleForceSync}
           disabled={isSyncing}
           role="status"
-          title="All changes backed up. Tap to force sync."
-          aria-label="All changes backed up. Tap to force sync."
+          title={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
+          aria-label={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
           className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs transition-colors disabled:opacity-70 ${
             isContrast
               ? "text-brand-accent-contrast/90 hover:text-white hover:bg-white/10"
@@ -213,11 +263,11 @@ export function SyncIndicator({
         onClick={handleForceSync}
         disabled={isSyncing}
         role="status"
-        aria-label="All changes backed up. Tap to force sync."
+        aria-label={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
-        Synced
+        {pullComplete ? "Synced" : "Sync not checked"}
         <RefreshCw size={10} className={isSyncing ? "animate-spin" : ""} />
       </button>
     );

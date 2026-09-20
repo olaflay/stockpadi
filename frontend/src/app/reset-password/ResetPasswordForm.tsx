@@ -7,8 +7,8 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { TextInput } from "@/components/ui/TextInput";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
-import { getSupabase } from "@/lib/supabase";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
+import { serverPost } from "@/features/operations/server-client";
 
 export default function ResetPasswordForm() {
   const isOnline = useOnlineStatus();
@@ -40,14 +40,7 @@ export default function ResetPasswordForm() {
         return;
       }
 
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase is not configured.");
-      const { data: { session } } = await supabase.auth.getSession();
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
-      if (!session || !backendUrl) throw new Error("The application backend is not configured.");
-      const response = await fetch(`${backendUrl}/api/auth/password/update`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ password }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.error?.message ?? "Could not update password");
+      await serverPost("/api/auth/password/update", { password });
 
       setSuccess(true);
     } catch {

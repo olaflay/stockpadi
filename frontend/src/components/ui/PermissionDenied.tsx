@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import type { AccountType } from "@/features/auth/authorization";
 import { RippleButton } from "@/components/ui/Ripple";
+import type { WorkerCapability } from "@/features/auth/authorization";
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   ADMIN: "Admin",
@@ -12,7 +13,7 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   WORKER: "Worker",
 };
 
-export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: { requiredAccountTypes?: readonly AccountType[]; requiredAccountType?: AccountType }) {
+export function PermissionDenied({ requiredAccountTypes, requiredAccountType, requiredCapabilities }: { requiredAccountTypes?: readonly AccountType[]; requiredAccountType?: AccountType; requiredCapabilities?: readonly WorkerCapability[] }) {
   const router = useRouter();
   const labels: string[] = [];
   if (requiredAccountTypes) {
@@ -20,6 +21,9 @@ export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: 
   }
   if (requiredAccountType) {
     labels.push(ACCOUNT_TYPE_LABELS[requiredAccountType]);
+  }
+  if (requiredCapabilities) {
+    labels.push(...requiredCapabilities.map((capability) => capability.replaceAll("_", " ").toLowerCase()));
   }
   const roleList =
     labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(", ")} or ${labels[labels.length - 1]}`;
@@ -39,7 +43,11 @@ export function PermissionDenied({ requiredAccountTypes, requiredAccountType }: 
         </p>
 
         <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
-          Ask someone with the <strong className="text-on-surface">{roleList}</strong> account type to make this change.
+          {requiredCapabilities?.length ? (
+            <>Ask the business owner to grant the <strong className="text-on-surface">{roleList}</strong> permission before trying again.</>
+          ) : (
+            <>Ask someone with the <strong className="text-on-surface">{roleList}</strong> account type to make this change.</>
+          )}
         </p>
       </div>
 

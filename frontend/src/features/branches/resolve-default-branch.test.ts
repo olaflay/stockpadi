@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { resolveDefaultBranch } from "./resolve-default-branch";
 
 const BRANCHES = [
-  { id: "branch-a" },
-  { id: "branch-b" },
+  { id: "branch-a", isPrimary: true },
+  { id: "branch-b", isPrimary: false },
 ] as const;
 
 function user(overrides: { accountType?: string; branchIds?: string[] }) {
@@ -14,11 +14,11 @@ function user(overrides: { accountType?: string; branchIds?: string[] }) {
 }
 
 describe("resolveDefaultBranch", () => {
-  it("gives an owner the first branch on the device", () => {
+  it("gives an owner the active primary branch", () => {
     expect(resolveDefaultBranch(BRANCHES, user({ accountType: "BUSINESS_OWNER" }))).toBe("branch-a");
   });
 
-  it("gives an admin the first branch on the device", () => {
+  it("gives an admin the active primary branch", () => {
     expect(resolveDefaultBranch(BRANCHES, user({ accountType: "ADMIN" }))).toBe("branch-a");
   });
 
@@ -36,5 +36,9 @@ describe("resolveDefaultBranch", () => {
 
   it("returns undefined when there are no branches at all", () => {
     expect(resolveDefaultBranch([], user({ accountType: "BUSINESS_OWNER" }))).toBeUndefined();
+  });
+
+  it("does not guess when an owner has no primary branch", () => {
+    expect(resolveDefaultBranch([{ id: "branch-a" }], user({ accountType: "BUSINESS_OWNER" }))).toBeUndefined();
   });
 });
