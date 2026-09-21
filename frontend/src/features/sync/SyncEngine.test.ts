@@ -34,13 +34,11 @@ describe("runSyncCycle", () => {
     expect(preloadSessionData).toHaveBeenCalledWith(true, "push-success");
   });
 
-  it("forces an immediate pull for reconnect and foreground triggers", async () => {
+  it("forces an immediate pull for reconnects", async () => {
     drainOutbox.mockResolvedValue({ drained: 0, pendingRemaining: 0 });
 
     await runSyncCycle("online");
-    await runSyncCycle("visibility");
 
     expect(preloadSessionData).toHaveBeenNthCalledWith(1, true, "online");
-    expect(preloadSessionData).toHaveBeenNthCalledWith(2, true, "visibility");
   });
 });

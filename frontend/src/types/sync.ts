@@ -4,6 +4,12 @@ export type { SyncEntityType };
 export type SyncPushResponse = ContractSyncPushResponse;
 export type SyncPullResponse = ContractSyncPullResponse;
 
+/**
+ * These are the only user-facing lifecycle states.  A stock event can remain
+ * `syncing` after its upload is acknowledged while we wait to confirm the
+ * authoritative branch projection; `awaitingConfirmation` carries that
+ * internal detail without inventing a fifth visible state.
+ */
 export type SyncItemStatus = "pending" | "syncing" | "blocked" | "failed" | "conflict";
 
 export interface SyncQueueItem<TPayload = unknown> {
@@ -26,6 +32,8 @@ export interface SyncQueueItem<TPayload = unknown> {
   lastErrorMessage?: string | null;
   nextAttemptAt?: string | null;
   lastAttemptAt?: string | null;
+  /** Upload succeeded; keep its local ledger delta until a pull confirms it. */
+  awaitingConfirmation?: boolean;
   /** Durable ordering key. Older rows without one fall back to createdAtLocal. */
   sequence?: number;
   /** Entity-level identity is separate from the idempotency/event key. */

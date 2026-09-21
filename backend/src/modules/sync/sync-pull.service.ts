@@ -1,9 +1,14 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability } from "../authorization/capabilities.js";
 
 const PAGE_SIZE = 200;
+const CURSOR_DATASETS = new Set([
+  "business_profile", "customers", "credit_movements", "branches", "categories",
+  "products", "suppliers", "inventory", "sales", "expenses", "purchases",
+]);
 type TimestampPosition = { time: string; id: string };
 type InventoryPosition = { time: string; productId: string; branchId: string };
 interface PullCursor {
@@ -25,14 +30,30 @@ function decodeCursor(value: string | undefined, serverTime: string): PullCursor
     if (decoded.version === 1 && typeof decoded.watermark === "string") {
       return { version: 2, lowerWatermark: decoded.watermark, upperWatermark: serverTime, positions: {}, deferred: [] };
     }
-    if (decoded.version !== 2 || typeof decoded.lowerWatermark !== "string" || typeof decoded.upperWatermark !== "string" || !decoded.positions || typeof decoded.positions !== "object") throw new Error("invalid cursor");
-    const deferred = Array.isArray(decoded.deferred) ? decoded.deferred.filter((entity): entity is string => typeof entity === "string") : [];
+    if (decoded.version !== 2 || !isTimestamp(decoded.lowerWatermark) || !isTimestamp(decoded.upperWatermark) || !isRecord(decoded.positions)) throw new Error("invalid cursor");
+    for (const [dataset, position] of Object.entries(decoded.positions)) {
+      if (!CURSOR_DATASETS.has(dataset)) throw new Error("invalid cursor dataset");
+      if (dataset === "inventory") {
+        if (!isInventoryPosition(position)) throw new Error("invalid inventory cursor position");
+      } else if (!isTimestampPosition(position)) {
+        throw new Error("invalid cursor position");
+      }
+    }
+    const deferred = Array.isArray(decoded.deferred)
+      ? decoded.deferred.filter((entity): entity is string => typeof entity === "string" && CURSOR_DATASETS.has(entity))
+      : [];
     if (decoded.complete) return { version: 2, lowerWatermark: deferred.length ? decoded.lowerWatermark : decoded.upperWatermark, upperWatermark: serverTime, positions: {}, deferred };
     return { ...decoded, deferred } as PullCursor;
   } catch { throw new HttpError(400, "INVALID_CURSOR", "The sync cursor is invalid. A complete refresh is required."); }
 }
-function isTimestampPosition(value: PullCursor["positions"][string]): value is TimestampPosition { return Boolean(value && "time" in value && "id" in value); }
-function isInventoryPosition(value: PullCursor["positions"][string]): value is InventoryPosition { return Boolean(value && "productId" in value && "branchId" in value); }
+function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function isTimestamp(value: unknown): value is string { return typeof value === "string" && Number.isFinite(Date.parse(value)); }
+function isTimestampPosition(value: unknown): value is TimestampPosition {
+  return isRecord(value) && isTimestamp(value.time) && typeof value.id === "string" && value.id.length > 0;
+}
+function isInventoryPosition(value: unknown): value is InventoryPosition {
+  return isRecord(value) && isTimestamp(value.time) && typeof value.productId === "string" && value.productId.length > 0 && typeof value.branchId === "string" && value.branchId.length > 0;
+}
 
 function takePage<T>(cursor: PullCursor, key: string, records: T[], position: TimestampPosition | InventoryPosition | undefined): { records: T[]; hasMore: boolean } {
   const hasMore = records.length > PAGE_SIZE;
@@ -51,6 +72,12 @@ async function pullEntity(entities: PullEntityResult[], entity: string, loader: 
   try { entities.push({ entity, success: true, records: await loader(), lastSuccessfulPullAt: new Date().toISOString(), error: null }); return true; }
   catch (cause) {
     const error = cause instanceof HttpError ? { code: safePullCode(cause.code), message: safePullMessage(cause.code, cause.message) } : { code: "PULL_FAILED", message: "Could not load this dataset." };
+    logger.error("sync pull dataset failed", {
+      entity,
+      safeCode: error.code,
+      sourceCode: cause instanceof HttpError ? cause.code : "UNHANDLED_PULL_ERROR",
+      status: cause instanceof HttpError ? cause.status : 500,
+    }, cause);
     entities.push({ entity, success: false, records: [], lastSuccessfulPullAt: null, error }); return false;
   }
 }

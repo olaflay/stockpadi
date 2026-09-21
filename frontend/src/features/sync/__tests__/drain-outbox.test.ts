@@ -99,10 +99,9 @@ describe("drainOutbox", () => {
     await drainOutbox();
 
     const remaining = await db.outbox.toArray();
-    expect(remaining.map((item) => item.clientId)).toEqual(["sale-bad"]);
-    expect(remaining[0].status).toBe("failed");
-    expect(remaining[0].attemptCount).toBe(1);
-    expect(remaining[0].lastError).toBe("Nope");
+    expect(remaining.map((item) => item.clientId).sort()).toEqual(["sale-bad", "sale-ok"]);
+    expect(remaining.find((item) => item.clientId === "sale-bad")).toMatchObject({ status: "failed", attemptCount: 1, lastError: "Nope" });
+    expect(remaining.find((item) => item.clientId === "sale-ok")).toMatchObject({ status: "syncing", awaitingConfirmation: true });
   });
 
   it("reverts items to pending (not failed) on a network failure, so a dropped connection is retried, not surfaced as a rejection", async () => {
@@ -148,7 +147,7 @@ describe("drainOutbox", () => {
     await retryFailedOutboxItems();
 
     const remaining = await db.outbox.toArray();
-    expect(remaining).toHaveLength(0);
+    expect(remaining).toEqual([expect.objectContaining({ clientId: "sale-retry", status: "syncing", awaitingConfirmation: true })]);
   });
 
   it("drains a queue larger than one sync-push batch in multiple sub-batch calls, each within MAX_BATCH_SIZE", async () => {
@@ -190,7 +189,7 @@ describe("drainOutbox", () => {
 
     expect(batchSizes).toEqual([500, 100]);
     for (const size of batchSizes) expect(size).toBeLessThanOrEqual(500);
-    expect(await db.outbox.toArray()).toHaveLength(0);
+    expect((await db.outbox.where("status").equals("syncing").toArray()).filter((item) => item.awaitingConfirmation)).toHaveLength(600);
   }, 20000);
 
   it("keeps an item retryable (pending) when the server response has no per-item result, rather than deleting it as if applied", async () => {
@@ -235,7 +234,7 @@ describe("drainOutbox", () => {
     await drainOutbox();
 
     expect(batches).toEqual([["product-1"], ["movement-1"]]);
-    expect(await db.outbox.toArray()).toHaveLength(0);
+    expect(await db.outbox.toArray()).toEqual([expect.objectContaining({ clientId: "movement-1", status: "syncing", awaitingConfirmation: true })]);
   });
 
   it("links a queued product to its queued category before batching", async () => {
@@ -367,7 +366,7 @@ describe("drainOutbox", () => {
     // First drain refreshes account context and leaves the mutation blocked;
     // second drain refreshes it again, then pushes the now-unblocked mutation.
     expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(await db.outbox.get("account-blocked")).toBeUndefined();
+    expect(await db.outbox.get("account-blocked")).toMatchObject({ status: "syncing", awaitingConfirmation: true });
   });
 
   it("refreshes worker capabilities and branch assignments while the app is open", async () => {

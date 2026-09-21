@@ -146,6 +146,8 @@ export interface SyncDiagnostic {
   lastSuccessfulPullAt: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  httpStatus?: number | null;
+  retryCount?: number;
   recordsApplied: number;
 }
 
@@ -186,6 +188,17 @@ export interface SyncPullState {
   lastServerContactAt?: string | null;
   /** Last time at least one push mutation was durably accepted. */
   lastSuccessfulPushAt?: string | null;
+  /** Safe, durable status fields used by advanced sync diagnostics. */
+  lastPushStatus?: "success" | "failed" | null;
+  lastPushErrorCode?: string | null;
+  lastPushHttpStatus?: number | null;
+  lastPushAttemptAt?: string | null;
+  lastPullStatus?: "success" | "failed" | null;
+  lastPullErrorCode?: string | null;
+  lastPullHttpStatus?: number | null;
+  lastFailedDataset?: string | null;
+  pullRetryCount?: number;
+  nextPullAttemptAt?: string | null;
 }
 
 class StockPadiDB extends Dexie {

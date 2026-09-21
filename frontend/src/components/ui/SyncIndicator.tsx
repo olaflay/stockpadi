@@ -229,14 +229,14 @@ export function SyncIndicator({
       return (
         <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" title="Open Sync Diagnostics" aria-label="Open Sync Diagnostics" className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning"}`}>
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-          <span>! Needs attention</span>
+          <span>Sync issue</span>
         </button>
       );
     }
     return (
       <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
         <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-        ! Needs attention
+        Sync issue
       </button>
     );
   }
@@ -245,7 +245,7 @@ export function SyncIndicator({
     return (
       <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" title="Open Sync Diagnostics" className={`inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] transition-colors ${isContrast ? "text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}>
         <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-        {runtimePhase === "idle" ? "! Needs attention" : phaseLabel}
+        {runtimePhase === "idle" ? "Sync issue" : phaseLabel}
       </button>
     );
   }

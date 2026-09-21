@@ -38,6 +38,7 @@ interface SyncPushItemResult {
 // 413. The last slice is always a partial, so a drain that is already under
 // the cap stays a single call.
 const DRAIN_BATCH_SIZE = 500;
+const STOCK_AFFECTING_TYPES = new Set(["sale", "stock_adjustment", "stock_count_submission", "purchase_receipt"]);
 
 let isDraining = false;
 
@@ -55,7 +56,7 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
   await getLocalBusinessId();
 
   const getPendingCount = async () =>
-    (await db.outbox.where("status").anyOf("pending", "blocked", "syncing").toArray()).filter(matchesActiveTenant).length;
+    (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant).length;
 
   const initialCount = await getPendingCount();
   if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
@@ -323,8 +324,10 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
       ].includes(err.code);
       if (retryable) await parkRetryable(slice, err.code, err.message, ["BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED", "DEPENDENCY_NOT_READY"].includes(err.code));
       else await markPermanentFailure(slice, err.code, err.message);
+      await recordPushOutcome(slice, false, err.code, err.status);
     } else {
       await revertToPending(slice, err instanceof Error ? err.message : "Network error during sync");
+      await recordPushOutcome(slice, false, "NETWORK_UNAVAILABLE", null);
     }
     return false;
   }
@@ -334,6 +337,7 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
     ...(result.mutationId ? [[result.mutationId, result] as const] : []),
   ]));
   const toDelete: string[] = [];
+  const toConfirm: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
   const toMarkFailed: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
   const toRequeue: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
 
@@ -343,7 +347,29 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
       if (result.canonicalized && result.authoritativeEntityId && result.authoritativeEntityId !== item.entityId) {
         await reconcileAuthoritativeIdentity(item, result.authoritativeEntityId);
       }
-      toDelete.push(item.clientId);
+      if (STOCK_AFFECTING_TYPES.has(item.type)) {
+        // A push acknowledgement proves the server accepted the ledger event,
+        // but it does not prove this device has downloaded the resulting
+        // product+branch projection. Keep the local delta authoritative until
+        // a complete inventory pull confirms that exact key.
+        toConfirm.push({
+          key: item.clientId,
+          changes: {
+            // Keep this in the professional, familiar "syncing" state.
+            // The explicit flag prevents the crash-recovery sweeper from
+            // re-uploading an event that the server has already accepted.
+            status: "syncing",
+            awaitingConfirmation: true,
+            errorCode: null,
+            lastErrorCode: null,
+            lastErrorMessage: null,
+            lastError: null,
+            nextAttemptAt: null,
+          },
+        });
+      } else {
+        toDelete.push(item.clientId);
+      }
       if (item.type === "product" && result.version !== undefined) {
         const productId = item.entityId ?? (item.payload as { id?: string }).id;
         if (productId) await db.products.update(productId, { version: result.version });
@@ -407,20 +433,46 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
 
   if (toDelete.length > 0) {
     await db.outbox.bulkDelete(toDelete);
-    const businessId = slice.find((item) => item.businessId)?.businessId ?? await getLocalBusinessId();
-    if (businessId) await recordSuccessfulPush(businessId);
   }
+  if (toConfirm.length > 0) await db.outbox.bulkUpdate(toConfirm);
   if (toMarkFailed.length > 0) await db.outbox.bulkUpdate(toMarkFailed);
   if (toRequeue.length > 0) await db.outbox.bulkUpdate(toRequeue);
+  const firstFailureItem = slice.find((item) => {
+    const result = resultByClientId.get(item.clientId);
+    return !result || !["applied", "skipped"].includes(result.status);
+  });
+  const firstFailure = firstFailureItem ? resultByClientId.get(firstFailureItem.clientId) : undefined;
+  const accepted = toDelete.length > 0 || toConfirm.length > 0;
+  await recordPushOutcome(
+    slice,
+    !firstFailureItem,
+    firstFailure?.error?.code ?? (firstFailureItem ? "MISSING_RESULT" : null),
+    null,
+    accepted,
+  );
   return true;
 }
 
-async function recordSuccessfulPush(businessId: string): Promise<void> {
+async function recordPushOutcome(
+  items: SyncQueueItem[],
+  success: boolean,
+  errorCode: string | null,
+  httpStatus: number | null,
+  accepted = false,
+): Promise<void> {
+  const businessId = items.find((item) => item.businessId)?.businessId ?? await getLocalBusinessId();
+  if (!businessId) return;
   const id = `${businessId}:session`;
-  const pushedAt = new Date().toISOString();
+  const attemptedAt = new Date().toISOString();
   const existing = await db.syncPullState.get(id);
   if (existing) {
-    await db.syncPullState.update(id, { lastSuccessfulPushAt: pushedAt });
+    await db.syncPullState.update(id, {
+      ...(accepted ? { lastSuccessfulPushAt: attemptedAt } : {}),
+      lastPushStatus: success ? "success" : "failed",
+      lastPushErrorCode: errorCode,
+      lastPushHttpStatus: httpStatus,
+      lastPushAttemptAt: attemptedAt,
+    });
     return;
   }
   await db.syncPullState.put({
@@ -433,10 +485,20 @@ async function recordSuccessfulPush(businessId: string): Promise<void> {
     entityCounts: {},
     partialErrors: [],
     lastCompletePullAt: null,
-    lastSuccessfulPushAt: pushedAt,
+    lastSuccessfulPushAt: accepted ? attemptedAt : null,
     lastPullTrigger: null,
     lastInvalidationReceivedAt: null,
     lastServerContactAt: null,
+    lastPushStatus: success ? "success" : "failed",
+    lastPushErrorCode: errorCode,
+    lastPushHttpStatus: httpStatus,
+    lastPushAttemptAt: attemptedAt,
+    lastPullStatus: null,
+    lastPullErrorCode: null,
+    lastPullHttpStatus: null,
+    lastFailedDataset: null,
+    pullRetryCount: 0,
+    nextPullAttemptAt: null,
   });
 }
 
@@ -490,7 +552,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * them up. Safe to call on every connect and on boot.
  */
 export async function recoverStuckSyncingItems(): Promise<void> {
-  const stuck = (await db.outbox.where("status").equals("syncing").toArray()).filter(matchesActiveTenant);
+  const stuck = (await db.outbox.where("status").equals("syncing").toArray())
+    .filter((item) => matchesActiveTenant(item) && !item.awaitingConfirmation);
   if (stuck.length === 0) return;
   await db.outbox.bulkUpdate(
     stuck.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, nextAttemptAt: null } }))
@@ -504,7 +567,7 @@ export async function recoverStuckSyncingItems(): Promise<void> {
 export async function recoverStaleSyncingItems(maxAgeMs = 30000): Promise<void> {
   const threshold = new Date(Date.now() - maxAgeMs).toISOString();
   const stale = (await db.outbox.where("status").equals("syncing").toArray())
-    .filter((item) => matchesActiveTenant(item) && (item.lastAttemptAt ?? item.createdAtLocal) < threshold);
+    .filter((item) => matchesActiveTenant(item) && !item.awaitingConfirmation && (item.lastAttemptAt ?? item.createdAtLocal) < threshold);
   if (stale.length === 0) return;
   await db.outbox.bulkUpdate(
     stale.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))

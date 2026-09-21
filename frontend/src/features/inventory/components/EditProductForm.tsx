@@ -155,7 +155,7 @@ export function EditProductForm({
             onClick={() => setIsDeleteModalOpen(true)}
             className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger/30 bg-surface px-5 py-2.5 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-all"
           >
-            Delete product
+            Archive product
           </button>
         </div>
       </form>
@@ -164,17 +164,17 @@ export function EditProductForm({
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
-        title="Delete product"
+        title="Archive product"
       >
         <div className="flex flex-col items-center gap-3 text-center py-2">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger mb-1">
             <AlertTriangle size={28} aria-hidden />
           </div>
           <p className="text-[length:var(--font-size-title)] font-semibold text-on-surface">
-            Are you sure you want to delete this product?
+            Archive this product?
           </p>
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed max-w-sm">
-            This will permanently remove the product from your shop catalog. Previous sales records will remain preserved in your ledger.
+            It will disappear from selling and search, while sales and stock history remain protected. The archive change will sync to every device.
           </p>
 
           <div className="mt-4 flex w-full gap-3">
@@ -192,7 +192,7 @@ export function EditProductForm({
               disabled={isDeleting}
               className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-semibold text-white hover:opacity-95 transition-opacity disabled:opacity-50"
             >
-              {isDeleting ? "Deleting…" : "Yes, delete"}
+              {isDeleting ? "Archiving…" : "Archive product"}
             </RippleButton>
           </div>
         </div>

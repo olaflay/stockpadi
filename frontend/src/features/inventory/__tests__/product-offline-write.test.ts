@@ -71,6 +71,21 @@ describe("writeNewProductOffline", () => {
     expect(payload.reasonCode).toBe("initial_stock");
     expect(payload.quantityDelta).toBe(12);
   });
+
+  it("queues a zero-stock product and its zero opening-stock event instead of treating it as absent", async () => {
+    const product = baseProduct({ name: "Out of stock item" });
+    await writeNewProductOffline(product, {
+      branchId: BRANCH_ID,
+      quantity: 0,
+      createdByUserId: "user-1",
+    }, null, OWNER);
+
+    expect(await getCurrentStock(product.id, BRANCH_ID)).toBe(0);
+    expect(await db.outbox.toArray()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "product", entityId: product.id }),
+      expect.objectContaining({ type: "stock_adjustment", payload: expect.objectContaining({ productId: product.id, quantityDelta: 0, reasonCode: "initial_stock" }) }),
+    ]));
+  });
 });
 
 describe("writeProductEditOffline", () => {

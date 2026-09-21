@@ -6,7 +6,7 @@ import { preloadSessionData, type SyncPullTrigger } from "@/features/sync/preloa
 import { getSupabase } from "@/lib/supabase";
 import { setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
-const ACTIVE_POLL_MS = 30_000;
+const ACTIVE_POLL_MS = 3 * 60_000;
 
 /**
  * One orchestration cycle for the only client sync engine. Every trigger uses
@@ -15,6 +15,10 @@ const ACTIVE_POLL_MS = 30_000;
  * pull so server canonicalization is reflected locally on the same device.
  */
 export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<void> {
+  // Do not even start account/push/pull work while offline. Every local write
+  // is already durable in Dexie; the browser's `online` event or the next
+  // three-minute online check is the only automatic wake-up path.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
   setSyncRuntimePhase("syncing");
   try {
     await recoverStaleSyncingItems();
@@ -32,8 +36,10 @@ export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<v
 /**
  * Invisible app-level coordinator. The backend currently uses bounded
  * incremental polling as the server-to-device invalidation fallback. It is
- * deliberately paused while hidden and immediately resumed on foreground,
- * focus, reconnect, and auth/session restoration. No user action is needed.
+ * deliberately restricted to an online boot, reconnect, auth/session
+ * restoration, and one three-minute check while the app is visible. Focus
+ * and visibility events do not create surprise request bursts; the user can
+ * always choose Sync now for an immediate attempt.
  */
 export function SyncEngine() {
   useEffect(() => {
@@ -63,18 +69,11 @@ export function SyncEngine() {
     };
 
     const onOnline = () => requestRun("online");
-    const onFocus = () => requestRun("focus");
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") requestRun("visibility");
-    };
-
-    requestRun("boot");
+    if (navigator.onLine) requestRun("boot");
     window.addEventListener("online", onOnline);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     const interval = window.setInterval(() => {
-      if (document.visibilityState !== "hidden") requestRun("poll");
+      if (navigator.onLine && document.visibilityState !== "hidden") requestRun("poll");
     }, ACTIVE_POLL_MS);
 
     const supabase = getSupabase();
@@ -87,8 +86,6 @@ export function SyncEngine() {
 
     return () => {
       window.removeEventListener("online", onOnline);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearInterval(interval);
       authSubscription?.unsubscribe();
     };
