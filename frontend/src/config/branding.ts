@@ -39,7 +39,7 @@ export function getBrandingConfig(): BrandingConfig {
   // was slipping through as a real value (e.g. rendering `<link rel="icon"
   // href="">`, an invalid empty href).
   return {
-    businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "StockPadi",
+    businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "OjaPadi",
     accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0a6e4d",
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
     appUrl: getAppUrl(),

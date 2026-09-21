@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { RippleButton } from "@/components/ui/Ripple";
 import { HelpCircle, FileText, MessageCircle, ChevronRight, ChevronDown, Mail, Star, HeartHandshake } from "lucide-react";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { getBrandingConfig } from "@/config/branding";
 
 const USER_GUIDE_STEPS = [
   { title: "Add your products", body: "Products → the + button. Set a cost price and sell price; starting stock is optional." },
@@ -26,6 +27,7 @@ const FAQS = [
 export default function HelpPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const branding = getBrandingConfig();
   const [userGuideOpen, setUserGuideOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -36,7 +38,7 @@ export default function HelpPage() {
   function handleSendReview() {
     setSubmittingReview(true);
     // WhatsApp feedback submission or local toast confirmation
-    const message = `*StockPadi Review & Merchant Feedback*\nRating: ${rating}/5 stars\nFeedback: ${feedbackText.trim() || "Loving the offline speed and simplicity!"}`;
+    const message = `*${branding.businessName} Review & Merchant Feedback*\nRating: ${rating}/5 stars\nFeedback: ${feedbackText.trim() || "Loving the offline speed and simplicity!"}`;
     window.open(buildWhatsAppUrl(undefined, message), "_blank");
     showToast("Thank you for your feedback!", "success");
     setSubmittingReview(false);
@@ -55,7 +57,7 @@ export default function HelpPage() {
             <HeartHandshake size={22} aria-hidden />
           </div>
           <div>
-            <h3 className="text-[length:var(--font-size-body)] font-semibold text-on-surface">Enjoying StockPadi?</h3>
+            <h3 className="text-[length:var(--font-size-body)] font-semibold text-on-surface">Enjoying {branding.businessName}?</h3>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Help us make it better for all retail shop owners.
             </p>

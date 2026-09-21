@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { WifiOff, MessageSquare, Moon, CheckCircle2, ChevronRight } from "lucide-react";
+import { getBrandingConfig } from "@/config/branding";
 import { EducationSuperpower } from "../types";
 
 interface StepEducationSuperpowersProps {
@@ -10,7 +11,7 @@ interface StepEducationSuperpowersProps {
   isSaving: boolean;
 }
 
-const SHOP_RULES: EducationSuperpower[] = [
+const getShopRules = (brandName: string): EducationSuperpower[] => [
   {
     id: "offline",
     iconName: "WifiOff",
@@ -32,7 +33,7 @@ const SHOP_RULES: EducationSuperpower[] = [
     iconName: "Moon",
     title: "Fast daily balancing",
     badge: "Close day",
-    description: "Enter your drawer cash at the end of the day. StockPadi checks for any difference.",
+    description: `Enter your drawer cash at the end of the day. ${brandName} checks for any difference.`,
     benefit: "Know your exact profit and cash balance.",
   },
 ];
@@ -42,6 +43,8 @@ export function StepEducationSuperpowers({
   isSaving,
 }: StepEducationSuperpowersProps) {
   const [selectedId, setSelectedId] = useState<string>("offline");
+  const branding = getBrandingConfig();
+  const rules = getShopRules(branding.businessName);
 
   const icons = {
     offline: <WifiOff className="h-5 w-5 text-brand-accent shrink-0" />,
@@ -60,13 +63,13 @@ export function StepEducationSuperpowers({
           Three key things to know
         </h1>
         <p className="mt-1 text-[length:var(--font-size-body)] text-on-surface-muted max-w-xs">
-          How StockPadi protects your shop every day.
+          How {branding.businessName} protects your shop every day.
         </p>
       </div>
 
       {/* Interactive Micro-Cards */}
       <div className="my-auto flex flex-col gap-2.5 py-2" role="radiogroup" aria-label="Key shop protection rules">
-        {SHOP_RULES.map((item) => {
+        {rules.map((item) => {
           const isSelected = selectedId === item.id;
           return (
             <button

@@ -100,3 +100,6 @@ scratch/
 tmp/
 temp/
 *audit_report*.md
+
+# Standalone repositories
+stockpadi-landing/

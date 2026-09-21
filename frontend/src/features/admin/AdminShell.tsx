@@ -6,6 +6,7 @@ import { Building2, Radio, Server, LogOut, ShieldCheck } from "lucide-react";
 import { signOut } from "@/features/auth/logout";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { RippleButton } from "@/components/ui/Ripple";
+import { getBrandingConfig } from "@/config/branding";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const currentUser = useCurrentUser();
+  const branding = getBrandingConfig();
 
   async function handleSignOut() {
     await signOut();
@@ -37,7 +39,7 @@ export function AdminShell({ children }: AdminShellProps) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-bold tracking-tight text-on-surface">StockPadi</span>
+                <span className="text-base font-bold tracking-tight text-on-surface">{branding.businessName}</span>
                 <span className="rounded-md bg-brand-accent/10 px-2 py-0.5 text-[11px] font-semibold text-brand-accent border border-brand-accent/20">
                   Super Admin
                 </span>
