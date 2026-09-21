@@ -86,7 +86,10 @@ export default function SyncHealthPage() {
       .catch(() => setCloud("failed"));
   }, [online]);
 
-  if (user.accountType !== "BUSINESS_OWNER") return <><ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} /><PermissionDenied requiredAccountType="BUSINESS_OWNER" /></>;
+  // Workers need read-only diagnostics and a manual retry too: a branch pull
+  // failure is actionable on their device even though conflict choices remain
+  // an owner responsibility.
+  if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "WORKER") return <><ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} /><PermissionDenied requiredAccountType="BUSINESS_OWNER" /></>;
   if (!snapshot) return <><ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} /><Skeleton className="h-48" /></>;
 
   const pullFailed = snapshot.state?.lastPullStatus === "failed" || Boolean(snapshot.state?.partialErrors.length) || snapshot.diagnostics.some((item) => !item.success);
@@ -184,7 +187,7 @@ export default function SyncHealthPage() {
         <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Oldest pending change: {snapshot.oldestPendingAt ? new Date(snapshot.oldestPendingAt).toLocaleString() : "None"}</p>
       </section>
 
-      {snapshot.conflicts.length > 0 && (
+      {user.accountType === "BUSINESS_OWNER" && snapshot.conflicts.length > 0 && (
         <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
           <h2 className="text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">Review sync conflicts</h2>
           <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Choose which catalogue version to keep. Stock and sales history can never be deleted here.</p>
