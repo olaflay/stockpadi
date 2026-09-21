@@ -20,6 +20,8 @@ jobs:
 
       - run: npm run lint
 
+      - run: npm run contracts:build
+
       - run: npm run test
 
       - run: npm run build
