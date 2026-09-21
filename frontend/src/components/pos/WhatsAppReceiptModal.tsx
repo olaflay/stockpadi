@@ -7,6 +7,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/format";
 import { getCustomerCreditBalance } from "@/features/customers/credit";
+import { getBrandingConfig } from "@/config/branding";
 import type { Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { LocalCustomer } from "@/lib/db";
@@ -93,7 +94,7 @@ export function WhatsAppReceiptModal({
     `Payment:\n${paymentLine}` +
     `${debtSummarySection}\n\n` +
     `Thank you for your business.\n` +
-    `Powered by StockPadi`;
+    `Powered by ${getBrandingConfig().businessName}`;
 
   function handleSend() {
     const trimmed = phone.trim();

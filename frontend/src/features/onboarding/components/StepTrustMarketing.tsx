@@ -4,6 +4,7 @@ import { WelcomeIllustration } from "@/components/illustrations";
 import { TextInput } from "@/components/ui/TextInput";
 import { RippleButton } from "@/components/ui/Ripple";
 import { ShieldCheck, WifiOff, Download } from "lucide-react";
+import { getBrandingConfig } from "@/config/branding";
 
 interface StepTrustMarketingProps {
   businessName: string;
@@ -16,6 +17,8 @@ export function StepTrustMarketing({
   onChangeBusinessName,
   onNext,
 }: StepTrustMarketingProps) {
+  const branding = getBrandingConfig();
+
   return (
     <div className="flex flex-1 flex-col justify-between">
       {/* Top Focus Block (Samsung One UI) */}
@@ -24,7 +27,7 @@ export function StepTrustMarketing({
           <WelcomeIllustration className="h-12 w-12 text-brand-accent" />
         </div>
         <p className="text-[length:var(--font-size-label)] font-medium text-brand-accent">
-          Welcome to StockPadi
+          Welcome to {branding.businessName}
         </p>
         <h1 className="mt-1 text-[length:var(--font-size-title-lg)] font-bold text-on-surface">
           Your shop, on your phone.

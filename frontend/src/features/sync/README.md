@@ -1,6 +1,6 @@
 # Sync
 
-StockPadi writes domain data to Dexie and the outbox in one transaction. `drainOutbox()` sends durable mutations to the Node application API at `/api/sync/push`; the Node service authenticates the caller, checks tenant/branch/worker scope, and invokes the idempotent `sync_apply_*` Postgres RPCs with the service-role client. The service-role client is isolated to privileged context resolution and RPC execution; ordinary inventory reads use a JWT-scoped Supabase client.
+OjàPadi writes domain data to Dexie and the outbox in one transaction. `drainOutbox()` sends durable mutations to the Node application API at `/api/sync/push`; the Node service authenticates the caller, checks tenant/branch/worker scope, and invokes the idempotent `sync_apply_*` Postgres RPCs with the service-role client. The service-role client is isolated to privileged context resolution and RPC execution; ordinary inventory reads use a JWT-scoped Supabase client.
 
 Mutable entities (`product`, `customer`, `supplier`, `branch`, and `category`) carry separate mutation/entity identities and coalesce while pending. Immutable ledger events retain distinct idempotency keys. Product snapshots include the expected version, and the RPC returns the authoritative version or a deterministic conflict result. Dependent events such as opening stock wait for their branch and product mutations; durable outbox sequence numbers provide deterministic ordering.
 

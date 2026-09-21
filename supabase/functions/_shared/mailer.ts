@@ -21,17 +21,21 @@ export interface MailOptions {
 }
 
 export function parseSenderAddress(rawFrom?: string): { name: string; email: string } {
-  const fromStr = rawFrom || Deno.env.get("BREVO_SENDER_EMAIL") || Deno.env.get("SMTP_FROM") || "StockPadi <noreply@stockpadi.app>";
+  const defaultName = Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "OjaPadi";
+  const defaultDomain = Deno.env.get("MAIL_DOMAIN") || "example.com";
+  const defaultEmail = Deno.env.get("SYSTEM_EMAIL") || `noreply@${defaultDomain}`;
+  const fallbackFrom = `${defaultName} <${defaultEmail}>`;
+  const fromStr = rawFrom || Deno.env.get("BREVO_SENDER_EMAIL") || Deno.env.get("SMTP_FROM") || fallbackFrom;
   const match = fromStr.match(/^(?:"?([^"]*)"?\s)?<([^>]+)>$/);
   if (match) {
     return {
-      name: match[1]?.trim() || "StockPadi",
-      email: match[2]?.trim() || "noreply@stockpadi.app",
+      name: match[1]?.trim() || defaultName,
+      email: match[2]?.trim() || defaultEmail,
     };
   }
   return {
-    name: "StockPadi",
-    email: fromStr.trim() || "noreply@stockpadi.app",
+    name: defaultName,
+    email: fromStr.trim() || defaultEmail,
   };
 }
 
@@ -55,7 +59,10 @@ export function createTransport() {
 }
 
 export function getFromAddress(): string {
-  return Deno.env.get("SMTP_FROM") ?? "StockPadi <noreply@stockpadi.app>";
+  const defaultName = Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "OjaPadi";
+  const defaultDomain = Deno.env.get("MAIL_DOMAIN") || "example.com";
+  const defaultEmail = Deno.env.get("SYSTEM_EMAIL") || `noreply@${defaultDomain}`;
+  return Deno.env.get("SMTP_FROM") ?? `${defaultName} <${defaultEmail}>`;
 }
 
 /** Sends a single email via Brevo API v3 or SMTP */

@@ -3,6 +3,7 @@
 import { BUSINESS_TYPE_TEMPLATES, BusinessTypeTemplate } from "@/config/business-types";
 import { RippleButton } from "@/components/ui/Ripple";
 import { CheckCircle2, Sparkles, Package, ShoppingBag, Shirt, HeartPulse, Smartphone, Hammer } from "lucide-react";
+import { getBrandingConfig } from "@/config/branding";
 
 interface StepBusinessTypeProps {
   selectedId: string;
@@ -18,7 +19,8 @@ const TEMPLATE_ICONS: Record<string, typeof ShoppingBag> = {
   health: HeartPulse,
   beauty: Sparkles,
   gadgets: Smartphone,
-  materials: Hammer,
+  hardware: Hammer,
+  custom: Package,
 };
 
 export function StepBusinessType({
@@ -28,6 +30,7 @@ export function StepBusinessType({
   onToggleStarterPack,
   onNext,
 }: StepBusinessTypeProps) {
+  const branding = getBrandingConfig();
   const currentTemplate =
     BUSINESS_TYPE_TEMPLATES.find((t) => t.id === selectedId) || BUSINESS_TYPE_TEMPLATES[0];
 
@@ -42,7 +45,7 @@ export function StepBusinessType({
           What type of shop do you run?
         </h1>
         <p className="mt-1 text-[length:var(--font-size-body)] text-on-surface-muted max-w-xs">
-          StockPadi configures your units, categories, and inventory settings to match.
+          {branding.businessName} configures your units, categories, and inventory settings to match.
         </p>
       </div>
 

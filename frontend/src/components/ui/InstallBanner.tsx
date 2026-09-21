@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
+import { getBrandingConfig } from "@/config/branding";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const branding = getBrandingConfig();
 
   useEffect(() => {
     // If user has dismissed it recently, don't show
@@ -23,15 +25,13 @@ export function InstallBanner() {
       setVisible(true);
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
-
-    // If already installed, this might trigger
     const appInstalledHandler = () => {
       setVisible(false);
       setDeferredPrompt(null);
     };
-    window.addEventListener("appinstalled", appInstalledHandler);
 
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", appInstalledHandler);
@@ -40,12 +40,12 @@ export function InstallBanner() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setDeferredPrompt(null);
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    if (choiceResult.outcome === "accepted") {
       setVisible(false);
     }
+    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
@@ -60,7 +60,7 @@ export function InstallBanner() {
       <div className="flex items-center gap-2 min-w-0">
         <Download size={18} className="shrink-0" />
         <span className="text-[length:var(--font-size-caption)] font-medium truncate">
-          Install StockPadi for faster, offline access
+          Install {branding.businessName} for faster, offline access
         </span>
       </div>
       <div className="flex items-center gap-2">

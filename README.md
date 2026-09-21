@@ -1,8 +1,8 @@
-# StockPadi
+# OjàPadi (formerly StockPadi)
 
-StockPadi is an offline-first inventory, sales, customer-credit, and point-of-sale app for retail businesses.
+OjàPadi is an offline-first inventory, sales, customer-credit, and point-of-sale app for retail businesses.
 
-This guide explains how to run, test, update the database, and deploy StockPadi without needing to understand the code.
+This guide explains how to run, test, update the database, and deploy OjàPadi without needing to understand the code.
 
 ## The three parts
 

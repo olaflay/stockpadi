@@ -10,7 +10,7 @@ Feature-oriented, not type-oriented. Group by what the code does (`pos/`, `inven
 
 ## Business-type and branding configuration
 
-Per `.agents/rules/reusability-and-multi-client.md`, business name, branding, and business-type defaults are configuration, never hardcoded conditionals scattered through feature code. If you find yourself writing `if (businessType === 'pharmacy')` inside a component, that logic belongs in the configuration layer, not the component.
+Per `.agents/rules/reusability-and-multi-client.md`, business name, branding, and business-type defaults are configuration, never hardcoded conditionals or hardcoded strings scattered through feature code. **Never hardcode brand names in JSX or templates.** Always import and consume `getBrandingConfig()` in `frontend/` or `getBusinessName()` in `stockpadi-landing/`. If you find yourself writing `if (businessType === 'pharmacy')` inside a component, that logic belongs in the configuration layer, not the component.
 
 ## API conventions
 

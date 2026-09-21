@@ -45,7 +45,8 @@ export function SideDrawer() {
     () => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
     []
   );
-  const storeName = businessProfile?.name?.trim() || getBrandingConfig().businessName;
+  const branding = getBrandingConfig();
+  const storeName = businessProfile?.name?.trim() || branding.businessName;
 
   const drawerRef = React.useRef<HTMLElement>(null);
 
@@ -265,7 +266,7 @@ export function SideDrawer() {
           </button>
 
           <p className="text-center text-[10px] text-on-surface-muted/60 pt-0.5">
-            StockPadi • Offline-First Retail
+            {branding.businessName} • Offline-First Retail
           </p>
         </div>
       </aside>

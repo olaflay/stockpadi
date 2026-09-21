@@ -1,6 +1,6 @@
-# StockPadi backend
+# OjàPadi backend
 
-This is StockPadi's independently deployable Node.js application backend. It owns
+This is OjàPadi's independently deployable Node.js application backend. It owns
 authentication checks, account context, tenant and branch authorization, domain
 operations, validation, email delivery, and privileged Supabase calls.
 

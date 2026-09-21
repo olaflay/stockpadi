@@ -54,9 +54,9 @@ export const metadata: Metadata = {
     template: `%s | ${branding.businessName}`,
   },
   description:
-    "StockPadi is the free, offline-first point of sale and inventory management app for retail stores. Track sales, record customer debts, manage stock, and share WhatsApp receipts with zero internet required.",
+    `${branding.businessName} is the free, offline-first point of sale and inventory management app for retail stores. Track sales, record customer debts, manage stock, and share WhatsApp receipts with zero internet required.`,
   keywords: [
-    "StockPadi",
+    branding.businessName,
     "offline POS app",
     "inventory management",
     "point of sale software",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     "free POS software",
     "store inventory tracker",
   ],
-  authors: [{ name: "StockPadi" }],
+  authors: [{ name: branding.businessName }],
   applicationName: branding.businessName,
   manifest: "/manifest.json",
   icons: {

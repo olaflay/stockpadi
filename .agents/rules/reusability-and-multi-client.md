@@ -10,6 +10,43 @@ This is currently a single-client build, but it is architected to become a repea
    - Each client receives a dedicated Vercel project (e.g. `shop-a.stockpadi.com` and `shop-b.stockpadi.com`) running their own build/deploy.
    - This ensures 100% data security/isolation, simplifies DNS caching, and removes database handshake roundtrips at startup. Credentials live strictly in Vercel-managed environment variables, never committed to version control.
 
+## STRICT ZERO-HARDCODING MANDATE
+
+**UNDER NO CIRCUMSTANCES SHALL ANY AGENT HARDCODE BRAND NAMES, BUSINESS NAMES, CURRENCIES, OR COMPANY STRINGS INTO APPLICATION CODE, PAGES, COMPONENTS, OR TEMPLATES.**
+
+Every brand touchpoint, business title, and client configuration MUST resolve dynamically from configuration. This is non-negotiable.
+
+### Banned Patterns (Immediate Lint / Review Failure):
+```tsx
+// ❌ CRITICAL VIOLATION - Hardcoding brand in JSX:
+<h1>Welcome to OjaPadi</h1>
+<p>Powered by StockPadi</p>
+<title>OjaPadi POS</title>
+
+// ❌ CRITICAL VIOLATION - Hardcoding brand in email subject / body:
+const subject = "Your StockPadi verification code";
+const from = "OjaPadi <noreply@ojapadi.com>";
+```
+
+### Required Patterns (Mandatory Architecture):
+```tsx
+// ✅ REQUIRED in frontend/ components & pages:
+import { getBrandingConfig } from "@/config/branding";
+
+export function Header() {
+  const branding = getBrandingConfig();
+  return <h1>Welcome to {branding.businessName}</h1>;
+}
+
+// ✅ REQUIRED in stockpadi-landing/ components:
+import { getBusinessName } from "@/config/env";
+const brand = getBusinessName(); // Interpolates brandDisplay
+
+// ✅ REQUIRED in backend/ & Edge Functions:
+const brandName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
+const subject = `Your ${brandName} verification code`;
+```
+
 ## What this rule catches in practice
 
 If a change hardcodes this specific client's business name, branch names, or category list anywhere in component code rather than reading it from configuration, that is a violation of this rule even if it works correctly for the current client. It will break silently the first time this codebase gets forked for someone else, and the person doing that fork may not be the person who wrote the original hardcoded value.

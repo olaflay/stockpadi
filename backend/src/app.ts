@@ -52,7 +52,7 @@ async function readBody(request: Request): Promise<unknown> {
 }
 
 function allowedOrigins(): Set<string> {
-  const configured = process.env.FRONTEND_ORIGINS ?? process.env.FRONTEND_ORIGIN ?? "https://stockpadi-drab.vercel.app";
+  const configured = process.env.FRONTEND_ORIGINS ?? process.env.FRONTEND_ORIGIN ?? (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
   return new Set(configured.split(",").map((origin) => origin.trim().replace(/\/$/, "")).filter(Boolean));
 }
 

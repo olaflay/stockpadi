@@ -3,17 +3,19 @@
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { getBrandingConfig } from "@/config/branding";
 
 /** Open to every role — nothing here is sensitive. */
 export default function AboutSettingsPage() {
   const router = useRouter();
+  const branding = getBrandingConfig();
 
   return (
     <div className="flex flex-col gap-6">
       <ScreenHeader title="About" onBack={() => router.push("/settings")} />
 
       <div className="rounded-2xl bg-surface-container p-4">
-        <p className="text-[length:var(--font-size-body-lg)] text-on-surface">StockPadi</p>
+        <p className="text-[length:var(--font-size-body-lg)] text-on-surface">{branding.businessName}</p>
         <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
           Offline-first inventory and point-of-sale.
         </p>
