@@ -30,13 +30,34 @@ describe("branch-scoped stock projections", () => {
     });
     await db.inventoryStock.bulkPut([
       { id: "test-business:product-coke:branch-ikeja", businessId: "test-business", productId: "product-coke", branchId: "branch-ikeja", quantity: 20, updatedAt: new Date().toISOString() },
-      { id: "test-business:product-coke:branch-lekki", businessId: "test-business", productId: "product-coke", branchId: "branch-lekki", quantity: 7, updatedAt: new Date().toISOString() },
+      { id: "test-business:product-coke:branch-lekki", businessId: "test-business", productId: "product-coke", branchId: "branch-lekki", quantity: 0, updatedAt: new Date().toISOString() },
     ]);
   });
 
   it("keeps catalogue identity business-wide while scoping displayed stock", async () => {
     expect(await getStockByProduct(["branch-ikeja"])).toEqual(new Map([["product-coke", 20]]));
-    expect(await getStockByProduct(["branch-lekki"])).toEqual(new Map([["product-coke", 7]]));
-    expect(await getStockByProduct(null)).toEqual(new Map([["product-coke", 27]]));
+    expect(await getStockByProduct(["branch-lekki"])).toEqual(new Map([["product-coke", 0]]));
+    expect(await getStockByProduct(null)).toEqual(new Map([["product-coke", 20]]));
+  });
+
+  it("falls back to the exact branch ledger only when that branch projection is missing", async () => {
+    await db.inventoryStock.delete("test-business:product-coke:branch-ikeja");
+    await db.stockMovements.put({
+      id: "opening-coke-ikeja",
+      clientId: "opening-coke-ikeja",
+      businessId: "test-business",
+      branchId: "branch-ikeja",
+      productId: "product-coke",
+      quantityDelta: 20,
+      source: "initial_stock",
+      sourceReferenceId: null,
+      reasonCode: null,
+      createdAtLocal: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      createdByUserId: "owner",
+    });
+
+    expect(await getStockByProduct("branch-ikeja")).toEqual(new Map([["product-coke", 20]]));
+    expect(await getStockByProduct("branch-lekki")).toEqual(new Map([["product-coke", 0]]));
   });
 });

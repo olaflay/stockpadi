@@ -41,15 +41,22 @@ export async function getStockByProduct(
         : await tenantArray(db.inventoryStock.where("branchId").equals(branchId));
     const products = await tenantArray(db.products);
     const productIds = new Set(products.filter((product) => product.businessId).map((product) => product.id));
-    for (const projection of projections) if (productIds.has(projection.productId)) stockByProduct.set(projection.productId, (stockByProduct.get(projection.productId) ?? 0) + projection.quantity);
-    if (projections.length > 0) {
-      const pendingMovementIds = await getPendingStockMovementIds();
-      for (const movement of movements) {
-        if (!pendingMovementIds.has(movement.clientId)) continue;
-        stockByProduct.set(movement.productId, (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta);
-      }
-      return stockByProduct;
+    const projectionKeys = new Set<string>();
+    for (const projection of projections) {
+      if (!productIds.has(projection.productId)) continue;
+      projectionKeys.add(`${projection.productId}:${projection.branchId}`);
+      stockByProduct.set(projection.productId, (stockByProduct.get(projection.productId) ?? 0) + projection.quantity);
     }
+    const pendingMovementIds = await getPendingStockMovementIds();
+    for (const movement of movements) {
+      // A projection row is authoritative even when its quantity is zero.
+      // If the exact product/branch row is absent, fall back to the local
+      // ledger so a partial/stale pull cannot turn known stock into 0.
+      const hasAuthoritativeProjection = projectionKeys.has(`${movement.productId}:${movement.branchId}`);
+      if (!pendingMovementIds.has(movement.clientId) && hasAuthoritativeProjection) continue;
+      stockByProduct.set(movement.productId, (stockByProduct.get(movement.productId) ?? 0) + movement.quantityDelta);
+    }
+    return stockByProduct;
   }
   for (const movement of movements) {
     stockByProduct.set(

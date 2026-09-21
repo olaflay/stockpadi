@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
+import { SelectInput } from "@/components/ui/SelectInput";
 import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
@@ -42,6 +43,7 @@ function PosPageContent() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 80);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cart = useCart();
@@ -50,12 +52,17 @@ function PosPageContent() {
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   const categories = useLiveQuery(() => tenantArray<LocalCategory>(db.categories), [], []);
   const customers = useLiveQuery(() => tenantArray<LocalCustomer>(db.customers), [], []);
+  const accessibleBranches = branches.filter(
+    (branch) => branch.isActive !== false && (user.accountType !== "WORKER" || user.branchIds?.includes(branch.id))
+  );
+  const activeBranchId =
+    (selectedBranchId && accessibleBranches.some((branch) => branch.id === selectedBranchId) ? selectedBranchId : null) ??
+    resolveDefaultBranch(accessibleBranches, user);
 
   const stockByProduct = useLiveQuery(async () => {
-    const branchId = resolveDefaultBranch(branches, user);
-    if (!branchId) return undefined;
-    return Object.fromEntries((await getStockByProduct(branchId)).entries());
-  }, [branches, user]);
+    if (!activeBranchId) return undefined;
+    return Object.fromEntries((await getStockByProduct(activeBranchId)).entries());
+  }, [activeBranchId]);
 
   const result = useLiveQuery(async () => {
     try {
@@ -144,7 +151,7 @@ function PosPageContent() {
 
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;
-    const branchId = resolveDefaultBranch(branches, user);
+    const branchId = activeBranchId;
     if (!branchId && user.accountType !== "WORKER") {
       showToast("No primary branch is available. Ask the owner to configure one.", "warning");
       return;
@@ -282,25 +289,46 @@ function PosPageContent() {
   }
 
   return (
-    <BrowseStep
-      query={query}
-      onQueryChange={setQuery}
-      categories={categories}
-      selectedCategoryId={selectedCategoryId}
-      onSelectCategory={setSelectedCategoryId}
-      filteredProducts={filtered}
-      allProducts={result.products}
-      bestSellerIds={bestSellerIds}
-      cart={cart.cart}
-      onAddToCart={cart.addToCart}
-      onIncrementLine={cart.incrementLine}
-      onDecrementLine={cart.decrementLine}
-      itemCount={cart.itemCount}
-      total={cart.total}
-      onReviewCart={() => setStep("cart")}
-      onGoToSettings={() => router.push("/settings/branches")}
-      stockByProduct={stockByProduct}
-    />
+    <div className="flex flex-col gap-3">
+      {accessibleBranches.length > 1 && (
+        <div>
+          <label htmlFor="pos-active-branch" className="mb-1.5 block text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">
+            Selling from
+          </label>
+          <SelectInput
+            id="pos-active-branch"
+            value={activeBranchId ?? ""}
+            onChange={(event) => setSelectedBranchId(event.target.value || null)}
+            aria-label="Selling from branch"
+          >
+            {accessibleBranches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </SelectInput>
+        </div>
+      )}
+      <BrowseStep
+        query={query}
+        onQueryChange={setQuery}
+        categories={categories}
+        selectedCategoryId={selectedCategoryId}
+        onSelectCategory={setSelectedCategoryId}
+        filteredProducts={filtered}
+        allProducts={result.products}
+        bestSellerIds={bestSellerIds}
+        cart={cart.cart}
+        onAddToCart={cart.addToCart}
+        onIncrementLine={cart.incrementLine}
+        onDecrementLine={cart.decrementLine}
+        itemCount={cart.itemCount}
+        total={cart.total}
+        onReviewCart={() => setStep("cart")}
+        onGoToSettings={() => router.push("/settings/branches")}
+        stockByProduct={stockByProduct}
+      />
+    </div>
   );
 }
 

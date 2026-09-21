@@ -148,13 +148,25 @@ function saleUsesCustomerCredit(payload: unknown): boolean {
   );
 }
 
-function classifyRpcError(error: { code?: string; message?: string }): { code: string; message: string } {
+function dependencyNotReadyMessage(rawMessage: unknown): string {
+  // The SQL functions deliberately use a stable, non-sensitive dependency
+  // message. Preserve that detail for diagnostics instead of reducing every
+  // missing prerequisite to the same opaque error. Anything outside the
+  // allow-list remains generic so database internals are never exposed.
+  if (typeof rawMessage === "string") {
+    const match = /^Referenced (businesses|branches|categories|customers|products|suppliers) is not synced yet$/i.exec(rawMessage.trim());
+    if (match) return `${match[0]}. The prerequisite must sync before this change can be applied.`;
+  }
+  return "A required related record is not available yet; the change will be retried.";
+}
+
+export function classifyRpcError(error: { code?: string; message?: string }): { code: string; message: string } {
   switch (error.code) {
     case "42501": return { code: "FORBIDDEN", message: "The account is not allowed to apply this change." };
     case "40001":
     case "40P01":
     case "55P03": return { code: "TEMPORARY_UNAVAILABLE", message: "The server is temporarily unavailable; the change will be retried." };
-    case "23503": return { code: "DEPENDENCY_NOT_READY", message: "A required related record is not available yet; the change will be retried." };
+    case "23503": return { code: "DEPENDENCY_NOT_READY", message: dependencyNotReadyMessage(error.message) };
     case "22023":
     case "22P02":
     case "23502": return { code: "VALIDATION_ERROR", message: "The mutation payload is invalid." };

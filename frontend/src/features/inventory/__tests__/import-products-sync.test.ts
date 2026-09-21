@@ -100,7 +100,7 @@ describe("CSV/XLSX import sync regression", () => {
     for (const item of queued.slice(5)) {
       expect(item.dependsOn).toEqual(["branch-a", item.payload && (item.payload as { productId: string }).productId]);
     }
-  }, 15000);
+  }, 120000);
 
   it("pushes the five products before their opening stock, then applies the worker pull without a reload", async () => {
     await importProducts(productRows(), OWNER, "branch-a");

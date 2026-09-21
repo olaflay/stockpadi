@@ -132,4 +132,78 @@ describe("preloadSessionData diagnostics", () => {
       lastServerContactAt: expect.any(String),
     });
   });
+
+  it("does not advance the completed cursor when a pull page is only partially applied", async () => {
+    await db.syncPullState.put({
+      id: "test-business:session",
+      businessId: "test-business",
+      cursor: "last-complete",
+      startedAt: "2026-09-20T10:00:00.000Z",
+      completedAt: "2026-09-20T10:00:00.000Z",
+      pagesFetched: 1,
+      entityCounts: {},
+      partialErrors: [],
+      lastCompletePullAt: "2026-09-20T10:00:00.000Z",
+      lastPullTrigger: "boot",
+      lastInvalidationReceivedAt: null,
+      lastServerContactAt: null,
+      lastSuccessfulPushAt: null,
+    });
+
+    serverGet
+      .mockResolvedValueOnce({
+        ok: true,
+        businessId: "test-business",
+        serverTime: "2026-09-20T10:05:00.000Z",
+        cursor: "must-not-be-committed",
+        nextCursor: null,
+        hasMore: false,
+        entities: [
+          {
+            entity: "products",
+            success: true,
+            records: [{ id: "p-partial", name: "Pending Product", sku: "PENDING", cost_price: 1, sell_price: 2, unit_label: "piece", expiry_tracking: "off", expiry_date: null, low_stock_threshold: null, version: 1, updated_at: "2026-09-20T10:04:00.000Z" }],
+            lastSuccessfulPullAt: "2026-09-20T10:05:00.000Z",
+            error: null,
+          },
+          {
+            entity: "inventory",
+            success: false,
+            records: [],
+            lastSuccessfulPullAt: null,
+            error: { code: "TEMPORARY_UNAVAILABLE", message: "Inventory was unavailable" },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        businessId: "test-business",
+        serverTime: "2026-09-20T10:06:00.000Z",
+        cursor: "completed-after-retry",
+        nextCursor: null,
+        hasMore: false,
+        entities: [{
+          entity: "products",
+          success: true,
+          records: [{ id: "p-after-retry", name: "Product After Retry", sku: "RETRY", cost_price: 1, sell_price: 3, unit_label: "piece", expiry_tracking: "off", expiry_date: null, low_stock_threshold: null, version: 1, updated_at: "2026-09-20T10:05:30.000Z" }],
+          lastSuccessfulPullAt: "2026-09-20T10:06:00.000Z",
+          error: null,
+        }],
+      });
+
+    const partial = await preloadSessionData(true, "poll");
+
+    expect(partial.fullySynced).toBe(false);
+    expect(await db.syncPullState.get("test-business:session")).toMatchObject({
+      cursor: "last-complete",
+      lastCompletePullAt: "2026-09-20T10:00:00.000Z",
+    });
+
+    const recovered = await preloadSessionData(true, "visibility");
+
+    expect(recovered.fullySynced).toBe(true);
+    expect(serverGet.mock.calls[1][0]).toBe("/api/sync/pull?cursor=last-complete");
+    expect(await db.products.get("p-after-retry")).toMatchObject({ name: "Product After Retry" });
+    expect(await db.syncPullState.get("test-business:session")).toMatchObject({ cursor: "completed-after-retry" });
+  });
 });

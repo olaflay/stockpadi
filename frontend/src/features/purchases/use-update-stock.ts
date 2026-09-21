@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
+import { getStockByProduct } from "@/features/inventory/product-insights";
 
 export interface RowState {
   name: string;
@@ -60,14 +61,7 @@ export function useUpdateStockRows(
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const stockByProduct = useLiveQuery(async () => {
-    const movements = await tenantArray(db.stockMovements.where("branchId").equals(branchId));
-    const map = new Map<string, number>();
-    for (const movement of movements) {
-      map.set(movement.productId, (map.get(movement.productId) ?? 0) + movement.quantityDelta);
-    }
-    return map;
-  }, [branchId]);
+  const stockByProduct = useLiveQuery(() => getStockByProduct(branchId), [branchId]);
 
   function currentStockFor(productId: string): number {
     return stockByProduct?.get(productId) ?? 0;

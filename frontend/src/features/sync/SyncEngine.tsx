@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { drainOutbox, recoverStuckSyncingItems, recoverStaleSyncingItems, refreshActiveAccountContext } from "@/features/sync/drain-outbox";
 import { preloadSessionData, type SyncPullTrigger } from "@/features/sync/preload-session-data";
 import { getSupabase } from "@/lib/supabase";
+import { setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
 const ACTIVE_POLL_MS = 30_000;
 
@@ -14,11 +15,18 @@ const ACTIVE_POLL_MS = 30_000;
  * pull so server canonicalization is reflected locally on the same device.
  */
 export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<void> {
-  await recoverStaleSyncingItems();
-  await recoverStuckSyncingItems();
-  await refreshActiveAccountContext();
-  const pushResult = await drainOutbox();
-  await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+  setSyncRuntimePhase("syncing");
+  try {
+    await recoverStaleSyncingItems();
+    await recoverStuckSyncingItems();
+    await refreshActiveAccountContext();
+    setSyncRuntimePhase("uploading");
+    const pushResult = await drainOutbox();
+    setSyncRuntimePhase("downloading");
+    await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+  } finally {
+    setSyncRuntimePhase("idle");
+  }
 }
 
 /**

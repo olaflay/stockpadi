@@ -98,6 +98,7 @@ async function drainOnce(): Promise<void> {
     // the same tenant's local category row. Never invent a category or use a
     // row from another business.
     await restoreMissingProductCategoryDependencies(queued, restoredCategoryIds);
+    await linkQueuedProductCategoryDependencies(queued);
     queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant);
     const allActive = (await db.outbox.toArray()).filter(matchesActiveTenant);
 
@@ -142,6 +143,43 @@ async function drainOnce(): Promise<void> {
     const progressed = await drainSlice(ready.slice(0, DRAIN_BATCH_SIZE));
     if (!progressed) return;
   }
+}
+
+/**
+ * A product is sorted before other mutations so catalogue rows reach the
+ * server before stock movements. Categories are a product prerequisite,
+ * however, and must be the exception to that priority rule. Add the
+ * dependency while both mutations are still local so a batch can never send
+ * the product ahead of its queued category and trigger a foreign-key retry.
+ */
+async function linkQueuedProductCategoryDependencies(items: SyncQueueItem[]): Promise<void> {
+  const categoryIdsByBusiness = new Map<string, Set<string>>();
+  for (const item of items) {
+    if (item.type !== "category" || typeof item.businessId !== "string") continue;
+    const id = item.entityId ?? (isRecord(item.payload) && typeof item.payload.id === "string" ? item.payload.id : item.clientId);
+    if (!id) continue;
+    const ids = categoryIdsByBusiness.get(item.businessId) ?? new Set<string>();
+    ids.add(id);
+    ids.add(item.clientId);
+    if (item.mutationId) ids.add(item.mutationId);
+    categoryIdsByBusiness.set(item.businessId, ids);
+  }
+
+  const updates: Array<{ key: string; changes: Partial<SyncQueueItem> }> = [];
+  for (const item of items) {
+    if (item.type !== "product" || typeof item.businessId !== "string" || !isRecord(item.payload)) continue;
+    const categoryId = item.payload.categoryId;
+    if (typeof categoryId !== "string") continue;
+    const categoryIds = categoryIdsByBusiness.get(item.businessId);
+    if (!categoryIds?.has(categoryId)) continue;
+    if ((item.dependsOn ?? []).includes(categoryId)) continue;
+    const dependsOn = [...(item.dependsOn ?? []), categoryId];
+    updates.push({
+      key: item.clientId,
+      changes: { dependsOn, dependsOnMutationIds: [...(item.dependsOnMutationIds ?? []), categoryId] },
+    });
+  }
+  if (updates.length > 0) await db.outbox.bulkUpdate(updates);
 }
 
 async function restoreMissingProductCategoryDependencies(items: SyncQueueItem[], restoredCategoryIds: Set<string>): Promise<void> {

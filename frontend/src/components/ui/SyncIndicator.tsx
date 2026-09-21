@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw, Zap } from "lucide-react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { retryFailedOutboxItems, drainOutbox } from "@/features/sync/drain-outbox";
@@ -9,6 +10,9 @@ import { getLocalBusinessId } from "@/lib/local-tenant";
 import { useLiveQuery } from "dexie-react-hooks";
 import { preloadSessionData } from "@/features/sync/preload-session-data";
 import { useSyncSafety } from "@/lib/use-sync-safety";
+import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
+
+const CLOUD_HEALTH_MAX_AGE_MS = 90_000;
 
 /**
  * Sync status indicator with manual "Force Sync Now" control.
@@ -26,17 +30,33 @@ export function SyncIndicator({
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const isOnline = useOnlineStatus();
+  const router = useRouter();
+  const runtimePhase = useSyncRuntimePhase();
   const pullDiagnostics = useLiveQuery(async () => {
     const businessId = await getLocalBusinessId();
     return businessId ? db.syncDiagnostics.where("businessId").equals(businessId).toArray() : [];
   }, [], []);
   const pullFailure = pullDiagnostics?.some((diagnostic) => !diagnostic.success) ?? false;
   const pullComplete = pullDiagnostics?.some((diagnostic) => diagnostic.entity === "session" && diagnostic.success) ?? false;
+  const pullState = useLiveQuery(async () => {
+    const businessId = await getLocalBusinessId();
+    return businessId ? db.syncPullState.get(`${businessId}:session`) : undefined;
+  }, [], undefined);
   const syncSafety = useSyncSafety();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { showToast } = useToast();
   const isContrast = variant === "contrast";
+  const cloudHealthy = Boolean(
+    isOnline &&
+    pullComplete &&
+    !pullFailure &&
+    pullState?.lastCompletePullAt &&
+    pullState.lastServerContactAt &&
+    Date.now() - new Date(pullState.lastServerContactAt).getTime() <= CLOUD_HEALTH_MAX_AGE_MS
+  );
+  const openDiagnostics = () => router.push("/settings/sync-health");
+  const phaseLabel = runtimePhase === "uploading" ? "↑ Uploading" : runtimePhase === "downloading" ? "↓ Downloading" : "↕ Syncing";
 
   const handleForceSync = async () => {
     if (isSyncing) return;
@@ -50,6 +70,7 @@ export function SyncIndicator({
       return;
     }
     setIsSyncing(true);
+    setSyncRuntimePhase("syncing");
     if (compact && pendingCount > 0) {
       showToast(`Backing up ${pendingCount} change${pendingCount === 1 ? "" : "s"} to cloud…`, "neutral");
     }
@@ -68,6 +89,7 @@ export function SyncIndicator({
     } catch {
       showToast("Could not complete cloud sync. Check connection and retry.", "warning");
     } finally {
+      setSyncRuntimePhase("idle");
       setIsSyncing(false);
     }
   };
@@ -93,10 +115,10 @@ export function SyncIndicator({
     return (
       <button
         type="button"
-        onClick={handleForceSync}
+        onClick={openDiagnostics}
         disabled={isSyncing || !isOnline}
         role="status"
-        title="Sync is required before more high-risk offline operations"
+        title="Open Sync Diagnostics"
         className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-amber-400 text-black" : "bg-warning-container text-on-warning-container"}`}
       >
         <AlertTriangle size={13} aria-hidden />
@@ -111,11 +133,11 @@ export function SyncIndicator({
         <div className="inline-flex items-center gap-1.5">
           <button
             type="button"
-            onClick={handleRetryFailed}
+            onClick={openDiagnostics}
             disabled={isRetrying}
             role="status"
-            title={`${failedCount} changes didn't sync · Tap to retry`}
-            aria-label={`${failedCount} changes didn't sync · Tap to retry`}
+            title="Open Sync Diagnostics"
+            aria-label="Open Sync Diagnostics"
             className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold disabled:opacity-70 transition-transform active:scale-95 ${
               isContrast ? "bg-red-500 text-white" : "bg-danger-container text-on-danger-container"
             }`}
@@ -166,15 +188,10 @@ export function SyncIndicator({
       return (
         <button
           type="button"
-          onClick={() =>
-            showToast(
-              `You're offline. ${pendingCount} change${pendingCount === 1 ? "" : "s"} saved locally on this device.`,
-              "neutral"
-            )
-          }
+          onClick={openDiagnostics}
           role="status"
-          title={`${pendingCount} changes saved on this device (offline)`}
-          aria-label={`${pendingCount} changes saved on this device (offline)`}
+          title="Open Sync Diagnostics"
+          aria-label="Open Sync Diagnostics"
           className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-transform active:scale-95 ${
             isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
           }`}
@@ -193,12 +210,7 @@ export function SyncIndicator({
     return (
       <button
         type="button"
-        onClick={() =>
-          showToast(
-            `You're offline. ${pendingCount} change${pendingCount === 1 ? "" : "s"} saved locally on this device.`,
-            "neutral"
-          )
-        }
+        onClick={openDiagnostics}
         role="status"
         className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted"
       >
@@ -207,7 +219,7 @@ export function SyncIndicator({
           className="h-2 w-2 rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>{pendingCount} saved on device · Offline</span>
+        <span>Offline — changes saved</span>
       </button>
     );
   }
@@ -215,32 +227,39 @@ export function SyncIndicator({
   if (pendingCount === 0 && pullFailure) {
     if (compact) {
       return (
-        <button type="button" onClick={handleForceSync} disabled={isSyncing} role="status" title="Some data could not refresh. Tap to retry." aria-label="Some data could not refresh. Tap to retry." className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning"}`}>
+        <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" title="Open Sync Diagnostics" aria-label="Open Sync Diagnostics" className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning"}`}>
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-          <span>Refresh needed</span>
-          <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
+          <span>! Needs attention</span>
         </button>
       );
     }
     return (
-      <button type="button" onClick={handleForceSync} disabled={isSyncing} role="status" aria-label="Some cloud data could not refresh. Tap to retry." className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
+      <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
         <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-        Some cloud data couldn&apos;t refresh
-        <RefreshCw size={10} className={isSyncing ? "animate-spin" : ""} />
+        ! Needs attention
       </button>
     );
   }
 
-  if (pendingCount === 0) {
+  if (pendingCount === 0 && (runtimePhase !== "idle" || !cloudHealthy)) {
+    return (
+      <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" title="Open Sync Diagnostics" className={`inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] transition-colors ${isContrast ? "text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}>
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
+        {runtimePhase === "idle" ? "! Needs attention" : phaseLabel}
+      </button>
+    );
+  }
+
+  if (pendingCount === 0 && runtimePhase === "idle" && cloudHealthy) {
     if (compact) {
       return (
         <button
           type="button"
-          onClick={handleForceSync}
+          onClick={openDiagnostics}
           disabled={isSyncing}
           role="status"
-          title={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
-          aria-label={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
+          title="Open Sync Diagnostics"
+          aria-label="Open Sync Diagnostics"
           className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs transition-colors disabled:opacity-70 ${
             isContrast
               ? "text-brand-accent-contrast/90 hover:text-white hover:bg-white/10"
@@ -260,15 +279,16 @@ export function SyncIndicator({
     return (
       <button
         type="button"
-        onClick={handleForceSync}
+        onClick={openDiagnostics}
         disabled={isSyncing}
         role="status"
-        aria-label={pullComplete ? "All changes backed up. Tap to force sync." : "Complete the initial sync."}
+        aria-label="Open Sync Diagnostics"
+        title="Open Sync Diagnostics"
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
         {pullComplete ? "Synced" : "Sync not checked"}
-        <RefreshCw size={10} className={isSyncing ? "animate-spin" : ""} />
+        <RefreshCw size={10} aria-hidden />
       </button>
     );
   }
@@ -276,13 +296,15 @@ export function SyncIndicator({
   if (compact) {
     return (
       <div className="inline-flex items-center gap-1.5">
-        <span
-          role="status"
-          title={`${pendingCount} changes waiting to sync`}
-          aria-label={`${pendingCount} changes waiting to sync`}
-          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold ${
-            isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
-          }`}
+      <button
+        type="button"
+        onClick={openDiagnostics}
+        role="status"
+        title={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
+        aria-label={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
+        className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors ${
+          isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
+        }`}
         >
           <span
             aria-hidden
@@ -290,7 +312,7 @@ export function SyncIndicator({
             style={{ background: isContrast ? "#86efac" : "var(--color-brand-accent)" }}
           />
           <span className="font-number leading-none">{isSyncing ? "…" : pendingCount}</span>
-        </span>
+        </button>
         <button
           type="button"
           onClick={handleForceSync}
@@ -313,9 +335,12 @@ export function SyncIndicator({
 
   return (
     <div className="inline-flex items-center gap-2">
-      <span
+      <button
+        type="button"
+        onClick={openDiagnostics}
         role="status"
-        aria-label={`${pendingCount} changes waiting to sync`}
+        title="Open Sync Diagnostics"
+        aria-label={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
         className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted"
       >
         <span
@@ -323,8 +348,8 @@ export function SyncIndicator({
           className="h-2 w-2 animate-pulse rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>{pendingCount} {pendingCount === 1 ? "action" : "actions"} pending</span>
-      </span>
+        <span>{runtimePhase === "idle" ? "↕ Syncing" : phaseLabel} · {pendingCount} pending</span>
+      </button>
       <button
         type="button"
         onClick={handleForceSync}

@@ -238,6 +238,57 @@ describe("drainOutbox", () => {
     expect(await db.outbox.toArray()).toHaveLength(0);
   });
 
+  it("links a queued product to its queued category before batching", async () => {
+    await setLocalBusinessId("test-business");
+    await db.categories.put({ id: "category-before-product", businessId: "test-business", name: "Drinks" });
+    await db.outbox.bulkAdd([
+      {
+        clientId: "product-category-order",
+        mutationId: "product-category-order",
+        entityId: "product-category-order",
+        type: "product",
+        operation: "upsert",
+        expectedVersion: 1,
+        payload: { id: "product-category-order", version: 1, categoryId: "category-before-product" },
+        createdAtLocal: new Date().toISOString(),
+        status: "pending",
+        attemptCount: 0,
+        lastError: null,
+        businessId: "test-business",
+      },
+      {
+        clientId: "category-before-product",
+        mutationId: "category-before-product",
+        entityId: "category-before-product",
+        type: "category",
+        operation: "upsert",
+        payload: { id: "category-before-product", name: "Drinks" },
+        createdAtLocal: new Date().toISOString(),
+        status: "pending",
+        attemptCount: 0,
+        lastError: null,
+        businessId: "test-business",
+      },
+    ]);
+
+    mockSession = { access_token: "test-token" };
+    const batches: string[][] = [];
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init: { body: string }) => {
+      const body = JSON.parse(init.body) as { batch: Array<{ client_id: string; type: string }> };
+      batches.push(body.batch.map((item) => item.type));
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ results: body.batch.map((item) => ({ clientId: item.client_id, status: "applied", ...(item.type === "product" ? { version: 1 } : {}) })) }),
+      });
+    }));
+
+    const { drainOutbox } = await import("@/features/sync/drain-outbox");
+    await drainOutbox();
+
+    expect(batches).toEqual([["category"], ["product"]]);
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
   it("recreates a missing local category mutation before retrying its dependent product", async () => {
     await setLocalBusinessId("test-business");
     await db.categories.put({ id: "category-1", businessId: "test-business", name: "Drinks" });

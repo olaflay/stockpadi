@@ -15,6 +15,7 @@ import { productFormSchema, type ProductFormInput, type ProductFormValues } from
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { findProductReferenceConflict } from "@/features/inventory/product-references";
 import { writeStockAdjustment } from "@/features/inventory/write-stock-adjustment";
+import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 
 /**
  * All state and write-path logic for the Edit Product screen: loading the
@@ -144,7 +145,7 @@ export function useEditProductForm(id: string) {
       totalStock !== undefined &&
       newStockQty !== totalStock
     ) {
-      const effectiveBranchId = stockBranchId ?? (branches && branches.length > 0 ? branches[0].id : null);
+      const effectiveBranchId = stockBranchId ?? resolveDefaultBranch(branches, user) ?? null;
       if (effectiveBranchId) {
         await writeStockAdjustment({
           branchId: effectiveBranchId,
