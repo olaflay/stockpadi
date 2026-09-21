@@ -1,6 +1,6 @@
 import type { AccountContext } from "../accounts/account-context.js";
 import { HttpError } from "../../shared/errors/http-error.js";
-import { WORKER_CAPABILITIES, type WorkerCapability } from "@stockpadi/contracts";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "../../shared/contracts.generated.js";
 
 export { WORKER_CAPABILITIES };
 export type { WorkerCapability };

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { WORKER_CAPABILITIES, type WorkerCapability } from "@stockpadi/contracts";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "../../shared/contracts.generated.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 
 export interface StaffListItem {

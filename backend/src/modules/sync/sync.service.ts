@@ -3,7 +3,7 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireCapability, requireAssignedBranch, type Capability } from "../authorization/capabilities.js";
-import { isSyncEntityType, type SyncEntityType } from "@stockpadi/contracts";
+import { isSyncEntityType, type SyncEntityType } from "../../shared/contracts.generated.js";
 
 const MAX_BATCH_SIZE = 500;
 

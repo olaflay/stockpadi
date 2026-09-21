@@ -1,5 +1,5 @@
 import { HttpError } from "../../shared/errors/http-error.js";
-import { WORKER_CAPABILITIES, type WorkerCapability } from "@stockpadi/contracts";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "../../shared/contracts.generated.js";
 
 export type WorkerAction = "create" | "reset_password" | "deactivate" | "reactivate" | "update_permissions" | "assign_branches" | "designate_manager";
 export interface WorkerRequest { action: WorkerAction; userId?: string; fullName?: string; email?: string; branchId?: string | null; branchIds?: string[]; capabilities?: WorkerCapability[]; isManager?: boolean; }

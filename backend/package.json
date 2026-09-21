@@ -8,20 +8,19 @@
     "node": "24.x"
   },
   "dependencies": {
-    "@stockpadi/contracts": "file:../packages/contracts",
     "@supabase/supabase-js": "^2.112.2",
     "@types/nodemailer": "^8.0.1",
     "nodemailer": "^9.0.5",
     "pg": "^8.23.0"
   },
   "scripts": {
-    "prebuild": "npm --prefix ../packages/contracts run build",
+    "prebuild": "node scripts/prepare-contracts.mjs",
     "build": "tsc",
     "start": "npm run build && node --env-file=.env dist/src/server.js",
     "provision:admin": "node --env-file=.env scripts/provision-platform-admin.mjs",
-    "pretest": "npm --prefix ../packages/contracts run build",
+    "pretest": "node scripts/prepare-contracts.mjs",
     "test": "vitest run",
-    "pretypecheck": "npm --prefix ../packages/contracts run build",
+    "pretypecheck": "node scripts/prepare-contracts.mjs",
     "typecheck": "tsc --noEmit",
     "seed:owner": "node --env-file=.env scripts/seed-owner.mjs",
     "check:auth": "node scripts/check-auth.mjs",
