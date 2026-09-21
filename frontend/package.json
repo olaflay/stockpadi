@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm --prefix ../packages/contracts run build && node scripts/check-secrets.mjs",
+    "prebuild": "node node_modules/typescript/bin/tsc -p ../packages/contracts/tsconfig.json && node scripts/check-secrets.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",

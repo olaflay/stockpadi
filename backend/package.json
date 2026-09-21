@@ -5,7 +5,7 @@
   "type": "module",
   "description": "StockPadi backend: Postgres migrations, RLS policies, and Supabase Edge Functions. Split from the original monorepo's supabase/ directory — see docs/BACKEND-SPLIT.md.",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@stockpadi/contracts": "file:../packages/contracts",
