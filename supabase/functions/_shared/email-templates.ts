@@ -1,11 +1,11 @@
 /**
- * StockPadi HTML & Plain Text Email Templates for Supabase Edge Functions (Deno)
+ * OjàPadi HTML & Plain Text Email Templates for Supabase Edge Functions (Deno)
  *
  * KEEP IN SYNC with backend/src/shared/email/email-templates.ts (Node copy) for the
  * shared functions (renderVerificationEmail, renderWelcomeEmail).
  *
  * Designed with universal email client compatibility (Gmail, Outlook, Apple Mail, mobile screens).
- * Uses StockPadi brand colors (#0A6E4D Emerald), clean typography, high contrast,
+ * Uses dynamic brand colors (Ojà Emerald #0B7A55), clean typography, high contrast,
  * and responsive table structures.
  */
 
@@ -13,6 +13,22 @@ export interface RenderedEmail {
   subject: string;
   text: string;
   html: string;
+}
+
+export interface BrandEmailConfig {
+  name: string;
+  displayName: string;
+  primaryColor: string;
+  accentColor: string;
+}
+
+export function getBrandConfig(): BrandEmailConfig {
+  return {
+    name: Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "OjaPadi",
+    displayName: Deno.env.get("BUSINESS_DISPLAY_NAME") || "OjàPadi",
+    primaryColor: Deno.env.get("BRAND_COLOR") || "#0B7A55",
+    accentColor: Deno.env.get("BRAND_ACCENT") || "#F59E0B",
+  };
 }
 
 /** Escapes special HTML characters to prevent XSS/injection in email bodies */
@@ -32,6 +48,9 @@ export function escapeHtml(value: string): string {
 
 /** Base layout container wrapping email content cards */
 function baseTemplate(title: string, bodyHtml: string): string {
+  const brand = getBrandConfig();
+  const safeBrandDisplay = escapeHtml(brand.displayName);
+
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -103,7 +122,7 @@ function baseTemplate(title: string, bodyHtml: string): string {
     }
     .top-accent-bar {
       height: 4px;
-      background-color: #0a6e4d;
+      background-color: ${brand.primaryColor};
       width: 100%;
       font-size: 1px;
       line-height: 1px;
@@ -114,7 +133,7 @@ function baseTemplate(title: string, bodyHtml: string): string {
     }
     .brand-badge {
       display: inline-block;
-      background-color: #0a6e4d;
+      background-color: ${brand.primaryColor};
       color: #ffffff !important;
       font-weight: 800;
       font-size: 15px;
@@ -153,7 +172,7 @@ function baseTemplate(title: string, bodyHtml: string): string {
       font-size: 28px;
       font-weight: 800;
       letter-spacing: 6px;
-      color: #0a6e4d;
+      color: ${brand.primaryColor};
       line-height: 1.2;
       display: block;
       margin-bottom: 8px;
@@ -168,38 +187,25 @@ function baseTemplate(title: string, bodyHtml: string): string {
       border-radius: 9999px;
       border: 1px solid #a7f3d0;
     }
-    .credential-box {
-      background-color: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-left: 4px solid #0a6e4d;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin: 20px 0;
-      word-break: break-word;
-    }
-    .credential-row {
-      font-size: 14px;
-      color: #334155;
-    }
     .btn-table {
       margin: 24px auto 8px auto;
       width: auto !important;
     }
     .btn-cell {
       border-radius: 8px;
-      background-color: #0a6e4d;
+      background-color: ${brand.primaryColor};
       text-align: center;
     }
     .btn {
       display: inline-block;
-      background-color: #0a6e4d;
+      background-color: ${brand.primaryColor};
       color: #ffffff !important;
       font-weight: 600;
       font-size: 14px;
       text-decoration: none;
       padding: 12px 24px;
       border-radius: 8px;
-      border: 1px solid #0a6e4d;
+      border: 1px solid ${brand.primaryColor};
       text-align: center;
     }
     .security-note {
@@ -245,7 +251,7 @@ function baseTemplate(title: string, bodyHtml: string): string {
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 18px;">
                 <tr>
                   <td align="center">
-                    <div class="brand-badge">StockPadi</div>
+                    <div class="brand-badge">${safeBrandDisplay}</div>
                     <div class="subhead">Smart Retail & Point of Sale</div>
                   </td>
                 </tr>
@@ -259,7 +265,7 @@ function baseTemplate(title: string, bodyHtml: string): string {
         <table role="presentation" class="footer" border="0" cellpadding="0" cellspacing="0">
           <tr>
             <td align="center">
-              &copy; ${new Date().getFullYear()} StockPadi. All rights reserved.<br>
+              &copy; ${new Date().getFullYear()} ${safeBrandDisplay}. All rights reserved.<br>
               This is an automated security email. Please do not reply directly.
             </td>
           </tr>
@@ -273,27 +279,27 @@ function baseTemplate(title: string, bodyHtml: string): string {
 
 /**
  * Verification Code Email (6-digit OTP)
- * Simple, layman copy with 100% reliable copy-pasting across all email clients.
  */
 export function renderVerificationEmail(fullName: string, code: string): RenderedEmail {
+  const brand = getBrandConfig();
   const safeName = escapeHtml(fullName);
   const safeCode = escapeHtml(code);
-  const subject = "Your StockPadi code";
+  const subject = `Your ${brand.displayName} code`;
 
-  const text = `Hi ${fullName},\n\nYour StockPadi code is: ${code}\n\nIt expires in 30 minutes. Never share it with anyone.`;
+  const text = `Hi ${fullName},\n\nYour ${brand.displayName} code is: ${code}\n\nIt expires in 30 minutes. Never share it with anyone.`;
 
   const bodyHtml = `
     <h2 style="margin-top: 0; margin-bottom: 6px; color: #0f172a; font-size: 22px; font-weight: 800; text-align: center; letter-spacing: -0.5px;">
       Your 6-digit code
     </h2>
     <p style="margin: 0 0 20px 0; color: #475569; font-size: 14px; text-align: center; line-height: 1.5;">
-      Hi <strong>${safeName}</strong>, enter this code in StockPadi to activate your shop:
+      Hi <strong>${safeName}</strong>, enter this code in ${escapeHtml(brand.displayName)} to activate your shop:
     </p>
 
     <!-- Copy-Paste OTP Plaque -->
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 22px auto; width: 100%; max-width: 360px;">
       <tr>
-        <td align="center" style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 14px rgba(10, 110, 77, 0.07);">
+        <td align="center" style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 14px rgba(11, 122, 85, 0.07);">
           <div style="font-size: 11px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
             Your code
           </div>
@@ -313,8 +319,8 @@ export function renderVerificationEmail(fullName: string, code: string): Rendere
 
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 20px auto 14px auto;">
       <tr>
-        <td align="center" style="border-radius: 10px; background-color: #0a6e4d;">
-          <a href="${getFrontendUrl()}/verify-email" style="display: inline-block; padding: 13px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff !important; text-decoration: none; border-radius: 10px;">Open StockPadi &rarr;</a>
+        <td align="center" style="border-radius: 10px; background-color: ${brand.primaryColor};">
+          <a href="${getFrontendUrl()}/verify-email" style="display: inline-block; padding: 13px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff !important; text-decoration: none; border-radius: 10px;">Open ${escapeHtml(brand.displayName)} &rarr;</a>
         </td>
       </tr>
     </table>
@@ -328,21 +334,22 @@ export function renderVerificationEmail(fullName: string, code: string): Rendere
 }
 
 function getFrontendUrl(): string {
-  const origin = Deno.env.get("FRONTEND_ORIGIN") || Deno.env.get("SITE_URL") || "https://stockpadi-drab.vercel.app";
+  const origin = Deno.env.get("FRONTEND_ORIGIN") || Deno.env.get("SITE_URL") || "";
   return origin.trim().replace(/\/$/, "");
 }
 
 /** Welcome Email after verification completes */
 export function renderWelcomeEmail(fullName: string, storeName: string): RenderedEmail {
+  const brand = getBrandConfig();
   const safeName = escapeHtml(fullName);
   const safeStore = escapeHtml(storeName);
-  const subject = "Your StockPadi store is ready!";
+  const subject = `Your ${brand.displayName} store is ready!`;
   const dashboardUrl = `${getFrontendUrl()}/dashboard`;
 
   const text = `Hi ${fullName},\n\nCongratulations! Your email is verified and ${storeName} is ready to use.\n\nYou can now log in to add inventory, set up staff accounts, and process sales.\n\nWelcome aboard!`;
 
   const bodyHtml = `
-    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">Welcome to StockPadi!</h2>
+    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">Welcome to ${escapeHtml(brand.displayName)}!</h2>
     <p>Hi <strong>${safeName}</strong>,</p>
     <p>Your email is verified and your store <strong>${safeStore}</strong> is now active and ready for business.</p>
 
@@ -356,7 +363,7 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
     </div>
 
     <p style="text-align: center;">
-      <a href="${dashboardUrl}" class="btn">Go to StockPadi Dashboard &rarr;</a>
+      <a href="${dashboardUrl}" class="btn">Go to ${escapeHtml(brand.displayName)} Dashboard &rarr;</a>
     </p>
   `;
 

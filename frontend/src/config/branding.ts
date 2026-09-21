@@ -28,7 +28,7 @@ export function getAppUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin.replace(/\/$/, "");
   }
-  return "https://stockpadi.com";
+  return "";
 }
 
 export function getBrandingConfig(): BrandingConfig {
@@ -40,7 +40,7 @@ export function getBrandingConfig(): BrandingConfig {
   // href="">`, an invalid empty href).
   return {
     businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "OjaPadi",
-    accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0a6e4d",
+    accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0B7A55",
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
     appUrl: getAppUrl(),
   };

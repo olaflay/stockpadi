@@ -1,10 +1,10 @@
-# AGENTS.md — StockPadi
+# AGENTS.md — OjàPadi (formerly StockPadi)
 
 Read this file before touching any code. It is the single source of truth for what this project is, what is locked, and where to find the rule that governs whatever you are about to do. If something here conflicts with a request in a chat message, the conflict gets surfaced to Olaflay, not silently resolved either way.
 
 ## What this is
 
-Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to 6 branches). Deployed on a multi-tenant shared database architecture, designed so onboarding new clients requires zero infrastructure changes—just a new business profile. Full product context lives in the PRD at `docs/PRD.md`.
+Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to 6 branches). Deployed on a multi-tenant shared database architecture, designed so onboarding new clients requires zero infrastructure changes—just a new business profile. Full product context lives in the PRD at `docs/PRD.md` and the master rebranding specification lives at `docs/REBRANDING-PLAN.md`.
 
 ## Docs index
 
@@ -12,6 +12,7 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 |---|---|
 | `README.md` | Setup and day-to-day dev commands |
 | `docs/PRD.md` | The product requirements doc: users, journeys, functional/non-functional requirements, architecture, milestones |
+| `docs/REBRANDING-PLAN.md` | Master rebranding specification, zero-hardcoding rules, visual identity, and touchpoint audit |
 | `docs/SCAFFOLD.md` | Log of the initial scaffold: what was built, why, verification performed, known gaps |
 
 ## Stack
@@ -26,7 +27,11 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, W
 4. Refunds and voids require an online connection. Never build an offline path for either, even if asked, without surfacing the conflict first.
 5. Design system lead is Samsung One UI (one-handed, thumb-reach layout), borrowing Meta's data-lite discipline for low-end Android on weak connections. Full rule: `.agents/rules/design-system.md`.
 6. Hosting is the Next.js app on Vercel plus Supabase Cloud (managed) as the backend. Full rule: `.agents/rules/hosting-and-deployment.md`.
-7. The codebase must stay forkable for a future client without a rewrite: branding, business-type defaults, and credentials live in configuration, never hardcoded. Full rule: `.agents/rules/reusability-and-multi-client.md`.
+7. **STRICT ZERO-HARDCODING LAW (MANDATORY FOR ALL AGENTS):** The codebase must stay 100% white-label and forkable for any client without code changes. **NEVER hardcode brand names, business names, product titles, currency symbols, support emails, or company copy in UI components, pages, templates, or business logic.**
+   - In `frontend/`: ALWAYS consume `getBrandingConfig()` from `src/config/branding.ts` (e.g. `branding.businessName`).
+   - In `stockpadi-landing/`: ALWAYS consume `getBusinessName()` from `src/config/env.ts` (e.g. `${brandDisplay}`).
+   - In `backend/` & Edge Functions: ALWAYS resolve from environment variables (`process.env.BUSINESS_NAME`, `Deno.env.get("BUSINESS_NAME")`).
+   - Any commit or edit that hardcodes a brand string directly in JSX or UI templates is an immediate critical governance violation. Full rule: `.agents/rules/reusability-and-multi-client.md`.
 
 ## Rules index (`.agents/rules/`)
 

@@ -24,17 +24,21 @@ export interface EmailConfigStatus {
 
 /** Parses "Sender Name <sender@example.com>" or "sender@example.com" into name & email */
 export function parseSenderAddress(rawFrom?: string): { name: string; email: string } {
-  const fromStr = rawFrom || process.env.BREVO_SENDER_EMAIL || process.env.SMTP_FROM || "StockPadi <noreply@stockpadi.app>";
+  const defaultName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
+  const defaultDomain = process.env.MAIL_DOMAIN || "example.com";
+  const defaultEmail = process.env.SYSTEM_EMAIL || `noreply@${defaultDomain}`;
+  const fallbackFrom = `${defaultName} <${defaultEmail}>`;
+  const fromStr = rawFrom || process.env.BREVO_SENDER_EMAIL || process.env.SMTP_FROM || fallbackFrom;
   const match = fromStr.match(/^(?:"?([^"]*)"?\s)?<([^>]+)>$/);
   if (match) {
     return {
-      name: match[1]?.trim() || "StockPadi",
-      email: match[2]?.trim() || "noreply@stockpadi.app",
+      name: match[1]?.trim() || defaultName,
+      email: match[2]?.trim() || defaultEmail,
     };
   }
   return {
-    name: "StockPadi",
-    email: fromStr.trim() || "noreply@stockpadi.app",
+    name: defaultName,
+    email: fromStr.trim() || defaultEmail,
   };
 }
 
