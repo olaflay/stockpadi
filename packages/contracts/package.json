@@ -10,6 +10,9 @@
     }
   },
   "scripts": {
-    "build": "node ../../backend/node_modules/typescript/bin/tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5"
   }
 }
