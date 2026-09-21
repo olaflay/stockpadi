@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Trash2, X } from "lucide-react";
+import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -34,13 +34,14 @@ import { tenantArray } from "@/lib/local-tenant";
 import { PRODUCT_CAP } from "@/config/limits";
 import { searchProductsFuzzy } from "@/lib/fuzzy-search";
 
-type ProductFilter = "all" | "low-stock" | "best-sellers" | "expiring";
+type ProductFilter = "all" | "low-stock" | "best-sellers" | "expiring" | "archived";
 
 const FILTER_LABELS: Record<ProductFilter, string> = {
   all: "All",
   "low-stock": "Low stock",
   "best-sellers": "Fast sellers",
   expiring: "Expiring",
+  archived: "Archived",
 };
 
 export default function ProductsPage() {
@@ -68,6 +69,12 @@ export default function ProductsPage() {
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
+
+  useEffect(() => () => {
+    if (longPressTimerRef.current !== null) window.clearTimeout(longPressTimerRef.current);
+  }, []);
 
   // Reset visible limit when query or filter changes
   useEffect(() => {
@@ -103,16 +110,43 @@ export default function ProductsPage() {
 
   const handleArchiveSelected = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Archive ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? They won't appear in searches but historical data is preserved.`)) return;
+    const restoring = filter === "archived";
+    const action = restoring ? "Restore" : "Archive";
+    if (!window.confirm(`${action} ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? ${restoring ? "They will appear in selling and search again." : "They won't appear in selling or search, but historical data is preserved."}`)) return;
     try {
-      for (const id of selectedIds) await writeProductEditOffline(id, { archived: true }, null, user);
-      showToast(`${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} archived`, "success");
+      for (const id of selectedIds) await writeProductEditOffline(id, { archived: !restoring }, null, user);
+      showToast(`${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} ${restoring ? "restored" : "archived"}`, "success");
       setSelectedIds(new Set());
       setDeleteMode(false);
     } catch {
-      showToast("Couldn't archive products. Try again.", "danger");
+      showToast(`Couldn't ${restoring ? "restore" : "archive"} products. Try again.`, "danger");
     }
-  }, [selectedIds, showToast, user]);
+  }, [filter, selectedIds, showToast, user]);
+
+  const startLongPress = useCallback((id: string) => {
+    if (!canEditProducts) return;
+    longPressTriggeredRef.current = false;
+    if (longPressTimerRef.current !== null) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setDeleteMode(true);
+      setSelectedIds(new Set([id]));
+    }, 550);
+  }, [canEditProducts]);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const suppressLongPressNavigation = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!longPressTriggeredRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    longPressTriggeredRef.current = false;
+  }, []);
 
   const result = useLiveQuery(async () => {
     try {
@@ -153,6 +187,7 @@ export default function ProductsPage() {
 
   const byFilter = result
     ? result.products.filter((product) => {
+      if (filter === "archived") return Boolean(product.archived);
       if (product.archived) return false;
       if (filter === "low-stock") return result.lowStockIds.has(product.id);
       if (filter === "best-sellers") return result.bestSellerIds.has(product.id);
@@ -370,8 +405,8 @@ export default function ProductsPage() {
                   onClick={() => { setDeleteMode(true); setMenuOpen(false); }}
                   className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-colors"
                 >
-                  <Trash2 size={16} aria-hidden />
-                  Delete selected
+                  <Archive size={16} aria-hidden />
+                  Select products to archive
                 </button>
               </div>
             )}
@@ -403,6 +438,8 @@ export default function ProductsPage() {
                   ? "Nothing is low on stock"
                   : filter === "expiring"
                     ? "Nothing expiring soon"
+                    : filter === "archived"
+                      ? "No archived products"
                     : "Add your first product"
               }
               description={
@@ -410,6 +447,8 @@ export default function ProductsPage() {
                   ? "Every product is above the low-stock threshold right now."
                   : filter === "expiring"
                     ? "Nothing is expired or due to expire in the next 7 days."
+                    : filter === "archived"
+                      ? "Archived products remain in history and can be restored here."
                     : "Your branch is set up and ready. Add products to start tracking inventory and ringing up sales."
               }
               action={
@@ -431,7 +470,10 @@ export default function ProductsPage() {
                 {deleteMode ? (
                   <button
                     type="button"
-                    onClick={() => toggleSelect(product.id)}
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest("input")) return;
+                      toggleSelect(product.id);
+                    }}
                     className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-all ${selectedIds.has(product.id)
                         ? "bg-brand-container text-on-brand-container"
                         : "bg-surface-container hover:bg-surface-container-high"
@@ -441,6 +483,7 @@ export default function ProductsPage() {
                       type="checkbox"
                       checked={selectedIds.has(product.id)}
                       onChange={() => toggleSelect(product.id)}
+                      onClick={(event) => event.stopPropagation()}
                       className="h-5 w-5 shrink-0 accent-[var(--color-brand-accent)]"
                       aria-label={`Select ${product.name}`}
                     />
@@ -471,6 +514,12 @@ export default function ProductsPage() {
                 ) : (
                   <RippleLink
                     href={`/products/${product.id}`}
+                    onPointerDown={() => startLongPress(product.id)}
+                    onPointerUp={cancelLongPress}
+                    onPointerCancel={cancelLongPress}
+                    onPointerLeave={cancelLongPress}
+                    onClick={suppressLongPressNavigation}
+                    title="Long press to select for archive"
                     className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high active:scale-[0.99] transition-all"
                   >
                     <div className="min-w-0 flex-1">
@@ -509,7 +558,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Batch delete floating action bar */}
+      {/* Batch archive/restore floating action bar */}
       {deleteMode && (
         <div className="fixed bottom-22 sm:bottom-24 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab,50)] flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
           <button
@@ -529,8 +578,8 @@ export default function ProductsPage() {
             disabled={selectedIds.size === 0}
             className="flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-medium text-white disabled:opacity-50 hover:opacity-95 transition-opacity"
           >
-            <Trash2 size={16} aria-hidden />
-            Archive
+            {filter === "archived" ? <RotateCcw size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
+            {filter === "archived" ? "Restore" : "Archive"}
           </RippleButton>
         </div>
       )}

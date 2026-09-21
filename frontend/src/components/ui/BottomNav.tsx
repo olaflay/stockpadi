@@ -9,7 +9,6 @@ import {
   BarChart3,
   Settings,
   ClipboardCheck,
-  UserCircle,
 } from "lucide-react";
 
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -22,7 +21,7 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
  * Exactly 5 buttons keep touch targets roomy and thumb-reachable on mobile.
  * Adapts dynamically:
  * - Business Owner & Admin: Dashboard | Sell | Products | Reports | Settings
- * - Worker: Dashboard | Sell | Products | Stock | Profile
+ * - Worker: Dashboard | Sell | Products | Stock | Settings
  */
 const OWNER_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
@@ -37,7 +36,7 @@ const WORKER_NAV = [
   { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
   { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
   { href: "/stock-count", label: "Stock", icon: ClipboardCheck, capability: "SUBMIT_STOCK_COUNT" as const },
-  { href: "/profile", label: "Profile", icon: UserCircle },
+  { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 export function BottomNav() {

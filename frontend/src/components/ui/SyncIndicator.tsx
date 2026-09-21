@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw, Zap } from "lucide-react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
@@ -45,15 +45,22 @@ export function SyncIndicator({
   const syncSafety = useSyncSafety();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
   const { showToast } = useToast();
   const isContrast = variant === "contrast";
+  useEffect(() => {
+    const updateNow = () => setNow(Date.now());
+    updateNow();
+    const interval = window.setInterval(updateNow, 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
   const cloudHealthy = Boolean(
     isOnline &&
     pullComplete &&
     !pullFailure &&
     pullState?.lastCompletePullAt &&
     pullState.lastServerContactAt &&
-    Date.now() - new Date(pullState.lastServerContactAt).getTime() <= CLOUD_HEALTH_MAX_AGE_MS
+    now !== null && now - new Date(pullState.lastServerContactAt).getTime() <= CLOUD_HEALTH_MAX_AGE_MS
   );
   const openDiagnostics = () => router.push("/settings/sync-health");
   const phaseLabel = runtimePhase === "uploading" ? "↑ Uploading" : runtimePhase === "downloading" ? "↓ Downloading" : "↕ Syncing";

@@ -34,6 +34,7 @@ export type SyncPullTrigger =
   | "poll"
   | "online"
   | "auth"
+  | "focus"
   | "push-success"
   | "manual";
 
@@ -151,7 +152,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   const stagedRecords = new Map<PullEntityName, unknown[]>();
   const successfulPullAt = new Map<PullEntityName, string | null>();
   const pullStartedAt = new Date().toISOString();
-  const isInvalidationTrigger = ["online", "auth", "push-success"].includes(trigger);
+  const isInvalidationTrigger = ["online", "auth", "focus", "push-success"].includes(trigger);
   await db.syncPullState.put({
     ...(priorState ?? {}),
     id: pullStateId,
@@ -547,7 +548,49 @@ async function applyBranches(records: unknown[], businessId: string): Promise<nu
 async function applyCategories(records: unknown[], businessId: string): Promise<number> {
   const protectedIds = await pendingIds(businessId, "category");
   const categories = (records as Array<{ id: string; name: string }>).filter((category) => !protectedIds.has(category.id));
-  await db.categories.bulkPut(categories.map((category) => ({ id: category.id, businessId, name: category.name } as LocalCategory)));
+  const incomingIds = new Set(categories.map((category) => category.id));
+  await db.transaction("rw", db.categories, db.products, db.outbox, async () => {
+    await db.categories.bulkPut(categories.map((category) => ({ id: category.id, businessId, name: category.name } as LocalCategory)));
+
+    // A previous client version could leave two local rows that differ only by
+    // case. The server's case-insensitive unique index is authoritative, so
+    // coalesce only unprotected duplicates to the server row and carry the
+    // canonical id through local products and pending mutations.
+    const allCategories = (await db.categories.toArray()).filter((category) => category.businessId === businessId);
+    const products = await db.products.toArray();
+    const outbox = await db.outbox.toArray();
+    const winners = new Map<string, LocalCategory>();
+    for (const candidate of allCategories) {
+      const key = candidate.name.trim().toLocaleLowerCase();
+      const current = winners.get(key);
+      if (!current || (incomingIds.has(candidate.id) && !incomingIds.has(current.id))) winners.set(key, candidate);
+    }
+
+    for (const winner of winners.values()) {
+      const duplicateIds = allCategories
+        .filter((candidate) => candidate.id !== winner.id && candidate.name.trim().toLocaleLowerCase() === winner.name.trim().toLocaleLowerCase())
+        .map((candidate) => candidate.id);
+      for (const duplicateId of duplicateIds) {
+        if (protectedIds.has(duplicateId)) continue;
+        for (const product of products) {
+          if (product.businessId === businessId && product.categoryId === duplicateId) {
+            await db.products.update(product.id, { categoryId: winner.id });
+          }
+        }
+        for (const item of outbox) {
+          if (item.businessId !== businessId || !isRecord(item.payload)) continue;
+          const payload = item.payload.categoryId === duplicateId
+            ? { ...item.payload, categoryId: winner.id }
+            : item.payload;
+          const dependencies = (item.dependsOn ?? []).map((dependency) => dependency === duplicateId ? winner.id : dependency);
+          if (payload !== item.payload || dependencies.some((dependency, index) => dependency !== (item.dependsOn ?? [])[index])) {
+            await db.outbox.update(item.clientId, { payload, dependsOn: dependencies, dependsOnMutationIds: dependencies });
+          }
+        }
+        await db.categories.delete(duplicateId);
+      }
+    }
+  });
   return categories.length;
 }
 

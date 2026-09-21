@@ -34,6 +34,7 @@ function baseProduct(overrides: Partial<Product> = {}): Product {
 describe("writeNewProductOffline", () => {
   beforeEach(async () => {
     await db.products.clear();
+    await db.categories.clear();
     await db.stockMovements.clear();
     await db.outbox.clear();
   });
@@ -86,11 +87,28 @@ describe("writeNewProductOffline", () => {
       expect.objectContaining({ type: "stock_adjustment", payload: expect.objectContaining({ productId: product.id, quantityDelta: 0, reasonCode: "initial_stock" }) }),
     ]));
   });
+
+  it("reuses an existing category case-insensitively inside the write transaction", async () => {
+    const existingCategoryId = "category-drinks";
+    await db.categories.add({ id: existingCategoryId, businessId: "test-business", name: "Drinks" });
+    const product = baseProduct({ categoryId: "new-category-id" });
+
+    await writeNewProductOffline(product, null, { id: "new-category-id", name: " drinks " }, OWNER);
+
+    expect(await db.categories.toArray()).toEqual([
+      expect.objectContaining({ id: existingCategoryId, name: "Drinks" }),
+    ]);
+    expect(await db.products.get(product.id)).toMatchObject({ categoryId: existingCategoryId });
+    expect(await db.outbox.toArray()).toEqual([
+      expect.objectContaining({ type: "product", entityId: product.id }),
+    ]);
+  });
 });
 
 describe("writeProductEditOffline", () => {
   beforeEach(async () => {
     await db.products.clear();
+    await db.categories.clear();
     await db.outbox.clear();
   });
 
@@ -108,6 +126,42 @@ describe("writeProductEditOffline", () => {
     expect(outbox[0].type).toBe("product");
     expect(outbox[0].clientId).toBe(product.id);
     expect((outbox[0].payload as { sellPrice: number }).sellPrice).toBe(1500);
+  });
+
+  it("archives a product locally and queues the soft-delete snapshot", async () => {
+    const product = baseProduct();
+    await db.products.add({ ...product, businessId: "test-business" });
+
+    await writeProductEditOffline(product.id, { archived: true }, null, OWNER);
+
+    expect(await db.products.get(product.id)).toMatchObject({ archived: true });
+    expect(await db.outbox.get(product.id)).toMatchObject({
+      type: "product",
+      payload: expect.objectContaining({ id: product.id, archived: true }),
+    });
+  });
+
+  it("queues one durable archive mutation for every selected product", async () => {
+    const first = baseProduct({ id: "archive-first", sku: "ARCHIVE-1" });
+    const second = baseProduct({ id: "archive-second", sku: "ARCHIVE-2" });
+    await db.products.bulkAdd([
+      { ...first, businessId: "test-business" },
+      { ...second, businessId: "test-business" },
+    ]);
+
+    await Promise.all([
+      writeProductEditOffline(first.id, { archived: true }, null, OWNER),
+      writeProductEditOffline(second.id, { archived: true }, null, OWNER),
+    ]);
+
+    expect(await db.products.bulkGet([first.id, second.id])).toEqual([
+      expect.objectContaining({ id: first.id, archived: true }),
+      expect.objectContaining({ id: second.id, archived: true }),
+    ]);
+    expect(await db.outbox.bulkGet([first.id, second.id])).toEqual([
+      expect.objectContaining({ type: "product", payload: expect.objectContaining({ id: first.id, archived: true }) }),
+      expect.objectContaining({ type: "product", payload: expect.objectContaining({ id: second.id, archived: true }) }),
+    ]);
   });
 
   it("merges partial edits into a complete snapshot and coalesces a second pending edit", async () => {

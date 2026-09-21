@@ -41,4 +41,10 @@ describe("runSyncCycle", () => {
 
     expect(preloadSessionData).toHaveBeenNthCalledWith(1, true, "online");
   });
+
+  it("forces an incremental pull when an active app returns to the foreground", async () => {
+    await runSyncCycle("focus");
+
+    expect(preloadSessionData).toHaveBeenCalledWith(true, "focus");
+  });
 });
