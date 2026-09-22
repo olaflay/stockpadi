@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw, Zap } from "lucide-react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
-import { retryFailedOutboxItems, drainOutbox } from "@/features/sync/drain-outbox";
+import { retryFailedOutboxItems } from "@/features/sync/drain-outbox";
 import { useToast } from "@/components/ui/Toast";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { db } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import { useLiveQuery } from "dexie-react-hooks";
-import { preloadSessionData } from "@/features/sync/preload-session-data";
+import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
@@ -82,16 +82,19 @@ export function SyncIndicator({
       showToast(`Backing up ${pendingCount} change${pendingCount === 1 ? "" : "s"} to cloud…`, "neutral");
     }
     try {
-      const result = await drainOutbox();
-      const pullResult = await preloadSessionData(true);
-      if (result.pendingRemaining === 0 && pullResult.fullySynced) {
+      // Use the same authoritative cycle as automatic sync. In particular it
+      // refreshes a worker's branch assignment before validating pulled stock.
+      const cycle = await runSyncCycle("manual");
+      if (!cycle) return;
+      const { pushResult, pullResult } = cycle;
+      if (pushResult.pendingRemaining === 0 && pullResult.fullySynced) {
         showToast("Sync complete! All changes backed up.", "success");
-      } else if (result.pendingRemaining === 0 && !pullResult.fullySynced) {
+      } else if (pushResult.pendingRemaining === 0 && !pullResult.fullySynced) {
         showToast("Changes are backed up, but some cloud data could not refresh.", "warning");
-      } else if (result.drained > 0) {
-        showToast(`${result.drained} backed up, ${result.pendingRemaining} still uploading...`, "neutral");
+      } else if (pushResult.drained > 0) {
+        showToast(`${pushResult.drained} backed up, ${pushResult.pendingRemaining} still uploading...`, "neutral");
       } else {
-        showToast(`${result.pendingRemaining} changes waiting to upload.`, "neutral");
+        showToast(`${pushResult.pendingRemaining} changes waiting to upload.`, "neutral");
       }
     } catch {
       showToast("Could not complete cloud sync. Check connection and retry.", "warning");
@@ -106,10 +109,9 @@ export function SyncIndicator({
     setIsRetrying(true);
     try {
       await retryFailedOutboxItems();
-      // A failed upload may be followed by a failed/stale pull. A worker's
-      // Retry sync action must refresh both directions, not just resend the
-      // outbox row.
-      if (isOnline) await preloadSessionData(true, "manual");
+      // Retry marks durable failures pending; the cycle immediately sends
+      // them and then pulls cloud state in both directions.
+      if (isOnline) await runSyncCycle("manual");
       const firstFailed = await db.outbox.where("status").equals("failed").first();
       const firstBlocked = await db.outbox.where("status").equals("blocked").first();
       if (["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") || ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")) {

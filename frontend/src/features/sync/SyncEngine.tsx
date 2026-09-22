@@ -14,12 +14,17 @@ const ACTIVE_POLL_MS = 30_000;
  * local outbox, then pull the server cursor. A successful push always forces a
  * pull so server canonicalization is reflected locally on the same device.
  */
-export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<void> {
+export interface SyncCycleResult {
+  pushResult: Awaited<ReturnType<typeof drainOutbox>>;
+  pullResult: Awaited<ReturnType<typeof preloadSessionData>>;
+}
+
+export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<SyncCycleResult | null> {
   // Do not even start account/push/pull work while offline. Every local write
   // is already durable in Dexie; the browser's `online` event or the next
   // bounded active polling is the fallback wake-up path when the backend has
   // no realtime connection. Local writes remain durable even while offline.
-  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return null;
   setSyncRuntimePhase("syncing");
   try {
     await recoverStaleSyncingItems();
@@ -28,7 +33,8 @@ export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<v
     setSyncRuntimePhase("uploading");
     const pushResult = await drainOutbox();
     setSyncRuntimePhase("downloading");
-    await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+    const pullResult = await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+    return { pushResult, pullResult };
   } finally {
     setSyncRuntimePhase("idle");
   }

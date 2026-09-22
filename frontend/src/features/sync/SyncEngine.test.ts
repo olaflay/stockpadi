@@ -47,4 +47,18 @@ describe("runSyncCycle", () => {
 
     expect(preloadSessionData).toHaveBeenCalledWith(true, "focus");
   });
+
+  it("uses the complete worker-safe cycle for a manual sync", async () => {
+    drainOutbox.mockResolvedValue({ drained: 2, pendingRemaining: 0 });
+
+    const result = await runSyncCycle("manual");
+
+    expect(refreshActiveAccountContext).toHaveBeenCalledOnce();
+    expect(drainOutbox).toHaveBeenCalledOnce();
+    expect(preloadSessionData).toHaveBeenCalledWith(true, "push-success");
+    expect(result).toEqual({
+      pushResult: { drained: 2, pendingRemaining: 0 },
+      pullResult: { fullySynced: true },
+    });
+  });
 });
