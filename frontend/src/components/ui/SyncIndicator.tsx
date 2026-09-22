@@ -11,8 +11,44 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
+import type { SessionPreloadResult } from "@/features/sync/preload-session-data";
 
 const CLOUD_HEALTH_MAX_AGE_MS = 90_000;
+
+const PULL_DATASET_LABELS: Record<string, string> = {
+  business_profile: "business settings",
+  branches: "branches",
+  categories: "categories",
+  products: "products",
+  inventory: "stock levels",
+  suppliers: "suppliers",
+  customers: "customers",
+  credit_movements: "customer balances",
+  sales: "sales history",
+  purchases: "purchases",
+  expenses: "expenses",
+  session: "cloud data",
+};
+
+function pullFailureMessage(result: SessionPreloadResult): string {
+  const failure = result.pulls.find((pull) => !pull.success);
+  if (!failure) return "Some cloud data is still waiting to refresh. Try again in a moment.";
+
+  const dataset = PULL_DATASET_LABELS[failure.entity] ?? "cloud data";
+  switch (failure.error?.code) {
+    case "NETWORK_UNAVAILABLE":
+      return `The connection dropped while refreshing ${dataset}. Your local changes are safe; reconnect and try again.`;
+    case "ACCOUNT_NOT_APPROVED":
+    case "BUSINESS_UNAVAILABLE":
+      return "Your account is not ready for cloud refresh yet. Local changes remain safe and will retry automatically.";
+    case "FORBIDDEN":
+      return `Your access could not refresh ${dataset}. Ask the business owner to check your access and assigned branch.`;
+    case "PULL_BRANCH_SCOPE_MISMATCH":
+      return "Your branch access changed while syncing. Sign in again after the branch assignment is confirmed.";
+    default:
+      return `The cloud could not refresh ${dataset}. Your local changes are safe; try again when the connection is stable.`;
+  }
+}
 
 /**
  * Sync status indicator with manual "Force Sync Now" control.
@@ -87,10 +123,16 @@ export function SyncIndicator({
       const cycle = await runSyncCycle("manual");
       if (!cycle) return;
       const { pushResult, pullResult } = cycle;
-      if (pushResult.pendingRemaining === 0 && pullResult.fullySynced) {
+      const businessId = await getLocalBusinessId();
+      const unresolvedPushes = businessId
+        ? (await db.outbox.toArray()).filter((item) => item.businessId === businessId && ["failed", "conflict"].includes(item.status)).length
+        : 0;
+      if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && pullResult.fullySynced) {
         showToast("Sync complete! All changes backed up.", "success");
-      } else if (pushResult.pendingRemaining === 0 && !pullResult.fullySynced) {
-        showToast("Changes are backed up, but some cloud data could not refresh.", "warning");
+      } else if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && !pullResult.fullySynced) {
+        showToast(pullFailureMessage(pullResult), "warning");
+      } else if (unresolvedPushes > 0) {
+        showToast(`${unresolvedPushes} change${unresolvedPushes === 1 ? "" : "s"} needs attention before cloud sync can finish.`, "warning");
       } else if (pushResult.drained > 0) {
         showToast(`${pushResult.drained} backed up, ${pushResult.pendingRemaining} still uploading...`, "neutral");
       } else {

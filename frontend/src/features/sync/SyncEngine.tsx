@@ -19,7 +19,37 @@ export interface SyncCycleResult {
   pullResult: Awaited<ReturnType<typeof preloadSessionData>>;
 }
 
-export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<SyncCycleResult | null> {
+let activeCycle: Promise<SyncCycleResult | null> | null = null;
+let activeTrigger: SyncPullTrigger | null = null;
+
+/**
+ * Run exactly one cycle at a time per tab. The automatic foreground poll and
+ * the Sync button share this function, so a button tap must never race a
+ * cursor write or a Dexie apply from a cycle already in progress. A manual
+ * request that arrives during a background cycle waits for that cycle and
+ * then gets its own forced pull.
+ */
+export function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<SyncCycleResult | null> {
+  if (activeCycle) {
+    if (trigger === "manual" && activeTrigger !== "manual") {
+      return activeCycle.then(() => runSyncCycle("manual"));
+    }
+    return activeCycle;
+  }
+
+  const cycle = executeSyncCycle(trigger);
+  const trackedCycle = cycle.finally(() => {
+    if (activeCycle === trackedCycle) {
+      activeCycle = null;
+      activeTrigger = null;
+    }
+  });
+  activeCycle = trackedCycle;
+  activeTrigger = trigger;
+  return trackedCycle;
+}
+
+async function executeSyncCycle(trigger: SyncPullTrigger): Promise<SyncCycleResult | null> {
   // Do not even start account/push/pull work while offline. Every local write
   // is already durable in Dexie; the browser's `online` event or the next
   // bounded active polling is the fallback wake-up path when the backend has

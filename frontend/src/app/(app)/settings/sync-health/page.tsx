@@ -12,8 +12,7 @@ import { db } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { serverGet } from "@/features/operations/server-client";
-import { drainOutbox } from "@/features/sync/drain-outbox";
-import { preloadSessionData } from "@/features/sync/preload-session-data";
+import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { canResolveConflictInPlace, discardConflictingSnapshot } from "@/features/sync/conflict-resolution";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
@@ -110,8 +109,7 @@ export default function SyncHealthPage() {
   async function syncNow() {
     setBusy(true);
     try {
-      await drainOutbox();
-      await preloadSessionData(true, "manual");
+      await runSyncCycle("manual");
     } finally {
       setBusy(false);
     }
@@ -123,7 +121,7 @@ export default function SyncHealthPage() {
     setResolvingId(item.clientId);
     try {
       await discardConflictingSnapshot(item);
-      await preloadSessionData(true, "manual");
+      await runSyncCycle("manual");
     } finally {
       setResolvingId(null);
     }
@@ -136,10 +134,10 @@ export default function SyncHealthPage() {
     const desired = item.payload as Product;
     try {
       await discardConflictingSnapshot(item);
-      const pull = await preloadSessionData(true, "manual");
+      const cycle = await runSyncCycle("manual");
       const productId = item.entityId ?? desired.id;
       const cloudProduct = productId ? await db.products.get(productId) : undefined;
-      if (!pull.fullySynced || !cloudProduct) {
+      if (!cycle?.pullResult.fullySynced || !cloudProduct) {
         // Never drop an owner change merely because the refresh failed.
         await db.outbox.put(item);
         throw new Error("The cloud version could not be confirmed. Your change remains in the conflict list.");
@@ -209,8 +207,8 @@ export default function SyncHealthPage() {
                   <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{item.lastErrorMessage ?? "This record changed on another device."}</p>
                   {canResolve ? (
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <RippleButton type="button" disabled={isResolving} onClick={() => void resolveWithCloudVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
-                      {item.type === "product" && <RippleButton type="button" disabled={isResolving} onClick={() => void keepMyProductVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
+                      <RippleButton type="button" disabled={isResolving || !online} onClick={() => void resolveWithCloudVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
+                      {item.type === "product" && <RippleButton type="button" disabled={isResolving || !online} onClick={() => void keepMyProductVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
                     </div>
                   ) : <p className="mt-3 text-[length:var(--font-size-caption)] text-warning">Ledger history is protected. Resolve this by creating a correcting stock or sales entry.</p>}
                 </article>

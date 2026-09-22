@@ -61,4 +61,21 @@ describe("runSyncCycle", () => {
       pullResult: { fullySynced: true },
     });
   });
+
+  it("serializes a manual sync behind an automatic cycle instead of racing the pull cursor", async () => {
+    let releasePush!: (value: { drained: number; pendingRemaining: number }) => void;
+    drainOutbox.mockImplementationOnce(() => new Promise((resolve) => { releasePush = resolve; }));
+
+    const automatic = runSyncCycle("poll");
+    const manual = runSyncCycle("manual");
+
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledOnce());
+
+    releasePush({ drained: 0, pendingRemaining: 0 });
+    await Promise.all([automatic, manual]);
+
+    expect(drainOutbox).toHaveBeenCalledTimes(2);
+    expect(preloadSessionData).toHaveBeenNthCalledWith(1, false, "poll");
+    expect(preloadSessionData).toHaveBeenNthCalledWith(2, true, "manual");
+  });
 });
