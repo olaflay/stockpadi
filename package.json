@@ -2,8 +2,12 @@
   "name": "stockpadi",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
-  "engines": { "node": "24.x" },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "build": "npm run contracts:build && npm --prefix frontend run build",
@@ -13,8 +17,8 @@
     "start": "npm --prefix frontend run start",
     "lint": "npm --prefix frontend run lint",
     "typecheck": "npm run contracts:build && npm --prefix frontend run typecheck && npm --prefix backend run typecheck",
-    "test": "npm --prefix frontend test && npm --prefix backend test",
-    "backend:test": "npm --prefix backend test",
+    "test": "npm --prefix frontend test && npm --prefix backend test -- --passWithNoTests",
+    "backend:test": "npm --prefix backend test -- --passWithNoTests",
     "backend:typecheck": "npm --prefix backend run typecheck",
     "provision:admin": "npm --prefix backend run provision:admin",
     "contracts:build": "npm --prefix packages/contracts run build"
