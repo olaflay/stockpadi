@@ -29,21 +29,19 @@ export function BarcodeScanner({ onResult, onCancel }: BarcodeScannerProps) {
 
     async function startScanner() {
       try {
-        const videoInputDevices = await reader.listVideoInputDevices();
-        if (videoInputDevices.length === 0) {
-          if (mounted) setError("No camera found. Connect a camera or use search instead.");
-          return;
-        }
-
-        // Try to find a back camera
-        let deviceId = videoInputDevices[0].deviceId;
-        const backCamera = videoInputDevices.find((d) => d.label.toLowerCase().includes("back"));
-        if (backCamera) {
-          deviceId = backCamera.deviceId;
-        }
-
         if (videoRef.current && mounted) {
-          await reader.decodeFromVideoDevice(deviceId, videoRef.current, (result, err) => {
+          // Ask the browser for the environment camera directly. Enumerating
+          // devices first adds an extra permission/device round trip and often
+          // selects the front camera on mobile. The ideal constraints keep this
+          // compatible with laptops that only expose one camera.
+          await reader.decodeFromConstraints({
+            audio: false,
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }, videoRef.current, (result, err) => {
             if (result && mounted && !deliveredRef.current) {
               deliveredRef.current = true;
               if (navigator.vibrate) navigator.vibrate(100);

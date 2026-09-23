@@ -26,7 +26,8 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
-import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
+import type { WorkerCapability } from "@/features/auth/authorization";
+import { WorkerCapabilityPicker } from "@/features/auth/WorkerCapabilityPicker";
 
 export default function NewStaffPage() {
   const router = useRouter();
@@ -90,7 +91,7 @@ export default function NewStaffPage() {
     return (
       <div className="flex flex-col gap-4 pb-10">
         <ScreenHeader title="Worker added" onBack={() => router.push("/staff")} />
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container p-4">
           <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
             {fullName.trim()} is ready to sign in
           </p>
@@ -138,7 +139,7 @@ export default function NewStaffPage() {
         )}
 
         {/* Personal info card */}
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container p-4">
           <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
             Staff details
           </p>
@@ -192,7 +193,7 @@ export default function NewStaffPage() {
         </div>
 
         {/* Access card */}
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container p-4">
           <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
             Access
           </p>
@@ -240,16 +241,7 @@ export default function NewStaffPage() {
               <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Every worker is assigned to one branch.</span>
             </label>
           )}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">Capabilities</legend>
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Choose only the access this worker needs. You can change it later.</p>
-            {WORKER_CAPABILITIES.map((capability) => (
-              <label key={capability} className="flex min-h-[var(--touch-target-min)] items-center gap-3 text-[length:var(--font-size-body)] text-on-surface">
-                <input type="checkbox" checked={capabilities.includes(capability)} onChange={(event) => setCapabilities((current) => event.target.checked ? [...current, capability] : current.filter((item) => item !== capability))} />
-                {capability.replaceAll("_", " ").toLowerCase()}
-              </label>
-            ))}
-          </fieldset>
+          <WorkerCapabilityPicker value={capabilities} onChange={setCapabilities} />
         </div>
 
         <RippleButton

@@ -11,7 +11,8 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
+import type { WorkerCapability } from "@/features/auth/authorization";
+import { WorkerCapabilityPicker } from "@/features/auth/WorkerCapabilityPicker";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -107,7 +108,7 @@ export default function StaffDetailPage({ params }: PageProps) {
     </section>
     {memberAccountType === "WORKER" && <section>
       <h2 className="mb-2 text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">Worker password</h2>
-      <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+      <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container p-4">
         <p className="text-[length:var(--font-size-body)] text-on-surface">A password is created by StockPadi and shown once. Share it directly with the worker (WhatsApp or in person). It is never sent by email.</p>
         {newPassword && (
           <div className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-container p-3">
@@ -124,7 +125,7 @@ export default function StaffDetailPage({ params }: PageProps) {
     </section>}
     {memberAccountType === "WORKER" && <section className="flex flex-col gap-2">
       <h2 className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">Capabilities</h2>
-      {WORKER_CAPABILITIES.map((capability) => <label key={capability} className="flex min-h-[var(--touch-target-min)] items-center gap-3 text-on-surface"><input type="checkbox" checked={capabilities.includes(capability)} onChange={(event) => setCapabilities((current) => event.target.checked ? [...current, capability] : current.filter((item) => item !== capability))} />{capability.replaceAll("_", " ").toLowerCase()}</label>)}
+      <WorkerCapabilityPicker value={capabilities} onChange={setCapabilities} />
       <RippleButton type="button" onClick={savePermissions} disabled={busy} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast">Save permissions</RippleButton>
       <div className="mt-3 flex gap-2"><select value={branchId} onChange={(event) => setBranchId(event.target.value)} className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-on-surface"><option value="">Choose manager branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><RippleButton type="button" onClick={saveManagerAssignment} disabled={busy || !branchId} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-3 text-brand-accent">Assign</RippleButton></div>
     </section>}

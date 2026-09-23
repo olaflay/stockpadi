@@ -6,7 +6,7 @@ import { preloadSessionData, type SyncPullTrigger } from "@/features/sync/preloa
 import { getSupabase } from "@/lib/supabase";
 import { setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
-const ACTIVE_POLL_MS = 3 * 60_000;
+const ACTIVE_POLL_MS = 30_000;
 
 /**
  * One orchestration cycle for the only client sync engine. Every trigger uses
@@ -14,11 +14,47 @@ const ACTIVE_POLL_MS = 3 * 60_000;
  * local outbox, then pull the server cursor. A successful push always forces a
  * pull so server canonicalization is reflected locally on the same device.
  */
-export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<void> {
+export interface SyncCycleResult {
+  pushResult: Awaited<ReturnType<typeof drainOutbox>>;
+  pullResult: Awaited<ReturnType<typeof preloadSessionData>>;
+}
+
+let activeCycle: Promise<SyncCycleResult | null> | null = null;
+let activeTrigger: SyncPullTrigger | null = null;
+
+/**
+ * Run exactly one cycle at a time per tab. The automatic foreground poll and
+ * the Sync button share this function, so a button tap must never race a
+ * cursor write or a Dexie apply from a cycle already in progress. A manual
+ * request that arrives during a background cycle waits for that cycle and
+ * then gets its own forced pull.
+ */
+export function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<SyncCycleResult | null> {
+  if (activeCycle) {
+    if (trigger === "manual" && activeTrigger !== "manual") {
+      return activeCycle.then(() => runSyncCycle("manual"));
+    }
+    return activeCycle;
+  }
+
+  const cycle = executeSyncCycle(trigger);
+  const trackedCycle = cycle.finally(() => {
+    if (activeCycle === trackedCycle) {
+      activeCycle = null;
+      activeTrigger = null;
+    }
+  });
+  activeCycle = trackedCycle;
+  activeTrigger = trigger;
+  return trackedCycle;
+}
+
+async function executeSyncCycle(trigger: SyncPullTrigger): Promise<SyncCycleResult | null> {
   // Do not even start account/push/pull work while offline. Every local write
   // is already durable in Dexie; the browser's `online` event or the next
-  // three-minute online check is the only automatic wake-up path.
-  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  // bounded active polling is the fallback wake-up path when the backend has
+  // no realtime connection. Local writes remain durable even while offline.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return null;
   setSyncRuntimePhase("syncing");
   try {
     await recoverStaleSyncingItems();
@@ -27,7 +63,8 @@ export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<v
     setSyncRuntimePhase("uploading");
     const pushResult = await drainOutbox();
     setSyncRuntimePhase("downloading");
-    await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+    const pullResult = await preloadSessionData(pushResult.drained > 0 || trigger !== "poll", pushResult.drained > 0 ? "push-success" : trigger);
+    return { pushResult, pullResult };
   } finally {
     setSyncRuntimePhase("idle");
   }
@@ -37,9 +74,8 @@ export async function runSyncCycle(trigger: SyncPullTrigger = "poll"): Promise<v
  * Invisible app-level coordinator. The backend currently uses bounded
  * incremental polling as the server-to-device invalidation fallback. It is
  * deliberately restricted to an online boot, reconnect, auth/session
- * restoration, and one three-minute check while the app is visible. Focus
- * and visibility events do not create surprise request bursts; the user can
- * always choose Sync now for an immediate attempt.
+ * restoration, foreground/focus, and one 30-second check while the app is
+ * visible. Every pull is incremental from the last completed cursor.
  */
 export function SyncEngine() {
   useEffect(() => {
@@ -69,8 +105,14 @@ export function SyncEngine() {
     };
 
     const onOnline = () => requestRun("online");
+    const onFocus = () => requestRun("focus");
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") requestRun("focus");
+    };
     if (navigator.onLine) requestRun("boot");
     window.addEventListener("online", onOnline);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     const interval = window.setInterval(() => {
       if (navigator.onLine && document.visibilityState !== "hidden") requestRun("poll");
@@ -86,6 +128,8 @@ export function SyncEngine() {
 
     return () => {
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearInterval(interval);
       authSubscription?.unsubscribe();
     };

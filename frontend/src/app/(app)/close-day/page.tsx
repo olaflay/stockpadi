@@ -20,8 +20,7 @@ import { computeGrossProfit, computeNetProfit } from "@/features/reports/compute
 import type { PaymentMethod } from "@/types/sale";
 import { BackendRequestError, serverGet } from "@/features/operations/server-client";
 import { fetchReconciliationHistory, submitReconciliation, type ReconciliationRecord } from "@/features/reconciliation/reconciliation-client";
-import { drainOutbox } from "@/features/sync/drain-outbox";
-import { preloadSessionData } from "@/features/sync/preload-session-data";
+import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { tenantArray } from "@/lib/local-tenant";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import type { Expense } from "@/types/expense";
@@ -190,16 +189,15 @@ export default function CloseDayPage() {
     setReconciliationMessage(null);
     setReconciliationOk(false);
     try {
-      const drainResult = await drainOutbox();
+      const cycle = await runSyncCycle("manual");
       const queued = (await db.outbox.toArray()).filter((item) =>
         item.businessId === user.businessId && ["pending", "syncing", "blocked", "failed", "conflict"].includes(item.status),
       );
-      if (drainResult.pendingRemaining > 0 || queued.length > 0) {
+      if (!cycle || cycle.pushResult.pendingRemaining > 0 || queued.length > 0) {
         throw new Error("There are unsynced or unresolved changes. Sync them before closing the day.");
       }
-      const pullResult = await preloadSessionData(true);
       const pullState = user.businessId ? await db.syncPullState.get(`${user.businessId}:session`) : undefined;
-      if (!pullResult.fullySynced || !pullState?.lastCompletePullAt) {
+      if (!cycle.pullResult.fullySynced || !pullState?.lastCompletePullAt) {
         throw new Error("The latest server totals are not fully available. Try again after sync completes.");
       }
       const from = new Date(todayIso);

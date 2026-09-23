@@ -36,11 +36,13 @@ function KpiCard({
   label,
   value,
   sub,
+  valueClassName = "text-on-surface",
   onClick,
 }: {
   label: string;
   value: string;
   sub: string;
+  valueClassName?: string;
   onClick: () => void;
 }) {
   return (
@@ -51,7 +53,7 @@ function KpiCard({
     >
       <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight">{label}</p>
       <div className="mt-2 min-w-0">
-        <p className="truncate font-number text-lg font-bold tracking-tight tabular-nums text-on-surface sm:text-xl">
+        <p className={`truncate font-number text-lg font-bold tracking-tight tabular-nums sm:text-xl ${valueClassName}`}>
           {value}
         </p>
         <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">{sub}</p>
@@ -222,6 +224,7 @@ export default function DashboardPage() {
             label="Net cash flow"
             value={formatCurrency(netCashFlow)}
             sub="After expenses & purchases"
+            valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
             onClick={() => router.push("/reports")}
           />
         )}
@@ -230,6 +233,7 @@ export default function DashboardPage() {
           label="Low stock"
           value={String(metrics.lowStockCount)}
           sub="products below threshold"
+          valueClassName="text-warning"
           onClick={() => router.push("/products?filter=low-stock")}
         />
 
@@ -238,6 +242,7 @@ export default function DashboardPage() {
             label="Customers owing"
             value={totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
             sub="total debt"
+            valueClassName="text-danger"
             onClick={() => router.push("/customers")}
           />
         )}
@@ -269,12 +274,12 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => setIsExpenseSheetOpen(true)}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-warning-container text-on-warning-container hover:brightness-95 transition-all text-center min-h-[88px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-warning/15 text-on-warning-container">
                   <Wallet size={20} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-warning-container text-center leading-tight">
                   Record Expense
                 </span>
               </RippleButton>
@@ -284,12 +289,12 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/purchases/new")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-success-container text-on-success-container hover:brightness-95 transition-all text-center min-h-[88px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-success/15 text-on-success-container">
                   <PackagePlus size={20} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-success-container text-center leading-tight">
                   Restock
                 </span>
               </RippleButton>
@@ -299,12 +304,12 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/products/new")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-brand-container text-on-brand-container hover:brightness-95 transition-all text-center min-h-[88px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-accent/15 text-on-brand-container">
                   <Plus size={20} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-brand-container text-center leading-tight">
                   Add Product
                 </span>
               </RippleButton>
@@ -314,12 +319,12 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => router.push("/close-day")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl depth-card-interactive text-center min-h-[88px]"
+                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-danger-container text-on-danger-container hover:brightness-95 transition-all text-center min-h-[88px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface depth-bubble">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-danger/15 text-on-danger-container">
                   <CalendarCheck size={20} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-surface text-center leading-tight">
+                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-danger-container text-center leading-tight">
                   Close Day
                 </span>
               </RippleButton>

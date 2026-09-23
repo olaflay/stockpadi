@@ -12,8 +12,7 @@ import { db } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { serverGet } from "@/features/operations/server-client";
-import { drainOutbox } from "@/features/sync/drain-outbox";
-import { preloadSessionData } from "@/features/sync/preload-session-data";
+import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { canResolveConflictInPlace, discardConflictingSnapshot } from "@/features/sync/conflict-resolution";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
@@ -95,29 +94,34 @@ export default function SyncHealthPage() {
   const pullFailed = snapshot.state?.lastPullStatus === "failed" || Boolean(snapshot.state?.partialErrors.length) || snapshot.diagnostics.some((item) => !item.success);
   const complete = online && cloud === "connected" && Boolean(snapshot.state?.lastCompletePullAt) && snapshot.pending === 0 && snapshot.blocked === 0 && snapshot.issues === 0 && !pullFailed && !safety.required;
   const status = !online ? "Offline" : cloud === "failed" ? "Service unavailable" : safety.required ? "Sync required" : snapshot.issues > 0 || pullFailed ? "Sync issue" : complete ? "Healthy" : "Pending";
-  const description = pullFailed
-    ? "We couldn't download the latest stock from the cloud. Your local data is still safe."
-    : complete
-      ? "Cloud data and this device are up to date."
-      : "Some changes are still waiting to finish syncing.";
+  const description = !online
+    ? "You are offline. Changes you make are safely saved on this device."
+    : cloud === "failed"
+      ? "We cannot reach the cloud right now. Keep working and we will try again when the connection returns."
+      : safety.required
+        ? "Some changes have waited too long. Connect to the internet and leave the app open until they finish."
+        : pullFailed
+          ? "We are still checking this device against the cloud. Your saved work is safe."
+          : complete
+            ? "This device is up to date."
+            : "Saving recent changes and checking for updates.";
 
   async function syncNow() {
     setBusy(true);
     try {
-      await drainOutbox();
-      await preloadSessionData(true, "manual");
+      await runSyncCycle("manual");
     } finally {
       setBusy(false);
     }
   }
 
-  async function useCloudVersion(item: SyncQueueItem) {
+  async function resolveWithCloudVersion(item: SyncQueueItem) {
     if (!canResolveConflictInPlace(item) || resolvingId) return;
     if (!window.confirm("Discard this device's rejected change and download the cloud version?")) return;
     setResolvingId(item.clientId);
     try {
       await discardConflictingSnapshot(item);
-      await preloadSessionData(true, "manual");
+      await runSyncCycle("manual");
     } finally {
       setResolvingId(null);
     }
@@ -130,10 +134,10 @@ export default function SyncHealthPage() {
     const desired = item.payload as Product;
     try {
       await discardConflictingSnapshot(item);
-      const pull = await preloadSessionData(true, "manual");
+      const cycle = await runSyncCycle("manual");
       const productId = item.entityId ?? desired.id;
       const cloudProduct = productId ? await db.products.get(productId) : undefined;
-      if (!pull.fullySynced || !cloudProduct) {
+      if (!cycle?.pullResult.fullySynced || !cloudProduct) {
         // Never drop an owner change merely because the refresh failed.
         await db.outbox.put(item);
         throw new Error("The cloud version could not be confirmed. Your change remains in the conflict list.");
@@ -167,24 +171,26 @@ export default function SyncHealthPage() {
       <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
         <div className="grid grid-cols-2 gap-3 text-[length:var(--font-size-caption)]">
           <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">{online ? <Wifi className="mr-1 inline" size={14} /> : <WifiOff className="mr-1 inline" size={14} />} Internet: {online ? "Connected" : "Offline"}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Cloud: {cloud === "connected" ? "Connected" : cloud === "failed" ? "Unavailable" : "Checking"}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Pending upload: {snapshot.pending}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Verifying cloud stock: {snapshot.confirmationPending}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Issues: {snapshot.blocked + snapshot.issues}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Retry count: {snapshot.state?.pullRetryCount ?? snapshot.retries}</p>
+          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Cloud connection: {cloud === "connected" ? "Working" : cloud === "failed" ? "Unavailable" : "Checking"}</p>
+          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Changes waiting: {snapshot.pending}</p>
+          {user.accountType === "BUSINESS_OWNER" && <>
+            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Checking stock: {snapshot.confirmationPending}</p>
+            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Needs attention: {snapshot.blocked + snapshot.issues}</p>
+            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Automatic retries: {snapshot.state?.pullRetryCount ?? snapshot.retries}</p>
+          </>}
         </div>
       </section>
 
       <RippleButton type="button" onClick={syncNow} disabled={busy || !online} className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast disabled:opacity-50">
         <RefreshCw size={18} className={busy ? "animate-spin" : ""} aria-hidden />
-        {busy ? "Syncing…" : "Retry sync"}
+        {busy ? "Syncing…" : "Try syncing again"}
       </RippleButton>
 
       <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
-        <h2 className="mb-3 text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">Pull status</h2>
-        <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Last complete pull: {formatTime(snapshot.state?.lastCompletePullAt)}</p>
-        <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Last successful push: {formatTime(snapshot.state?.lastSuccessfulPushAt)}</p>
-        <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Oldest pending change: {snapshot.oldestPendingAt ? new Date(snapshot.oldestPendingAt).toLocaleString() : "None"}</p>
+        <h2 className="mb-3 text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">Last update</h2>
+        <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Last cloud check: {formatTime(snapshot.state?.lastCompletePullAt)}</p>
+        <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Last time this device saved changes: {formatTime(snapshot.state?.lastSuccessfulPushAt)}</p>
+        {user.accountType === "BUSINESS_OWNER" && <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Oldest waiting change: {snapshot.oldestPendingAt ? new Date(snapshot.oldestPendingAt).toLocaleString() : "None"}</p>}
       </section>
 
       {user.accountType === "BUSINESS_OWNER" && snapshot.conflicts.length > 0 && (
@@ -201,8 +207,8 @@ export default function SyncHealthPage() {
                   <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{item.lastErrorMessage ?? "This record changed on another device."}</p>
                   {canResolve ? (
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <RippleButton type="button" disabled={isResolving} onClick={() => void useCloudVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
-                      {item.type === "product" && <RippleButton type="button" disabled={isResolving} onClick={() => void keepMyProductVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
+                      <RippleButton type="button" disabled={isResolving || !online} onClick={() => void resolveWithCloudVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
+                      {item.type === "product" && <RippleButton type="button" disabled={isResolving || !online} onClick={() => void keepMyProductVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
                     </div>
                   ) : <p className="mt-3 text-[length:var(--font-size-caption)] text-warning">Ledger history is protected. Resolve this by creating a correcting stock or sales entry.</p>}
                 </article>
@@ -212,20 +218,20 @@ export default function SyncHealthPage() {
         </section>
       )}
 
-      <details className="rounded-[var(--radius-card)] bg-surface-container p-4 text-on-surface">
-        <summary className="cursor-pointer text-[length:var(--font-size-body-lg)] font-semibold">Advanced diagnostics</summary>
+      {user.accountType === "BUSINESS_OWNER" && <details className="rounded-[var(--radius-card)] bg-surface-container p-4 text-on-surface">
+        <summary className="cursor-pointer text-[length:var(--font-size-body-lg)] font-semibold">More details for support</summary>
+        <p className="mt-2 text-[length:var(--font-size-caption)] text-on-surface-muted">Share these details with StockPadi support only if they ask for them.</p>
         <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-3 gap-y-2 text-[length:var(--font-size-caption)]">
-          <dt className="text-on-surface-muted">Last push result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPushStatus, snapshot.state?.lastPushErrorCode, snapshot.state?.lastPushHttpStatus)}</dd>
-          <dt className="text-on-surface-muted">Last pull result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPullStatus, snapshot.state?.lastPullErrorCode ?? snapshot.latestFailure?.errorCode, snapshot.state?.lastPullHttpStatus ?? snapshot.latestFailure?.httpStatus)}</dd>
-          <dt className="text-on-surface-muted">Failed dataset</dt><dd>{snapshot.state?.lastFailedDataset ?? snapshot.latestFailure?.entity ?? "None"}</dd>
-          <dt className="text-on-surface-muted">Branch</dt><dd className="break-words">{branchLabel}</dd>
-          <dt className="text-on-surface-muted">Pending count</dt><dd>{snapshot.pending + snapshot.blocked + snapshot.issues}</dd>
-          <dt className="text-on-surface-muted">Retry count</dt><dd>{snapshot.state?.pullRetryCount ?? 0}</dd>
-          <dt className="text-on-surface-muted">Next automatic retry</dt><dd>{snapshot.state?.nextPullAttemptAt ? new Date(snapshot.state.nextPullAttemptAt).toLocaleString() : "Not scheduled"}</dd>
+          <dt className="text-on-surface-muted">Upload result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPushStatus, snapshot.state?.lastPushErrorCode, snapshot.state?.lastPushHttpStatus)}</dd>
+          <dt className="text-on-surface-muted">Download result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPullStatus, snapshot.state?.lastPullErrorCode ?? snapshot.latestFailure?.errorCode, snapshot.state?.lastPullHttpStatus ?? snapshot.latestFailure?.httpStatus)}</dd>
+          <dt className="text-on-surface-muted">Area that needs help</dt><dd>{snapshot.state?.lastFailedDataset ?? snapshot.latestFailure?.entity ?? "None"}</dd>
+          <dt className="text-on-surface-muted">Branches in this view</dt><dd className="break-words">{branchLabel}</dd>
+          <dt className="text-on-surface-muted">Changes waiting</dt><dd>{snapshot.pending + snapshot.blocked + snapshot.issues}</dd>
+          <dt className="text-on-surface-muted">Next automatic check</dt><dd>{snapshot.state?.nextPullAttemptAt ? new Date(snapshot.state.nextPullAttemptAt).toLocaleString() : "Not scheduled"}</dd>
         </dl>
-      </details>
+      </details>}
 
-      <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
+      {user.accountType === "BUSINESS_OWNER" && <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
         <h2 className="mb-3 text-[length:var(--font-size-body-lg)] font-semibold text-on-surface">Datasets</h2>
         <div className="flex flex-col gap-2">
           {snapshot.diagnostics.map((item) => (
@@ -235,7 +241,7 @@ export default function SyncHealthPage() {
             </div>
           ))}
         </div>
-      </section>
+      </section>}
     </div>
   );
 }
