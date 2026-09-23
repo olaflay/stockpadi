@@ -17,6 +17,8 @@ vi.mock("@/lib/supabase", () => ({ getSupabase: () => null }));
 
 import { runSyncCycle } from "./SyncEngine";
 
+vi.stubGlobal("navigator", { onLine: true });
+
 describe("runSyncCycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();

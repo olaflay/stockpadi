@@ -13,12 +13,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
-      - run: npm ci
+      - run: npm ci && npm --prefix frontend ci && npm --prefix backend ci && npm --prefix packages/contracts ci
 
       - run: npm run lint
+
+      - run: npm run contracts:build
 
       - run: npm run test
 
