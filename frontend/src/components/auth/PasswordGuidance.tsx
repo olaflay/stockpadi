@@ -11,7 +11,6 @@ interface PasswordGuidanceProps {
  */
 export function PasswordGuidance({ password }: PasswordGuidanceProps) {
   const checks = getPasswordRequirements(password);
-  const passedCount = checks.filter((check) => check.passed).length;
   const strong = meetsPasswordPolicy(password);
   const strength = password.length === 0 ? "" : strong ? "Strong password" : "Not strong enough";
 

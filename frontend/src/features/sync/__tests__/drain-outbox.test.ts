@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
-import { setLocalBusinessId } from "@/lib/local-tenant";
+import { getLocalBusinessId, setLocalBusinessId } from "@/lib/local-tenant";
 
 /**
  * Covers the client-side half of the sync engine: what drainOutbox does to
@@ -402,6 +402,7 @@ describe("drainOutbox", () => {
       branchIds: ["branch-a"],
       businessStatus: "active",
     });
+    expect(await getLocalBusinessId()).toBe("test-business");
   });
 
   it("recoverStuckSyncingItems returns rows parked in the transient syncing state back to pending so the next drain retries them", async () => {

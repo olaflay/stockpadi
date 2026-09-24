@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/features/operations/server-client";
 import type { SyncQueueItem } from "@/types/sync";
-import { matchesActiveTenant, getLocalBusinessId } from "@/lib/local-tenant";
+import { matchesActiveTenant, getLocalBusinessId, setLocalBusinessId } from "@/lib/local-tenant";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 
 /**
@@ -236,6 +236,11 @@ export async function refreshActiveAccountContext(): Promise<boolean> {
       branchIds?: string[];
       profile?: { email_verified?: boolean; is_active?: boolean };
     }>("/api/account-context", {});
+    // The server is authoritative for the authenticated account's tenant.
+    // Refresh this routing/cache key before the pull in the same sync cycle;
+    // otherwise a new worker session can try to pull using a stale or missing
+    // local business id and misleadingly report a cloud-refresh failure.
+    if (context.businessId) await setLocalBusinessId(context.businessId);
     await db.localUsers.update(sessionRow.userId, {
       ...(context.accountType ? { accountType: context.accountType } : {}),
       ...(context.businessId !== undefined ? { businessId: context.businessId } : {}),

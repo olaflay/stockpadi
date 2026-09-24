@@ -13,10 +13,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+            backend/package-lock.json
 
       - run: npm ci
+
+      # frontend/ and backend/ are independently locked packages, not root
+      # workspaces. Root npm ci alone therefore cannot install ESLint or the
+      # frontend test/build tooling.
+      - run: npm --prefix frontend ci
+
+      - run: npm --prefix backend ci
 
       - run: npm run lint
 

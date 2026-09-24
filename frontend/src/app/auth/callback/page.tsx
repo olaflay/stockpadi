@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
+import { setLocalBusinessId } from "@/lib/local-tenant";
 import { startSession } from "@/features/auth/session";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { BackendError, callBackend } from "@/features/auth/backend-client";
@@ -71,6 +72,7 @@ export default function AuthCallbackPage() {
         emailVerified: false,
         updatedAt: new Date().toISOString(),
       });
+      if (businessId) await setLocalBusinessId(businessId);
       await startSession(profile.id);
       router.replace(profile.account_type === "ADMIN" ? "/admin" : profile.account_type === "WORKER" ? "/work" : "/business");
     });
