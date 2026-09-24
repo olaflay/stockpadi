@@ -13,7 +13,7 @@
     "start": "npm --prefix frontend run start",
     "lint": "npm --prefix frontend run lint",
     "typecheck": "npm run contracts:build && npm --prefix frontend run typecheck && npm --prefix backend run typecheck",
-    "test": "npm --prefix frontend test && npm --prefix backend test",
+    "test": "npm run contracts:build && npm --prefix frontend test && npm --prefix backend test",
     "backend:test": "npm --prefix backend test",
     "backend:typecheck": "npm --prefix backend run typecheck",
     "provision:admin": "npm --prefix backend run provision:admin",
