@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { tenantArray } from "@/lib/local-tenant";
 
 /**
  * Credit balance is always computed from the ledger, never read from a
@@ -6,7 +7,7 @@ import { db } from "@/lib/db";
  * .agents/rules/offline-sync-and-ledger.md.
  */
 export async function getCustomerCreditBalance(customerId: string): Promise<number> {
-  const movements = await db.customerCreditMovements.where("customerId").equals(customerId).toArray();
+  const movements = (await tenantArray(db.customerCreditMovements)).filter((movement) => movement.customerId === customerId);
 
   return movements.reduce((total, m) => total + m.amountDelta, 0);
 }
@@ -18,7 +19,7 @@ export async function getCustomerCreditBalance(customerId: string): Promise<numb
  * getCustomerCreditBalance() calls (N separate IndexedDB transactions).
  */
 export async function getAllCustomerCreditBalances(): Promise<Map<string, number>> {
-  const movements = await db.customerCreditMovements.toArray();
+  const movements = await tenantArray(db.customerCreditMovements);
   const balances = new Map<string, number>();
   for (const m of movements) {
     balances.set(m.customerId, (balances.get(m.customerId) ?? 0) + m.amountDelta);
@@ -34,7 +35,7 @@ export async function getAllCustomerCreditBalances(): Promise<Map<string, number
  * Returns a map of customerId → days since oldest debt (0 if no debt).
  */
 export async function getCustomerDebtAges(): Promise<Map<string, number>> {
-  const movements = await db.customerCreditMovements.toArray();
+  const movements = await tenantArray(db.customerCreditMovements);
   const now = Date.now();
   const oldestDebt = new Map<string, number>(); // customerId → oldest timestamp
 

@@ -8,6 +8,9 @@ import { TextInput } from "@/components/ui/TextInput";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
+import { getSupabase } from "@/lib/supabase";
+import { PasswordGuidance } from "@/components/auth/PasswordGuidance";
+import { meetsPasswordPolicy } from "@stockpadi/contracts";
 import { serverPost } from "@/features/operations/server-client";
 
 export default function ResetPasswordForm() {
@@ -27,8 +30,8 @@ export default function ResetPasswordForm() {
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!meetsPasswordPolicy(password)) {
+      setError("Use every password requirement shown below.");
       return;
     }
 
@@ -40,11 +43,20 @@ export default function ResetPasswordForm() {
         return;
       }
 
+      // The reset link establishes a short-lived Supabase recovery session.
+      // Its token authenticates the request; the backend then applies the same
+      // shared password policy used at registration, with no business lookup.
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Password reset is not configured.");
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("This reset link has expired or has already been used. Request a new one.");
+      }
       await serverPost("/api/auth/password/update", { password });
 
       setSuccess(true);
-    } catch {
-      setError("Could not reset password. Check your connection.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not reset password. Check your connection.");
     } finally {
       setBusy(false);
     }
@@ -70,7 +82,7 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col px-6 max-w-md mx-auto overflow-y-auto">
+    <div className="flex min-h-[100dvh] w-full flex-col px-6 max-w-md mx-auto overflow-y-auto">
       {error && (
         <div
           ref={errorRef}
@@ -133,12 +145,13 @@ export default function ResetPasswordForm() {
                 {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
               </button>
             </div>
+            <PasswordGuidance password={password} />
           </label>
         </div>
 
         <RippleButton
           type="submit"
-          disabled={busy || !password.trim()}
+          disabled={busy || !meetsPasswordPolicy(password)}
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
         >
           {busy ? "Updating…" : "Reset Password"}

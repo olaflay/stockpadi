@@ -102,7 +102,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  interactiveWidget: "overlays-content",
+  // Let mobile browsers resize the app viewport for the on-screen keyboard
+  // so account inputs remain reachable instead of being covered by it.
+  interactiveWidget: "resizes-content",
 };
 
 const JSON_LD_SCHEMA = {

@@ -23,6 +23,27 @@ export const WORKER_CAPABILITIES = [
 ] as const;
 export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
 
+/**
+ * Password requirements enforced for owner account creation and shown live in
+ * account forms. Keep this in the shared contract so browser guidance and the
+ * API accept exactly the same minimum strength.
+ */
+export const PASSWORD_REQUIREMENTS = [
+  { key: "length", label: "8 or more characters", test: (password: string) => password.length >= 8 },
+  { key: "uppercase", label: "An uppercase letter", test: (password: string) => /[A-Z]/.test(password) },
+  { key: "lowercase", label: "A lowercase letter", test: (password: string) => /[a-z]/.test(password) },
+  { key: "number", label: "A number", test: (password: string) => /\d/.test(password) },
+  { key: "symbol", label: "A symbol (for example ! or @)", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
+] as const;
+
+export function getPasswordRequirements(password: string) {
+  return PASSWORD_REQUIREMENTS.map(({ key, label, test }) => ({ key, label, passed: test(password) }));
+}
+
+export function meetsPasswordPolicy(password: string): boolean {
+  return getPasswordRequirements(password).every((requirement) => requirement.passed);
+}
+
 export const SYNC_ENTITY_TYPES = [
   "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt",
   "customer", "product", "credit_payment", "expense", "supplier", "branch", "category",

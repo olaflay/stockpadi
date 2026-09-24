@@ -1,4 +1,5 @@
 import { HttpError } from "../../shared/errors/http-error.js";
+import { meetsPasswordPolicy } from "../../shared/contracts.generated.js";
 
 export interface RegistrationRequest { action?: "complete_oauth"; email?: string; password?: string; fullName?: string; businessName?: string; businessTypeId?: string; }
 
@@ -11,5 +12,6 @@ export function parseRegistration(input: unknown): RegistrationRequest {
 }
 
 export function validateRegistration(request: RegistrationRequest) {
-  if (!request.email || !/^\S+@\S+\.\S+$/.test(request.email) || !request.password || request.password.length < 8 || !request.fullName || !request.businessName || !request.businessTypeId) throw new HttpError(400, "INVALID_BODY", "Owner, business and password details are required");
+  if (!request.email || !/^\S+@\S+\.\S+$/.test(request.email) || !request.password || !request.fullName || !request.businessName || !request.businessTypeId) throw new HttpError(400, "INVALID_BODY", "Owner, business and password details are required");
+  if (!meetsPasswordPolicy(request.password)) throw new HttpError(400, "INVALID_BODY", "Password must use at least 8 characters, uppercase and lowercase letters, a number, and a symbol");
 }

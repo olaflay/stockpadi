@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
+import { clearLocalBusinessId, setLocalBusinessId } from "@/lib/local-tenant";
 import {
   getCustomerDebtAges,
   getAgingBucket,
@@ -14,6 +15,8 @@ describe("Customer Debt Aging & WhatsApp Integration", () => {
   const CUSTOMER_OVERDUE = "cust-overdue";
 
   beforeEach(async () => {
+    clearLocalBusinessId();
+    await db.businessProfile.clear();
     await db.customerCreditMovements.clear();
   });
 
@@ -63,6 +66,25 @@ describe("Customer Debt Aging & WhatsApp Integration", () => {
     expect(balances.get(CUSTOMER_RECENT)).toBe(5000);
     expect(balances.get(CUSTOMER_OVERDUE)).toBe(15000);
     expect(await getCustomerCreditBalance(CUSTOMER_RECENT)).toBe(5000);
+  });
+
+  it("never includes another business's credit ledger in this business's debt total", async () => {
+    await setLocalBusinessId("business-a");
+    await db.customerCreditMovements.bulkAdd([
+      {
+        id: "credit-a", clientId: "credit-a", businessId: "business-a", customerId: "customer-a",
+        amountDelta: 600, sourceReferenceId: "sale-a", createdAtLocal: new Date().toISOString(), createdByUserId: "owner-a",
+      },
+      {
+        id: "credit-b", clientId: "credit-b", businessId: "business-b", customerId: "customer-b",
+        amountDelta: 4500, sourceReferenceId: "sale-b", createdAtLocal: new Date().toISOString(), createdByUserId: "owner-b",
+      },
+    ]);
+
+    const balances = await getAllCustomerCreditBalances();
+    expect(balances.get("customer-a")).toBe(600);
+    expect(balances.has("customer-b")).toBe(false);
+    expect(await getCustomerCreditBalance("customer-b")).toBe(0);
   });
 
   it("builds valid Nigerian WhatsApp reminder URLs", () => {

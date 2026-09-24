@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type FocusEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, WifiOff, Check } from "lucide-react";
+import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
@@ -20,6 +20,8 @@ import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@
 import { sanitizeString } from "@/lib/sanitize";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
+import { PasswordGuidance } from "@/components/auth/PasswordGuidance";
+import { meetsPasswordPolicy } from "@stockpadi/contracts";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -39,8 +41,12 @@ export default function RegisterForm() {
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   const formComplete = Boolean(
-    fullName.trim() && businessName.trim() && email.trim() && password.trim().length >= 8
+    fullName.trim() && businessName.trim() && email.trim() && meetsPasswordPolicy(password)
   );
+
+  function keepFocusedInputVisible(event: FocusEvent<HTMLInputElement>) {
+    event.currentTarget.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  }
 
   async function handleGoogleSignUp() {
     setError(null);
@@ -75,7 +81,7 @@ export default function RegisterForm() {
     if (active instanceof HTMLElement) active.blur();
     setError(null);
     if (!formComplete) {
-      setError("Fill in all fields. Password must have at least 8 characters.");
+      setError("Fill in all fields and meet every password requirement.");
       return;
     }
     if (!isOnline) {
@@ -184,7 +190,7 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col max-w-md mx-auto overflow-hidden">
+    <div className="flex h-[100dvh] w-full flex-col max-w-md mx-auto overflow-hidden">
       <div className="flex flex-col items-center gap-2 px-6 pt-12 sm:pt-14 text-center shrink-0">
         <div
           className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent mb-1"
@@ -200,7 +206,7 @@ export default function RegisterForm() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
+      <div className="flex-1 overflow-y-auto scroll-pb-36 px-6 pt-2 pb-6">
         {!isOnline && (
           <div
             role="status"
@@ -263,6 +269,7 @@ export default function RegisterForm() {
                 type="text"
                 autoComplete="name"
                 autoCapitalize="words"
+                onFocus={keepFocusedInputVisible}
               />
             </label>
 
@@ -277,6 +284,7 @@ export default function RegisterForm() {
                 placeholder="e.g. Kola Provisions"
                 type="text"
                 autoCapitalize="words"
+                onFocus={keepFocusedInputVisible}
               />
             </label>
 
@@ -293,6 +301,7 @@ export default function RegisterForm() {
                 autoComplete="email"
                 autoCapitalize="none"
                 inputMode="email"
+                onFocus={keepFocusedInputVisible}
               />
             </label>
 
@@ -309,6 +318,7 @@ export default function RegisterForm() {
                   type={showPassword ? "text" : "password"}
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
+                  onFocus={keepFocusedInputVisible}
                 />
                 <button
                   type="button"
@@ -319,21 +329,7 @@ export default function RegisterForm() {
                   {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[length:var(--font-size-caption)] mt-1 px-1">
-                <span className={password.length >= 8 ? "text-brand-accent font-medium flex items-center gap-1" : "text-on-surface-muted"}>
-                  {password.length >= 8 ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" />
-                      <span>Password meets minimum length</span>
-                    </>
-                  ) : (
-                    "At least 8 characters"
-                  )}
-                </span>
-                {password.length > 0 && (
-                  <span className="text-on-surface-muted font-mono">{password.length}/8</span>
-                )}
-              </div>
+              <PasswordGuidance password={password} />
             </label>
           </div>
         </form>
