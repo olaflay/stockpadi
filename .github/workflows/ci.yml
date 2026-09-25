@@ -19,15 +19,20 @@ jobs:
             package-lock.json
             frontend/package-lock.json
             backend/package-lock.json
+            packages/contracts/package-lock.json
 
       - run: npm ci
 
       # frontend/ and backend/ are independently locked packages, not root
       # workspaces. Root npm ci alone therefore cannot install ESLint or the
       # frontend test/build tooling.
+      - run: npm --prefix packages/contracts ci
+
       - run: npm --prefix frontend ci
 
       - run: npm --prefix backend ci
+
+      - run: npm run contracts:build
 
       - run: npm run lint
 
