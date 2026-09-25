@@ -28,7 +28,7 @@ export function getAppUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin.replace(/\/$/, "");
   }
-  return "";
+  return "https://stockpadi.com";
 }
 
 export function getBrandingConfig(): BrandingConfig {
