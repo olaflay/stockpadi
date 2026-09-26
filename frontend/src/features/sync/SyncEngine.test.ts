@@ -20,6 +20,7 @@ import { runSyncCycle } from "./SyncEngine";
 describe("runSyncCycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("navigator", { onLine: true });
     drainOutbox.mockResolvedValue({ drained: 0, pendingRemaining: 0 });
   });
 
