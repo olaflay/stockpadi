@@ -29,7 +29,7 @@ export function getAppUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin.replace(/\/$/, "");
   }
-  return "";
+  return process.env.NODE_ENV === "production" ? "https://ojapadi.com" : "http://localhost:3000";
 }
 
 export function getBrandingConfig(): BrandingConfig {
