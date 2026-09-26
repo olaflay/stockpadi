@@ -1,5 +1,5 @@
 /**
- * Single source of truth for date and time calculations in StockPadi.
+ * Single source of truth for date and time calculations in OjàPadi.
  * Handles local timezone midnight boundaries (WAT / UTC+1) accurately
  * so that offline ledger queries never clip transactions across days.
  */

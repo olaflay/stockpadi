@@ -2,6 +2,7 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
+import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
 import { addCreditCustomer } from "@/features/pos/add-credit-customer";
@@ -203,19 +204,14 @@ export function PaymentStep(props: {
                     {TRANSFER_PROVIDERS.map((provider) => {
                       const active = transferMeta[index]?.provider === provider;
                       return (
-                        <button
+                        <Chip
                           key={provider}
-                          type="button"
-                          aria-pressed={active}
+                          variant="filter"
+                          selected={active}
                           onClick={() => toggleTransferProvider(index, provider)}
-                          className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border px-3 text-[length:var(--font-size-caption)] font-medium transition-colors ${
-                            active
-                              ? "border-brand-accent bg-brand-accent text-brand-accent-contrast"
-                              : "border-border bg-surface-container text-on-surface"
-                          }`}
                         >
                           {provider}
-                        </button>
+                        </Chip>
                       );
                     })}
                   </div>
@@ -267,19 +263,15 @@ export function PaymentStep(props: {
               {quickTenderChips.map((chip) => {
                 const active = tenderedAmount === chip.value;
                 return (
-                  <button
+                  <Chip
                     key={chip.label}
-                    type="button"
-                    aria-pressed={active}
+                    variant="filter"
+                    selected={active}
                     onClick={() => applyTendered(chip.value)}
-                    className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-3 font-number text-[length:var(--font-size-caption)] font-medium tabular-nums transition-colors ${
-                      active
-                        ? "bg-brand-accent text-brand-accent-contrast"
-                        : "bg-surface-container-high text-on-surface hover:bg-surface-container"
-                    }`}
+                    className="font-number tabular-nums"
                   >
                     {chip.label}
-                  </button>
+                  </Chip>
                 );
               })}
               {tenderedAmount > 0 && (
@@ -437,7 +429,7 @@ export function PaymentStep(props: {
         )}
       </div>
 
-      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 border-t border-border/60 bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
         <RippleButton
           id="tour-pos-checkout"
           type="button"

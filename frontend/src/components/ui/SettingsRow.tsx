@@ -53,7 +53,7 @@ export function SettingsRow({
       {trailing && (
         <span className="shrink-0 text-[length:var(--font-size-body)] text-on-surface-muted font-number tabular-nums">{trailing}</span>
       )}
-      <ChevronRight size={18} className="shrink-0 text-on-surface-muted/60" aria-hidden />
+      <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
     </button>
   );
 }

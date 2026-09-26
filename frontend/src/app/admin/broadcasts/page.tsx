@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
+import { getBrandingConfig } from "@/config/branding";
 
 interface BroadcastItem {
   id: string;
@@ -247,7 +248,7 @@ export default function AdminBroadcastsPage() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider">
-                      StockPadi Announcement
+                      {getBrandingConfig().businessName} Announcement
                     </span>
                     <span className="text-[10px] opacity-70">Just now</span>
                   </div>

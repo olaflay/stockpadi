@@ -18,6 +18,7 @@ import { canResolveConflictInPlace, discardConflictingSnapshot } from "@/feature
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import type { Product } from "@/types/product";
 import type { SyncQueueItem } from "@/types/sync";
+import { getBrandingConfig } from "@/config/branding";
 
 function formatTime(value: string | null | undefined): string {
   return value ? new Date(value).toLocaleString() : "Not completed yet";
@@ -220,7 +221,7 @@ export default function SyncHealthPage() {
 
       {user.accountType === "BUSINESS_OWNER" && <details className="rounded-[var(--radius-card)] bg-surface-container p-4 text-on-surface">
         <summary className="cursor-pointer text-[length:var(--font-size-body-lg)] font-semibold">More details for support</summary>
-        <p className="mt-2 text-[length:var(--font-size-caption)] text-on-surface-muted">Share these details with StockPadi support only if they ask for them.</p>
+        <p className="mt-2 text-[length:var(--font-size-caption)] text-on-surface-muted">Share these details with {getBrandingConfig().businessName} support only if they ask for them.</p>
         <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-3 gap-y-2 text-[length:var(--font-size-caption)]">
           <dt className="text-on-surface-muted">Upload result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPushStatus, snapshot.state?.lastPushErrorCode, snapshot.state?.lastPushHttpStatus)}</dd>
           <dt className="text-on-surface-muted">Download result</dt><dd className="break-words">{formatResult(snapshot.state?.lastPullStatus, snapshot.state?.lastPullErrorCode ?? snapshot.latestFailure?.errorCode, snapshot.state?.lastPullHttpStatus ?? snapshot.latestFailure?.httpStatus)}</dd>

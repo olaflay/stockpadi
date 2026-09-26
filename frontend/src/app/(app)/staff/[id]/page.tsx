@@ -13,6 +13,8 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { WorkerCapabilityPicker } from "@/features/auth/WorkerCapabilityPicker";
+import { SelectInput } from "@/components/ui/SelectInput";
+import { getBrandingConfig } from "@/config/branding";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -109,7 +111,7 @@ export default function StaffDetailPage({ params }: PageProps) {
     {memberAccountType === "WORKER" && <section>
       <h2 className="mb-2 text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">Worker password</h2>
       <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container p-4">
-        <p className="text-[length:var(--font-size-body)] text-on-surface">A password is created by StockPadi and shown once. Share it directly with the worker (WhatsApp or in person). It is never sent by email.</p>
+        <p className="text-[length:var(--font-size-body)] text-on-surface">A password is created by {getBrandingConfig().businessName} and shown once. Share it directly with the worker (WhatsApp or in person). It is never sent by email.</p>
         {newPassword && (
           <div className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-container p-3">
             <code className="select-all font-mono text-[length:var(--font-size-body-lg)] text-on-surface">{newPassword}</code>
@@ -127,7 +129,13 @@ export default function StaffDetailPage({ params }: PageProps) {
       <h2 className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">Capabilities</h2>
       <WorkerCapabilityPicker value={capabilities} onChange={setCapabilities} />
       <RippleButton type="button" onClick={savePermissions} disabled={busy} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast">Save permissions</RippleButton>
-      <div className="mt-3 flex gap-2"><select value={branchId} onChange={(event) => setBranchId(event.target.value)} className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-on-surface"><option value="">Choose manager branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><RippleButton type="button" onClick={saveManagerAssignment} disabled={busy || !branchId} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-3 text-brand-accent">Assign</RippleButton></div>
+      <div className="mt-3 flex gap-2">
+        <SelectInput value={branchId} onChange={(event) => setBranchId(event.target.value)} className="flex-1">
+          <option value="">Choose manager branch</option>
+          {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+        </SelectInput>
+        <RippleButton type="button" onClick={saveManagerAssignment} disabled={busy || !branchId} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-3 text-brand-accent">Assign</RippleButton>
+      </div>
     </section>}
     {memberAccountType === "WORKER" && staffMember.isActive && <button type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-danger px-4 text-danger disabled:opacity-50">Deactivate</button>}
     {memberAccountType === "WORKER" && !staffMember.isActive && <button type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-4 text-brand-accent disabled:opacity-50">Reactivate</button>}

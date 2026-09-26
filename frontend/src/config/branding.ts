@@ -10,6 +10,7 @@ export interface BrandingConfig {
   accentColor: string;
   logoUrl: string | null;
   appUrl: string;
+  supportEmail: string;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface BrandingConfig {
  *   1. NEXT_PUBLIC_APP_URL environment variable
  *   2. NEXT_PUBLIC_SITE_URL environment variable
  *   3. window.location.origin (if running in browser)
- *   4. "https://stockpadi.com" (production default fallback)
+ *   4. "https://ojapadi.com" (production default fallback)
  */
 export function getAppUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
@@ -39,9 +40,10 @@ export function getBrandingConfig(): BrandingConfig {
   // was slipping through as a real value (e.g. rendering `<link rel="icon"
   // href="">`, an invalid empty href).
   return {
-    businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "OjaPadi",
+    businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME || "OjàPadi",
     accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0B7A55",
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
     appUrl: getAppUrl(),
+    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@ojapadi.com",
   };
 }

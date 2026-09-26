@@ -124,22 +124,27 @@ export default function ExpensesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
+      <ScreenHeader title="Expenses" backHref="/reports" />
 
-      <div className="mb-3 flex gap-2">
+      <div
+        role="tablist"
+        aria-label="Expense period"
+        className="mb-3 flex gap-2 rounded-[var(--radius-control)] bg-surface-container-low p-1 border border-border/40"
+      >
         {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
           <button
             key={key}
+            role="tab"
             type="button"
-            aria-pressed={period === key}
+            aria-selected={period === key}
             onClick={() => {
               setPeriod(key);
               setVisibleLimit(50);
             }}
-            className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] transition-colors ${
+            className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium transition-all ${
               period === key
-                ? "bg-brand-accent text-brand-accent-contrast"
-                : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
+                ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
+                : "text-on-surface-muted hover:text-on-surface hover:bg-surface-container"
             }`}
           >
             {PERIOD_LABELS[key]}
@@ -171,7 +176,7 @@ export default function ExpensesPage() {
               return (
                 <li
                   key={expense.id}
-                  className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 transition-colors"
+                  className="flex flex-col rounded-[var(--radius-card)] bg-surface-container p-4 hover:bg-surface-container-high transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <button
@@ -201,10 +206,10 @@ export default function ExpensesPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(expense.id, expense.category)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-on-surface-muted hover:bg-danger-container hover:text-on-danger-container transition-colors"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-on-surface-muted hover:bg-danger-container hover:text-on-danger-container active:scale-95 transition-all"
                         aria-label={`Delete ${expense.category} expense of ${formatCurrency(expense.amount)}`}
                       >
-                        <Trash2 size={16} aria-hidden />
+                        <Trash2 size={18} aria-hidden />
                       </button>
                     )}
                   </div>

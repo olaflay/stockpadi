@@ -1,5 +1,5 @@
 /**
- * Premium, lightweight vector illustrations for StockPadi.
+ * Premium, lightweight vector illustrations for OjàPadi.
  * Crafted with smooth Bézier curvature, soft ambient duotone layers,
  * and adaptive theme colors (inheriting currentColor and design tokens).
  * ~1-2KB each, inline vector, zero network requests, ultra-crisp on all screen densities.

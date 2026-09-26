@@ -21,13 +21,20 @@ export function useRipple() {
   const [ripples, setRipples] = useState<RippleSpan[]>([]);
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    // Avoid expensive getBoundingClientRect() which forces a full DOM layout recalculation
+    // Use cached clientWidth/clientHeight with nativeEvent offsets for 60fps responsiveness on low-end CPUs
     const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height) * 2;
+    const width = target.clientWidth || 44;
+    const height = target.clientHeight || 44;
+    const size = Math.max(width, height) * 2;
     const id = Date.now();
+    const native = event.nativeEvent as PointerEvent;
+    const x = (native.offsetX ?? width / 2) - size / 2;
+    const y = (native.offsetY ?? height / 2) - size / 2;
+
     setRipples((current) => [
       ...current,
-      { id, x: event.clientX - rect.left - size / 2, y: event.clientY - rect.top - size / 2, size },
+      { id, x, y, size },
     ]);
     window.setTimeout(() => {
       setRipples((current) => current.filter((ripple) => ripple.id !== id));
@@ -73,7 +80,7 @@ export function RippleButton({
         startRipple(event);
         onPointerDown?.(event);
       }}
-      className={`${positionClass} overflow-hidden ${className}`}
+      className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
     >
       <RippleLayer ripples={ripples} />
       {children}
@@ -102,7 +109,7 @@ export function RippleLink({
         startRipple(event);
         onPointerDown?.(event);
       }}
-      className={`${positionClass} overflow-hidden ${className}`}
+      className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
     >
       <RippleLayer ripples={ripples} />
       {children}

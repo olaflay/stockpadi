@@ -51,9 +51,11 @@ export function CartStep(props: {
         </span>
         <button
           type="button"
-          onClick={onClearCart}
+          onClick={() => {
+            if (window.confirm("Clear all items from the cart?")) onClearCart();
+          }}
           aria-label="Clear all items from cart"
-          className="text-[length:var(--font-size-caption)] text-danger font-medium hover:underline"
+          className="min-h-[var(--touch-target-min)] flex items-center px-2 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-danger font-medium hover:bg-danger/5 transition-colors"
         >
           Clear cart
         </button>
@@ -89,7 +91,11 @@ export function CartStep(props: {
                   <button
                     type="button"
                     onClick={() => onDecrement(key)}
-                    className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full bg-surface-container text-on-surface font-semibold text-[length:var(--font-size-title)] hover:bg-surface-container-high transition-colors"
+                    className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-colors ${
+                      isOverStock
+                        ? "bg-danger/15 text-danger hover:bg-danger/25"
+                        : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+                    }`}
                     aria-label={`Decrease ${product.name} (${line.unitLabel}) quantity`}
                   >
                     −
@@ -104,9 +110,11 @@ export function CartStep(props: {
                     }}
                     disabled={!canIncrement}
                     className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-colors ${
-                      canIncrement
-                        ? "bg-surface-container text-on-surface hover:bg-surface-container-high"
-                        : "bg-surface-container/40 text-on-surface-muted opacity-40 cursor-not-allowed"
+                      !canIncrement
+                        ? "bg-surface-container/40 text-on-surface-muted opacity-40 cursor-not-allowed"
+                        : isOverStock
+                        ? "bg-danger/15 text-danger hover:bg-danger/25"
+                        : "bg-surface-container text-on-surface hover:bg-surface-container-high"
                     }`}
                     aria-label={`Increase ${product.name} (${line.unitLabel}) quantity`}
                   >
@@ -152,7 +160,7 @@ export function CartStep(props: {
         })}
       </ul>
 
-      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-4">
+      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border/60 bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
         {hasOutOfStockItem && (
           <div className="rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger flex items-center justify-between">
             <span>

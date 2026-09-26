@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Receipt, Plus, BarChart3 } from "lucide-react";
+import { Receipt, Plus, BarChart3, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -151,21 +151,35 @@ export default function SalesPage() {
   return (
     <div>
       <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-on-surface-muted">{visibleSales.length} recorded sale{visibleSales.length === 1 ? "" : "s"}</p>
-        <label className="flex items-center gap-2 text-xs font-semibold text-on-surface-muted">
-          Period
-          <select
-            aria-label="Sales history period"
-            value={range}
-            onChange={(event) => { setRange(event.target.value as "all" | "today" | "7days"); setVisibleLimit(25); }}
-            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-2.5 text-xs font-semibold text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
-          >
-            <option value="all">All time</option>
-            <option value="7days">Last 7 days</option>
-            <option value="today">Today</option>
-          </select>
-        </label>
+        <div className="flex gap-1.5" role="tablist" aria-label="Sales history period">
+          {(
+            [
+              { key: "all", label: "All time" },
+              { key: "7days", label: "7 days" },
+              { key: "today", label: "Today" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={range === tab.key}
+              onClick={() => {
+                setRange(tab.key);
+                setVisibleLimit(25);
+              }}
+              className={`min-h-[32px] rounded-full px-3 text-[length:var(--font-size-caption)] font-medium transition-all ${
+                range === tab.key
+                  ? "bg-brand-accent text-brand-accent-contrast shadow-xs"
+                  : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div>
         <ul className="flex flex-col gap-2">
@@ -197,6 +211,7 @@ export default function SalesPage() {
                       })}
                     </p>
                   </div>
+                  <ChevronRight size={16} className="shrink-0 text-on-surface-muted" aria-hidden />
                 </RippleLink>
               </li>
             );

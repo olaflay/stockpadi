@@ -2,6 +2,8 @@
 
 import React from "react";
 
+import { getBrandingConfig } from "@/config/branding";
+
 interface BrandLogoProps {
   variant?: "mark" | "full" | "lockup";
   size?: "sm" | "md" | "lg" | "xl" | number;
@@ -57,10 +59,13 @@ export function BrandLogo({
   showTagline = false,
 }: BrandLogoProps) {
   const pixelSize = typeof size === "number" ? size : SIZE_MAP[size];
+  const { businessName } = getBrandingConfig();
 
   if (variant === "mark") {
     return <BrandMark size={pixelSize} className={`text-brand-accent ${className}`} />;
   }
+
+  const isOjapadi = businessName.toLowerCase().replace(/à/g, "a") === "ojapadi";
 
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
@@ -68,7 +73,13 @@ export function BrandLogo({
       <div className="flex flex-col leading-none">
         <div className="flex items-center">
           <span className="font-extrabold tracking-tight text-on-surface text-[1.15em]">
-            Ojà<span className="text-brand-accent">Padi</span>
+            {isOjapadi ? (
+              <>
+                Ojà<span className="text-brand-accent">Padi</span>
+              </>
+            ) : (
+              businessName
+            )}
           </span>
           <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-brand-accent" />
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { X, type LucideIcon } from "lucide-react";
+import { X, Check, type LucideIcon } from "lucide-react";
 
-export type ChipVariant = "filter" | "assist" | "input";
+export type ChipVariant = "filter" | "assist" | "input" | "suggestion";
 
 interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ChipVariant;
@@ -19,9 +19,10 @@ interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
  * instantaneous tap feedback on budget Android devices with zero JS reflows.
  * 
  * Variants:
- * - filter: For toggling categories/filters (with aria-pressed)
+ * - filter: For toggling categories/filters (with aria-pressed and selection checkmark)
  * - assist: For triggering helper tasks (barcode scan, quick templates)
  * - input: For removable tags with a trailing dismiss icon
+ * - suggestion: For quick actions and contextual prompts
  */
 export function Chip({
   variant = "filter",
@@ -40,14 +41,17 @@ export function Chip({
 
   if (variant === "filter") {
     stateClasses = selected
-      ? "bg-brand-accent text-brand-accent-contrast shadow-xs"
-      : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest";
+      ? "bg-brand-accent text-brand-accent-contrast shadow-xs border border-transparent"
+      : "bg-surface-container-high text-on-surface border border-border/60 hover:bg-surface-container-highest";
   } else if (variant === "assist") {
     stateClasses =
-      "bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-surface-container-highest";
+      "bg-surface-container text-on-surface border border-transparent hover:bg-surface-container-high active:bg-surface-container-highest";
+  } else if (variant === "suggestion") {
+    stateClasses =
+      "bg-surface-container text-on-surface border border-border/40 hover:bg-surface-container-high active:bg-surface-container-highest";
   } else if (variant === "input") {
     stateClasses =
-      "bg-surface-container text-on-surface pr-1.5 hover:bg-surface-container-high";
+      "bg-surface-container text-on-surface pr-1.5 border border-transparent hover:bg-surface-container-high";
   }
 
   return (
@@ -58,7 +62,11 @@ export function Chip({
       className={`${baseClasses} ${stateClasses} ${className}`}
       {...props}
     >
-      {Icon && <Icon size={14} className="shrink-0" aria-hidden />}
+      {variant === "filter" && selected && !Icon ? (
+        <Check size={16} className="shrink-0" aria-hidden />
+      ) : Icon ? (
+        <Icon size={16} className="shrink-0" aria-hidden />
+      ) : null}
       <span>{children}</span>
       {variant === "input" && onRemove && (
         <span
@@ -74,7 +82,7 @@ export function Chip({
               onRemove();
             }
           }}
-          className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-on-surface-muted hover:bg-black/10 active:scale-90 transition-all"
+          className="ml-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-on-surface-muted hover:bg-black/10 active:scale-90 transition-all"
           aria-label="Remove"
         >
           <X size={12} aria-hidden />

@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { SelectInput } from "@/components/ui/SelectInput";
+import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -23,9 +24,6 @@ import { hasCapability } from "@/features/auth/authorization";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch } from "@/lib/db";
-
-const inputClass =
-  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
 
 /** Pick a product, enter the counted quantity, mandatory reason. docs/RESEARCH-AND-PLAN.md Phase 2 item 19. */
 export default function StockCountPage() {
@@ -82,7 +80,7 @@ export default function StockCountPage() {
   if (!hasCapability(user, "SUBMIT_STOCK_COUNT")) {
     return (
       <div>
-        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" backHref="/dashboard" />
         <PermissionDenied requiredCapabilities={["SUBMIT_STOCK_COUNT"]} />
       </div>
     );
@@ -91,7 +89,7 @@ export default function StockCountPage() {
   if (branches === undefined || products === undefined) {
     return (
       <div>
-        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" backHref="/dashboard" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -103,19 +101,19 @@ export default function StockCountPage() {
     if (branches.length === 0) {
       return (
         <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-          <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+          <ScreenHeader title="Stock count" backHref="/dashboard" />
           <EmptyState
             icon={ClipboardList}
             title="No branches yet"
             description="Add a branch in Settings before counting stock."
-            action={{ label: "Add a branch", onClick: () => router.push("/settings/branches") }}
+            action={{ label: "Add a branch", href: "/settings/branches" }}
           />
         </div>
       );
     }
     return (
       <div>
-        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" backHref="/dashboard" />
         <div className="flex flex-col gap-2">
           <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch?</p>
           {branches.map((branch) => (
@@ -176,10 +174,9 @@ export default function StockCountPage() {
 
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Counted quantity</span>
-          <input
+          <TextInput
             value={countedQuantity}
             onChange={(e) => setCountedQuantity(e.target.value.replace(/[^\d]/g, ""))}
-            className={inputClass}
             inputMode="numeric"
             autoFocus
           />
@@ -198,7 +195,7 @@ export default function StockCountPage() {
 
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Note (optional)</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+          <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
 
         <RippleButton
@@ -213,17 +210,15 @@ export default function StockCountPage() {
     );
   }
 
-
-
   if (products.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Stock count" backHref="/dashboard" />
         <EmptyState
           icon={ClipboardList}
           title="No products yet"
           description="Add products before counting stock."
-          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+          action={{ label: "Add a product", href: "/products/new" }}
         />
       </div>
     );
@@ -231,7 +226,7 @@ export default function StockCountPage() {
 
   return (
     <div>
-      <ScreenHeader title="Stock count" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Stock count" backHref="/dashboard" />
 
       <div className="relative mb-3 w-full">
         <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted" aria-hidden />

@@ -22,6 +22,7 @@ import { useDashboardMetrics } from "@/features/dashboard/use-dashboard-metrics"
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
+import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
@@ -37,20 +38,18 @@ function KpiCard({
   value,
   sub,
   valueClassName = "text-on-surface",
+  href,
   onClick,
 }: {
   label: string;
   value: string;
   sub: string;
   valueClassName?: string;
-  onClick: () => void;
+  href?: string;
+  onClick?: () => void;
 }) {
-  return (
-    <RippleButton
-      type="button"
-      onClick={onClick}
-      className="flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-4 text-left hover:bg-surface-container-high transition-colors"
-    >
+  const content = (
+    <>
       <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight">{label}</p>
       <div className="mt-2 min-w-0">
         <p className={`truncate font-number text-lg font-bold tracking-tight tabular-nums sm:text-xl ${valueClassName}`}>
@@ -58,6 +57,22 @@ function KpiCard({
         </p>
         <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">{sub}</p>
       </div>
+    </>
+  );
+
+  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-4 text-left hover:bg-surface-container-high transition-colors";
+
+  if (href) {
+    return (
+      <RippleLink href={href} className={className}>
+        {content}
+      </RippleLink>
+    );
+  }
+
+  return (
+    <RippleButton type="button" onClick={onClick} className={className}>
+      {content}
     </RippleButton>
   );
 }
@@ -179,22 +194,20 @@ export default function DashboardPage() {
       )}
 
       {allAlertsCount > 0 && (
-        <RippleButton
-          type="button"
-          onClick={() => router.push("/alerts")}
+        <RippleLink
+          href="/alerts"
           className="mb-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-container text-on-brand-container px-4 py-3 text-left hover:brightness-95 transition-all"
         >
           <span className="text-[length:var(--font-size-body)] font-medium">
             {allAlertsCount} {allAlertsCount === 1 ? "alert" : "alerts"} need your attention
           </span>
           <Bell size={18} aria-hidden />
-        </RippleButton>
+        </RippleLink>
       )}
 
       {canSeeMoney && (
-        <RippleButton
-          type="button"
-          onClick={() => router.push("/products")}
+        <RippleLink
+          href="/products"
           className="mb-3.5 flex w-full flex-col rounded-2xl bg-surface-container p-4.5 sm:p-5 text-left hover:bg-surface-container-high transition-colors"
         >
           <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
@@ -206,7 +219,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
             Stock at cost · {metrics.stockedProductCount} {metrics.stockedProductCount === 1 ? "product" : "products"} on hand
           </p>
-        </RippleButton>
+        </RippleLink>
       )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -225,7 +238,7 @@ export default function DashboardPage() {
             value={formatCurrency(netCashFlow)}
             sub="After expenses & purchases"
             valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
-            onClick={() => router.push("/reports")}
+            href="/reports"
           />
         )}
 
@@ -234,7 +247,7 @@ export default function DashboardPage() {
           value={String(metrics.lowStockCount)}
           sub="products below threshold"
           valueClassName="text-warning"
-          onClick={() => router.push("/products?filter=low-stock")}
+          href="/products?filter=low-stock"
         />
 
         {canSeeMoney && (
@@ -243,24 +256,23 @@ export default function DashboardPage() {
             value={totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
             sub="total debt"
             valueClassName="text-danger"
-            onClick={() => router.push("/customers")}
+            href="/customers"
           />
         )}
       </div>
 
       {metrics.expiringCount > 0 && (
-        <RippleButton
-          type="button"
-          onClick={() => router.push("/products?filter=expiring")}
+        <RippleLink
+          href="/products?filter=expiring"
           className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
         >
           <span className="text-[length:var(--font-size-body)] font-medium">
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
           </span>
-        </RippleButton>
+        </RippleLink>
       )}
 
-      {/* Quick Actions Hub — Clean, accessible 2x2 grid for high-frequency operations */}
+      {/* Quick Actions Hub — Clean, accessible compact 4-column bar with unified surface */}
       {(hasAccountType(user, CAN_RECORD_EXPENSES) ||
         hasAccountType(user, CAN_RESTOCK) ||
         hasAccountType(user, CAN_EDIT_PRODUCTS) ||
@@ -274,60 +286,57 @@ export default function DashboardPage() {
               <RippleButton
                 type="button"
                 onClick={() => setIsExpenseSheetOpen(true)}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-warning-container text-on-warning-container hover:brightness-95 transition-all text-center min-h-[88px]"
+                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-warning/15 text-on-warning-container">
-                  <Wallet size={20} aria-hidden />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
+                  <Wallet size={19} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-warning-container text-center leading-tight">
-                  Record Expense
+                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                  Expense
                 </span>
               </RippleButton>
             )}
 
             {hasAccountType(user, CAN_RESTOCK) && (
-              <RippleButton
-                type="button"
-                onClick={() => router.push("/purchases/new")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-success-container text-on-success-container hover:brightness-95 transition-all text-center min-h-[88px]"
+              <RippleLink
+                href="/purchases/new"
+                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-success/15 text-on-success-container">
-                  <PackagePlus size={20} aria-hidden />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
+                  <PackagePlus size={19} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-success-container text-center leading-tight">
+                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
                   Restock
                 </span>
-              </RippleButton>
+              </RippleLink>
             )}
 
             {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
-              <RippleButton
-                type="button"
-                onClick={() => router.push("/products/new")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-brand-container text-on-brand-container hover:brightness-95 transition-all text-center min-h-[88px]"
+              <RippleLink
+                href="/products/new"
+                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-accent/15 text-on-brand-container">
-                  <Plus size={20} aria-hidden />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
+                  <Plus size={19} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-brand-container text-center leading-tight">
-                  Add Product
+                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                  Add
                 </span>
-              </RippleButton>
+              </RippleLink>
             )}
 
             {hasAccountType(user, CAN_CLOSE_DAY) && (
-              <RippleButton
-                type="button"
-                onClick={() => router.push("/close-day")}
-                className="flex flex-col items-center justify-center py-3.5 px-1 rounded-2xl bg-danger-container text-on-danger-container hover:brightness-95 transition-all text-center min-h-[88px]"
+              <RippleLink
+                href="/close-day"
+                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-danger/15 text-on-danger-container">
-                  <CalendarCheck size={20} aria-hidden />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
+                  <CalendarCheck size={19} aria-hidden />
                 </div>
-                <span className="mt-2 text-[11px] sm:text-xs font-medium text-on-danger-container text-center leading-tight">
+                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
                   Close Day
                 </span>
-              </RippleButton>
+              </RippleLink>
             )}
           </div>
         </section>
@@ -340,10 +349,9 @@ export default function DashboardPage() {
           </h2>
           <div className="flex flex-col gap-2">
             {metrics.topProducts.map((p) => (
-              <RippleButton
+              <RippleLink
                 key={p.id}
-                type="button"
-                onClick={() => router.push(`/pos?add=${p.id}`)}
+                href={`/pos?add=${p.id}`}
                 className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high active:scale-98 transition-all"
               >
                 <div className="min-w-0 flex-1">
@@ -355,7 +363,7 @@ export default function DashboardPage() {
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container font-semibold text-lg" aria-hidden>
                   +
                 </span>
-              </RippleButton>
+              </RippleLink>
             ))}
           </div>
         </section>

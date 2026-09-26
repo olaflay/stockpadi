@@ -4,7 +4,7 @@
  * Lead system: Samsung One UI — bottom-interaction layout.
  * Business Owner adds a Worker: name, email and optional branch.
  * Online-required: creates an auth.users row via the Node manage-staff API.
- * StockPadi generates the worker password and emails it after creation.
+ * The app generates the worker password and emails it after creation.
  * See .agents/rules/design-system.md and zero-ai-slop-design.md.
  */
 
@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 
 import { TextInput } from "@/components/ui/TextInput";
+import { getBrandingConfig } from "@/config/branding";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -181,7 +182,7 @@ export default function NewStaffPage() {
               id="staff-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="johnsonaimus@gmail.com"
+              placeholder="e.g. staff@example.com"
               type="email"
               autoComplete="email"
               autoCapitalize="none"
@@ -189,7 +190,7 @@ export default function NewStaffPage() {
             />
           </label>
 
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">StockPadi generates a secure password that you&apos;ll share with the worker yourself (WhatsApp or in person). It&apos;s never sent by email.</p>
+          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{getBrandingConfig().businessName} generates a secure password that you&apos;ll share with the worker yourself (WhatsApp or in person). It&apos;s never sent by email.</p>
         </div>
 
         {/* Access card */}

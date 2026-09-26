@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 top-3 sm:top-4 z-[9999] flex flex-col items-center gap-2 px-4 pt-[env(safe-area-inset-top,0px)]"
+        className="pointer-events-none fixed inset-x-0 bottom-20 sm:bottom-24 z-[9999] flex flex-col-reverse items-center gap-2 px-4 pb-[env(safe-area-inset-bottom,0px)]"
         aria-live="polite"
         aria-atomic="true"
       >
@@ -196,18 +196,18 @@ function ToastItem({
           : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out",
         touchAction: "pan-y",
       }}
-      className={`pointer-events-auto animate-toast-slide-down flex items-center justify-between gap-2.5 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] select-none cursor-grab active:cursor-grabbing ${TONE_CLASSES[toast.tone].container}`}
+      className={`pointer-events-auto animate-toast-slide-up flex items-center justify-between gap-2.5 w-full max-w-md rounded-[var(--radius-control)] px-3.5 py-2.5 text-[length:var(--font-size-body)] shadow-[var(--shadow-elevation-3)] select-none cursor-grab active:cursor-grabbing ${TONE_CLASSES[toast.tone].container}`}
     >
       {toast.onClick ? (
         <button
           type="button"
           onClick={toast.onClick}
-          className="flex-1 text-left font-medium underline decoration-dotted underline-offset-4 hover:opacity-90 active:opacity-75 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
+          className="flex-1 text-left font-medium line-clamp-2 underline decoration-dotted underline-offset-4 hover:opacity-90 active:opacity-75 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
         >
           {toast.text}
         </button>
       ) : (
-        <span className="flex-1 font-medium leading-snug">{toast.text}</span>
+        <span className="flex-1 font-medium leading-snug line-clamp-2">{toast.text}</span>
       )}
 
       {toast.action && (

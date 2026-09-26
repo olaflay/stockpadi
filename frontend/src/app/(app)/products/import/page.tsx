@@ -63,7 +63,7 @@ export default function ImportProductsPage() {
   if (!hasCapability(user, "MANAGE_PRODUCTS")) {
     return (
       <div>
-        <ScreenHeader title="Import products" onBack={() => router.back()} />
+        <ScreenHeader title="Import products" backHref="/products" />
         <PermissionDenied requiredCapabilities={["MANAGE_PRODUCTS"]} />
       </div>
     );
@@ -74,7 +74,7 @@ export default function ImportProductsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "stockpadi-products-template.xlsx";
+    a.download = "products-template.xlsx";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -86,7 +86,7 @@ export default function ImportProductsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "stockpadi-import-errors.csv";
+    a.download = "import-errors.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -157,7 +157,7 @@ export default function ImportProductsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Import products" onBack={() => router.back()} />
+      <ScreenHeader title="Import products" backHref="/products" />
 
       <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
         Add many products at once by filling in a spreadsheet template, then uploading it.

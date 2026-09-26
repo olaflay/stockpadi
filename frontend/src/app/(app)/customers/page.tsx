@@ -13,11 +13,13 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { NoResultsState } from "@/components/ui/NoResultsState";
+import { RippleLink } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
 import { tenantArray } from "@/lib/local-tenant";
 import type { LocalCustomer } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
+import { getBrandingConfig } from "@/config/branding";
 
 /** Sorted by amount owed, descending, total owed on top. docs/RESEARCH-AND-PLAN.md Section 4.3. */
 export default function CustomersPage() {
@@ -81,7 +83,7 @@ export default function CustomersPage() {
   if (customersWithBalance === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Customers owing" backHref="/dashboard" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -96,12 +98,12 @@ export default function CustomersPage() {
   if (customersWithBalance.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="Customers owing" backHref="/dashboard" />
         <EmptyState
           icon={Users}
           title="No customers yet"
           description="Customers are added when you tag a sale as credit, at checkout."
-          action={{ label: "Go to Sell", onClick: () => router.push("/pos") }}
+          action={{ label: "Go to Sell", href: "/pos" }}
         />
       </div>
     );
@@ -112,14 +114,14 @@ export default function CustomersPage() {
   const handleQuickRemind = (e: React.MouseEvent, customer: LocalCustomer, balance: number) => {
     e.stopPropagation();
     if (!customer.phone) return;
-    const shopName = businessProfile?.name ?? "StockPadi";
+    const shopName = businessProfile?.name ?? getBrandingConfig().businessName;
     const message = renderOwingMessage(businessProfile?.owingMessageTemplate, { customerName: customer.name, businessName: shopName, amountOwed: formatCurrency(Math.max(balance, 0)) });
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   };
 
   return (
     <div>
-      <ScreenHeader title="Customers owing" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="Customers owing" backHref="/dashboard" />
 
       <div className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Total owed to you</p>
@@ -152,19 +154,16 @@ export default function CustomersPage() {
                   key={customer.id}
                   className="flex items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high transition-colors"
                 >
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => router.push(`/customers/${customer.id}`)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/customers/${customer.id}`); }}
+                  <RippleLink
+                    href={`/customers/${customer.id}`}
                     aria-label={`View customer ${customer.name}, owing ${formatCurrency(Math.max(balance, 0))}`}
-                    className="min-w-0 flex-1 cursor-pointer"
+                    className="min-w-0 flex-1 py-0.5"
                   >
                     <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{customer.name}</p>
                     {customer.phone && (
                       <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>
                     )}
-                  </div>
+                  </RippleLink>
                   <div className="flex shrink-0 items-center gap-2">
                     {aging && (
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}>
@@ -183,9 +182,9 @@ export default function CustomersPage() {
                         onClick={(e) => handleQuickRemind(e, customer, balance)}
                         aria-label={`Send WhatsApp payment reminder to ${customer.name}`}
                         title={`Send WhatsApp reminder to ${customer.name}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#25D366] hover:bg-[#25D366]/15 active:scale-90 transition-all"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-[#25D366] hover:bg-[#25D366]/15 active:scale-95 transition-all"
                       >
-                        <MessageCircle size={18} />
+                        <MessageCircle size={20} />
                       </button>
                     )}
                   </div>

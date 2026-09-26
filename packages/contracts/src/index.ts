@@ -36,7 +36,13 @@ export const PASSWORD_REQUIREMENTS = [
   { key: "symbol", label: "A symbol (for example ! or @)", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
 ] as const;
 
-export function getPasswordRequirements(password: string) {
+export interface PasswordRequirementResult {
+  key: string;
+  label: string;
+  passed: boolean;
+}
+
+export function getPasswordRequirements(password: string): PasswordRequirementResult[] {
   return PASSWORD_REQUIREMENTS.map(({ key, label, test }) => ({ key, label, passed: test(password) }));
 }
 

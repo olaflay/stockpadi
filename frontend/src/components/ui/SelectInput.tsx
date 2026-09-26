@@ -16,7 +16,7 @@ interface SelectInputProps extends React.SelectHTMLAttributes<HTMLSelectElement>
 export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
   function SelectInput({ className = "", hasError = false, ...props }, ref) {
     const baseClass =
-      "min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] bg-surface pl-3.5 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)]";
+      "min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] bg-surface pl-3.5 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)]";
     const normalClass = "border border-border/80 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
     const errorClass = "border-2 border-danger focus:border-danger focus:ring-2 focus:ring-danger/20";
 

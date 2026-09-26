@@ -321,7 +321,7 @@ export default function LoginForm() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="approval-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-scrim)] px-4"
         >
           <div
             className="w-full max-w-sm rounded-2xl bg-surface p-6 border border-border/80"

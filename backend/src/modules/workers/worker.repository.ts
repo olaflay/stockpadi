@@ -108,7 +108,7 @@ export function isWorkerRetentionExpired(deactivatedAt: string | null | undefine
 }
 
 function tombstoneEmail(userId: string): string {
-  return `deleted-worker+${userId}@deleted.stockpadi.app`;
+  return `deleted-worker+${userId}@deleted.ojapadi.app`;
 }
 
 /** Retire the login but retain its user id for historical records. */

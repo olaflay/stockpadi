@@ -51,7 +51,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/95 backdrop-blur-md gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface after:pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
       style={{
         paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
       }}
@@ -67,14 +67,14 @@ export function BottomNav() {
             href={item.href}
             id={`tour-nav-${item.label.toLowerCase()}`}
             prefetch={true}
-            className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
-              isActive ? "text-brand-accent-active font-semibold" : "text-on-surface-muted"
+            className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+              isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
             }`}
             aria-current={isActive ? "page" : undefined}
           >
             <span
-              className={`relative flex items-center justify-center rounded-full px-4 py-0.5 transition-colors duration-[var(--motion-duration-short)] ${
-                isActive ? "bg-brand-accent/10" : ""
+              className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
+                isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />

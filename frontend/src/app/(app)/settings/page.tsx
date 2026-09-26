@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronRight, Sun, Moon, SunMoon, Users, LogOut } from "lucide-react";
+import { Sun, Moon, SunMoon, Users, LogOut, ChevronRight } from "lucide-react";
+import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const user = useCurrentUser();
   const { theme } = useTheme();
+  const branding = getBrandingConfig();
   const canManageBusiness = hasAccountType(user, CAN_MANAGE_BUSINESS_SETTINGS);
 
   async function handleLogout() {
@@ -59,7 +61,7 @@ export default function SettingsPage() {
           </div>
           <p className="truncate text-xs text-on-surface-muted mt-0.5">Manage profile & account details</p>
         </div>
-        <ChevronRight size={18} className="shrink-0 text-on-surface-muted/60" aria-hidden />
+        <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
       </RippleButton>
 
       {/* Appearance Section */}
@@ -167,12 +169,21 @@ export default function SettingsPage() {
         </h2>
         <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
           <SettingsRow
+            label="App Walkthrough"
+            description="Replay the interactive guided tour"
+            onClick={() => {
+              window.localStorage.removeItem(`stockpadi.guided-tour.v2:${user.id}`);
+              window.dispatchEvent(new Event("stockpadi-tour-change"));
+              router.push("/dashboard");
+            }}
+          />
+          <SettingsRow
             label="Help & Support"
             description="User guides, offline FAQs & feedback"
             onClick={() => router.push("/settings/help")}
           />
           <SettingsRow
-            label="About StockPadi"
+            label={`About ${branding.businessName}`}
             description="Version 0.1.0 • Offline-first architecture"
             onClick={() => router.push("/settings/about")}
           />
@@ -193,7 +204,6 @@ export default function SettingsPage() {
             <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-danger">Log out</p>
             <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">Sign out of this device</p>
           </div>
-          <ChevronRight size={18} className="shrink-0 text-on-surface-muted/60" aria-hidden />
         </RippleButton>
       </section>
     </div>

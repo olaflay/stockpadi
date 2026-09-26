@@ -14,6 +14,7 @@
  */
 
 import { formatCurrency } from "@/lib/format";
+import { getBrandingConfig } from "@/config/branding";
 import type { Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { LocalBusinessProfile, LocalCustomer } from "@/lib/db";
@@ -164,7 +165,7 @@ export function ThermalReceipt({
       {/* Footer */}
       <div className="text-center">
         <p>Thank you for your patronage!</p>
-        <p className="text-xs mt-1">Powered by StockPadi</p>
+        <p className="text-xs mt-1">Powered by {getBrandingConfig().businessName}</p>
       </div>
 
       {/* Tear-off feed margins: 4 blank lines so the printer's physical

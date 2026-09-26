@@ -142,7 +142,7 @@ export function SideDrawer() {
     <>
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] transition-opacity duration-[280ms] ease-out ${
+        className={`fixed inset-0 z-50 bg-[var(--color-scrim)] transition-opacity duration-[280ms] ease-out ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={closeDrawer}
@@ -160,6 +160,7 @@ export function SideDrawer() {
         }}
         aria-label="Navigation drawer"
         aria-hidden={!isOpen}
+        inert={!isOpen || undefined}
       >
         {/* Drawer Header: Business Name prominently at the top */}
         <div className="flex flex-col px-4 pt-6 pb-4.5 bg-brand-accent text-brand-accent-contrast select-none shadow-sm">
@@ -265,7 +266,7 @@ export function SideDrawer() {
             <span>Sign Out</span>
           </button>
 
-          <p className="text-center text-[10px] text-on-surface-muted/60 pt-0.5">
+          <p className="text-center text-[10px] text-on-surface-muted pt-0.5">
             {branding.businessName} • Offline-First Retail
           </p>
         </div>

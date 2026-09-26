@@ -25,6 +25,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { RippleButton } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
+import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { formatCurrency } from "@/lib/format";
@@ -269,7 +270,7 @@ export default function ProductsPage() {
           description="Add your first product to start selling and tracking stock."
           action={
             canEditProducts
-              ? { label: "Add a product", onClick: () => router.push("/products/new"), id: "empty-add-product" }
+              ? { label: "Add a product", href: "/products/new", id: "empty-add-product" }
               : undefined
           }
         />
@@ -358,18 +359,14 @@ export default function ProductsPage() {
       <div className="mb-3 flex items-center gap-2">
         <div className="flex flex-1 gap-2 overflow-x-auto pb-0.5 no-scrollbar">
           {(Object.keys(FILTER_LABELS) as ProductFilter[]).map((key) => (
-            <button
+            <Chip
               key={key}
-              type="button"
-              aria-pressed={filter === key}
+              variant="filter"
+              selected={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-[var(--touch-target-min)] shrink-0 rounded-full px-4 text-[length:var(--font-size-body)] transition-colors ${filter === key
-                  ? "bg-brand-accent text-brand-accent-contrast"
-                  : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
-                }`}
             >
               {FILTER_LABELS[key]}
-            </button>
+            </Chip>
           ))}
         </div>
 
@@ -455,7 +452,7 @@ export default function ProductsPage() {
                 filter === "all"
                   ? {
                     label: "Add product",
-                    onClick: () => router.push("/products/new"),
+                    href: "/products/new",
                   }
                   : undefined
               }
@@ -576,7 +573,9 @@ export default function ProductsPage() {
             type="button"
             onClick={handleArchiveSelected}
             disabled={selectedIds.size === 0}
-            className="flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-medium text-white disabled:opacity-50 hover:opacity-95 transition-opacity"
+            className={`flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] font-medium text-white disabled:opacity-50 hover:opacity-95 transition-opacity ${
+              filter === "archived" ? "bg-brand-accent" : "bg-danger"
+            }`}
           >
             {filter === "archived" ? <RotateCcw size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
             {filter === "archived" ? "Restore" : "Archive"}

@@ -8,7 +8,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
-import { RippleButton } from "@/components/ui/Ripple";
+import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { fetchStaff } from "@/features/auth/manage-staff-client";
 
@@ -52,7 +52,7 @@ export default function StaffPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Staff" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Staff" backHref="/settings" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -61,7 +61,7 @@ export default function StaffPage() {
   if (result === undefined) {
     return (
       <div>
-        <ScreenHeader title="Staff" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Staff" backHref="/settings" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -70,7 +70,7 @@ export default function StaffPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Staff" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Staff" backHref="/settings" />
         <ErrorState message="Couldn't load staff." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -80,7 +80,7 @@ export default function StaffPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Staff" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="Staff" backHref="/settings" />
 
       <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
         {nonOwnerActiveCount} of {STAFF_CAP} staff used
@@ -88,11 +88,10 @@ export default function StaffPage() {
 
       <div className="flex flex-col gap-2">
         {result.users.map((staffMember) => (
-          <RippleButton
+          <RippleLink
             key={staffMember.id}
-            type="button"
-            onClick={() => router.push(`/staff/${staffMember.id}`)}
-            className="flex min-h-[var(--touch-target-min)] items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border px-4 py-3 text-left hover:bg-surface-container transition-colors"
+            href={`/staff/${staffMember.id}`}
+            className="flex min-h-[var(--touch-target-min)] items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
           >
             <div className="min-w-0">
               <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
@@ -108,33 +107,31 @@ export default function StaffPage() {
               </p>
             </div>
             <ChevronRight size={20} className="shrink-0 text-on-surface-muted" aria-hidden />
-          </RippleButton>
+          </RippleLink>
         ))}
       </div>
 
       {nonOwnerActiveCount < STAFF_CAP ? (
-        <RippleButton
-          type="button"
-          onClick={() => router.push("/staff/new")}
+        <RippleLink
+          href="/staff/new"
           className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
         >
           <Plus size={18} aria-hidden />
           Add staff
-        </RippleButton>
+        </RippleLink>
       ) : (
         <p className="rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-center text-[length:var(--font-size-body)] text-on-surface-muted">
           You&apos;ve reached the {STAFF_CAP}-staff limit. Deactivate someone to add another.
         </p>
       )}
 
-      <RippleButton
-        type="button"
-        onClick={() => router.push("/staff/audit")}
-        className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container transition-colors"
+      <RippleLink
+        href="/staff/audit"
+        className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container transition-colors"
       >
         <ScrollText size={18} aria-hidden />
         View audit log
-      </RippleButton>
+      </RippleLink>
     </div>
   );
 }

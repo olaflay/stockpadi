@@ -549,7 +549,7 @@ export function BrowseStep(props: {
       )}
 
       {itemCount > 0 && (
-        <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
+        <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 border-t border-border/60 bg-surface px-gutter sm:px-gutter-lg py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
           <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
             {itemCount} item{itemCount === 1 ? "" : "s"} · <span key={total} className="animate-count-pop font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
           </span>

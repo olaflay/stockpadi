@@ -28,6 +28,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { CheckCircle2, Clock, Mail } from "lucide-react";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { RippleButton } from "@/components/ui/Ripple";
+import { getBrandingConfig } from "@/config/branding";
 import { signOut } from "@/features/auth/logout";
 import { callBackend, BackendError } from "@/features/auth/backend-client";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -203,10 +204,10 @@ export default function PendingApprovalPage() {
             <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-snug">
               Need help? Email{" "}
               <a
-                href="mailto:support@stockpadi.com"
+                href={`mailto:${getBrandingConfig().supportEmail}`}
                 className="text-brand-accent font-semibold hover:underline"
               >
-                support@stockpadi.com
+                {getBrandingConfig().supportEmail}
               </a>
             </p>
           </div>

@@ -1,11 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
-import { RippleButton } from "@/components/ui/Ripple";
+import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 
 interface EmptyStateProps {
   title: string;
   description: string;
-  action?: { label: string; onClick: () => void; id?: string };
+  action?: { label: string; onClick?: () => void; href?: string; id?: string };
   /**
    * A real icon in a soft tonal container, following Samsung One UI & M3.
    */
@@ -58,14 +58,24 @@ export function EmptyState({
 
       {action && (
         <div className="w-full pt-4 mt-auto">
-          <RippleButton
-            id={action.id}
-            type="button"
-            onClick={action.onClick}
-            className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer"
-          >
-            {action.label}
-          </RippleButton>
+          {action.href ? (
+            <RippleLink
+              id={action.id}
+              href={action.href}
+              className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer text-center"
+            >
+              {action.label}
+            </RippleLink>
+          ) : (
+            <RippleButton
+              id={action.id}
+              type="button"
+              onClick={action.onClick}
+              className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer"
+            >
+              {action.label}
+            </RippleButton>
+          )}
         </div>
       )}
     </div>

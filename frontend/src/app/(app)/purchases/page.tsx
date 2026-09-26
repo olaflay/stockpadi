@@ -100,14 +100,14 @@ export default function PurchasesPage() {
   if (result.purchases.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
+        <ScreenHeader title="Restocks" backHref="/products" />
         <EmptyState
           icon={Truck}
           title="No restocks recorded"
           description="Record stock coming in from a supplier so what's on the shelf matches the app."
           action={
             canAdd
-              ? { label: "Record a restock", onClick: () => router.push("/purchases/new") }
+              ? { label: "Record a restock", href: "/purchases/new" }
               : undefined
           }
         />
@@ -117,7 +117,7 @@ export default function PurchasesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Restocks" onBack={() => router.push("/products")} />
+      <ScreenHeader title="Restocks" backHref="/products" />
 
       {canAdd && (
         <Link
@@ -138,7 +138,7 @@ export default function PurchasesPage() {
               <li key={purchase.id}>
                 <RippleLink
                   href={`/purchases/${purchase.id}`}
-                  className="block rounded-[var(--radius-card)] border border-border px-4 py-3 hover:bg-surface-container transition-colors"
+                  className="block rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">

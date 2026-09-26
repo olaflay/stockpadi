@@ -134,7 +134,7 @@ export function NewProductForm({
 
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface/95 backdrop-blur-md z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-border/60 bg-surface z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
         <div className="flex items-center gap-3 max-w-xl md:max-w-2xl mx-auto w-full">
           {onCancel && (
             <button

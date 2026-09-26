@@ -84,7 +84,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
 
   try {
     if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
-    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: "stockpadi-backend" }, requestOrigin);
+    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: "ojapadi-backend" }, requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.categories) return jsonResponse(200, await handleCategoryList(request), requestOrigin);

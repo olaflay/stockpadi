@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
@@ -40,7 +39,6 @@ export function ReportsBody({
   periodNetProfit: number;
   periodNetCashFlow: number;
 }) {
-  const router = useRouter();
   const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
   const [showCashFlowBreakdown, setShowCashFlowBreakdown] = useState(false);
 
@@ -55,18 +53,19 @@ export function ReportsBody({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2">
+      <div className="flex gap-2" role="tablist" aria-label="Report period">
         {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
           <button
             key={key}
             type="button"
-            aria-pressed={period === key}
+            role="tab"
+            aria-selected={period === key}
             onClick={() => onSelectPeriod(key)}
-            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)]"
-            style={{
-              background: period === key ? "var(--color-brand-accent)" : "var(--color-surface-container)",
-              color: period === key ? "var(--color-brand-accent-contrast)" : "var(--color-on-surface)",
-            }}
+            className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium transition-colors ${
+              period === key
+                ? "bg-brand-accent text-brand-accent-contrast"
+                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+            }`}
           >
             {PERIOD_LABELS[key]}
           </button>
@@ -92,15 +91,6 @@ export function ReportsBody({
             {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"}
           </p>
         </RippleLink>
-        {period === "today" && (
-          <button
-            type="button"
-            onClick={() => router.push("/close-day")}
-            className="mt-4 w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent text-brand-accent-contrast font-medium text-[length:var(--font-size-body)] hover:opacity-95 transition-opacity"
-          >
-            Close day (guided)
-          </button>
-        )}
       </section>
 
       <div className="flex flex-col gap-4">

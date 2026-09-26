@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
 import { useToast } from "@/components/ui/Toast";
+import { getBrandingConfig } from "@/config/branding";
 
 interface Tenant {
   id: string;
@@ -207,7 +208,7 @@ export default function SuperAdminTenantsPage() {
             Tenant Directory
           </h1>
           <p className="text-xs sm:text-sm text-on-surface-muted mt-0.5">
-            Monitor, inspect, and manage tenant organizations across StockPadi.
+            Monitor, inspect, and manage tenant organizations across {getBrandingConfig().businessName}.
           </p>
         </div>
 

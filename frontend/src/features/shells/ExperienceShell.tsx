@@ -70,7 +70,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         </main>
         <nav
           aria-label={`${shell} navigation`}
-          className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/95 backdrop-blur-md gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface after:pointer-events-none"
+          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
           style={{
             paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
           }}

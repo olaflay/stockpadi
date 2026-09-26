@@ -90,7 +90,7 @@ export default function HelpPage() {
                 User Guide
               </span>
               <span className="block text-[length:var(--font-size-caption)] text-on-surface-muted">
-                Learn how to use StockPadi
+                Learn how to use {branding.businessName}
               </span>
             </div>
             {userGuideOpen ? (
@@ -150,7 +150,7 @@ export default function HelpPage() {
         </h2>
         <div className="flex flex-col overflow-hidden rounded-2xl bg-surface-container">
           <a
-            href={buildWhatsAppUrl(undefined, "Hi StockPadi Team, I have a question about my shop inventory...")}
+            href={buildWhatsAppUrl(undefined, `Hi ${branding.businessName} Team, I have a question about my shop inventory...`)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex min-h-[var(--touch-target-min)] items-center gap-3 px-4 py-3 text-left hover:bg-surface-container transition-colors"
@@ -169,7 +169,7 @@ export default function HelpPage() {
           </a>
 
           <a
-            href="mailto:support@stockpadi.com"
+            href={`mailto:${branding.supportEmail}`}
             className="flex min-h-[var(--touch-target-min)] items-center gap-3 px-4 py-3 text-left hover:bg-surface-container transition-colors"
           >
             <Mail size={20} className="text-on-surface-muted" aria-hidden />
@@ -178,7 +178,7 @@ export default function HelpPage() {
                 Email Support
               </span>
               <span className="block text-[length:var(--font-size-caption)] text-on-surface-muted">
-                support@stockpadi.com
+                {branding.supportEmail}
               </span>
             </div>
           </a>
@@ -189,7 +189,7 @@ export default function HelpPage() {
       <Modal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Share Your Review">
         <div className="flex flex-col gap-4 py-2">
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted text-center">
-            How is your experience with StockPadi so far?
+            How is your experience with {branding.businessName} so far?
           </p>
 
           <div className="flex items-center justify-center gap-3 py-2">
@@ -243,7 +243,7 @@ export default function HelpPage() {
       </Modal>
 
       <div className="mt-8 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
-        StockPadi v1.0.0
+        {branding.businessName} v1.0.0
       </div>
     </div>
   );

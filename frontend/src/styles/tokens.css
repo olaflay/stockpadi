@@ -1,5 +1,5 @@
 /**
- * Design tokens — StockPadi.
+ * Design tokens — OjàPadi.
  * Lead system: Samsung One UI (one-handed, thumb-reach, focus blocks).
  * Borrowed: Meta's data-lite/accessibility discipline (WCAG AA, low-end
  * device legibility); Material Design 3's token vocabulary — tonal
@@ -90,8 +90,8 @@
    --color-badge-alert-bg: #b91c1c;
    --color-badge-alert-fg: #ffffff;
 
-   /* Scrim: modal/sheet backdrop. Same value in both themes, per M3. */
-   --color-scrim: rgba(0, 0, 0, 0.4);
+   /* Scrim: modal/sheet backdrop. Same value in both themes, per M3 (32% opacity). */
+   --color-scrim: rgba(0, 0, 0, 0.32);
 
    /* Type scale: mobile-first, One UI reads large and legible at arm's length */
    /* Fluid, not fixed: a hero number (sale total, dashboard figures) must
@@ -170,8 +170,8 @@
    /* 6px — chips, badges */
    --radius-sm: 0.5rem;
    /* 8px */
-   --radius-control: 0.625rem;
-   /* 10px — buttons, inputs */
+   --radius-control: 0.75rem;
+   /* 12px (M3 Medium Shape) — buttons, inputs */
    --radius-md: 0.75rem;
    /* 12px */
    --radius-card: 0.875rem;

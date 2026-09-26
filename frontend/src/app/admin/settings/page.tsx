@@ -17,6 +17,7 @@ import {
   Lock,
   Download,
 } from "lucide-react";
+import { getBrandingConfig } from "@/config/branding";
 
 interface SystemStats {
   total_tenants: number;
@@ -75,8 +76,9 @@ export default function AdminSettingsPage() {
 
   function handleExportAudit() {
     if (!stats) return;
+    const brand = getBrandingConfig().businessName;
     const exportData = {
-      system: "StockPadi Platform",
+      system: `${brand} Platform`,
       exported_at: new Date().toISOString(),
       cluster: "Supabase Cloud Managed",
       stats,
@@ -85,7 +87,7 @@ export default function AdminSettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `stockpadi-platform-audit-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `${brand.toLowerCase()}-platform-audit-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast("Audit file downloaded.", "success");

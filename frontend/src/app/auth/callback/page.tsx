@@ -54,7 +54,7 @@ export default function AuthCallbackPage() {
       }
 
       if (!profile || !profile.is_active) {
-        // Authenticated with Google but no StockPadi account exists for
+        // Authenticated with Google but no account exists for
         // this email — send them to create one instead of stranding them.
         await supabase.auth.signOut().catch(() => {});
         router.replace("/register?error=no_account");

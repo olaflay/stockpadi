@@ -25,7 +25,7 @@ export function ServiceWorkerRegister() {
               installingWorker.addEventListener("statechange", () => {
                 if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
                   // New version available
-                  console.info("[StockPadi PWA] New update installed and ready.");
+                  console.info("[PWA] New update installed and ready.");
                 }
               });
             }
@@ -34,9 +34,9 @@ export function ServiceWorkerRegister() {
         .catch((err) => {
           // In development mode, sw.js might be disabled; log as debug
           if (process.env.NODE_ENV !== "production") {
-            console.debug("[StockPadi PWA] Service worker registration skipped/inactive in dev:", err.message);
+            console.debug("[PWA] Service worker registration skipped/inactive in dev:", err.message);
           } else {
-            console.warn("[StockPadi PWA] Service worker registration failed:", err);
+            console.warn("[PWA] Service worker registration failed:", err);
           }
         });
     }

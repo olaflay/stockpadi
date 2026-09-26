@@ -91,7 +91,7 @@ export default function CloseDayPage() {
   if (!hasCapability(user, "SUBMIT_RECONCILIATION")) {
     return (
       <div>
-        <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Close day" backHref="/reports" />
         <PermissionDenied requiredCapabilities={["SUBMIT_RECONCILIATION"]} />
       </div>
     );
@@ -100,7 +100,7 @@ export default function CloseDayPage() {
   if (result === undefined) {
     return (
       <div>
-        <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Close day" backHref="/reports" />
         <Skeleton className="h-64" />
       </div>
     );
@@ -109,7 +109,7 @@ export default function CloseDayPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Close day" backHref="/reports" />
         <ErrorState
           title="Couldn't load today's sales"
           message={result.error}
@@ -270,7 +270,7 @@ export default function CloseDayPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-12">
-      <ScreenHeader title="Close day" onBack={() => router.push("/reports")} />
+      <ScreenHeader title="Close day" backHref="/reports" />
 
       {/* Top Sales & Profit Overview */}
       <div className="flex flex-col gap-3 rounded-2xl depth-card p-4.5 sm:p-5">

@@ -4,13 +4,14 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { MessageCircle, Printer } from "lucide-react";
-import { db } from "@/lib/db";
+import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getCustomerCreditBalance } from "@/features/customers/credit";
 import { recordCreditPayment } from "@/features/customers/record-payment";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
+import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -19,6 +20,7 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { formatCurrency } from "@/lib/format";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
+import { getBrandingConfig } from "@/config/branding";
 import type { LocalCustomer, CustomerCreditMovement } from "@/lib/db";
 
 // Matches customer_credit_movements_insert RLS policy — see the comment on
@@ -45,13 +47,14 @@ export default function CustomerDetailPage({ params }: PageProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const result = useLiveQuery(async () => {
     try {
-      const [customer, movements, balance] = await Promise.all([
+      const [customer, movements, balance, profile] = await Promise.all([
         tenantGet<LocalCustomer>(db.customers, id),
         tenantArray<CustomerCreditMovement>(db.customerCreditMovements.where("customerId").equals(id)),
         getCustomerCreditBalance(id),
+        db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
       ]);
       setLoadError(null);
-      return { customer, movements, balance };
+      return { customer, movements, balance, profile };
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not load this customer.");
       return undefined;
@@ -61,7 +64,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   if (!hasCapability(user, "VIEW_CUSTOMERS")) {
     return (
       <div>
-        <ScreenHeader title="Customer" onBack={() => router.push("/customers")} />
+        <ScreenHeader title="Customer" backHref="/customers" />
         <PermissionDenied requiredCapabilities={["VIEW_CUSTOMERS"]} />
       </div>
     );
@@ -70,7 +73,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   if (loadError) {
     return (
       <div>
-        <ScreenHeader title="Customer" onBack={() => router.push("/customers")} />
+        <ScreenHeader title="Customer" backHref="/customers" />
         <ErrorState message="Couldn't load this customer." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -79,18 +82,18 @@ export default function CustomerDetailPage({ params }: PageProps) {
   if (result === undefined) {
     return (
       <div>
-        <ScreenHeader title="Customer" onBack={() => router.push("/customers")} />
+        <ScreenHeader title="Customer" backHref="/customers" />
         <Skeleton className="h-40" />
       </div>
     );
   }
 
-  const { customer, movements, balance } = result;
+  const { customer, movements, balance, profile } = result;
 
   if (!customer) {
     return (
       <div>
-        <ScreenHeader title="Customer" onBack={() => router.push("/customers")} />
+        <ScreenHeader title="Customer" backHref="/customers" />
         <p className="text-center text-[length:var(--font-size-body)] text-on-surface-muted">Not found.</p>
       </div>
     );
@@ -127,15 +130,14 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
   function handleRemind() {
     if (!customer) return;
-    const message = `Hi ${customer.name}, gentle reminder from ${
-      process.env.NEXT_PUBLIC_BUSINESS_NAME ?? "us"
-    }. Your balance is ${formatCurrency(Math.max(balance ?? 0, 0))}. Please pay when convenient. Thank you.`;
+    const shopName = profile?.name ?? getBrandingConfig().businessName;
+    const message = `Hi ${customer.name}, gentle reminder from ${shopName}. Your balance is ${formatCurrency(Math.max(balance ?? 0, 0))}. Please pay when convenient. Thank you.`;
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title={customer.name} onBack={() => router.push("/customers")} />
+      <ScreenHeader title={customer.name} backHref="/customers" />
 
       <div className="rounded-[var(--radius-focus-block)] bg-surface-container p-5 text-center">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Balance owed</p>
@@ -194,22 +196,20 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
           <label className="flex flex-col gap-1">
             <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Amount received (₦) *</span>
-            <input
+            <TextInput
               value={amount}
               onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
               placeholder={`e.g. ${Math.max(balance, 0)}`}
-              className={inputClass}
               inputMode="decimal"
               autoFocus
             />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Note (optional)</span>
-            <input
+            <TextInput
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Cash collected in shop"
-              className={inputClass}
             />
           </label>
           <div className="pt-2">

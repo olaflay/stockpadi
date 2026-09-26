@@ -26,7 +26,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
  * Browser requests stay on the frontend origin and are forwarded by the
  * Next.js `/api` rewrite. This is important for local multi-device testing:
  * an absolute `http://localhost:8787` URL would point at the phone/tablet
- * itself instead of the computer running StockPadi. Server-side callers still
+ * itself instead of the computer running OjàPadi. Server-side callers still
  * need the configured absolute backend URL.
  */
 function requestUrl(path: string): string {

@@ -65,7 +65,7 @@ export default function EditProductPage({ params }: PageProps) {
   if (product === undefined) {
     return (
       <div>
-        <ScreenHeader title="Product" onBack={() => router.push("/products")} />
+        <ScreenHeader title="Product" backHref="/products" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -74,7 +74,7 @@ export default function EditProductPage({ params }: PageProps) {
   if (product === null) {
     return (
       <div>
-        <ScreenHeader title="Product" onBack={() => router.push("/products")} />
+        <ScreenHeader title="Product" backHref="/products" />
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Product not found.</p>
       </div>
     );
@@ -126,7 +126,7 @@ export default function EditProductPage({ params }: PageProps) {
                       {branch && ` · ${branch.name}`}
                     </p>
                   </div>
-                  <p className={`shrink-0 text-[length:var(--font-size-body)] font-medium ${isPositive ? "text-success" : "text-danger"}`}>
+                  <p className={`shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${isPositive ? "text-success" : "text-danger"}`}>
                     {formattedDelta}
                   </p>
                 </div>
@@ -141,7 +141,7 @@ export default function EditProductPage({ params }: PageProps) {
   if (!canEdit) {
     return (
       <div className="flex flex-col gap-6">
-        <ScreenHeader title={prod.name} onBack={() => router.push("/products")} />
+        <ScreenHeader title={prod.name} backHref="/products" />
         <ProductReadOnlyDetails product={prod} totalStock={totalStock} stockValueClass={stockValueClass} />
         {canViewMovements && renderStockMovements()}
       </div>
@@ -150,7 +150,7 @@ export default function EditProductPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Edit Product" onBack={() => router.push("/products")} />
+      <ScreenHeader title="Edit Product" backHref="/products" />
       <EditProductForm
         totalStock={totalStock}
         stockValueClass={stockValueClass}

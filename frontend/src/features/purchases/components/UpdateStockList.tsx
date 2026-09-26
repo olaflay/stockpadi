@@ -119,7 +119,7 @@ export function UpdateStockList({
         </ul>
       )}
 
-      <div className="fixed bottom-16 left-0 right-0 z-10 bg-surface/95 backdrop-blur-md px-4 py-3">
+      <div className="fixed bottom-16 left-0 right-0 z-10 border-t border-border/60 bg-surface px-4 py-3">
         <RippleButton
           type="button"
           onClick={onSave}

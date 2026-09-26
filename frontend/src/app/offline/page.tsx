@@ -4,8 +4,11 @@ import Link from "next/link";
 import { WifiOff, ShoppingBag, Package, Users, RefreshCw } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
+import { getBrandingConfig } from "@/config/branding";
 
 export default function OfflinePage() {
+  const { businessName } = getBrandingConfig();
+
   return (
     <div className="flex min-h-screen flex-col bg-surface p-4 sm:p-6">
       <ScreenHeader title="Offline Mode" hideBack />
@@ -16,11 +19,11 @@ export default function OfflinePage() {
         </div>
 
         <h1 className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
-          You&apos;re Offline. StockPadi Still Works
+          You&apos;re Offline. {businessName} Still Works
         </h1>
 
         <p className="mt-2 max-w-sm text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
-          No internet right now. StockPadi works offline on this device. Everything you record will sync automatically when you reconnect.
+          No internet right now. {businessName} works offline on this device. Everything you record will sync automatically when you reconnect.
         </p>
 
         {/* Actionable navigation cards — Zero Dead Ends */}

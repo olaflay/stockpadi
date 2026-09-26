@@ -14,6 +14,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { retryFailedOutboxItems } from "@/features/sync/drain-outbox";
 import { buildProductsCsv, buildSalesCsv } from "@/features/reports/csv-export";
+import { getBrandingConfig } from "@/config/branding";
 
 export default function DataSettingsPage() {
   const router = useRouter();
@@ -54,8 +55,10 @@ export default function DataSettingsPage() {
         tenantArray(db.purchases),
       ]);
 
+      const branding = getBrandingConfig();
       const backupData = {
-        appName: "stockpadi",
+        appName: branding.businessName.toLowerCase().replace(/\s+/g, "-"),
+        legacyAppName: "stockpadi",
         version: 2,
         exportedAt: new Date().toISOString(),
         data: { profile, branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases },
@@ -65,7 +68,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `stockpadi-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       showToast("Backup downloaded.", "success");
@@ -86,9 +89,11 @@ export default function DataSettingsPage() {
     try {
       const text = await file.text();
       const backup = JSON.parse(text);
+      const branding = getBrandingConfig();
+      const validNames = ["stockpadi", "ojapadi", branding.businessName.toLowerCase().replace(/\s+/g, "-")];
 
-      if (backup.appName !== "stockpadi" || !backup.data) {
-        showToast("That file doesn't look like a StockPadi backup. Check the file and try again.", "danger");
+      if (!validNames.includes(backup.appName?.toLowerCase()) && !validNames.includes(backup.legacyAppName?.toLowerCase()) || !backup.data) {
+        showToast(`That file doesn't look like an authorized backup. Check the file and try again.`, "danger");
         event.target.value = "";
         return;
       }
@@ -170,7 +175,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `stockpadi-products-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `products-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       showToast("Products downloaded as a spreadsheet.", "success");
@@ -192,7 +197,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `stockpadi-sales-this-month.csv`;
+      a.download = `sales-this-month-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       showToast("Sales downloaded as a spreadsheet.", "success");

@@ -103,7 +103,7 @@ describe("Customer Debt Aging & WhatsApp Integration", () => {
     const floatSum = 0.1 + 0.2;
     expect(floatSum).not.toBe(0.3);
 
-    // StockPadi integer kobo arithmetic guarantees exact 0.30
+    // OjàPadi integer kobo arithmetic guarantees exact 0.30
     const koboSum = sumNairaAmounts([0.1, 0.2]);
     expect(koboSum).toBe(0.3);
 

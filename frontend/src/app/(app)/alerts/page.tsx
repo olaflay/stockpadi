@@ -30,7 +30,7 @@ export default function AlertsPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-      <ScreenHeader title="Alerts" onBack={() => router.back()} />
+      <ScreenHeader title="Alerts" backHref="/dashboard" />
 
       <div className="flex-1 flex flex-col justify-between">
         {isLoading ? (
@@ -46,7 +46,7 @@ export default function AlertsPage() {
             icon={Bell}
             title="All clear"
             description="No low stock or expiry warnings right now."
-            action={{ label: "Go to Dashboard", onClick: () => router.push("/dashboard") }}
+            action={{ label: "Go to Dashboard", href: "/dashboard" }}
           />
         ) : (
           <ul className="flex flex-col gap-3">
@@ -57,7 +57,7 @@ export default function AlertsPage() {
                   <RippleLink
                     href={alert.href}
                     onClick={() => acknowledgeAlert(alert.id)}
-                    className="flex items-start gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 hover:bg-surface-container active:scale-[0.99] transition-all"
+                    className="flex items-start gap-4 rounded-[var(--radius-card)] bg-surface-container p-4 hover:bg-surface-container-high active:scale-[0.99] transition-all"
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent">
                       <Icon size={20} aria-hidden />
