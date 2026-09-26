@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Sun, Moon, SunMoon, Users, LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight } from "lucide-react";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
@@ -70,7 +70,6 @@ export default function SettingsPage() {
           Display
         </h2>
         {(() => {
-          const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : SunMoon;
           const themeSubtitle =
             theme === "system"
               ? "System default (light & dark)"
@@ -80,14 +79,9 @@ export default function SettingsPage() {
 
           return (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-container p-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container transition-colors">
-                  <ThemeIcon size={20} aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[length:var(--font-size-body)] font-semibold text-on-surface truncate">Appearance</p>
-                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted truncate mt-0.5">{themeSubtitle}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-[length:var(--font-size-body)] font-semibold text-on-surface truncate">Appearance</p>
+                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted truncate mt-0.5">{themeSubtitle}</p>
               </div>
               <div className="flex shrink-0 items-center">
                 <ThemeToggle variant="capsule-pill" />
