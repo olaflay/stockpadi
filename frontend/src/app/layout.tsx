@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PwaReadiness } from "@/components/pwa/PwaReadiness";
+import { KeyboardAvoidingHandler } from "@/components/ui/KeyboardAvoidingHandler";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -152,6 +153,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <ServiceWorkerRegister />
           <PwaReadiness />
+          <KeyboardAvoidingHandler />
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

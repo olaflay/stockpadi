@@ -60,17 +60,17 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
 
   return (
     <DrawerProvider>
-      <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-full flex-col overflow-hidden bg-surface">
         <TopStoreHeader />
         <SyncEngine />
         <BannerStrip />
         <SideDrawer />
-        <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
+        <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-6 w-full max-w-xl md:max-w-2xl mx-auto">
           {children}
         </main>
         <nav
           aria-label={`${shell} navigation`}
-          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
+          className="relative z-40 flex shrink-0 w-full border-t border-border/40 bg-surface-container gpu-layer"
           style={{
             paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
           }}
