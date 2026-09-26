@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Sun, Moon, SunMoon, LogOut, ChevronRight } from "lucide-react";
+import { Sun, Moon, SunMoon, Users, LogOut, ChevronRight } from "lucide-react";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
@@ -39,8 +39,8 @@ export default function SettingsPage() {
     user.accountType === "BUSINESS_OWNER"
       ? "Owner"
       : user.accountType === "ADMIN"
-      ? "Admin"
-      : "Staff";
+        ? "Admin"
+        : "Staff";
 
   return (
     <div className="flex flex-col gap-6 pb-12">
@@ -75,8 +75,8 @@ export default function SettingsPage() {
             theme === "system"
               ? "System default (light & dark)"
               : theme === "dark"
-              ? "Dark mode"
-              : "Light mode";
+                ? "Dark mode"
+                : "Light mode";
 
           return (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-container p-4">

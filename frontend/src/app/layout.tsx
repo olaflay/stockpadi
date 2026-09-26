@@ -6,7 +6,6 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PwaReadiness } from "@/components/pwa/PwaReadiness";
-import { KeyboardAvoidingHandler } from "@/components/ui/KeyboardAvoidingHandler";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -71,9 +70,13 @@ export const metadata: Metadata = {
   applicationName: branding.businessName,
   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: branding.logoUrl ?? "/icon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: branding.logoUrl ?? "/icon.svg", type: "image/svg+xml" },
+      { url: branding.logoUrl ?? "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: branding.logoUrl ?? "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     shortcut: [{ url: branding.logoUrl ?? "/icon.svg" }],
-    apple: [{ url: branding.logoUrl ?? "/icon.svg" }],
+    apple: [{ url: branding.logoUrl ?? "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
@@ -153,7 +156,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <ServiceWorkerRegister />
           <PwaReadiness />
-          <KeyboardAvoidingHandler />
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

@@ -48,19 +48,6 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       }
     };
 
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      // Smoothly scroll input into view when mobile keyboard appears
-      setTimeout(() => {
-        if (document.activeElement === e.target) {
-          e.target.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 150);
-
-      if (props.onFocus) {
-        props.onFocus(e);
-      }
-    };
-
     const isError = hasError || internalError;
 
     const baseClass = "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface px-3.5 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)]";
@@ -74,7 +61,6 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
-        onFocus={handleFocus}
         aria-invalid={isError || undefined}
         aria-describedby={isError ? errorId : undefined}
         {...props}

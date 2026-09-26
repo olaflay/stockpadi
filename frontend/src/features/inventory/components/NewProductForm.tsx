@@ -134,13 +134,13 @@ export function NewProductForm({
 
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-2 sm:p-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c1a30]/20 backdrop-blur-sm border-t border-sky-400/20 shadow-lg">
-        <div className="flex items-center gap-2.5 max-w-xl md:max-w-2xl mx-auto w-full">
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-surface border-t border-border/60 shadow-[var(--shadow-elevation-sticky-top)]">
+        <div className="flex items-center gap-3 max-w-xl md:max-w-2xl mx-auto w-full">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
+              className="min-h-[var(--touch-target-min)] px-5 rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
             >
               Cancel
             </button>
@@ -149,7 +149,7 @@ export function NewProductForm({
             id="tour-save-product"
             type="submit"
             disabled={isSubmitting}
-            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
           >
             {isSubmitting ? "Saving…" : "Save product"}
           </RippleButton>

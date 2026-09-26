@@ -176,8 +176,8 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-2 sm:p-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c1a30]/20 backdrop-blur-sm border-t border-sky-400/20 shadow-lg">
-        <div className="flex flex-col gap-2 max-w-xl md:max-w-2xl mx-auto w-full">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
+        <div className="flex flex-col gap-2">
         <RippleButton
           type="button"
           onClick={handleAddAndSell}

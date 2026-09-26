@@ -83,7 +83,7 @@ export default function BusinessSettingsPage() {
       <ScreenHeader title="Business" onBack={() => router.push("/settings")} />
 
 
-      <form id="business-settings-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="flex flex-col gap-4">
+      <form id="business-settings-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="flex flex-col gap-4 pb-24">
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Business name</span>
           <input value={name ?? profile.name} onChange={(e) => setName(e.target.value)} className={inputClass} />
@@ -101,7 +101,7 @@ export default function BusinessSettingsPage() {
         </label>
       </form>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-2 sm:p-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c1a30]/20 backdrop-blur-sm border-t border-sky-400/20 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-surface border-t border-border/60 shadow-[var(--shadow-elevation-sticky-top)]">
         <div className="max-w-xl md:max-w-2xl mx-auto w-full">
           <RippleButton
             type="button"

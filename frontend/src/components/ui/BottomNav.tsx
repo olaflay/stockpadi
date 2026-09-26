@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -42,6 +43,68 @@ const WORKER_NAV = [
 export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const vv = window.visualViewport;
+    const updateKeyboardState = () => {
+      if (vv) {
+        // Virtual keyboard causes visualViewport height to shrink significantly
+        setIsKeyboardOpen(vv.height < window.innerHeight - 100);
+      }
+    };
+
+    if (vv) {
+      vv.addEventListener("resize", updateKeyboardState);
+    }
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) &&
+        (target as HTMLInputElement).type !== "checkbox" &&
+        (target as HTMLInputElement).type !== "radio"
+      ) {
+        setIsKeyboardOpen(true);
+      }
+    };
+
+    const handleFocusOut = () => {
+      window.setTimeout(() => {
+        if (vv) {
+          setIsKeyboardOpen(vv.height < window.innerHeight - 100);
+        } else {
+          setIsKeyboardOpen(false);
+        }
+      }, 100);
+    };
+
+    window.addEventListener("focusin", handleFocusIn);
+    window.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      if (vv) vv.removeEventListener("resize", updateKeyboardState);
+      window.removeEventListener("focusin", handleFocusIn);
+      window.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
+
+  // Only render BottomNav on primary top-level tabs. All child/sub-routes (forms, sub-settings, details)
+  // have full screen space with their own action buttons without navigation collision.
+  const isMainTab =
+    pathname === "/dashboard" ||
+    pathname === "/pos" ||
+    pathname === "/products" ||
+    pathname === "/reports" ||
+    pathname === "/settings" ||
+    pathname === "/stock-count";
+
+  if (!isMainTab || isKeyboardOpen) {
+    return null;
+  }
 
   const isOwnerOrAdmin = user.accountType === "BUSINESS_OWNER" || user.accountType === "ADMIN";
   const items = (isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV).filter(
@@ -51,7 +114,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="relative z-40 flex shrink-0 w-full border-t border-border/40 bg-surface-container gpu-layer"
+      className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
       style={{
         paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
       }}
