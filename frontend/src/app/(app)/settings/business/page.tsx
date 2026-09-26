@@ -101,18 +101,20 @@ export default function BusinessSettingsPage() {
         </label>
       </form>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface border-t border-border z-[100] shadow-[var(--shadow-elevation-sticky-top)]">
-        <RippleButton
-          type="button"
-          onClick={() => {
-            const form = document.getElementById("business-settings-form") as HTMLFormElement;
-            if (form) form.requestSubmit();
-          }}
-          disabled={!hasChanges || isSubmitting}
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
-        >
-          {isSubmitting ? "Saving…" : "Save changes"}
-        </RippleButton>
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-2 sm:p-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c1a30]/20 backdrop-blur-sm border-t border-sky-400/20 shadow-lg">
+        <div className="max-w-xl md:max-w-2xl mx-auto w-full">
+          <RippleButton
+            type="button"
+            onClick={() => {
+              const form = document.getElementById("business-settings-form") as HTMLFormElement;
+              if (form) form.requestSubmit();
+            }}
+            disabled={!hasChanges || isSubmitting}
+            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+          >
+            {isSubmitting ? "Saving…" : "Save changes"}
+          </RippleButton>
+        </div>
       </div>
     </div>
   );

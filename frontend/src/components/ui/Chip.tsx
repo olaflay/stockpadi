@@ -35,7 +35,7 @@ export function Chip({
   ...props
 }: ChipProps) {
   const baseClasses =
-    "inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-3 py-1 text-[length:var(--font-size-label)] font-medium select-none touch-manipulation transition-all duration-[var(--motion-duration-short)] ease-out disabled:opacity-40 disabled:pointer-events-none active:scale-[0.96]";
+    "inline-flex min-h-[30px] items-center gap-1 rounded-full px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-medium select-none touch-manipulation transition-all duration-[var(--motion-duration-short)] ease-out disabled:opacity-40 disabled:pointer-events-none active:scale-[0.96]";
 
   let stateClasses = "";
 
@@ -63,9 +63,9 @@ export function Chip({
       {...props}
     >
       {variant === "filter" && selected && !Icon ? (
-        <Check size={16} className="shrink-0" aria-hidden />
+        <Check size={13} className="shrink-0" aria-hidden />
       ) : Icon ? (
-        <Icon size={16} className="shrink-0" aria-hidden />
+        <Icon size={13} className="shrink-0" aria-hidden />
       ) : null}
       <span>{children}</span>
       {variant === "input" && onRemove && (

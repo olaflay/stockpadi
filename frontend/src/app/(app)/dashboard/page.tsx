@@ -281,17 +281,17 @@ export default function DashboardPage() {
           <h2 className="mb-2.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
             Quick Actions
           </h2>
-          <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
+          <div className="rounded-3xl bg-surface-container p-3 sm:p-4.5 grid grid-cols-4 gap-2 sm:gap-3">
             {hasAccountType(user, CAN_RECORD_EXPENSES) && (
               <RippleButton
                 type="button"
                 onClick={() => setIsExpenseSheetOpen(true)}
-                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
-                  <Wallet size={19} aria-hidden />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                  <Wallet size={22} strokeWidth={2.2} aria-hidden />
                 </div>
-                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                   Expense
                 </span>
               </RippleButton>
@@ -300,12 +300,12 @@ export default function DashboardPage() {
             {hasAccountType(user, CAN_RESTOCK) && (
               <RippleLink
                 href="/purchases/new"
-                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
-                  <PackagePlus size={19} aria-hidden />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                  <PackagePlus size={22} strokeWidth={2.2} aria-hidden />
                 </div>
-                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                   Restock
                 </span>
               </RippleLink>
@@ -314,12 +314,12 @@ export default function DashboardPage() {
             {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
               <RippleLink
                 href="/products/new"
-                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
-                  <Plus size={19} aria-hidden />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                  <Plus size={22} strokeWidth={2.4} aria-hidden />
                 </div>
-                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                   Add
                 </span>
               </RippleLink>
@@ -328,12 +328,12 @@ export default function DashboardPage() {
             {hasAccountType(user, CAN_CLOSE_DAY) && (
               <RippleLink
                 href="/close-day"
-                className="flex flex-col items-center justify-center py-3 px-1 rounded-2xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-center min-h-[82px]"
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container">
-                  <CalendarCheck size={19} aria-hidden />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                  <CalendarCheck size={22} strokeWidth={2.2} aria-hidden />
                 </div>
-                <span className="mt-2 text-xs font-semibold text-on-surface text-center leading-tight truncate w-full">
+                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                   Close Day
                 </span>
               </RippleLink>

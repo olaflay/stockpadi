@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Sun, Moon, SunMoon, Users, LogOut, ChevronRight } from "lucide-react";
+import { Sun, Moon, SunMoon, LogOut, ChevronRight } from "lucide-react";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
@@ -105,10 +105,8 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              icon={Users}
               label="Staff and access"
               description="Add cashiers, workers and manage permissions"
-              tone="brand"
               onClick={() => router.push("/staff")}
             />
           </div>
