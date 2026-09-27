@@ -48,7 +48,7 @@ const geistMono = Geist_Mono({
 const branding = getBrandingConfig();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(branding.appUrl),
+  metadataBase: branding.appUrl ? new URL(branding.appUrl) : undefined,
   title: {
     default: `${branding.businessName} | Free Offline POS & Inventory App`,
     template: `%s | ${branding.businessName}`,
