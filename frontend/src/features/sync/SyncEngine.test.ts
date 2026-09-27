@@ -21,6 +21,7 @@ describe("runSyncCycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     drainOutbox.mockResolvedValue({ drained: 0, pendingRemaining: 0 });
+    vi.stubGlobal("navigator", { onLine: true });
   });
 
   it("forces a pull after a successful push", async () => {
