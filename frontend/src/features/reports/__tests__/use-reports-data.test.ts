@@ -219,14 +219,14 @@ describe("useReportsData", () => {
     expect(result.current.lowStockProducts.map((p: Product) => p.id)).toContain("product-1");
   });
 
-  it("does not flag a product as low stock once its computed stock meets LOW_STOCK_THRESHOLD", async () => {
+  it("does not flag a product as low stock once its computed stock exceeds LOW_STOCK_THRESHOLD", async () => {
     await db.products.add(product({ id: "product-1" }));
     const movement: StockMovement = {
       id: crypto.randomUUID(),
       clientId: crypto.randomUUID(),
       branchId: BRANCH_ID,
       productId: "product-1",
-      quantityDelta: LOW_STOCK_THRESHOLD,
+      quantityDelta: LOW_STOCK_THRESHOLD + 1,
       source: "initial_stock",
       sourceReferenceId: null,
       reasonCode: null,

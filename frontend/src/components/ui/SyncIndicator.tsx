@@ -274,7 +274,7 @@ export function SyncIndicator({
           className="h-2 w-2 rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>Offline — changes saved</span>
+        <span>Offline · Changes saved</span>
       </button>
     );
   }
@@ -357,7 +357,7 @@ export function SyncIndicator({
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
-        {pullComplete ? "Synced" : "Sync not checked"}
+        {pullComplete ? "Synced just now" : "Sync not checked"}
         <RefreshCw size={10} aria-hidden />
       </button>
     );
@@ -418,7 +418,7 @@ export function SyncIndicator({
           className="h-2 w-2 animate-pulse rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>{runtimePhase === "idle" ? "↕ Syncing" : phaseLabel} · {pendingCount} pending</span>
+        <span>{runtimePhase === "idle" ? "Syncing…" : phaseLabel} · {pendingCount} pending</span>
       </button>
       <button
         type="button"

@@ -226,5 +226,6 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     hasInitialStock,
     onSubmit,
     setValue: form.setValue,
+    watch: form.watch,
   };
 }

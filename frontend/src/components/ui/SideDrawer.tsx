@@ -5,15 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  ReceiptText,
   UserCircle,
-  ClipboardCheck,
   Truck,
-  Wallet,
-  CalendarCheck,
-  Bell,
   LogOut,
   Store,
+  Users,
+  FileSpreadsheet,
+  Database,
+  HelpCircle,
+  CalendarCheck,
 } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getBrandingConfig } from "@/config/branding";
@@ -23,7 +23,6 @@ import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { AlertBadge } from "@/components/ui/AlertBadge";
 
 interface NavItem {
   label: string;
@@ -98,7 +97,22 @@ export function SideDrawer() {
   const closeDayHref = "/close-day";
   const isCloseDayActive = pathname === closeDayHref || pathname.startsWith(`${closeDayHref}/`);
 
+  /**
+   * Secondary menu items strictly isolated from bottom navigation tabs:
+   * Business Profile | Staff | Customers | Suppliers | Import/Export | Backup | Help
+   */
   const navItems: NavItem[] = [
+    {
+      label: "Business Profile",
+      href: "/profile",
+      icon: Store,
+    },
+    {
+      label: "Staff & Access",
+      href: "/staff",
+      icon: Users,
+      ownerOnly: true,
+    },
     {
       label: "Customers",
       href: "/customers",
@@ -106,35 +120,27 @@ export function SideDrawer() {
       capability: "VIEW_CUSTOMERS",
     },
     {
-      label: "Sales & Receipts",
-      href: "/sales",
-      icon: ReceiptText,
-      capability: "VIEW_OWN_SALES",
-    },
-    {
-      label: "Stock Count",
-      href: "/stock-count",
-      icon: ClipboardCheck,
-      capability: "SUBMIT_STOCK_COUNT",
-    },
-    {
-      label: "Restock",
+      label: "Purchases & Suppliers",
       href: "/purchases",
       icon: Truck,
       capability: "RECEIVE_STOCK",
     },
     {
-      label: "Expenses",
-      href: "/expenses",
-      icon: Wallet,
-      capability: "MANAGE_EXPENSES",
+      label: "Import / Export",
+      href: "/products/import",
+      icon: FileSpreadsheet,
+      capability: "MANAGE_PRODUCTS",
     },
     {
-      label: "Stock & Alerts",
-      href: "/alerts",
-      icon: Bell,
-      badge: <AlertBadge inline />,
-      capability: "VIEW_ALERTS",
+      label: "Backup & Data",
+      href: "/settings/sharing",
+      icon: Database,
+      ownerOnly: true,
+    },
+    {
+      label: "Help & Support",
+      href: "/settings/help",
+      icon: HelpCircle,
     },
   ];
 
@@ -258,7 +264,7 @@ export function SideDrawer() {
               closeDrawer();
               await signOut();
             }}
-            className="flex min-h-[38px] w-full items-center justify-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/15 active:scale-[0.98] transition-all"
+            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/15 active:scale-[0.98] transition-all"
             title="Sign Out"
             aria-label="Sign Out"
           >

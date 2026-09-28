@@ -75,7 +75,7 @@ export function useReportsData() {
         );
       }
 
-      const lowStockIds = await getLowStockProductIds();
+      const lowStockIds = await getLowStockProductIds(undefined, null, products, stockByProduct);
 
       return { sales, products, stockByProduct, profile, expenses, purchases, creditMovements, lowStockIds, error: null };
     } catch (err) {
@@ -207,8 +207,14 @@ export function useReportsData() {
     };
   }, [period]);
 
+  /* ---- Smooth transition: retain cached result during period switches to avoid skeleton flashing ---- */
+  const [cachedResult, setCachedResult] = useState<LocalReportData | undefined>(undefined);
+  if (localData && cachedResult !== localData) {
+    setCachedResult(localData);
+  }
+
   /* ---- Merge: local is always the primary source; remote fills gaps ---- */
-  const result = localData ?? remoteData;
+  const result = localData ?? remoteData ?? cachedResult;
 
   const products = result?.products ?? [];
   const lowStockIds = result?.lowStockIds ?? new Set<string>();

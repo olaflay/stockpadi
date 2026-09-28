@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useDraft } from "@/hooks/use-draft";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Search, ClipboardList } from "lucide-react";
 import { db } from "@/lib/db";
@@ -27,7 +26,6 @@ import type { LocalBranch } from "@/lib/db";
 
 /** Pick a product, enter the counted quantity, mandatory reason. docs/RESEARCH-AND-PLAN.md Phase 2 item 19. */
 export default function StockCountPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [query, setQuery] = useState("");
@@ -45,18 +43,13 @@ export default function StockCountPage() {
   const products = useLiveQuery(() => tenantArray<Product>(db.products.orderBy("name")), [], []);
   const currentStock = useLiveQuery(
     () => (activeProduct && branchId ? getCurrentStock(activeProduct.id, branchId) : undefined),
-    [activeProduct, branchId]
+    [activeProduct?.id, branchId]
   );
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const [prevQuery, setPrevQuery] = useState("");
-  if (debouncedQuery !== prevQuery) {
-    setPrevQuery(debouncedQuery);
-    setVisibleLimit(50);
-  }
 
   const filtered = products.filter((product) =>
     `${product.name} ${product.sku} ${product.barcode ?? ""}`.toLowerCase().includes(debouncedQuery.toLowerCase())
@@ -234,7 +227,10 @@ export default function StockCountPage() {
           type="search"
           aria-label="Search by name, SKU, or barcode"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setVisibleLimit(50);
+          }}
           placeholder="Search by name, SKU, or barcode"
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
         />

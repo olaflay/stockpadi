@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, BUSINESS_PROFILE_SINGLETON_ID, type LocalBranch } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -30,7 +29,6 @@ import { Banknote, Smartphone, CreditCard, Check, AlertTriangle } from "lucide-r
 
 export default function CloseDayPage() {
   const user = useCurrentUser();
-  const router = useRouter();
 
   // Multi-channel inputs
   const [countedCashInput, setCountedCashInput] = useState("");

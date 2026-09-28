@@ -16,6 +16,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
 import { getRecentCategoryIds, markCategoryUsed } from "@/lib/last-used-category";
 import { cartLineKey } from "@/features/pos/use-cart";
+import { resolveStockStatus } from "@/features/inventory/product-insights";
 import { parsePosQuery } from "@/lib/parse-pos-query";
 import type { CartLine } from "@/features/pos/complete-sale";
 import type { Product } from "@/types/product";
@@ -296,9 +297,12 @@ export function BrowseStep(props: {
             {bestSellerProducts.map((product) => {
               const baseKey = cartLineKey(product.id, product.unitLabel);
               const baseQty = cart[baseKey]?.quantity ?? 0;
-              const stock = stockByProduct?.[product.id] ?? 0;
-              const isStockTracked = stockByProduct !== undefined;
-              const isOutOfStock = isStockTracked && stock <= 0;
+              const status = resolveStockStatus(
+                stockByProduct?.[product.id],
+                product.lowStockThreshold
+              );
+              const isStockResolved = stockByProduct !== undefined;
+              const isOutOfStock = isStockResolved && status === "out";
               return (
                 <li key={product.id} className="shrink-0">
                   <RippleButton
@@ -357,15 +361,25 @@ export function BrowseStep(props: {
             const baseQty = cart[baseKey]?.quantity ?? 0;
             const altKey = product.altUnitLabel ? cartLineKey(product.id, product.altUnitLabel) : null;
             const altQty = altKey ? (cart[altKey]?.quantity ?? 0) : 0;
-            const stock = stockByProduct?.[product.id] ?? 0;
-            const isStockTracked = stockByProduct !== undefined;
-            const isOutOfStock = isStockTracked && stock <= 0;
-            const isLowStock = !isOutOfStock && isStockTracked && stock <= (product.lowStockThreshold ?? 5);
+            const isStockResolved = stockByProduct !== undefined;
+            const stock = stockByProduct?.[product.id];
+            const status = resolveStockStatus(stock, product.lowStockThreshold);
+            const isOutOfStock = isStockResolved && status === "out";
+            const isLowStock = isStockResolved && status === "low";
+            const isUntracked = isStockResolved && status === "untracked";
 
             const altFactor = product.altUnitConversionFactor ?? 1;
             const currentTotalBaseUnits = baseQty * 1 + altQty * altFactor;
-            const canAddBase = !isStockTracked || currentTotalBaseUnits + 1 <= stock;
-            const canAddAlt = !isStockTracked || currentTotalBaseUnits + altFactor <= stock;
+            const canAddBase = !isStockResolved
+              ? false
+              : stock === undefined
+                ? true
+                : currentTotalBaseUnits + 1 <= stock;
+            const canAddAlt = !isStockResolved
+              ? false
+              : stock === undefined
+                ? true
+                : currentTotalBaseUnits + altFactor <= stock;
 
             return (
             <li key={product.id}>
@@ -386,6 +400,10 @@ export function BrowseStep(props: {
                     ) : isLowStock ? (
                       <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
                         {stock} left
+                      </span>
+                    ) : isUntracked ? (
+                      <span className="shrink-0 text-xs text-on-surface-muted">
+                        Not tracked
                       </span>
                     ) : null}
                   </div>
@@ -451,9 +469,9 @@ export function BrowseStep(props: {
                     <RippleButton
                       type="button"
                       onClick={() =>
-                        isOutOfStock || stock < (product.altUnitConversionFactor ?? 1)
+                        isOutOfStock || (stock !== undefined && stock < (product.altUnitConversionFactor ?? 1))
                           ? showToast(
-                              `Not enough stock for a ${product.altUnitLabel}: only ${stock} in stock.`,
+                              `Not enough stock for a ${product.altUnitLabel}: only ${stock ?? 0} in stock.`,
                               "warning",
                               {
                                 label: "Restock",
@@ -527,6 +545,10 @@ export function BrowseStep(props: {
                       ) : isLowStock ? (
                         <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
                           {stock} left
+                        </span>
+                      ) : isUntracked ? (
+                        <span className="shrink-0 text-xs text-on-surface-muted">
+                          Not tracked
                         </span>
                       ) : null}
                     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -20,7 +19,6 @@ const ALERT_ICONS: Record<AlertType, React.ElementType> = {
 };
 
 export default function AlertsPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { alerts, isLoading, error, acknowledgeAlert } = useAlertCenter();
 

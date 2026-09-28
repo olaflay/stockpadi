@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { MessageCircle, Printer } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
@@ -23,10 +22,6 @@ import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import { getBrandingConfig } from "@/config/branding";
 import type { LocalCustomer, CustomerCreditMovement } from "@/lib/db";
 
-// Matches customer_credit_movements_insert RLS policy — see the comment on
-// ROLES_ALLOWED_TO_RECORD_PAYMENT in src/features/customers/record-payment.ts.
-const inputClass =
-  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,7 +29,6 @@ interface PageProps {
 
 export default function CustomerDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
   const user = useCurrentUser();
   const canRecordPayment = hasCapability(user, "RECORD_REPAYMENT");
   const { showToast } = useToast();

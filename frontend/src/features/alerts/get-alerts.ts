@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
-import { getLowStockProductIds, getExpiringProductIds } from "@/features/inventory/product-insights";
+import {
+  getLowStockProductIds,
+  getExpiringProductIds,
+  getStockByProduct,
+  LOW_STOCK_THRESHOLD,
+  EXPIRY_ALERT_WINDOW_DAYS,
+} from "@/features/inventory/product-insights";
 
 export type AlertType = "low_stock" | "expiring" | "unsynced";
 
@@ -31,13 +37,18 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
     });
   }
 
-  const [lowStockIds, expiringIds] = await Promise.all([getLowStockProductIds(), getExpiringProductIds()]);
+  const [products, stockByProduct] = await Promise.all([
+    tenantArray(db.products),
+    getStockByProduct(),
+  ]);
 
-  // Fetch only the flagged products by id instead of scanning the entire
-  // products table a third time (getLowStockProductIds and
-  // getExpiringProductIds each already do their own full scan internally).
-  const flaggedIds = [...new Set([...lowStockIds, ...expiringIds])];
-  const flaggedProducts = (await tenantArray(db.products)).filter((product) => flaggedIds.includes(product.id));
+  const [lowStockIds, expiringIds] = await Promise.all([
+    getLowStockProductIds(LOW_STOCK_THRESHOLD, null, products, stockByProduct),
+    getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, null, products, stockByProduct),
+  ]);
+
+  const flaggedIds = new Set([...lowStockIds, ...expiringIds]);
+  const flaggedProducts = products.filter((product) => flaggedIds.has(product.id));
 
   for (const product of flaggedProducts) {
     if (!product) continue;
@@ -74,7 +85,16 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
  * alerts (built from bare product ids, never needs to fetch a product row).
  */
 export async function getAlertCounts(unsyncedCount: number, acknowledgedIds?: Set<string>): Promise<number> {
-  const [lowStockIds, expiringIds] = await Promise.all([getLowStockProductIds(), getExpiringProductIds()]);
+  const [products, stockByProduct] = await Promise.all([
+    tenantArray(db.products),
+    getStockByProduct(),
+  ]);
+
+  const [lowStockIds, expiringIds] = await Promise.all([
+    getLowStockProductIds(LOW_STOCK_THRESHOLD, null, products, stockByProduct),
+    getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, null, products, stockByProduct),
+  ]);
+
   let count = 0;
   if (unsyncedCount > 0 && !acknowledgedIds?.has("unsynced-outbox")) count++;
   for (const id of lowStockIds) if (!acknowledgedIds?.has(`low-stock-${id}`)) count++;

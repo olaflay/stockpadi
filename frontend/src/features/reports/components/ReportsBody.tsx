@@ -23,6 +23,7 @@ export function ReportsBody({
   periodPurchasesTotal,
   bestSellers,
   lowStockProducts,
+  periodGrossProfit,
   periodNetProfit,
   periodNetCashFlow,
 }: {
@@ -42,14 +43,25 @@ export function ReportsBody({
   const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
   const [showCashFlowBreakdown, setShowCashFlowBreakdown] = useState(false);
 
-  // Compute drill-down values
+  // Compute drill-down values aligned with the shared formulas
   const totalRevenue = periodSales.reduce((sum, s) => sum + s.total, 0);
   const totalExpenses = periodExpensesTotal;
   const totalRestocks = periodPurchasesTotal;
-  // COGS estimate: sum of (item.quantity * item.unitPrice) for all sale items
-  const totalCogs = periodSales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitPrice, 0), 0);
-  const computedNetProfit = totalRevenue - totalCogs - totalExpenses;
-  const computedNetCashFlow = totalRevenue - totalExpenses - totalRestocks;
+  // COGS is mathematically totalRevenue - periodGrossProfit, ensuring totalRevenue - totalCogs - totalExpenses === periodNetProfit exactly
+  const totalCogs = Math.max(0, totalRevenue - periodGrossProfit);
+  const computedNetProfit = periodNetProfit;
+
+  // Real cash received from sales (excluding unpaid credit)
+  const cashReceivedFromSales = periodSales.reduce((sum, s) => {
+    if (s.voidedAt) return sum;
+    return (
+      sum +
+      (s.payments ?? [])
+        .filter((p) => p.method !== "credit")
+        .reduce((pSum, p) => pSum + p.amount, 0)
+    );
+  }, 0);
+  const computedNetCashFlow = periodNetCashFlow;
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,7 +178,7 @@ export function ReportsBody({
             <div className="mt-3 space-y-2 rounded-xl bg-surface-container-high/50 p-3 animate-step-in">
               <div className="flex justify-between text-[length:var(--font-size-caption)]">
                 <span className="text-on-surface-muted">Cash received (sales)</span>
-                <span className="font-number tabular-nums text-on-surface">{formatCurrency(totalRevenue)}</span>
+                <span className="font-number tabular-nums text-on-surface">{formatCurrency(cashReceivedFromSales)}</span>
               </div>
               <div className="flex justify-between text-[length:var(--font-size-caption)]">
                 <span className="text-on-surface-muted">Expenses paid</span>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Search, Users, MessageCircle } from "lucide-react";
@@ -23,7 +22,6 @@ import { getBrandingConfig } from "@/config/branding";
 
 /** Sorted by amount owed, descending, total owed on top. docs/RESEARCH-AND-PLAN.md Section 4.3. */
 export default function CustomersPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 120);
@@ -51,11 +49,6 @@ export default function CustomersPage() {
     return withBalances;
   }, []);
 
-  const [prevQuery, setPrevQuery] = useState("");
-  if (debouncedQuery !== prevQuery) {
-    setPrevQuery(debouncedQuery);
-    setVisibleLimit(50);
-  }
 
   const filtered = (customersWithBalance ?? []).filter(({ customer }) =>
     `${customer.name} ${customer.phone ?? ""}`.toLowerCase().includes(debouncedQuery.toLowerCase())
@@ -136,7 +129,10 @@ export default function CustomersPage() {
           type="search"
           aria-label="Search customers by name or phone"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setVisibleLimit(50);
+          }}
           placeholder="Search by name or phone"
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
         />

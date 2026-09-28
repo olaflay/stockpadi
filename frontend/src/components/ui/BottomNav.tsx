@@ -8,7 +8,7 @@ import {
   Package,
   Receipt,
   BarChart3,
-  Settings,
+  MoreHorizontal,
   ClipboardCheck,
 } from "lucide-react";
 
@@ -21,15 +21,15 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
  * Samsung One UI bottom interaction area:
  * Exactly 5 buttons keep touch targets roomy and thumb-reachable on mobile.
  * Adapts dynamically:
- * - Business Owner & Admin: Dashboard | Sell | Products | Reports | Settings
- * - Worker: Dashboard | Sell | Products | Stock | Settings
+ * - Business Owner & Admin: Dashboard | Sell | Products | Reports | More
+ * - Worker: Dashboard | Sell | Products | Stock | More
  */
 const OWNER_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
   { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
   { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
   { href: "/reports", label: "Reports", icon: BarChart3, capability: "VIEW_REPORTS" as const },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/more", label: "More", icon: MoreHorizontal },
 ] as const;
 
 const WORKER_NAV = [
@@ -37,7 +37,7 @@ const WORKER_NAV = [
   { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
   { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
   { href: "/stock-count", label: "Stock", icon: ClipboardCheck, capability: "SUBMIT_STOCK_COUNT" as const },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/more", label: "More", icon: MoreHorizontal },
 ] as const;
 
 export function BottomNav() {
@@ -50,9 +50,19 @@ export function BottomNav() {
 
     const vv = window.visualViewport;
     const updateKeyboardState = () => {
-      if (vv) {
-        // Virtual keyboard causes visualViewport height to shrink significantly
-        setIsKeyboardOpen(vv.height < window.innerHeight - 100);
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isInputFocused =
+        activeEl &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable) &&
+        (activeEl as HTMLInputElement).type !== "checkbox" &&
+        (activeEl as HTMLInputElement).type !== "radio";
+
+      if (vv && isInputFocused) {
+        // True virtual keyboard causes visualViewport height to shrink by at least 180px or 25% of window
+        const isShrunkByKeyboard = vv.height < window.innerHeight - 180 || vv.height < window.innerHeight * 0.75;
+        setIsKeyboardOpen(Boolean(isShrunkByKeyboard));
+      } else {
+        setIsKeyboardOpen(false);
       }
     };
 
@@ -60,26 +70,12 @@ export function BottomNav() {
       vv.addEventListener("resize", updateKeyboardState);
     }
 
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) &&
-        (target as HTMLInputElement).type !== "checkbox" &&
-        (target as HTMLInputElement).type !== "radio"
-      ) {
-        setIsKeyboardOpen(true);
-      }
+    const handleFocusIn = () => {
+      window.setTimeout(updateKeyboardState, 150);
     };
 
     const handleFocusOut = () => {
-      window.setTimeout(() => {
-        if (vv) {
-          setIsKeyboardOpen(vv.height < window.innerHeight - 100);
-        } else {
-          setIsKeyboardOpen(false);
-        }
-      }, 100);
+      window.setTimeout(updateKeyboardState, 150);
     };
 
     window.addEventListener("focusin", handleFocusIn);
@@ -99,6 +95,7 @@ export function BottomNav() {
     pathname === "/pos" ||
     pathname === "/products" ||
     pathname === "/reports" ||
+    pathname === "/more" ||
     pathname === "/settings" ||
     pathname === "/stock-count";
 
@@ -122,7 +119,8 @@ export function BottomNav() {
       {items.map((item) => {
         const isActive =
           pathname === item.href ||
-          (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+          (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)) ||
+          (item.href === "/more" && (pathname === "/settings" || pathname.startsWith("/settings/")));
         const Icon = item.icon;
         return (
           <Link

@@ -68,7 +68,7 @@ export default function ExpensesPage() {
   if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
-        <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Expenses" onBack={() => router.back()} />
         <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
@@ -77,7 +77,7 @@ export default function ExpensesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Expenses" onBack={() => router.back()} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -92,7 +92,7 @@ export default function ExpensesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Expenses" onBack={() => router.back()} />
         <ErrorState message="Couldn't load your expenses." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -101,7 +101,7 @@ export default function ExpensesPage() {
   if (result.expenses.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Expenses" onBack={() => router.push("/reports")} />
+        <ScreenHeader title="Expenses" onBack={() => router.back()} />
         <EmptyState
           icon={Wallet}
           title="No expenses recorded"
@@ -118,13 +118,20 @@ export default function ExpensesPage() {
 
   async function handleDelete(id: string, category: string) {
     if (!confirm(`Delete this ${category} expense? This cannot be undone.`)) return;
-    await deleteExpense(id);
-    showToast("Expense deleted", "success");
+    try {
+      await deleteExpense(id);
+      showToast("Expense deleted", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Couldn't delete expense.",
+        "warning"
+      );
+    }
   }
 
   return (
     <div>
-      <ScreenHeader title="Expenses" backHref="/reports" />
+      <ScreenHeader title="Expenses" onBack={() => router.back()} />
 
       <div
         role="tablist"

@@ -16,6 +16,7 @@ export function getPageTitle(pathname: string): string {
   if (pathname.includes("/products/new")) return "Add Product";
   if (pathname.includes("/products")) return "Products";
   if (pathname.includes("/reports")) return "Reports";
+  if (pathname.includes("/more")) return "More";
   if (pathname.includes("/settings/help")) return "Help & Support";
   if (pathname.includes("/settings/sharing")) return "Sharing";
   if (pathname.includes("/settings/branches")) return "Branches";

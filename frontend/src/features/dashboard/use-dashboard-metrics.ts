@@ -7,6 +7,7 @@ import { tenantArray } from "@/lib/local-tenant";
 import { getStartOfTodayIso } from "@/lib/date";
 import type { Purchase } from "@/types/purchase";
 import { getStockByProduct } from "@/features/inventory/product-insights";
+import { toKobo, fromKobo } from "@/lib/kobo";
 
 export interface DashboardMetrics {
   hasAnyProducts: boolean;
@@ -16,6 +17,8 @@ export interface DashboardMetrics {
   todaysPurchasesTotal: number;
   todaysCreditCollected: number;
   todaysCashSalesTotal: number;
+  todaysPaidSalesTotal: number;
+  todaysCreditSalesTotal: number;
   lowStockCount: number;
   expiringCount: number;
   unsyncedCount: number;
@@ -70,20 +73,24 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
       // Hero figure: cost value of all stock on hand, plus how many products
       // actually carry stock. Counted only from the ledger-derived stock map,
       // never from a mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
-      let inventoryValue = 0;
+      // Hero figure: cost value of all stock on hand, plus how many products
+      // actually carry stock. Counted only from the ledger-derived stock map,
+      // using integer Kobo arithmetic to prevent IEEE-754 float drift.
+      let inventoryValueKobo = 0;
       let stockedProductCount = 0;
       for (const product of products) {
         const qty = stockByProduct.get(product.id) ?? 0;
         if (qty > 0) {
           stockedProductCount += 1;
-          inventoryValue += qty * (product.costPrice ?? 0);
+          inventoryValueKobo += Math.round(qty * toKobo(product.costPrice ?? 0));
         }
       }
+      const inventoryValue = fromKobo(inventoryValueKobo);
 
-      const lowStockIds = await getLowStockProductIds(undefined, branchId);
+      const lowStockIds = await getLowStockProductIds(undefined, branchId, products, stockByProduct);
       const lowStockCount = lowStockIds.size;
 
-      const expiringIds = await getExpiringProductIds(undefined, branchId);
+      const expiringIds = await getExpiringProductIds(undefined, branchId, products, stockByProduct);
       const expiringCount = expiringIds.size;
 
       // Frequency calculations for Quick Add (last 30 days)
@@ -96,12 +103,13 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         }
       }
 
+      const productMap = new Map(products.map((p) => [p.id, p]));
       const sortedProductIdsByFreq = Object.keys(freqMap).sort((a, b) => freqMap[b] - freqMap[a]);
       
-      // Select top 6 products that have positive stock
+      // Select top 6 products that have positive stock (O(1) lookup per id)
       let selectedProducts = sortedProductIdsByFreq
-        .map(id => {
-          const p = products.find(prod => prod.id === id);
+        .map((id) => {
+          const p = productMap.get(id);
           if (!p) return null;
           const qty = stockByProduct.get(p.id) ?? 0;
           return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
@@ -111,12 +119,12 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
       // If less than 6, backfill with remaining in-stock products
       if (selectedProducts.length < 6) {
         const remaining = products
-          .filter(p => !sortedProductIdsByFreq.includes(p.id))
-          .map(p => {
+          .filter((p) => !freqMap[p.id])
+          .map((p) => {
             const qty = stockByProduct.get(p.id) ?? 0;
             return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
           })
-          .filter(p => p.currentStock > 0);
+          .filter((p) => p.currentStock > 0);
         selectedProducts = selectedProducts.concat(remaining);
       }
 
@@ -131,9 +139,36 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         0
       );
 
+      // Sum by payment method so mixed-payment sales (e.g. ₦9,000 cash + ₦1,000 credit)
+      // contribute their actual paid cash/transfer amounts to cash flow rather than being dropped entirely.
+      const todaysPaidSalesTotal = relevantSales.reduce((sum, sale) => {
+        if (sale.voidedAt) return sum;
+        return (
+          sum +
+          (sale.payments ?? [])
+            .filter((p: { method: string }) => p.method !== "credit")
+            .reduce((pSum: number, p: { amount: number }) => pSum + p.amount, 0)
+        );
+      }, 0);
+
       const todaysCashSalesTotal = relevantSales.reduce((sum, sale) => {
-        const hasCredit = sale.payments.some((p: { method: string }) => p.method === "credit");
-        return hasCredit ? sum : sum + sale.total;
+        if (sale.voidedAt) return sum;
+        return (
+          sum +
+          (sale.payments ?? [])
+            .filter((p: { method: string }) => p.method === "cash")
+            .reduce((pSum: number, p: { amount: number }) => pSum + p.amount, 0)
+        );
+      }, 0);
+
+      const todaysCreditSalesTotal = relevantSales.reduce((sum, sale) => {
+        if (sale.voidedAt) return sum;
+        return (
+          sum +
+          (sale.payments ?? [])
+            .filter((p: { method: string }) => p.method === "credit")
+            .reduce((pSum: number, p: { amount: number }) => pSum + p.amount, 0)
+        );
       }, 0);
 
       // Repayments are the only negative-amountDelta movements (credit sales
@@ -150,6 +185,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         todaysExpensesTotal,
         todaysPurchasesTotal,
         todaysCashSalesTotal,
+        todaysPaidSalesTotal,
+        todaysCreditSalesTotal,
         todaysCreditCollected,
         lowStockCount,
         expiringCount,
@@ -167,6 +204,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         todaysExpensesTotal: 0,
         todaysPurchasesTotal: 0,
         todaysCashSalesTotal: 0,
+        todaysPaidSalesTotal: 0,
+        todaysCreditSalesTotal: 0,
         todaysCreditCollected: 0,
         lowStockCount: 0,
         expiringCount: 0,

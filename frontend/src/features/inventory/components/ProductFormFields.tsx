@@ -1,7 +1,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Layers, Camera } from "lucide-react";
-import { Controller, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
+import { Controller, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue, type UseFormWatch } from "react-hook-form";
 
 // Loaded on demand — see the matching comment in
 // src/features/pos/components/BrowseStep.tsx.
@@ -14,6 +14,7 @@ import { CategoryAutocomplete, type CategoryOption } from "@/components/ui/Categ
 import { getRecentCategoryIds } from "@/lib/last-used-category";
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
 import { TextInput } from "@/components/ui/TextInput";
+import { formatCurrency } from "@/lib/format";
 
 /**
  * Shared red caption under a control, wired to that control's aria-describedby
@@ -36,6 +37,7 @@ export { FieldError };
 export function ProductCoreFields({
   register,
   setValue,
+  watch,
   errors,
   categories,
   categoryId,
@@ -46,6 +48,8 @@ export function ProductCoreFields({
   onSkuChange,
 }: {
   register: UseFormRegister<ProductFormInput>;
+  setValue: UseFormSetValue<ProductFormInput>;
+  watch?: UseFormWatch<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
   categories: CategoryOption[] | undefined;
   categoryId: string;
@@ -56,11 +60,18 @@ export function ProductCoreFields({
   onNameChange?: (value: string) => void;
   /** Called when the user edits the SKU so auto-fill can step aside. */
   onSkuChange?: (value: string) => void;
-  setValue: UseFormSetValue<ProductFormInput>;
 }) {
   const [scanning, setScanning] = useState(false);
   const nameRegister = register("name");
   const skuRegister = register("sku");
+
+  const watchedCost = watch ? watch("costPrice") : undefined;
+  const watchedSell = watch ? watch("sellPrice") : undefined;
+  const costNum = parseFloat(String(watchedCost ?? "0"));
+  const sellNum = parseFloat(String(watchedSell ?? "0"));
+  const hasPrices = !isNaN(costNum) && !isNaN(sellNum) && (costNum > 0 || sellNum > 0);
+  const profit = sellNum - costNum;
+  const margin = sellNum > 0 ? (profit / sellNum) * 100 : 0;
 
   return (
     <>
@@ -126,6 +137,9 @@ export function ProductCoreFields({
               <Camera size={18} aria-hidden />
             </button>
           </div>
+          <p className="text-[11px] text-on-surface-muted mt-0.5">
+            No barcode? That&apos;s okay — you can leave this blank.
+          </p>
           <FieldError id="field-error-barcode" error={errors.barcode?.message} />
         </label>
       </div>
@@ -171,6 +185,23 @@ export function ProductCoreFields({
           <FieldError id="field-error-sell-price" error={errors.sellPrice?.message} />
         </label>
       </div>
+
+      {hasPrices && (
+        <div className="flex items-center justify-between rounded-xl bg-surface-container px-3.5 py-2.5 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="text-on-surface-muted">Profit per unit:</span>
+            <span className={`font-bold font-number ${profit >= 0 ? "text-success" : "text-danger"}`}>
+              {formatCurrency(profit)}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-on-surface-muted">Margin:</span>
+            <span className={`font-bold font-number ${margin >= 0 ? "text-success" : "text-danger"}`}>
+              {Math.round(margin)}%
+            </span>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -187,7 +218,7 @@ export function ProductStockAlertField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Stock alert *</span>
+      <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Low-stock alert</span>
       <TextInput
         type="number"
         min="0"
@@ -197,6 +228,9 @@ export function ProductStockAlertField({
         hasError={Boolean(errors.lowStockThreshold)}
         errorId="field-error-low-stock-threshold"
       />
+      <p className="text-[11px] text-on-surface-muted mt-0.5">
+        Notify me when stock reaches {placeholder || "5"} units
+      </p>
       <FieldError id="field-error-low-stock-threshold" error={errors.lowStockThreshold?.message} />
     </label>
   );

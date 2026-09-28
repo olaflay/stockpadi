@@ -44,6 +44,7 @@ function NewProductContent() {
     hasInitialStock,
     onSubmit,
     setValue,
+    watch,
   } = useNewProductForm({ prefillName, prefillBarcode });
 
   if (!hasCapability(user, "MANAGE_PRODUCTS")) {
@@ -87,6 +88,7 @@ function NewProductContent() {
         onCancel={() => router.push("/products")}
         register={register}
         setValue={setValue}
+        watch={watch}
         errors={errors}
         control={control}
         categories={categories}

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 import { getPendingStockMovementIds } from "@/features/inventory/stock";
+import type { Product } from "@/types/product";
 
 /**
  * Shared read-only helpers for "which products need attention" — used by
@@ -12,6 +13,66 @@ import { getPendingStockMovementIds } from "@/features/inventory/stock";
 
 export const LOW_STOCK_THRESHOLD = 5;
 export const EXPIRY_ALERT_WINDOW_DAYS = 7;
+
+/**
+ * The single definition of "how much stock does this product have left", and
+ * therefore the single definition of what counts as low. Before this existed
+ * the same business meaning was computed four different ways across the app
+ * (product-insights.ts, products/page.tsx, BrowseStep.tsx, InventoryView.tsx)
+ * with a different comparison operator and a different null-handling rule in
+ * each, so the Products row could warn "low" while the filter chip that
+ * produced the row excluded the very product it was warning about.
+ *
+ * `undefined` is deliberately NOT collapsed to 0. A product created with a
+ * blank starting stock writes no ledger row at all (see
+ * product-offline-write.ts), so `undefined` means "no stock is being tracked
+ * for this product" — an absence of data, not a quantity of zero. Rendering
+ * it as a red "Out of stock" states a fact the ledger does not support.
+ */
+export type StockStatus = "out" | "low" | "ok" | "untracked";
+
+export function resolveStockStatus(
+  quantity: number | undefined,
+  lowStockThreshold?: number | null
+): StockStatus {
+  if (quantity === undefined || Number.isNaN(quantity)) return "untracked";
+  if (quantity <= 0) return "out";
+  // A reorder point of 5 means "at or below 5, reorder" — the same reading a
+  // shop owner gives the number they typed into the product form.
+  const threshold = lowStockThreshold ?? LOW_STOCK_THRESHOLD;
+  return quantity <= threshold ? "low" : "ok";
+}
+
+/** Returns true if a product is low on stock (at or below threshold, but > 0). */
+export function isLowStock(
+  quantity: number | undefined,
+  lowStockThreshold?: number | null
+): boolean {
+  return resolveStockStatus(quantity, lowStockThreshold) === "low";
+}
+
+/** Returns true if a product is out of stock (<= 0). */
+export function isOutOfStock(quantity: number | undefined): boolean {
+  return resolveStockStatus(quantity) === "out";
+}
+
+/** Plain-language label for a stock status, as the cashier reads it. */
+export function stockStatusLabel(status: StockStatus, quantity?: number): string {
+  if (status === "untracked") return "No stock tracked";
+  if (status === "out") return "Out of stock";
+  if (status === "low") return `Only ${quantity} left`;
+  return `${quantity} in stock`;
+}
+
+/** True when the quantity cannot cover the requested amount. Untracked is not
+ *  treated as "enough" — callers decide separately whether to block or warn. */
+export function isShortOnStock(
+  quantity: number | undefined,
+  requested: number
+): boolean {
+  if (quantity === undefined) return true;
+  return quantity < requested;
+}
 
 /**
  * Stock per product, computed from the append-only ledger. branchId null =
@@ -69,14 +130,26 @@ export async function getStockByProduct(
 
 export async function getLowStockProductIds(
   defaultThreshold: number = LOW_STOCK_THRESHOLD,
-  branchScope: StockBranchScope = null
+  branchScope: StockBranchScope = null,
+  cachedProducts?: Product[],
+  cachedStock?: Map<string, number>
 ): Promise<Set<string>> {
-  const products = await tenantArray(db.products);
-  const stockByProduct = await getStockByProduct(branchScope);
+  const products = cachedProducts ?? (await tenantArray(db.products));
+  const stockByProduct = cachedStock ?? (await getStockByProduct(branchScope));
 
   return new Set(
     products
-      .filter((product) => (stockByProduct.get(product.id) ?? 0) < (product.lowStockThreshold ?? defaultThreshold))
+      .filter((product) => {
+        const status = resolveStockStatus(
+          stockByProduct.get(product.id),
+          product.lowStockThreshold ?? defaultThreshold
+        );
+        // Untracked counts as needing attention: the owner asked for a low
+        // stock list, and a product nothing has ever been recorded against is
+        // exactly the one they have to go count. It is filtered in here but
+        // never rendered as "out of stock" — see stockStatusLabel.
+        return status === "untracked" || status === "out" || status === "low";
+      })
       .map((product) => product.id)
   );
 }
@@ -90,14 +163,16 @@ export async function getLowStockProductIds(
  */
 export async function getExpiringProductIds(
   windowDays: number = EXPIRY_ALERT_WINDOW_DAYS,
-  branchScope: StockBranchScope = null
+  branchScope: StockBranchScope = null,
+  cachedProducts?: Product[],
+  cachedStock?: Map<string, number>
 ): Promise<Set<string>> {
-  let products = await tenantArray(db.products);
+  let products = cachedProducts ?? (await tenantArray(db.products));
 
   if (branchScope !== null) {
     // If filtering by branch, only consider products that have some stock at this branch.
     // Expiring alerts only make sense if you actually have the product in stock.
-    const stockByProduct = await getStockByProduct(branchScope);
+    const stockByProduct = cachedStock ?? (await getStockByProduct(branchScope));
     products = products.filter((product) => (stockByProduct.get(product.id) ?? 0) > 0);
   }
 

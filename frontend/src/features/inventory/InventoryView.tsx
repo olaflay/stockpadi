@@ -9,7 +9,7 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Product } from "@/types/product";
-import { getStockByProduct } from "@/features/inventory/product-insights";
+import { getStockByProduct, resolveStockStatus, stockStatusLabel } from "@/features/inventory/product-insights";
 
 export function InventoryView({ worker }: { worker: boolean }) {
   const user = useCurrentUser();
@@ -28,5 +28,43 @@ export function InventoryView({ worker }: { worker: boolean }) {
 
   if (!result) return <Skeleton className="h-48" />;
   if (result.error) return <ErrorState message={result.error} onRetry={() => setRetryToken((value) => value + 1)} />;
-  return <div className="flex flex-col gap-4"><ScreenHeader title={worker ? "Stock" : "Inventory"} /><p className="text-sm text-on-surface-muted">{worker ? "View stock for your assigned branch." : "Current stock across your business branches."}</p><div className="flex flex-col divide-y divide-border rounded-[var(--radius-card)] border border-border">{result.products.map((product) => <div key={product.id} className="flex items-center justify-between px-4 py-3"><div><p className="font-medium text-on-surface">{product.name}</p><p className="text-xs text-on-surface-muted">{product.sku}</p></div><p className={`font-semibold ${(product.lowStockThreshold !== null && (result.quantity.get(product.id) ?? 0) <= product.lowStockThreshold) ? "text-danger" : "text-on-surface"}`}>{result.quantity.get(product.id) ?? 0}</p></div>)}</div></div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <ScreenHeader title={worker ? "Stock" : "Inventory"} />
+      <p className="text-sm text-on-surface-muted">
+        {worker ? "View stock for your assigned branch." : "Current stock across your business branches."}
+      </p>
+      <div className="flex flex-col divide-y divide-border rounded-[var(--radius-card)] border border-border">
+        {result.products.map((product) => {
+          const quantity = result.quantity.get(product.id);
+          // This view used its own rule — "low only when the threshold is set,
+          // otherwise never low" — and a null-coalescing zero on top, so a
+          // product with no ledger row read as a firm 0 here while the Products
+          // list called it out of stock. Same resolver as every other screen.
+          const status = resolveStockStatus(quantity, product.lowStockThreshold);
+          const tone =
+            status === "out"
+              ? "text-danger"
+              : status === "low"
+                ? "text-warning"
+                : "text-on-surface";
+          return (
+            <div key={product.id} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="font-medium text-on-surface">{product.name}</p>
+                <p className="text-xs text-on-surface-muted">{product.sku}</p>
+              </div>
+              <p className={`font-semibold ${tone}`}>
+                {quantity === undefined
+                  ? stockStatusLabel("untracked")
+                  : quantity <= 0
+                    ? stockStatusLabel("out")
+                    : `${quantity.toLocaleString()} in stock`}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

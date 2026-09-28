@@ -1,5 +1,5 @@
 import { useState, type BaseSyntheticEvent } from "react";
-import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import type { Control, FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { RippleButton } from "@/components/ui/Ripple";
 import { Modal } from "@/components/ui/Modal";
 import { AlertTriangle } from "lucide-react";
@@ -40,6 +40,7 @@ export function EditProductForm({
   expiryTracking,
   isSubmitting,
   onDelete,
+  watch,
 }: {
   totalStock: number | undefined;
   stockValueClass: string;
@@ -64,6 +65,7 @@ export function EditProductForm({
   expiryTracking: ProductFormInput["expiryTracking"];
   isSubmitting: boolean;
   onDelete: () => Promise<void> | void;
+  watch?: UseFormWatch<ProductFormInput>;
 }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -134,6 +136,7 @@ export function EditProductForm({
           categoryId={categoryId}
           categoryInputName={categoryInputName}
           onCategorySelect={onCategorySelect}
+          watch={watch}
         />
 
         <ProductStockAlertField register={register} errors={errors} placeholder={`Default: ${LOW_STOCK_THRESHOLD}`} />

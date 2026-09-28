@@ -45,12 +45,30 @@ export async function addExpense(params: {
 }
 
 /**
- * Local-only delete — mirrors the existing product-delete pattern
- * (src/app/(app)/products/[id]/page.tsx), which likewise has no outbox
- * entry today. Deletion sync isn't wired up anywhere in this codebase yet;
- * this stays consistent with that rather than inventing a new mechanism
- * for expenses alone.
+ * Deletes an expense only when safe to do so.
+ * In this offline-first architecture, silent local-only deletes are prohibited because
+ * deleting only from local IndexedDB causes silent data loss and permanent divergence
+ * from the server and other devices.
+ *
+ * An expense may only be deleted if it is still pending in the outbox (un-synced local creation),
+ * in which case both the local record and its outbox queue entry are removed together atomically.
+ *
+ * Deletion of an expense that has already synced to the server is blocked because there is no
+ * deletion sync pipeline for expenses yet.
  */
 export async function deleteExpense(id: string): Promise<void> {
-  await db.expenses.delete(id);
+  const pendingOutbox = await db.outbox
+    .where("clientId")
+    .equals(id)
+    .first();
+
+  if (pendingOutbox && (pendingOutbox.status === "pending" || pendingOutbox.status === "blocked")) {
+    await db.transaction("rw", db.expenses, db.outbox, async () => {
+      await db.expenses.delete(id);
+      await db.outbox.delete(pendingOutbox.clientId);
+    });
+    return;
+  }
+
+  throw new Error("This expense has already synced to the cloud. Cloud deletion is not supported.");
 }

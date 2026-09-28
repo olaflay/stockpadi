@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <ScreenHeader title="Settings" hideBack={true} />
+      <ScreenHeader title="Settings" backHref="/more" />
 
       {/* Account Identity Header — Clean profile surface, not an isolated floating card */}
       <RippleButton

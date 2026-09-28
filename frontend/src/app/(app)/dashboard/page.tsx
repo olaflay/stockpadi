@@ -10,6 +10,8 @@ import {
   PackagePlus,
   Plus,
   CalendarCheck,
+  Receipt,
+  ClipboardCheck,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -23,20 +25,21 @@ import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { RippleButton } from "@/components/ui/Ripple";
 import { RippleLink } from "@/components/ui/Ripple";
-import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { hasCapability } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
 /**
- * One KPI tile: label up top, big number + caption below.
- * Pure typography and tonal surface matching the reports design.
+ * One KPI tile: label up top, big number + caption below, and optional actionable prompt.
+ * Pure typography and tonal surface matching Samsung One UI / M3 design tokens.
  */
 function KpiCard({
   label,
   value,
   sub,
+  actionLabel,
   valueClassName = "text-on-surface",
   href,
   onClick,
@@ -44,19 +47,29 @@ function KpiCard({
   label: string;
   value: string;
   sub: string;
+  actionLabel?: string;
   valueClassName?: string;
   href?: string;
   onClick?: () => void;
 }) {
   const content = (
     <>
-      <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight">{label}</p>
+      <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight truncate">
+        {label}
+      </p>
       <div className="mt-2 min-w-0">
         <p className={`truncate font-number text-lg font-bold tracking-tight tabular-nums sm:text-xl ${valueClassName}`}>
           {value}
         </p>
-        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">{sub}</p>
+        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight truncate">
+          {sub}
+        </p>
       </div>
+      {actionLabel && (
+        <span className="mt-2 text-[11px] font-semibold text-brand-accent hover:underline flex items-center gap-0.5">
+          {actionLabel}
+        </span>
+      )}
     </>
   );
 
@@ -77,39 +90,95 @@ function KpiCard({
   );
 }
 
-const CAN_CLOSE_DAY = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-const CAN_EDIT_PRODUCTS = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-const CAN_RECORD_EXPENSES = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-const CAN_RESTOCK = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
-
 export default function DashboardPage() {
   const router = useRouter();
   const user = useCurrentUser();
   const [branchId, setBranchId] = useState<string | null>(null);
   const [isExpenseSheetOpen, setIsExpenseSheetOpen] = useState(false);
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
-  // Revenue, cash flow, and customer debt follow the same view_sales
-  // permission as /sales and /reports: inventory_staff sees none of it,
-  // cashiers see only their own sales (never the full shop's), matching
-  // "own_only" in src/types/permissions.ts.
-  const canSeeMoney = user.accountType !== "WORKER";
+  
+  // Scoped permissions:
+  // - Cashiers/workers with VIEW_OWN_SALES see their own sales total for the day
+  // - Full store finances (net cash flow, inventory valuation) are owner/admin only
+  // - Customer credit is visible to users with VIEW_CUSTOMERS
+  const canSeeStoreMoney = user.accountType !== "WORKER";
+  const canSeeOwnSales = hasCapability(user, "VIEW_OWN_SALES");
+  const canSeeCustomers = hasCapability(user, "VIEW_CUSTOMERS");
   const viewerId = user.accountType === "WORKER" ? user.id : null;
   const metrics = useDashboardMetrics(branchId, viewerId);
-  const totalOwed = useLiveQuery(async () => {
-    if (!canSeeMoney) return 0;
-    const balances = await getAllCustomerCreditBalances();
-    return [...balances.values()].reduce((sum, b) => sum + Math.max(b, 0), 0);
-  }, [canSeeMoney]);
 
-  // Live query for email verification status — banner disappears without a
-  // page reload once the owner enters the correct code in EmailVerificationBanner.
+  const quickActions = [
+    hasCapability(user, "POS_SELL") && {
+      key: "sell",
+      label: "Sell",
+      href: "/pos",
+      icon: Receipt,
+      isPrimary: true,
+    },
+    hasCapability(user, "MANAGE_PRODUCTS") && {
+      key: "add-product",
+      label: "Add product",
+      href: "/products/new",
+      icon: Plus,
+    },
+    hasCapability(user, "RECEIVE_STOCK") && {
+      key: "restock",
+      label: "Restock",
+      href: "/purchases/new",
+      icon: PackagePlus,
+    },
+    hasCapability(user, "MANAGE_EXPENSES") && {
+      key: "expense",
+      label: "Expense",
+      onClick: () => setIsExpenseSheetOpen(true),
+      icon: Wallet,
+    },
+    hasCapability(user, "SUBMIT_STOCK_COUNT") && !hasCapability(user, "MANAGE_PRODUCTS") && {
+      key: "stock-count",
+      label: "Stock count",
+      href: "/stock-count",
+      icon: ClipboardCheck,
+    },
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    icon: typeof Receipt;
+    href?: string;
+    onClick?: () => void;
+    isPrimary?: boolean;
+  }>;
+
+  // Live debtor balances and count
+  const customersOwingData = useLiveQuery(async () => {
+    if (!canSeeCustomers) return { totalOwed: 0, debtorCount: 0 };
+    const balances = await getAllCustomerCreditBalances();
+    let total = 0;
+    let count = 0;
+    for (const b of balances.values()) {
+      if (b > 0) {
+        total += b;
+        count++;
+      }
+    }
+    return { totalOwed: total, debtorCount: count };
+  }, [canSeeCustomers], { totalOwed: 0, debtorCount: 0 });
+
+  // Live query for email verification status
   const localUser = useLiveQuery(() => tenantGet<import("@/lib/db").LocalUser>(db.localUsers, user.id), [user.id]);
   const showVerificationBanner =
     user.accountType === "BUSINESS_OWNER" && localUser !== undefined && !localUser?.emailVerified;
     
   const allAlertsCount = useAlertBadgeCount();
 
-  const netCashFlow = metrics ? (metrics.todaysCashSalesTotal - metrics.todaysExpensesTotal - metrics.todaysPurchasesTotal + metrics.todaysCreditCollected) : 0;
+  const netCashFlow = metrics
+    ? (metrics.todaysCashSalesTotal - metrics.todaysExpensesTotal - metrics.todaysPurchasesTotal + metrics.todaysCreditCollected)
+    : 0;
+
+  const todayFormatted = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  }).format(new Date());
 
   if (metrics === undefined) {
     return (
@@ -157,7 +226,7 @@ export default function DashboardPage() {
           description="Add your first product and this screen fills in with your sales and stock numbers."
           action={{
             label: "Add a product",
-            onClick: () => router.push(hasAccountType(user, CAN_EDIT_PRODUCTS) ? "/products/new" : "/products"),
+            onClick: () => router.push(hasCapability(user, "MANAGE_PRODUCTS") ? "/products/new" : "/products"),
           }}
         />
       </div>
@@ -165,18 +234,24 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="pb-16">
       <ScreenHeader title="Dashboard" hideBack={true} />
 
-      {/* Email verification banner — shown only to owner until email confirmed.
-          Non-blocking: rendered above dashboard content, never as a modal. */}
+      {/* Today Date Context */}
+      <div className="mb-3 flex items-center justify-between text-on-surface-muted">
+        <p className="text-[length:var(--font-size-label)] font-medium">
+          Today · {todayFormatted}
+        </p>
+      </div>
+
+      {/* Email verification banner — shown only to owner until email confirmed */}
       {showVerificationBanner && (
         <div className="mb-4">
           <EmailVerificationBanner userId={user.id} />
         </div>
       )}
 
-
+      {/* Branch selector if multi-branch */}
       {branches && branches.length > 1 && (
         <div className="mb-4">
           <SelectInput
@@ -193,6 +268,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Alerts notification strip */}
       {allAlertsCount > 0 && (
         <RippleLink
           href="/alerts"
@@ -205,66 +281,84 @@ export default function DashboardPage() {
         </RippleLink>
       )}
 
-      {canSeeMoney && (
-        <RippleLink
-          href="/products"
-          className="mb-3.5 flex w-full flex-col rounded-2xl bg-surface-container p-4.5 sm:p-5 text-left hover:bg-surface-container-high transition-colors"
-        >
-          <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Inventory value
-          </p>
-          <p className="mt-1 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
-            {formatCurrency(metrics.inventoryValue)}
+      {/* PRIMARY HERO CARD: Today's Sales */}
+      {canSeeOwnSales && (
+        <div className="mb-3.5 flex w-full flex-col rounded-3xl bg-surface-container p-5 text-left border border-border/20 shadow-xs">
+          <div className="flex items-center justify-between">
+            <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+              {user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
+            </p>
+            <span className="inline-flex items-center rounded-full bg-brand-container px-2 py-0.5 text-[11px] font-semibold text-on-brand-container">
+              Today
+            </span>
+          </div>
+          <p className="mt-1.5 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
+            {formatCurrency(metrics.todaysSalesTotal)}
           </p>
           <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
-            Stock at cost · {metrics.stockedProductCount} {metrics.stockedProductCount === 1 ? "product" : "products"} on hand
+            {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
           </p>
-        </RippleLink>
+          <div className="mt-3.5 pt-2.5 border-t border-border/20 flex justify-end">
+            <RippleLink
+              href="/sales"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-accent hover:underline"
+            >
+              <span>View sales</span>
+              <span aria-hidden>→</span>
+            </RippleLink>
+          </div>
+        </div>
       )}
 
+      {/* SECONDARY METRICS: 2x2 Actionable Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {canSeeMoney && (
-          <KpiCard
-            label={user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
-            value={formatCurrency(metrics.todaysSalesTotal)}
-            sub={`${metrics.todaysSalesCount} ${metrics.todaysSalesCount === 1 ? "sale" : "sales"} · ${formatCurrency(metrics.todaysCashSalesTotal)} cash · ${formatCurrency(Math.max(metrics.todaysSalesTotal - metrics.todaysCashSalesTotal, 0))} credit`}
-            onClick={() => router.push("/sales")}
-          />
-        )}
-
-        {canSeeMoney && user.accountType !== "WORKER" && (
+        {canSeeStoreMoney && (
           <KpiCard
             label="Net cash flow"
             value={formatCurrency(netCashFlow)}
-            sub="After expenses & purchases"
+            sub="After expenses & stock"
+            actionLabel="View reports →"
             valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
             href="/reports"
+          />
+        )}
+
+        {canSeeStoreMoney && (
+          <KpiCard
+            label="Inventory value"
+            value={formatCurrency(metrics.inventoryValue)}
+            sub={`${metrics.stockedProductCount} products on hand`}
+            actionLabel="View inventory →"
+            href="/products"
+          />
+        )}
+
+        {canSeeCustomers && (
+          <KpiCard
+            label="Customers owing"
+            value={customersOwingData !== undefined ? formatCurrency(customersOwingData.totalOwed) : "…"}
+            sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "customer" : "customers"}` : "No debt"}
+            actionLabel="View debts →"
+            valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-danger" : "text-on-surface"}
+            href="/customers"
           />
         )}
 
         <KpiCard
           label="Low stock"
           value={String(metrics.lowStockCount)}
-          sub="products below threshold"
-          valueClassName="text-warning"
+          sub={metrics.lowStockCount > 0 ? "Restock soon" : "All healthy"}
+          actionLabel={metrics.lowStockCount > 0 ? "Restock →" : undefined}
+          valueClassName={metrics.lowStockCount > 0 ? "text-warning" : "text-on-surface"}
           href="/products?filter=low-stock"
         />
-
-        {canSeeMoney && (
-          <KpiCard
-            label="Customers owing"
-            value={totalOwed !== undefined ? formatCurrency(totalOwed) : "…"}
-            sub="total debt"
-            valueClassName="text-danger"
-            href="/customers"
-          />
-        )}
       </div>
 
+      {/* Expiring Products Alert */}
       {metrics.expiringCount > 0 && (
         <RippleLink
           href="/products?filter=expiring"
-          className="mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
+          className="mt-3 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
         >
           <span className="text-[length:var(--font-size-body)] font-medium">
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
@@ -272,104 +366,131 @@ export default function DashboardPage() {
         </RippleLink>
       )}
 
-      {/* Quick Actions Hub — Clean, accessible compact 4-column bar with unified surface */}
-      {(hasAccountType(user, CAN_RECORD_EXPENSES) ||
-        hasAccountType(user, CAN_RESTOCK) ||
-        hasAccountType(user, CAN_EDIT_PRODUCTS) ||
-        hasAccountType(user, CAN_CLOSE_DAY)) && (
+      {/* QUICK ACTIONS HUB: Essential routine actions */}
+      {quickActions.length > 0 && (
         <section className="mt-5">
           <h2 className="mb-2.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
             Quick Actions
           </h2>
-          <div className="rounded-3xl bg-surface-container p-3 sm:p-4.5 grid grid-cols-4 gap-2 sm:gap-3">
-            {hasAccountType(user, CAN_RECORD_EXPENSES) && (
-              <RippleButton
-                type="button"
-                onClick={() => setIsExpenseSheetOpen(true)}
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-              >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                  <Wallet size={22} strokeWidth={2.2} aria-hidden />
-                </div>
-                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                  Expense
-                </span>
-              </RippleButton>
-            )}
-
-            {hasAccountType(user, CAN_RESTOCK) && (
-              <RippleLink
-                href="/purchases/new"
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-              >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                  <PackagePlus size={22} strokeWidth={2.2} aria-hidden />
-                </div>
-                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                  Restock
-                </span>
-              </RippleLink>
-            )}
-
-            {hasAccountType(user, CAN_EDIT_PRODUCTS) && (
-              <RippleLink
-                href="/products/new"
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-              >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                  <Plus size={22} strokeWidth={2.4} aria-hidden />
-                </div>
-                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                  Add
-                </span>
-              </RippleLink>
-            )}
-
-            {hasAccountType(user, CAN_CLOSE_DAY) && (
-              <RippleLink
-                href="/close-day"
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-              >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                  <CalendarCheck size={22} strokeWidth={2.2} aria-hidden />
-                </div>
-                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                  Close Day
-                </span>
-              </RippleLink>
-            )}
+          <div
+            className={`rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
+              quickActions.length === 2
+                ? "grid-cols-2"
+                : quickActions.length === 3
+                ? "grid-cols-3"
+                : "grid-cols-4"
+            }`}
+          >
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              if ("href" in action && action.href) {
+                return (
+                  <RippleLink
+                    key={action.key}
+                    href={action.href}
+                    className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                  >
+                    <div
+                      className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                        action.isPrimary
+                          ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                          : "bg-surface-container-highest text-on-surface group-hover:bg-brand-container group-hover:text-on-brand-container"
+                      }`}
+                    >
+                      <Icon size={22} strokeWidth={action.isPrimary ? 2.2 : 2.4} aria-hidden />
+                    </div>
+                    <span
+                      className={`mt-2 text-xs sm:text-[13px] text-center leading-tight truncate w-full transition-colors ${
+                        action.isPrimary
+                          ? "font-semibold text-brand-accent"
+                          : "font-medium text-on-surface group-hover:text-brand-accent"
+                      }`}
+                    >
+                      {action.label}
+                    </span>
+                  </RippleLink>
+                );
+              }
+              return (
+                <RippleButton
+                  key={action.key}
+                  type="button"
+                  onClick={action.onClick}
+                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                >
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-on-surface shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                    <Icon size={22} strokeWidth={2.2} aria-hidden />
+                  </div>
+                  <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
+                    {action.label}
+                  </span>
+                </RippleButton>
+              );
+            })}
           </div>
         </section>
       )}
 
+      {/* QUICK SELL / TOP SELLERS: Compact product rows with 1-tap + Sell */}
       {metrics.topProducts && metrics.topProducts.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Quick Sell / Top Sellers
-          </h2>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+              Quick Sell
+            </h2>
+            <RippleLink href="/products" className="text-xs font-semibold text-brand-accent hover:underline">
+              All products →
+            </RippleLink>
+          </div>
           <div className="flex flex-col gap-2">
             {metrics.topProducts.map((p) => (
-              <RippleLink
+              <div
                 key={p.id}
-                href={`/pos?add=${p.id}`}
-                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high active:scale-98 transition-all"
+                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{p.name}</p>
-                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    {formatCurrency(p.sellPrice)} · {p.currentStock} in stock
+                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">{p.name}</p>
+                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
+                    {formatCurrency(p.sellPrice)} · <span className={p.currentStock <= 5 ? "text-warning font-medium" : ""}>{p.currentStock} in stock</span>
                   </p>
                 </div>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-container text-on-brand-container font-semibold text-lg" aria-hidden>
-                  +
-                </span>
-              </RippleLink>
+                <RippleLink
+                  href={`/pos?add=${p.id}`}
+                  className="flex h-8 items-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all"
+                  aria-label={`Sell ${p.name}`}
+                >
+                  <span>+ Sell</span>
+                </RippleLink>
+              </div>
             ))}
           </div>
         </section>
       )}
 
-      {hasAccountType(user, CAN_RECORD_EXPENSES) && (
+      {/* END-OF-DAY OPERATIONS: Close Day distinctly placed here */}
+      {hasCapability(user, "SUBMIT_RECONCILIATION") && (
+        <section className="mt-6">
+          <RippleLink
+            href="/close-day"
+            className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-4 hover:bg-surface-container-high transition-colors active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-container text-on-brand-container">
+                <CalendarCheck size={20} aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-on-surface truncate">Close today&apos;s books</p>
+                <p className="text-xs text-on-surface-muted truncate">End-of-day register settlement & cash tally</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-brand-accent hover:underline flex items-center gap-1">
+              Close day →
+            </span>
+          </RippleLink>
+        </section>
+      )}
+
+      {hasCapability(user, "MANAGE_EXPENSES") && (
         <AddExpenseSheet
           isOpen={isExpenseSheetOpen}
           onClose={() => setIsExpenseSheetOpen(false)}

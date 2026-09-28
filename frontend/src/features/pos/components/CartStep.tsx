@@ -35,9 +35,16 @@ export function CartStep(props: {
     stockByProduct,
   } = props;
 
-  const isStockTracked = stockByProduct !== undefined;
-  const invalidLines = isStockTracked
-    ? cartLines.filter((l) => (stockByProduct[l.productId] ?? 0) < l.quantity * l.conversionFactor)
+  // `undefined` means the stock query has not resolved yet. It must NOT be
+  // read as "no problem": unresolved blocks checkout and increment.
+  // Once resolved, untracked products (stock === undefined) are not artificially clamped to 0.
+  const isStockResolved = stockByProduct !== undefined;
+  const invalidLines = isStockResolved
+    ? cartLines.filter((l) => {
+        const stock = stockByProduct?.[l.productId];
+        if (stock === undefined) return false; // Untracked inventory does not fail the clamp
+        return stock < l.quantity * l.conversionFactor;
+      })
     : [];
   const hasOutOfStockItem = invalidLines.length > 0;
 
@@ -66,11 +73,15 @@ export function CartStep(props: {
           const product = products.find((p) => p.id === line.productId);
           if (!product) return null;
           const key = cartLineKey(line.productId, line.unitLabel);
-          const stock = stockByProduct?.[line.productId] ?? 0;
+          const stock = stockByProduct?.[line.productId];
           const requestedBase = line.quantity * line.conversionFactor;
-          const isOverStock = isStockTracked && requestedBase > stock;
-          const maxAvailableQty = Math.max(0, Math.floor(stock / line.conversionFactor));
-          const canIncrement = !isStockTracked || (line.quantity + 1) * line.conversionFactor <= stock;
+          const isOverStock = isStockResolved && stock !== undefined && requestedBase > stock;
+          const maxAvailableQty = stock !== undefined ? Math.max(0, Math.floor(stock / line.conversionFactor)) : line.quantity;
+          const canIncrement = !isStockResolved
+            ? false
+            : stock === undefined
+              ? true
+              : (line.quantity + 1) * line.conversionFactor <= stock;
 
           return (
             <li
@@ -168,6 +179,11 @@ export function CartStep(props: {
             </span>
           </div>
         )}
+        {!isStockResolved && cartLines.length > 0 && (
+          <div className="rounded-[var(--radius-control)] border border-border/60 bg-surface-container px-3 py-2 text-xs font-medium text-on-surface-muted">
+            Checking stock before checkout…
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 font-semibold text-on-surface">
           <span>Total</span>
           <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums">{formatCurrency(total)}</span>
@@ -175,7 +191,7 @@ export function CartStep(props: {
         <RippleButton
           type="button"
           onClick={onContinueToPayment}
-          disabled={cartLines.length === 0 || hasOutOfStockItem}
+          disabled={cartLines.length === 0 || hasOutOfStockItem || !isStockResolved}
           className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
         >
           Continue to payment

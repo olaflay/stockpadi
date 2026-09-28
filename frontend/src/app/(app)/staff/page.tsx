@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronRight, ScrollText } from "lucide-react";
 import { db } from "@/lib/db";
@@ -8,7 +7,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
-import { RippleButton, RippleLink } from "@/components/ui/Ripple";
+import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { fetchStaff } from "@/features/auth/manage-staff-client";
 
@@ -16,7 +15,6 @@ import { fetchStaff } from "@/features/auth/manage-staff-client";
 const STAFF_CAP = 3;
 
 export default function StaffPage() {
-  const router = useRouter();
   const user = useCurrentUser();
 
   const result = useLiveQuery(async () => {

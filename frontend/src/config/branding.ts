@@ -11,6 +11,7 @@ export interface BrandingConfig {
   logoUrl: string | null;
   appUrl: string;
   supportEmail: string;
+  currency: string;
 }
 
 /**
@@ -45,5 +46,6 @@ export function getBrandingConfig(): BrandingConfig {
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
     appUrl: getAppUrl(),
     supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@ojapadi.com",
+    currency: process.env.NEXT_PUBLIC_CURRENCY || "NGN",
   };
 }

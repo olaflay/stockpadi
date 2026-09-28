@@ -22,7 +22,6 @@ export default function EditProductPage({ params }: PageProps) {
   const { id } = use(params);
   const {
     user,
-    router,
     categories,
     product,
     totalStock,
@@ -47,6 +46,7 @@ export default function EditProductPage({ params }: PageProps) {
     onSubmit,
     handleDelete,
     setValue,
+    watch,
   } = useEditProductForm(id);
 
   const canViewProducts = hasCapability(user, "VIEW_PRODUCTS");
@@ -178,6 +178,7 @@ export default function EditProductPage({ params }: PageProps) {
         expiryTracking={expiryTracking}
         isSubmitting={isSubmitting}
         onDelete={() => handleDelete(prod)}
+        watch={watch}
       />
       {canViewMovements && renderStockMovements()}
     </div>

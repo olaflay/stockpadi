@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { completeSale } from "@/features/pos/complete-sale";
+import { resolveStockStatus, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { useCart } from "@/features/pos/use-cart";
 import { parsePosQuery } from "@/lib/parse-pos-query";
 import { useSplitPayment, AMOUNT_EPSILON } from "@/features/pos/use-split-payment";
@@ -175,8 +176,15 @@ function PosPageContent() {
     }
 
     setIsSubmitting(true);
+    const soldLines = [...cart.cartLines];
+
+    // The save is isolated in its own try/catch on purpose. It used to share
+    // one block with the low-stock advisory below, so any failure in that
+    // advisory — a stock read, a lookup — reported "Couldn't save the sale"
+    // for a sale that had already been committed and cleared from the cart.
+    // A cashier would retry a sale that had in fact gone through.
+    let savedSaleId: string;
     try {
-      const soldLines = [...cart.cartLines];
       const sale = await completeSale({
         branchId,
         customerId: payment.hasCreditLine ? payment.creditCustomerId : null,
@@ -185,39 +193,7 @@ function PosPageContent() {
         createdByUserId: user.id,
         actor: user,
       });
-
-      feedbackSaleComplete();
-      // Tappable but non-blocking: a cashier mid-queue keeps selling, but the
-      // receipt this sale produced is never just a toast that vanishes in 3
-      // seconds. See finding 3.1/#4 in docs/RESEARCH-AND-PLAN.md.
-      showToast(`Sale completed: ${formatCurrency(cart.total)} · Tap to view receipt`, "success", () =>
-        router.push(`/sales/${sale.id}`)
-      );
-      cart.clearCart();
-      payment.reset();
-      setStep("browse");
-
-      // Check remaining stock for products sold to trigger low-stock alert if applicable
-      const uniqueProductIds = Array.from(new Set(soldLines.map((l) => l.productId)));
-      for (const pid of uniqueProductIds) {
-        const remaining = await getCurrentStock(pid, branchId);
-        const prod = result?.products.find((p) => p.id === pid);
-        const threshold = prod?.lowStockThreshold ?? 5;
-        if (remaining <= threshold) {
-          const prodName = prod?.name ?? "An item";
-          setTimeout(() => {
-            showToast(
-              `Low stock: "${prodName}" is down to ${remaining} left.`,
-              "warning",
-              {
-                label: "Restock",
-                onClick: () => router.push("/purchases/new"),
-              }
-            );
-          }, 350);
-          break; // Surface the most urgent item
-        }
-      }
+      savedSaleId = sale.id;
     } catch (err) {
       console.error("Failed to complete sale:", err);
       const message =
@@ -235,8 +211,47 @@ function PosPageContent() {
             }
           : undefined
       );
-    } finally {
       setIsSubmitting(false);
+      return;
+    }
+
+    feedbackSaleComplete();
+    // Tappable but non-blocking: a cashier mid-queue keeps selling, but the
+    // receipt this sale produced is never just a toast that vanishes in 3
+    // seconds. See finding 3.1/#4 in docs/RESEARCH-AND-PLAN.md.
+    showToast(`Sale completed: ${formatCurrency(cart.total)} · Tap to view receipt`, "success", () =>
+      router.push(`/sales/${savedSaleId}`)
+    );
+    cart.clearCart();
+    payment.reset();
+    setStep("browse");
+    setIsSubmitting(false);
+
+    // Advisory only. The sale is already saved and the cart already cleared,
+    // so a failure here is swallowed rather than surfaced as a save failure.
+    try {
+      const uniqueProductIds = Array.from(new Set(soldLines.map((l) => l.productId)));
+      for (const pid of uniqueProductIds) {
+        const remaining = await getCurrentStock(pid, branchId);
+        const prod = result?.products.find((p) => p.id === pid);
+        const status = resolveStockStatus(remaining, prod?.lowStockThreshold ?? LOW_STOCK_THRESHOLD);
+        if (status === "out" || status === "low") {
+          const prodName = prod?.name ?? "An item";
+          setTimeout(() => {
+            showToast(
+              `Low stock: "${prodName}" is down to ${remaining} left.`,
+              "warning",
+              {
+                label: "Restock",
+                onClick: () => router.push("/purchases/new"),
+              }
+            );
+          }, 350);
+          break; // Surface the most urgent item
+        }
+      }
+    } catch (err) {
+      console.warn("Sale saved, but the low-stock advisory could not run:", err);
     }
   }
 

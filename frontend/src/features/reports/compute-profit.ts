@@ -18,13 +18,33 @@ export function computeGrossProfit(sales: Sale[], products: Product[]): number {
   let grossProfit = 0;
   for (const sale of sales) {
     if (sale.voidedAt) continue;
+    let saleGross = 0;
     for (const item of sale.items) {
       const prod = products.find((p) => p.id === item.productId);
       const cost = prod ? prod.costPrice : 0;
-      grossProfit += (item.unitPrice - item.discount - cost) * item.quantity;
+      saleGross += (item.unitPrice - item.discount - cost) * item.quantity;
     }
+    // Subtract sale-level discount if present
+    saleGross -= sale.discount ?? 0;
+    grossProfit += saleGross;
   }
   return grossProfit;
+}
+
+/**
+ * Computes Cost of Goods Sold (COGS) based on current product cost prices.
+ */
+export function computeCogs(sales: Sale[], products: Product[]): number {
+  let totalCogs = 0;
+  for (const sale of sales) {
+    if (sale.voidedAt) continue;
+    for (const item of sale.items) {
+      const prod = products.find((p) => p.id === item.productId);
+      const cost = prod ? prod.costPrice : 0;
+      totalCogs += cost * item.quantity;
+    }
+  }
+  return totalCogs;
 }
 
 /**
@@ -36,8 +56,10 @@ export function computeNetProfit(grossProfit: number, expenses: Expense[]): numb
 }
 
 /**
- * Computes net cash flow by taking cash sales (excluding credit), 
+ * Computes net cash flow by taking cash/immediate sales (excluding credit payments),
  * subtracting expenses and purchases, and adding collected credit.
+ * In a mixed-payment sale (e.g. ₦9,000 cash + ₦1,000 credit), the non-credit
+ * payments are included in cash flow.
  */
 export function computeNetCashFlow(
   sales: Sale[],
@@ -47,8 +69,10 @@ export function computeNetCashFlow(
 ): number {
   const cashSalesTotal = sales.reduce((sum, sale) => {
     if (sale.voidedAt) return sum;
-    const hasCredit = sale.payments.some(p => p.method === "credit");
-    return hasCredit ? sum : sum + sale.total;
+    const paidAmount = (sale.payments ?? [])
+      .filter((p) => p.method !== "credit")
+      .reduce((paymentSum, p) => paymentSum + p.amount, 0);
+    return sum + paidAmount;
   }, 0);
 
   const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);

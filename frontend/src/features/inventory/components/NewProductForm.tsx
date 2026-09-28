@@ -1,4 +1,4 @@
-import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import type { Control, FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import type { BaseSyntheticEvent } from "react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { SelectInput } from "@/components/ui/SelectInput";
@@ -19,6 +19,7 @@ export function NewProductForm({
   onCancel,
   register,
   setValue,
+  watch,
   errors,
   control,
   categories,
@@ -46,6 +47,7 @@ export function NewProductForm({
   onCancel?: () => void;
   register: UseFormRegister<ProductFormInput>;
   setValue: UseFormSetValue<ProductFormInput>;
+  watch?: UseFormWatch<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
   control: Control<ProductFormInput, unknown, ProductFormValues>;
   categories: CategoryOption[] | undefined;
@@ -74,6 +76,7 @@ export function NewProductForm({
       <ProductCoreFields
         register={register}
         setValue={setValue}
+        watch={watch}
         errors={errors}
         categories={categories}
         categoryId={categoryId}
@@ -86,7 +89,7 @@ export function NewProductForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Starting stock *</span>
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Opening stock</span>
           <TextInput
             type="number"
             min="0"
@@ -97,6 +100,9 @@ export function NewProductForm({
             hasError={Boolean(initialStockError)}
             errorId="starting-stock-error"
           />
+          <p className="text-[11px] text-on-surface-muted mt-0.5">
+            How many units do you currently have?
+          </p>
           <FieldError id="starting-stock-error" error={initialStockError ?? undefined} />
         </label>
 
@@ -134,13 +140,13 @@ export function NewProductForm({
 
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-surface border-t border-border/60 shadow-[var(--shadow-elevation-sticky-top)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-surface border-t border-border/40 shadow-[var(--shadow-elevation-sticky-top)]">
         <div className="flex items-center gap-3 max-w-xl md:max-w-2xl mx-auto w-full">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-[var(--touch-target-min)] px-5 rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
+              className="min-h-[var(--touch-target-min)] px-4 text-[length:var(--font-size-body)] font-medium text-on-surface-muted hover:text-on-surface transition-colors shrink-0"
             >
               Cancel
             </button>
@@ -149,7 +155,7 @@ export function NewProductForm({
             id="tour-save-product"
             type="submit"
             disabled={isSubmitting}
-            className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+            className="min-h-[var(--touch-target-min)] flex-1 rounded-2xl bg-brand-accent px-5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:brightness-105 active:scale-[0.99] transition-all"
           >
             {isSubmitting ? "Saving…" : "Save product"}
           </RippleButton>

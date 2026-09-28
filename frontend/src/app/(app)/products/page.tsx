@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
 import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
@@ -14,7 +14,7 @@ const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").th
 
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
-import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds, getStockByProduct, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
+import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds, getStockByProduct, resolveStockStatus, stockStatusLabel, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { EmptyShelfIllustration } from "@/components/illustrations";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -46,7 +46,6 @@ const FILTER_LABELS: Record<ProductFilter, string> = {
 };
 
 export default function ProductsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const filterParam = searchParams.get("filter");
@@ -66,6 +65,7 @@ export default function ProductsPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
+  const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
 
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -157,11 +157,11 @@ export default function ProductsPage() {
       let expiringIds = new Set<string>();
 
       if (filter === "low-stock") {
-        lowStockIds = await getLowStockProductIds(LOW_STOCK_THRESHOLD, stockBranchScope);
+        lowStockIds = await getLowStockProductIds(LOW_STOCK_THRESHOLD, stockBranchScope, products);
       } else if (filter === "best-sellers") {
         bestSellerIds = await getBestSellingProductIds();
       } else if (filter === "expiring") {
-        expiringIds = await getExpiringProductIds(7, stockBranchScope);
+        expiringIds = await getExpiringProductIds(7, stockBranchScope, products);
       }
 
       return { products, lowStockIds, bestSellerIds, expiringIds, error: null as string | null };
@@ -201,7 +201,31 @@ export default function ProductsPage() {
   const filtered = [...exact, ...suggestions];
 
   // Ledger-derived current stock for a product (see getStockByProduct above).
-  const stockFor = (product: Product) => stockByProduct.get(product.id) ?? 0;
+  // `undefined` is preserved rather than collapsed to 0: a product created
+  // with a blank starting stock has no ledger row, which is an absence of
+  // data, not a quantity of zero. Rendering it as a red "Out of stock"
+  // tells the owner something the ledger does not actually say.
+  const stockFor = (product: Product) => stockByProduct.get(product.id);
+  const statusFor = (product: Product) =>
+    resolveStockStatus(stockFor(product), product.lowStockThreshold);
+
+  // One wording + one colour for every product row. These two blocks used to
+  // re-derive both inline, which is how the grid and the list ended up with
+  // different thresholds and the same product looking fine in one and alarming
+  // in the other.
+  const stockToneFor = (product: Product) => {
+    const status = statusFor(product);
+    if (status === "out") return "text-danger";
+    if (status === "low") return "text-warning";
+    return "text-on-surface-muted";
+  };
+
+  const stockTextFor = (product: Product) => {
+    const qty = stockFor(product);
+    if (qty === undefined) return stockStatusLabel("untracked");
+    if (qty <= 0) return stockStatusLabel("out");
+    return `${qty.toLocaleString()} ${qty === 1 ? "unit" : "units"}`;
+  };
 
   useEffect(() => {
     if (filtered.length <= visibleLimit) return;
@@ -495,54 +519,96 @@ export default function ProductsPage() {
                         {formatCurrency(product.sellPrice)}
                       </p>
                       <p
-                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${stockFor(product) === 0
-                            ? "text-danger"
-                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
-                              ? "text-warning"
-                              : "text-on-surface-muted"
-                          }`}
+                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${stockToneFor(product)}`}
                       >
-                        {stockFor(product) === 0
-                          ? "Out of stock"
-                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
+                        {stockTextFor(product)}
                       </p>
                     </div>
                   </button>
                 ) : (
-                  <RippleLink
-                    href={`/products/${product.id}`}
+                  <div
                     onPointerDown={() => startLongPress(product.id)}
                     onPointerUp={cancelLongPress}
                     onPointerCancel={cancelLongPress}
                     onPointerLeave={cancelLongPress}
-                    onClick={suppressLongPressNavigation}
                     title="Long press to select for archive"
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high active:scale-[0.99] transition-all"
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 hover:bg-surface-container-high transition-colors"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">{product.name}</p>
-                      <p className="truncate text-[length:var(--font-size-caption)] text-on-surface-muted">
-                        {filter === "expiring" && product.expiryDate ? `Expires ${product.expiryDate}` : product.sku}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
-                        {formatCurrency(product.sellPrice)}
-                      </p>
-                      <p
-                        className={`font-number text-[length:var(--font-size-caption)] tabular-nums ${stockFor(product) === 0
-                            ? "text-danger"
-                            : stockFor(product) <= (product.lowStockThreshold ?? LOW_STOCK_THRESHOLD)
-                              ? "text-warning"
-                              : "text-on-surface-muted"
+                    <RippleLink
+                      href={`/products/${product.id}`}
+                      onClick={suppressLongPressNavigation}
+                      className="min-w-0 flex-1 flex flex-col gap-1 text-left"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="truncate text-[length:var(--font-size-body-lg)] font-bold text-on-surface">
+                          {product.name}
+                        </p>
+                        {categories?.find((c) => c.id === product.categoryId)?.name && (
+                          <span className="shrink-0 text-[10px] text-on-surface-muted bg-surface-container-high px-2 py-0.5 rounded-full font-medium">
+                            {categories.find((c) => c.id === product.categoryId)?.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-number font-bold text-[length:var(--font-size-body)] tabular-nums text-on-surface">
+                          {formatCurrency(product.sellPrice)}
+                        </span>
+                        {product.costPrice > 0 && (
+                          <span className="text-xs text-on-surface-muted font-number tabular-nums">
+                            Cost {formatCurrency(product.costPrice)}{" "}
+                            {product.sellPrice > product.costPrice ? (
+                              <span className="text-success font-medium">
+                                (+{formatCurrency(product.sellPrice - product.costPrice)})
+                              </span>
+                            ) : null}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                            statusFor(product) === "out"
+                              ? "bg-danger-container text-on-danger-container"
+                              : statusFor(product) === "low"
+                              ? "bg-warning-container text-on-warning-container"
+                              : statusFor(product) === "ok"
+                              ? "bg-success-container text-on-success-container"
+                              : "bg-surface-container-high text-on-surface-muted"
                           }`}
-                      >
-                        {stockFor(product) === 0
-                          ? "Out of stock"
-                          : `${stockFor(product).toLocaleString()} ${stockFor(product) === 1 ? "unit" : "units"}`}
-                      </p>
-                    </div>
-                  </RippleLink>
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              statusFor(product) === "out"
+                                ? "bg-danger"
+                                : statusFor(product) === "low"
+                                ? "bg-warning"
+                                : statusFor(product) === "ok"
+                                ? "bg-success"
+                                : "bg-outline"
+                            }`}
+                            aria-hidden
+                          />
+                          <span>{stockTextFor(product)}</span>
+                        </span>
+                        {filter === "expiring" && product.expiryDate && (
+                          <span className="text-[11px] text-danger font-medium">
+                            Expires {product.expiryDate}
+                          </span>
+                        )}
+                      </div>
+                    </RippleLink>
+
+                    {/* 1-tap quick Sell button */}
+                    <RippleLink
+                      href={`/pos?add=${product.id}`}
+                      className="shrink-0 flex h-8 items-center justify-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all"
+                      aria-label={`Sell ${product.name}`}
+                    >
+                      <span>+ Sell</span>
+                    </RippleLink>
+                  </div>
                 )}
               </li>
             ))}

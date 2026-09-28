@@ -200,6 +200,7 @@ export function useEditProductForm(id: string) {
     altUnitLabel,
     onSubmit,
     handleDelete,
+    watch: form.watch,
     setValue: form.setValue,
   };
 }

@@ -7,10 +7,9 @@ import {
   LayoutDashboard,
   Package,
   Receipt,
-  Settings,
   BarChart3,
   ClipboardCheck,
-  UserCircle,
+  MoreHorizontal,
 } from "lucide-react";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -34,7 +33,7 @@ const BUSINESS_NAV = [
   { label: "Sell", href: "/business/pos", icon: Receipt },
   { label: "Products", href: "/business/products", icon: Package },
   { label: "Reports", href: "/business/reports", icon: BarChart3 },
-  { label: "Settings", href: "/business/settings", icon: Settings },
+  { label: "More", href: "/business/more", icon: MoreHorizontal },
 ] as const;
 
 const WORKER_NAV = [
@@ -42,7 +41,7 @@ const WORKER_NAV = [
   { label: "Sell", href: "/work/pos", icon: Receipt },
   { label: "Products", href: "/work/products", icon: Package },
   { label: "Stock", href: "/work/stock-count", icon: ClipboardCheck },
-  { label: "Profile", href: "/work/profile", icon: UserCircle },
+  { label: "More", href: "/work/more", icon: MoreHorizontal },
 ] as const;
 
 function ShellContent({ shell, children }: { shell: Shell; children: React.ReactNode }) {
@@ -79,7 +78,8 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
             const Icon = item.icon;
             const active =
               pathname === item.href ||
-              (item.href !== "/business" && item.href !== "/work" && pathname.startsWith(`${item.href}/`));
+              (item.href !== "/business" && item.href !== "/work" && pathname.startsWith(`${item.href}/`)) ||
+              (item.href === "/business/more" && (pathname === "/business/settings" || pathname.startsWith("/business/settings/")));
             return (
               <Link
                 key={item.href}
