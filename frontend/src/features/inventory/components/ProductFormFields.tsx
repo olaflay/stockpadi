@@ -15,6 +15,7 @@ import { getRecentCategoryIds } from "@/lib/last-used-category";
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
 import { TextInput } from "@/components/ui/TextInput";
 import { formatCurrency } from "@/lib/format";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 /**
  * Shared red caption under a control, wired to that control's aria-describedby
@@ -104,7 +105,10 @@ export function ProductCoreFields({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">SKU (optional)</span>
+          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+            SKU (optional)
+            <InfoTooltip text="Stock Keeping Unit. Auto-filled from name, or enter your custom code." />
+          </span>
           <TextInput
             {...skuRegister}
             onChange={(e) => {
@@ -119,7 +123,10 @@ export function ProductCoreFields({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Barcode</span>
+          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+            Barcode
+            <InfoTooltip text="Optional barcode. No barcode? That's fine — you can leave this blank." />
+          </span>
           <div className="flex gap-2">
             <TextInput
               {...register("barcode")}
@@ -137,9 +144,6 @@ export function ProductCoreFields({
               <Camera size={18} aria-hidden />
             </button>
           </div>
-          <p className="text-[11px] text-on-surface-muted mt-0.5">
-            No barcode? That&apos;s okay — you can leave this blank.
-          </p>
           <FieldError id="field-error-barcode" error={errors.barcode?.message} />
         </label>
       </div>
@@ -156,7 +160,10 @@ export function ProductCoreFields({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Cost price *</span>
+          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+            Cost price *
+            <InfoTooltip text="What you paid to purchase or manufacture one unit." />
+          </span>
           <TextInput
             type="number"
             min="0"
@@ -171,7 +178,10 @@ export function ProductCoreFields({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Sell price *</span>
+          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+            Sell price *
+            <InfoTooltip text="The retail price your customers pay." />
+          </span>
           <TextInput
             type="number"
             min="0"
@@ -218,7 +228,10 @@ export function ProductStockAlertField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Low-stock alert</span>
+      <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+        Low-stock alert
+        <InfoTooltip text={`Notify me when stock drops to or below ${placeholder || "5"} units.`} />
+      </span>
       <TextInput
         type="number"
         min="0"
@@ -228,9 +241,6 @@ export function ProductStockAlertField({
         hasError={Boolean(errors.lowStockThreshold)}
         errorId="field-error-low-stock-threshold"
       />
-      <p className="text-[11px] text-on-surface-muted mt-0.5">
-        Notify me when stock reaches {placeholder || "5"} units
-      </p>
       <FieldError id="field-error-low-stock-threshold" error={errors.lowStockThreshold?.message} />
     </label>
   );
@@ -352,7 +362,10 @@ export function ProductExpiryFields({
   return (
     <>
       <label className="flex flex-col gap-1">
-        <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Expiry tracking</span>
+        <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+          Expiry tracking
+          <InfoTooltip text="Track expiration dates for perishables and receive warnings before items expire." />
+        </span>
         <SelectInput {...register("expiryTracking")}>
           <option value="off">Off</option>
           <option value="optional">Optional</option>

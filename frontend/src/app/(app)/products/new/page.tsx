@@ -71,16 +71,14 @@ function NewProductContent() {
           </button>
         }
       />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] bg-surface-container px-4 py-3">
-        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-          Adding many products?
-        </p>
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-surface-container-low px-3.5 py-1.5 text-xs border border-border/30">
+        <span className="text-on-surface-muted truncate">Adding many products?</span>
         <Link
           href="/products/import"
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-2 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:bg-brand-accent/10 transition-colors"
+          className="inline-flex items-center gap-1.5 font-semibold text-brand-accent hover:underline shrink-0 py-0.5 px-1.5 rounded"
         >
-          <Upload size={16} aria-hidden />
-          Import products instead
+          <Upload size={13} aria-hidden />
+          Import instead
         </Link>
       </div>
       <NewProductForm

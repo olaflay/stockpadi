@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 interface ScreenHeaderProps {
   title: string;
@@ -36,12 +36,23 @@ export function ScreenHeader({
   action,
 }: ScreenHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
+    } else if (backHref) {
+      router.push(backHref);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
+    } else {
+      // Safe fallback so user never gets lost if direct-landed or history exhausted
+      if (pathname.includes("/settings/")) router.push("/settings");
+      else if (pathname.includes("/products/")) router.push("/products");
+      else if (pathname.includes("/staff/")) router.push("/staff");
+      else if (pathname.includes("/sales/")) router.push("/sales");
+      else if (pathname.includes("/customers/")) router.push("/customers");
+      else router.push("/dashboard");
     }
   };
 

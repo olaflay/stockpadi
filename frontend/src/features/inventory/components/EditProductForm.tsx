@@ -201,7 +201,7 @@ export function EditProductForm({
         </div>
       </Modal>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-surface border-t border-border/60 shadow-[var(--shadow-elevation-sticky-top)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-1.5 pb-[max(0.35rem,calc(env(safe-area-inset-bottom,0px)+0.2rem))] bg-surface border-t border-border/60 shadow-[var(--shadow-elevation-sticky-top)] after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface after:pointer-events-none">
         <div className="max-w-xl md:max-w-2xl mx-auto w-full">
           <RippleButton
             type="button"
@@ -210,7 +210,7 @@ export function EditProductForm({
               if (form) form.requestSubmit();
             }}
             disabled={isSubmitting}
-            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+            className="min-h-[44px] w-full rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
           >
             {isSubmitting ? "Saving…" : "Save changes"}
           </RippleButton>

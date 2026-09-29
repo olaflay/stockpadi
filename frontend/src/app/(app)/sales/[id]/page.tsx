@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { MessageCircle, Printer, Ban } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
@@ -43,7 +42,6 @@ interface PageProps {
 export default function SaleDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const user = useCurrentUser();
-  const router = useRouter();
   const { showToast } = useToast();
   const isOnline = useOnlineStatus();
 
@@ -62,7 +60,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
     return (
       <div>
-        <ScreenHeader title="Sale" onBack={() => router.push("/sales")} />
+        <ScreenHeader title="Sale" backHref="/sales" />
         <PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} />
       </div>
     );
@@ -71,7 +69,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   if (sale === undefined) {
     return (
       <div>
-        <ScreenHeader title="Sale" onBack={() => router.push("/sales")} />
+        <ScreenHeader title="Sale" backHref="/sales" />
         <Skeleton className="h-64" />
       </div>
     );
@@ -80,7 +78,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   if (sale === null) {
     return (
       <div>
-        <ScreenHeader title="Sale" onBack={() => router.push("/sales")} />
+        <ScreenHeader title="Sale" backHref="/sales" />
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Sale not found.</p>
       </div>
     );
@@ -89,7 +87,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   if (user.accountType === "WORKER" && sale.createdByUserId !== user.id) {
     return (
       <div>
-        <ScreenHeader title="Sale" onBack={() => router.push("/sales")} />
+        <ScreenHeader title="Sale" backHref="/sales" />
         <PermissionDenied requiredAccountTypes={BUSINESS_MANAGEMENT_ACCOUNT_TYPES} />
       </div>
     );
@@ -163,7 +161,7 @@ export default function SaleDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <ScreenHeader title="Sale receipt" onBack={() => router.push("/sales")} />
+      <ScreenHeader title="Sale receipt" backHref="/sales" />
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
         <section className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 animate-step-in">

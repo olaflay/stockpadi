@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
@@ -25,7 +24,6 @@ const FAQS = [
 ];
 
 export default function HelpPage() {
-  const router = useRouter();
   const { showToast } = useToast();
   const branding = getBrandingConfig();
   const [userGuideOpen, setUserGuideOpen] = useState(false);
@@ -48,7 +46,7 @@ export default function HelpPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Help & Support" onBack={() => router.back()} />
+      <ScreenHeader title="Help & Support" backHref="/settings" />
 
       {/* Review & Merchant Feedback Banner */}
       <section className="flex flex-col gap-3 rounded-2xl bg-brand-accent/10 p-4">
