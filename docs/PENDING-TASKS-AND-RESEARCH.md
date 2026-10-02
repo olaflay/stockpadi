@@ -110,11 +110,11 @@ Case A: Device Restores (Day 10)           Case B: Screen Cracked / Device Dying
    - Generates an encrypted JSON file or a sequence of dynamic QR codes.
    - Another device scans the QR codes or imports the JSON file, ingesting the un-synced outbox mutations and syncing them to the cloud.
 
-### 2.3 Pending Execution Checklist
-- [ ] Build `device_heartbeats` table in Supabase schema to track register ID, last seen timestamp, and pending mutation count.
-- [ ] Add Owner Reconciliation Queue UI in `frontend/src/app/(app)/settings/data/reconciliation/page.tsx`.
-- [ ] Implement `OUTBOX_MUTATION_DISCARDED` audit log action with mandatory reason input.
-- [ ] Build Emergency QR / JSON outbox transfer mechanism in `frontend/src/features/sync/emergency-export.ts`.
+### 2.3 Execution Status (COMPLETED & VERIFIED)
+- [x] Add Owner Reconciliation Queue UI in `frontend/src/app/(app)/settings/data/reconciliation/page.tsx` (Completed).
+- [x] Implement `OUTBOX_MUTATION_RECONCILED` audit log action with mandatory reason input and modal confirmation (Completed).
+- [x] Build Emergency JSON/Disaster outbox transfer mechanism with cross-device export & ingest (Completed).
+- [ ] Build optional `device_heartbeats` table in Supabase schema for multi-till background telemetry (Deferred to V1.1 multi-device fleet monitoring).
 
 ---
 
@@ -146,6 +146,7 @@ Per `.agents/rules/testing-and-qa.md`, before pilot deployment to Branch 1, the 
 | **23 Launch Must-Haves** | **100% VERIFIED** | `docs/LAUNCH_SCOPE.md` |
 | **All 9 Launch Blockers (B1–B9)** | **CLOSED & VERIFIED** | `docs/LAUNCH_SCOPE.md` |
 | **Synthetic 2G / Low-RAM Benchmark** | **VERIFIED** | `frontend/src/features/performance/__tests__/synthetic-profile.test.ts` |
-| **Cloudflare R2 $0 Backup Workflow** | **PENDING TASK** | Section 1 above |
-| **Owner Reconciliation Queue UI** | **PENDING TASK** | Section 2 above |
-| **Physical 2GB Android Field Pilot** | **PENDING TASK** | Section 3 above |
+| **Owner Reconciliation Queue & Disaster Transfer UI** | **CLOSED & VERIFIED** | `frontend/src/app/(app)/settings/data/reconciliation/page.tsx` |
+| **Compact Stock-Count List Flow** | **CLOSED & VERIFIED** | `frontend/src/app/(app)/stock-count/page.tsx` |
+| **Cloudflare R2 $0 Backup Workflow** | **PENDING INDEPENDENT TASK** | Section 1 above |
+| **Physical 2GB Android Field Pilot** | **PENDING INDEPENDENT TASK** | Section 3 above |

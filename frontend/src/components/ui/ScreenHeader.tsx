@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -41,19 +40,30 @@ export function ScreenHeader({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else if (backHref) {
-      router.push(backHref);
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      // Safe fallback so user never gets lost if direct-landed or history exhausted
-      if (pathname.includes("/settings/")) router.push("/settings");
-      else if (pathname.includes("/products/")) router.push("/products");
-      else if (pathname.includes("/staff/")) router.push("/staff");
-      else if (pathname.includes("/sales/")) router.push("/sales");
-      else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.push("/contacts");
-      else router.push("/dashboard");
+      return;
     }
+
+    // In a browser/PWA, if history has entries, router.back() correctly returns
+    // to the prior screen the user came from (e.g. Dashboard -> Sales -> Dashboard,
+    // or More -> Sales -> More).
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    // Safe fallback when opened directly in a new tab/session with no history
+    if (backHref) {
+      router.push(backHref);
+      return;
+    }
+
+    // Default safe fallbacks so user is never stuck
+    if (pathname.includes("/settings/")) router.push("/settings");
+    else if (pathname.includes("/products/")) router.push("/products");
+    else if (pathname.includes("/staff/")) router.push("/staff");
+    else if (pathname.includes("/sales/")) router.push("/sales");
+    else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.push("/contacts");
+    else router.push("/dashboard");
   };
 
   // On root tab screens, the page title, hamburger menu, and sync indicator
@@ -77,20 +87,14 @@ export function ScreenHeader({
 
   return (
     <div className="mb-3.5 sm:mb-4 flex items-center gap-2 sm:gap-2.5 min-h-[48px]">
-      {backHref ? (
-        <Link href={backHref} aria-label="Go back" className={backAffordanceClass}>
-          <ChevronLeft size={24} aria-hidden />
-        </Link>
-      ) : (
-        <button
-          type="button"
-          onClick={handleBack}
-          aria-label="Go back"
-          className={backAffordanceClass}
-        >
-          <ChevronLeft size={24} aria-hidden />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleBack}
+        aria-label="Go back"
+        className={backAffordanceClass}
+      >
+        <ChevronLeft size={24} aria-hidden />
+      </button>
 
       <h1 className="min-w-0 flex-1 truncate text-xl sm:text-2xl font-bold tracking-tight text-on-surface leading-tight">
         {title}

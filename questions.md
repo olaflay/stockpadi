@@ -312,9 +312,12 @@ All 7 previously partial capabilities in `docs/LAUNCH_SCOPE.md` have been harden
 
 ## 5. Remaining Open Decisions & Questions
 
-### Q8. Stranded Outbox Policy for Damaged/Lost Offline Hardware
-- **Context:** If a cashier's phone breaks or is lost with un-synced offline sales, `abandonStrandedItems` currently sweeps items older than 7 days.
-- **Question:** Should old un-synced items automatically purge after 7 days, or should they be flagged into an Owner Reconciliation Queue so the shop owner can manually audit and reconcile the cash drawer before any ledger deletion?
+### Q8. Stranded Outbox Policy for Damaged/Lost Offline Hardware — RESOLVED & CLOSED
+- **Decision:** Auto-purging offline sales violates Trust Promises 1 & 2. Outbox mutations are preserved and surfaced to the **Owner Reconciliation Queue** (`/settings/data/reconciliation`).
+- **Fix & Implementation:**
+  1. Built `frontend/src/app/(app)/settings/data/reconciliation/page.tsx` allowing business owners and admins to inspect failed or conflicted offline transactions, retry them against the server, or reconcile and write them off with a mandatory audit note (`OUTBOX_MUTATION_RECONCILED`).
+  2. Implemented Emergency Disaster Outbox Export & Ingest so un-synced sales can be transferred via JSON from a broken phone to a backup phone with zero data loss.
+  3. Linked seamlessly from `Settings > Data and backup` (`/settings/data`). Blocker/Question Q8 is closed.
 
 ### Q9. Point-in-Time Recovery (PITR) vs Managed Backups
 - **Context:** Supabase Pro includes 7 days of daily database backups. Full continuous Point-in-Time Recovery (PITR) is a $100/mo add-on.

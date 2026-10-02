@@ -11,7 +11,6 @@ import {
   Plus,
   CalendarCheck,
   Receipt,
-  ReceiptText,
   ArrowRight,
   ClipboardCheck,
 } from "lucide-react";
@@ -33,7 +32,7 @@ import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
-/** Format hero card date with ordinal suffix, e.g. "Today • Friday, 2nd of October" */
+/** Format hero card date with ordinal suffix, e.g. "Friday, 2nd of October" */
 function formatDashboardHeroDate(date: Date = new Date()): string {
   const weekday = date.toLocaleDateString("en-GB", { weekday: "long" });
   const day = date.getDate();
@@ -43,7 +42,7 @@ function formatDashboardHeroDate(date: Date = new Date()): string {
     const v = n % 100;
     return s[(v - 20) % 10] || s[v] || s[0];
   };
-  return `Today • ${weekday}, ${day}${getOrdinal(day)} of ${month}`;
+  return `${weekday}, ${day}${getOrdinal(day)} of ${month}`;
 }
 
 /**
@@ -286,12 +285,12 @@ export default function DashboardPage() {
       {/* PRIMARY HERO CARD: Today's Sales */}
       {canSeeOwnSales && (
         <div className="mb-3 flex w-full flex-col rounded-3xl bg-surface-container p-4 sm:p-5 text-left border border-border/20 shadow-xs">
-          {/* Small top header with label and dynamic date */}
+          {/* Small top header with label in capital letters and dynamic date */}
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-on-surface-muted">
-              {user.accountType === "WORKER" ? "Your Sales Today" : "Today's Sales"}
+            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-on-surface-muted">
+              {user.accountType === "WORKER" ? "YOUR SALES TODAY" : "TODAY'S SALES"}
             </p>
-            <span className="text-[11px] sm:text-xs font-medium text-on-surface-muted/90 shrink-0">
+            <span className="text-[11px] sm:text-xs font-medium text-on-surface-muted shrink-0">
               {formatDashboardHeroDate()}
             </span>
           </div>
@@ -306,18 +305,15 @@ export default function DashboardPage() {
             {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
           </p>
 
-          {/* Improved Full-width View Sales Action */}
+          {/* Improved Tonal View Sales Action: Thin green stroke, subtle green hint background, standard text, clean arrow */}
           <RippleLink
             href="/sales"
-            className="mt-3.5 flex items-center justify-between rounded-xl bg-surface-container-high/70 px-3.5 py-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container-highest transition-colors group"
+            className="mt-3.5 flex items-center justify-between rounded-xl border border-brand-accent/35 bg-brand-accent/[0.06] hover:bg-brand-accent/[0.12] active:scale-[0.99] px-3.5 py-2.5 text-xs text-on-surface transition-all group"
           >
-            <div className="flex items-center gap-2">
-              <ReceiptText size={15} className="text-brand-accent shrink-0" />
-              <span>View sales & receipts</span>
-            </div>
-            <div className="flex items-center gap-1 text-on-surface-muted group-hover:text-brand-accent transition-colors">
-              <span className="text-[11px]">{metrics.todaysSalesCount} recorded</span>
-              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            <span className="font-medium text-on-surface">View sales & receipts</span>
+            <div className="flex items-center gap-1.5 text-on-surface-muted group-hover:text-brand-accent transition-colors">
+              <span className="text-[11px] font-normal">{metrics.todaysSalesCount} recorded</span>
+              <ArrowRight size={14} className="text-brand-accent group-hover:translate-x-0.5 transition-transform" />
             </div>
           </RippleLink>
         </div>
