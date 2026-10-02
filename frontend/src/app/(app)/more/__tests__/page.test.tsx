@@ -38,17 +38,16 @@ describe("More Page — Operations & Settings Hub", () => {
 
     expect(await screen.findByText("More")).toBeInTheDocument();
     expect(screen.getByText("Alhaji Musa · Profile & details")).toBeInTheDocument();
-    expect(screen.getByText("Daily Operations")).toBeInTheDocument();
-    expect(screen.getByText("Customers & Debts")).toBeInTheDocument();
+    expect(screen.getByText("Daily Cash & Relationships")).toBeInTheDocument();
+    expect(screen.getByText("Contacts & Debtors")).toBeInTheDocument();
     expect(screen.getByText("Sales & Receipts")).toBeInTheDocument();
     expect(screen.getByText("Expenses")).toBeInTheDocument();
     expect(screen.getByText("Purchases & Restock")).toBeInTheDocument();
     expect(screen.getByText("Stock Count")).toBeInTheDocument();
     expect(screen.getByText("Close Day")).toBeInTheDocument();
-    expect(screen.getByText("Store & POS Settings")).toBeInTheDocument();
-    expect(screen.getByText("Staff & Permissions")).toBeInTheDocument();
-    expect(screen.getByText("Import / Export Products")).toBeInTheDocument();
-    expect(screen.getByText("Backup & Data Sync")).toBeInTheDocument();
+    expect(screen.getByText("Store & Staff Settings")).toBeInTheDocument();
+    expect(screen.getByText("Import / Export Catalog")).toBeInTheDocument();
+    expect(screen.getByText("Data, Sync & Backups")).toBeInTheDocument();
     expect(screen.getByText("Help & Support")).toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
@@ -67,10 +66,9 @@ describe("More Page — Operations & Settings Hub", () => {
     expect(screen.getByText("Sales & Receipts")).toBeInTheDocument();
     // Worker does NOT have MANAGE_EXPENSES, VIEW_CUSTOMERS, or admin settings
     expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
-    expect(screen.queryByText("Customers & Debts")).not.toBeInTheDocument();
-    expect(screen.queryByText("Store & POS Settings")).not.toBeInTheDocument();
-    expect(screen.queryByText("Staff & Permissions")).not.toBeInTheDocument();
-    expect(screen.queryByText("Backup & Data Sync")).not.toBeInTheDocument();
+    expect(screen.queryByText("Contacts & Debtors")).not.toBeInTheDocument();
+    expect(screen.queryByText("Store & Staff Settings")).not.toBeInTheDocument();
+    expect(screen.queryByText("Data, Sync & Backups")).not.toBeInTheDocument();
     // Still has access to Help and Sign Out
     expect(screen.getByText("Help & Support")).toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();

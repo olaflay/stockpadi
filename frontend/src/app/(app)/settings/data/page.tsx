@@ -35,7 +35,7 @@ export default function DataSettingsPage() {
   );
   const fullySynced = online && pendingCount === 0 && failedCount === 0 && Boolean(pullState?.lastCompletePullAt);
 
-  if (user.accountType !== "BUSINESS_OWNER") {
+  if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
     return (
       <div>
         <ScreenHeader title="Backup" onBack={() => router.push("/settings")} />

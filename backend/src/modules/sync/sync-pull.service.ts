@@ -3,6 +3,7 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability } from "../authorization/capabilities.js";
+import { tolerantSelect } from "../../shared/database/tolerant-select.js";
 
 const PAGE_SIZE = 200;
 const CURSOR_DATASETS = new Set([
@@ -212,12 +213,21 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
     const { data, error } = await query; if (error) throw new HttpError(500, "SALES_LOAD_FAILED", error.message);
     const page = takePage(cursor, "sales", data ?? [], position);
     const ids = page.records.map((row) => (row as { id: string }).id);
-    const [{ data: items, error: itemError }, { data: payments, error: paymentError }] = ids.length ? await Promise.all([
-      db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids),
+    const [saleItems, { data: payments, error: paymentError }] = ids.length ? await Promise.all([
+      tolerantSelect(
+        (columns) => db.from("sale_items").select(columns).in("sale_id", ids),
+        {
+          table: "sale_items",
+          baseColumns: ["sale_id", "product_id", "quantity", "unit_price", "discount", "unit_label", "unit_conversion_factor"],
+          evolutionaryColumns: ["unit_cost", "cost_basis", "product_version", "cost_flags"],
+        }
+      ).catch((err) => {
+        throw new HttpError(500, "SALES_LOAD_FAILED", err.message ?? "Could not load sale items");
+      }),
       db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids),
-    ]) : [{ data: [], error: null }, { data: [], error: null }];
-    if (itemError || paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", itemError?.message ?? paymentError?.message ?? "Could not load sale details");
-    more.push(page.hasMore); return page.records.map((sale) => ({ ...sale, items: (items ?? []).filter((item) => item.sale_id === (sale as { id: string }).id), payments: (payments ?? []).filter((payment) => payment.sale_id === (sale as { id: string }).id) }));
+    ]) : [[], { data: [], error: null }];
+    if (paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", paymentError.message);
+    more.push(page.hasMore); return page.records.map((sale) => ({ ...sale, items: (saleItems ?? []).filter((item) => (item as { sale_id?: unknown }).sale_id === (sale as { id: string }).id), payments: (payments ?? []).filter((payment) => payment.sale_id === (sale as { id: string }).id) }));
   });
 
   for (const [entity, table, select] of [["expenses", "expenses", "id, branch_id, category, amount, note, created_at, created_by_user_id"], ["purchases", "purchases", "id, client_id, branch_id, supplier_id, status, created_at, created_by_user_id"]] as const) {

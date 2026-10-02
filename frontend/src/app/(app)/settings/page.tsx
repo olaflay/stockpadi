@@ -99,6 +99,11 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
+              label="Contacts & Debtors"
+              description="Manage customers, debtor book and wholesale suppliers"
+              onClick={() => router.push("/contacts")}
+            />
+            <SettingsRow
               label="Staff and access"
               description="Add cashiers, workers and manage permissions"
               onClick={() => router.push("/staff")}

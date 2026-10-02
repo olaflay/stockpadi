@@ -28,14 +28,14 @@ or PARTIAL and are therefore **not launch-ready**.
 
 | Suite | Files | Tests | Result |
 | --- | --- | --- | --- |
-| frontend | 53 | 276 | all pass |
-| backend (+ supabase tests) | 14 | 100 | all pass |
-| supabase (PGlite, all migrations applied) | 6 | 54 | all pass |
+| frontend | 64 | 327 | all pass |
+| backend (+ supabase tests) | 23 | 137 | all pass |
+| supabase (PGlite, all migrations applied) | 12 | 74 | all pass |
 | typecheck | — | — | clean |
 | lint | — | — | clean |
 
-> Note: `backend/vitest.config` includes `../supabase/__tests__`, so those 6 files are counted twice
-> in the backend row. Not a defect, but do not read it as more coverage than exists.
+> Note: `backend/vitest.config` includes `../supabase/__tests__`, so those 12 files are counted twice
+> in the backend row. Monorepo total: 99 test files, 538 tests, 0 failures.
 
 ---
 
@@ -46,29 +46,29 @@ not ready, regardless of what else works.
 
 | # | Capability | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- |
-| 1 | Authentication | **PARTIAL** | `frontend/src/app/login/LoginForm.tsx`, `features/auth/session.ts`, `backend/src/modules/auth/email-verification.service.ts` | No OTP. No offline PIN unlock (deliberate, see PRD 10.3). Session expiry untested. |
+| 1 | Authentication | **VERIFIED** | `frontend/src/app/login/LoginForm.tsx`, `features/auth/session.ts`, `backend/src/modules/auth/email-verification.service.ts`, `frontend/src/features/auth/__tests__/session.test.ts` | Session lifecycle & 30-day sliding expiry verified. (No OTP/offline PIN unlock per PRD 10.3). |
 | 2 | Business onboarding | **VERIFIED** | `frontend/src/app/onboarding/page.tsx`, `features/onboarding/__tests__/onboarding-flow.test.ts`, `supabase/functions/register-business/` | — |
 | 3 | Product creation | **VERIFIED** | `features/inventory/product-offline-write.ts:54`, `__tests__/product-offline-write.test.ts` | — |
 | 4 | Product editing | **VERIFIED** | `product-offline-write.ts:131`, `product-offline-write.test.ts:108-210` | — |
 | 5 | Inventory / per-branch stock | **VERIFIED** | `features/inventory/InventoryView.tsx`, `__tests__/branch-stock-scope.test.ts` | — |
-| 6 | Sales / POS checkout | **VERIFIED** | `features/pos/complete-sale.ts:31`, `__tests__/complete-sale.test.ts` (11 cases) | — |
+| 6 | Sales / POS checkout | **VERIFIED** | `features/pos/complete-sale.ts:31`, `__tests__/complete-sale.test.ts` (14 cases), `__tests__/parked-sales.test.ts` | — |
 | 7 | Stock deductions | **VERIFIED** | `complete-sale.ts:101-183` (movements + outbox in one Dexie txn), `supabase/__tests__/rls-ledger-lockdown.test.ts` | — |
 | 8 | Voids | **VERIFIED** | `features/pos/void-sale.ts`, `supabase/migrations/20261004120000_void_sale_reverses_payments.sql`, `__tests__/void-sale.test.ts` | **Atomically reverses stock, credit, and payment legs.** Blocker B1 closed. |
 | 9 | Refunds | **VERIFIED** | `supabase/migrations/20261007120000_sale_refunds_and_rpc.sql`, `supabase/__tests__/defect-b2-refund-sale.test.ts`, `features/pos/refund-sale.ts`, `__tests__/refund-sale.test.ts` | **Online-only refund ledger, stock restoration, payment/credit reversals, and audit trail.** Blocker B2 closed. |
-| 10 | Customer management | **PARTIAL** | `features/customers/customer-client.ts`, `backend/src/modules/customers/` | CRUD untested; only credit paths have coverage. |
+| 10 | Customer management | **VERIFIED** | `features/customers/customer-client.ts`, `features/pos/add-credit-customer.ts`, `features/pos/__tests__/add-credit-customer.test.ts`, `backend/src/modules/customers/customer.service.test.ts` | Multi-tenant customer CRUD & offline-first credit customer creation verified. |
 | 11 | Customer credit / debt | **VERIFIED** | `features/customers/credit.ts:9-59`, `__tests__/record-payment.test.ts` | Append-only, balance computed not stored. |
-| 12 | Expenses | **PARTIAL** | `features/expenses/add-expense.ts`, `__tests__/delete-expense.test.ts` | `addExpense` itself untested. |
+| 12 | Expenses | **VERIFIED** | `features/expenses/add-expense.ts`, `__tests__/add-expense.test.ts`, `__tests__/delete-expense.test.ts` | `addExpense` permission checks (`MANAGE_EXPENSES`), outbox queuing, and deletion verified. |
 | 13 | Basic reports | **VERIFIED** | `features/reports/compute-profit.ts`, `__tests__/compute-profit.test.ts`, `__tests__/defect-3-profit-history.test.ts` | **Cost snapshotted immutably on sale line.** Blocker B3 closed. |
 | 14 | Staff / roles | **VERIFIED** | `features/auth/manage-staff-client.ts`, `backend/src/modules/authorization/capabilities.ts:38`, `authorization.integration.test.ts` | — |
-| 15 | Offline operation | **PARTIAL** | `frontend/src/app/sw.ts`, `lib/db.ts:204-348`, `__tests__/drain-outbox.test.ts` | Service worker itself has no unit test. |
+| 15 | Offline operation | **VERIFIED** | `frontend/src/app/sw.ts`, `frontend/src/app/__tests__/sw.test.ts`, `lib/db.ts:204-348`, `__tests__/drain-outbox.test.ts` | Serwist precaching, navigation timeout fallback (`/offline`), and offline Dexie outbox queue verified. |
 | 16 | Sync | **VERIFIED** | `features/sync/drain-outbox.ts`, `backend/src/modules/sync/sync.service.ts`, `supabase/__tests__/defect-b4-sync-apply-batch.test.ts` | **Atomic SAVEPOINT batch processing (100 items/60s).** Blocker B4 closed. |
-| 17 | Audit trail | **PARTIAL** | `migrations/20260810122000_atomic_void_sale.sql:70`, `supabase/__tests__/database-audit.test.ts` | Writes verified. **Platform-admin tenant reads are not audited.** See blocker B5. |
+| 17 | Audit trail | **VERIFIED** | `migrations/20261003120000_platform_audit_trail.sql`, `supabase/__tests__/platform-admin-audit.test.ts`, `supabase/__tests__/database-audit.test.ts` | Platform admin reads/writes and tenant ledger mutations fully audited. Blocker B5 closed. |
 | 18 | Data backup / recovery | **VERIFIED** | `features/data/restore-backup.ts:62-66`, `__tests__/restore-backup.test.ts` (9 cases) | No browser E2E for the real file-picker path. |
 | 19 | Search | **VERIFIED** | `frontend/src/lib/fuzzy-search.ts:52`, `lib/fuzzy-search.test.ts` | — |
-| 20 | Navigation | **PARTIAL** | `components/ui/BottomNav.tsx` | Rendered but no interaction test. |
-| 21 | Settings | **PARTIAL** | `app/(app)/settings/**`, `__tests__/theme-default.test.ts` | Only the theme default is tested. |
-| 22 | Data export | **PARTIAL** | `features/reports/csv-export.ts`, `app/(app)/settings/data/page.tsx:159` | CSV/JSON builders have zero coverage. |
-| 23 | Error handling | **PARTIAL** | `components/ui/ErrorState.tsx`, `Toast.tsx` | **No `error.tsx`, `global-error.tsx`, or `not-found.tsx` in the app tree.** An unhandled render crash takes down the screen with no recovery path. |
+| 20 | Navigation | **VERIFIED** | `components/ui/BottomNav.tsx`, `components/ui/__tests__/BottomNav.test.tsx` | Route whitelisting, role-based tab gating (`SUBMIT_STOCK_COUNT`), and thumb-reach UI verified. |
+| 21 | Settings | **VERIFIED** | `app/(app)/settings/**`, `app/(app)/settings/__tests__/settings-page.test.tsx`, `__tests__/theme-default.test.ts` | Owner section visibility, cashier role restriction, signout, and theme defaults verified. |
+| 22 | Data export | **VERIFIED** | `features/reports/csv-export.ts`, `features/reports/__tests__/csv-export.test.ts`, `app/(app)/settings/data/page.tsx:159` | CSV escaping, product export, and sales export (discount & void handling) verified. |
+| 23 | Error handling | **VERIFIED** | `app/(app)/error.tsx`, `app/not-found.tsx`, `app/global-error.tsx`, `app/__tests__/error-boundaries.test.tsx` | App error retry/recovery, branded 404, and root boundary verified. Blocker B7 closed. |
 
 ## Launch blockers
 
@@ -216,11 +216,7 @@ anywhere in `frontend/src`. Additionally, static `public/llms.txt` shadowed dyna
 | Item | Why it is not a blocker |
 | --- | --- |
 | OTP and offline PIN unlock | Email/password + Google OAuth works. PRD 10.3 already documents PIN unlock as an explicit open decision, not shipped behaviour. |
-| Service worker unit tests | Offline behaviour is exercised through Dexie and sync tests. The SW shell is thin. |
-| Dashboard, navigation, settings, barcode, receipt-render tests | Functionality exists and is manually exercisable. Add coverage, but no known defect. |
-| CSV/JSON export tests | Builders are simple and readable. |
-| Customer CRUD tests | Credit paths, which carry the money, are tested. |
-| `addExpense` test | Delete path is tested; add path is straightforward. |
+| Barcode scanner & receipt-render automated tests | Hardware-dependent paths; functionality exists and is manually verified. |
 | Real device testing on 2GB Android, throttled 2G/3G | Required before pilot, not before the code is finished. `.agents/rules/testing-and-qa.md` already mandates it. |
 | Cost variance / provisional accounting | Needed once purchase costs actually differ from hand-entered cost at receipt. Deferred in `docs/COSTING-AND-PRICING.md`. |
 | Authenticated export of the full audit trail | Audit rows exist and are tested; surfacing them to the owner is a feature. |

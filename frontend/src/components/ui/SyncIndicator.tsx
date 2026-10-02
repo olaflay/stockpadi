@@ -14,6 +14,8 @@ import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-r
 import type { SessionPreloadResult } from "@/features/sync/preload-session-data";
 
 const CLOUD_HEALTH_MAX_AGE_MS = 90_000;
+const MANUAL_SYNC_COOLDOWN_MS = 15_000;
+let lastManualSyncSuccessAt = 0;
 
 const PULL_DATASET_LABELS: Record<string, string> = {
   business_profile: "business settings",
@@ -102,7 +104,10 @@ export function SyncIndicator({
   const phaseLabel = runtimePhase === "uploading" ? "↑ Uploading" : runtimePhase === "downloading" ? "↓ Downloading" : "↕ Syncing";
 
   const handleForceSync = async () => {
-    if (isSyncing) return;
+    if (isSyncing) {
+      showToast("Sync already in progress. Updating in the background…", "neutral");
+      return;
+    }
     if (!isOnline) {
       showToast(
         pendingCount > 0
@@ -112,6 +117,16 @@ export function SyncIndicator({
       );
       return;
     }
+
+    // Repeated-tap protection: If all local changes are already pushed and a full
+    // sync completed recently within the cooldown window, reassure the user
+    // immediately without spamming Supabase database endpoints.
+    const nowTimestamp = Date.now();
+    if (pendingCount === 0 && nowTimestamp - lastManualSyncSuccessAt < MANUAL_SYNC_COOLDOWN_MS && !pullFailure) {
+      showToast("All changes are already up to date.", "success");
+      return;
+    }
+
     setIsSyncing(true);
     setSyncRuntimePhase("syncing");
     if (compact && pendingCount > 0) {
@@ -128,6 +143,7 @@ export function SyncIndicator({
         ? (await db.outbox.toArray()).filter((item) => item.businessId === businessId && ["failed", "conflict"].includes(item.status)).length
         : 0;
       if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && pullResult.fullySynced) {
+        lastManualSyncSuccessAt = Date.now();
         showToast("Sync complete! All changes backed up.", "success");
       } else if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && !pullResult.fullySynced) {
         showToast(pullFailureMessage(pullResult), "warning");

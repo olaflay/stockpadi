@@ -18,6 +18,7 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 | `docs/COSTING-AND-PRICING.md` | The costing decision (how cost is calculated and snapshotted) and the customer pricing decision, with citations |
 | `docs/complete-improvement-audit.md` | Consolidated vetted master plan: what is kept, what gets built, what was rejected and why |
 | `docs/BUSINESS-MODEL-AND-ROADMAP.md` | Plan tiers, phased feature value, and scaling economics |
+| `docs/PENDING-TASKS-AND-RESEARCH.md` | Research & pending specs: $0 Cloudflare R2 backups, Stranded Outbox / Owner Reconciliation Queue, low-end Android field pilot |
 | `questions.md` | Open findings and decisions still requiring the owner's answer. Unverified things live here rather than being smoothed over |
 
 ## Stack

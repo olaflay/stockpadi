@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 interface NavigationContextType {
@@ -34,15 +34,17 @@ const PRIMARY_NAV_ROUTES = new Set([
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [overrideHidden, setOverrideHidden] = useState(false);
 
-  // Route changes reset search & override state
-  useEffect(() => {
+  // Route changes reset search & override state during render (React 19 pattern)
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsSearchActive(false);
     setOverrideHidden(false);
-  }, [pathname]);
+  }
 
   // Mobile virtual keyboard detection via VisualViewport API + input focus
   useEffect(() => {

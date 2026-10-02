@@ -40,3 +40,16 @@ jobs:
       - run: npm run test
 
       - run: npm run build
+
+      # Automatically run pending migrations against Supabase Cloud on main
+      # to prevent temporal inversion where app code deploys before database columns exist.
+      - name: Apply Pending Database Migrations
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -n "$SUPABASE_DB_URL" ]; then
+            npm --prefix backend run db:migrate
+          else
+            echo "Notice: SUPABASE_DB_URL secret not configured in repository; skipping automated cloud migration."
+          fi

@@ -21,7 +21,7 @@ export function getPageTitle(pathname: string): string {
   if (pathname.includes("/settings/sharing")) return "Sharing";
   if (pathname.includes("/settings/branches")) return "Branches";
   if (pathname.includes("/settings")) return "Settings";
-  if (pathname.includes("/customers")) return "Customers";
+  if (pathname.includes("/contacts") || pathname.includes("/customers")) return "Contacts & Debtors";
   if (pathname.includes("/sales")) return "Sales and receipts";
   if (pathname.includes("/stock-count")) return "Stock count";
   if (pathname.includes("/purchases/new") || pathname.includes("/purchases/update-stock")) return "Restock";

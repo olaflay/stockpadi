@@ -16,8 +16,9 @@ export async function addCreditCustomer(name: string, phone: string): Promise<Lo
     updatedAt: new Date().toISOString(),
   };
 
+  const tenantCustomer = await withLocalBusinessId(customer);
+
   await db.transaction("rw", db.customers, db.outbox, async () => {
-    const tenantCustomer = await withLocalBusinessId(customer);
     await db.customers.add(tenantCustomer);
     await enqueueOutboxWrite(id, "customer", tenantCustomer, customer.updatedAt);
   });

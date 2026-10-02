@@ -3,21 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  UserCircle,
+  Users,
   Wallet,
   Truck,
   ClipboardCheck,
-  Bell,
   CalendarCheck,
-  ReceiptText,
   Settings,
-  Users,
-  FileSpreadsheet,
   Database,
   HelpCircle,
   LogOut,
   ChevronRight,
   Store,
+  FileSpreadsheet,
+  ReceiptText,
 } from "lucide-react";
 
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
@@ -31,12 +29,13 @@ import { hasCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
 
 /**
- * The More Page — Authoritative business & operations hub.
- * Replaces the static Settings tab with an actionable cockpit covering:
- * 1. Store & Profile Overview
- * 2. High-frequency Business Operations (Customers, Expenses, Restock, Stock Count, Close Day)
- * 3. Settings & Administration (Store & POS Settings, Staff, Import/Export, Backup, Help)
- * 4. Preferences & Session (Appearance, Sign Out)
+ * The More Page — Streamlined operations & store management cockpit.
+ * Designed for immediate clarity so a new user is never overwhelmed:
+ * 1. Store Profile & User Card
+ * 2. Daily Cash & Relationships (Contacts, Expenses, Close Day)
+ * 3. Inventory & Stock Tools (Purchases, Stock Count, Import/Export)
+ * 4. Store & System (Settings, Data & Sync, Help & Support)
+ * 5. Display Preferences & Sign Out
  */
 export default function MorePage() {
   const router = useRouter();
@@ -63,7 +62,7 @@ export default function MorePage() {
         : "Staff";
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
+    <div className="flex flex-col gap-6 pb-24">
       <ScreenHeader title="More" hideBack={true} />
 
       {/* Store Identity & Profile Card */}
@@ -89,19 +88,19 @@ export default function MorePage() {
         <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
       </RippleButton>
 
-      {/* 1. Daily Operations */}
+      {/* 1. Daily Cash & Relationships */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Daily Operations
+          Daily Cash & Relationships
         </h2>
         <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
           {hasCapability(user, "VIEW_CUSTOMERS") && (
             <SettingsRow
-              icon={UserCircle}
+              icon={Users}
               tone="brand"
-              label="Customers & Debts"
-              description="Customer balances, debt tracking, and credit"
-              onClick={() => router.push("/customers")}
+              label="Contacts & Debtors"
+              description="Customers, debtors owing you money, and wholesale suppliers"
+              onClick={() => router.push("/contacts")}
             />
           )}
 
@@ -120,17 +119,35 @@ export default function MorePage() {
               icon={Wallet}
               tone="warning"
               label="Expenses"
-              description="Record daily cash payouts, utility bills, and costs"
+              description="Record daily shop spending, bills, transport, and cash payouts"
               onClick={() => router.push("/expenses")}
             />
           )}
 
+          {hasCapability(user, "SUBMIT_RECONCILIATION") && (
+            <SettingsRow
+              icon={CalendarCheck}
+              tone="brand"
+              label="Close Day"
+              description="End-of-day register settlement and cash drawer tally"
+              onClick={() => router.push("/close-day")}
+            />
+          )}
+        </div>
+      </section>
+
+      {/* 2. Inventory & Stock Tools */}
+      <section className="flex flex-col">
+        <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
+          Inventory & Stock Tools
+        </h2>
+        <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
           {hasCapability(user, "RECEIVE_STOCK") && (
             <SettingsRow
               icon={Truck}
               tone="neutral"
               label="Purchases & Restock"
-              description="Record new stock deliveries from suppliers"
+              description="Record new inventory received from suppliers"
               onClick={() => router.push("/purchases")}
             />
           )}
@@ -140,57 +157,8 @@ export default function MorePage() {
               icon={ClipboardCheck}
               tone="neutral"
               label="Stock Count"
-              description="Physical inventory count and audit reconciliation"
+              description="Physical shelf count and inventory reconciliation"
               onClick={() => router.push("/stock-count")}
-            />
-          )}
-
-          {hasCapability(user, "VIEW_ALERTS") && (
-            <SettingsRow
-              icon={Bell}
-              tone="danger"
-              label="Stock Alerts"
-              description="Low-stock notifications and expiry alerts"
-              onClick={() => router.push("/alerts")}
-            />
-          )}
-
-          {hasCapability(user, "SUBMIT_RECONCILIATION") && (
-            <SettingsRow
-              icon={CalendarCheck}
-              tone="brand"
-              label="Close Day"
-              description="End-of-day register settlement and cash tally"
-              onClick={() => router.push("/close-day")}
-            />
-          )}
-        </div>
-      </section>
-
-      {/* 2. Settings & Business Administration */}
-      <section className="flex flex-col">
-        <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Settings & Management
-        </h2>
-        <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
-          {/* Settings is a dedicated button inside the More page */}
-          {isOwnerOrAdmin && (
-            <SettingsRow
-              icon={Settings}
-              tone="neutral"
-              label="Store & POS Settings"
-              description="Receipt headers, tax rates, barcode, and outlets"
-              onClick={() => router.push("/settings")}
-            />
-          )}
-
-          {isOwnerOrAdmin && (
-            <SettingsRow
-              icon={Users}
-              tone="brand"
-              label="Staff & Permissions"
-              description="Cashier access control and team accounts"
-              onClick={() => router.push("/staff")}
             />
           )}
 
@@ -198,9 +166,27 @@ export default function MorePage() {
             <SettingsRow
               icon={FileSpreadsheet}
               tone="neutral"
-              label="Import / Export Products"
-              description="Bulk upload or export catalog via Excel / CSV"
+              label="Import / Export Catalog"
+              description="Bulk upload or download products via Excel / CSV"
               onClick={() => router.push("/products/import")}
+            />
+          )}
+        </div>
+      </section>
+
+      {/* 3. Store Management & System */}
+      <section className="flex flex-col">
+        <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
+          Store & System
+        </h2>
+        <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
+          {isOwnerOrAdmin && (
+            <SettingsRow
+              icon={Settings}
+              tone="neutral"
+              label="Store & Staff Settings"
+              description="Receipt details, branches, staff accounts & outlets"
+              onClick={() => router.push("/settings")}
             />
           )}
 
@@ -208,9 +194,9 @@ export default function MorePage() {
             <SettingsRow
               icon={Database}
               tone="neutral"
-              label="Backup & Data Sync"
-              description="Sync diagnostics, offline outbox, and data export"
-              onClick={() => router.push("/settings/sharing")}
+              label="Data, Sync & Backups"
+              description="Sync diagnostics, offline outbox, and device backup"
+              onClick={() => router.push("/settings/data")}
             />
           )}
 
@@ -218,13 +204,13 @@ export default function MorePage() {
             icon={HelpCircle}
             tone="neutral"
             label="Help & Support"
-            description="User guide, offline tips, and customer support"
+            description="User guide, offline FAQs, and customer support"
             onClick={() => router.push("/settings/help")}
           />
         </div>
       </section>
 
-      {/* 3. Preferences & Session */}
+      {/* 4. Display Preferences */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
           Preferences

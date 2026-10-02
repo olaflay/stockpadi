@@ -15,6 +15,7 @@ The single entry point for OjàPadi product architecture, specifications, improv
 | [BUSINESS-MODEL-AND-ROADMAP.md](BUSINESS-MODEL-AND-ROADMAP.md) | Plan tiers, phased feature value, and scaling economics. | Evaluating commercial scope and roadmap sequencing. |
 | [complete-improvement-audit.md](complete-improvement-audit.md) | Master improvement audit: prioritized evaluation of features (keep/build/remove/reject), doctrines on minimalism, performance, and data-lite design. | Planning roadmap improvements or auditing UX. |
 | [specs/](specs/README.md) | Specification Index: implementation status (shipped vs next up) for Units Model, Contacts Hub, Hub Dashboard, Stock Count Redesign, and Coach Marks. | Building or reviewing upcoming specced features. |
+| [PENDING-TASKS-AND-RESEARCH.md](PENDING-TASKS-AND-RESEARCH.md) | **Pending Tasks & Research Log:** Specifications for $0 Cloudflare R2 backups, Stranded Outbox / Owner Reconciliation Queue, and 2GB Android hardware pilot protocol. | Reviewing pending architectural tasks, zero-cost backup workflow, or stranded outbox design. |
 | [../questions.md](../questions.md) | Open findings and decisions still requiring the owner's answer. | When something is unresolved and you need to know what is already known. |
 
 ---

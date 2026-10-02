@@ -6,22 +6,21 @@ import type { ContactKind } from "@/features/contacts/contacts-filter";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-function CustomersContent() {
+function ContactsContent() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") as ContactKind | null;
-  // Default to "debtors" when entering via /customers, or honor explicit ?filter=
   const initialKind: ContactKind =
-    filterParam === "all" ||
+    filterParam === "debtors" ||
     filterParam === "customers" ||
     filterParam === "suppliers" ||
-    filterParam === "debtors"
+    filterParam === "all"
       ? filterParam
-      : "debtors";
+      : "all";
 
-  return <ContactsHubView initialKind={initialKind} backHref="/dashboard" />;
+  return <ContactsHubView initialKind={initialKind} backHref="/more" />;
 }
 
-export default function CustomersPage() {
+export default function ContactsPage() {
   return (
     <Suspense
       fallback={
@@ -32,7 +31,7 @@ export default function CustomersPage() {
         </div>
       }
     >
-      <CustomersContent />
+      <ContactsContent />
     </Suspense>
   );
 }

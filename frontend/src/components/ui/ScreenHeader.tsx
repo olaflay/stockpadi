@@ -51,7 +51,7 @@ export function ScreenHeader({
       else if (pathname.includes("/products/")) router.push("/products");
       else if (pathname.includes("/staff/")) router.push("/staff");
       else if (pathname.includes("/sales/")) router.push("/sales");
-      else if (pathname.includes("/customers/")) router.push("/customers");
+      else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.push("/contacts");
       else router.push("/dashboard");
     }
   };

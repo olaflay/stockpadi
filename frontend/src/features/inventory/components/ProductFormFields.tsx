@@ -262,88 +262,128 @@ export function ProductUnitConversionFields({
   unitLabel: string;
   altUnitLabel: string;
 }) {
+  const displayUnit = unitLabel?.trim() || "piece";
+  const displayAlt = altUnitLabel?.trim();
+
   return (
-    <>
-      <div className="flex items-center justify-between rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
-        <span className="text-[length:var(--font-size-body)] text-on-surface">
-          {showUnitConversion ? "Selling in more than one unit" : "Just one unit for this product"}
-        </span>
+    <div className="flex flex-col rounded-2xl bg-surface-container border border-border/30 overflow-hidden">
+      {/* Banner / Toggle Card */}
+      <div className="flex items-center justify-between gap-3 p-4">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-container text-on-brand-container">
+            <Layers size={20} aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-on-surface">
+              Sell in cartons, crates, or packs?
+            </p>
+            <p className="text-xs text-on-surface-muted mt-0.5">
+              Sell both single items (e.g. bottle) and bulk packs (e.g. crate)
+            </p>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={onToggleUnitConversion}
           aria-expanded={showUnitConversion}
           aria-controls="unit-conversion-panel"
-          className="flex items-center gap-1.5 text-[length:var(--font-size-body)] font-medium text-brand-accent"
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+            showUnitConversion
+              ? "bg-danger/10 text-danger hover:bg-danger/20"
+              : "bg-brand-accent text-brand-accent-contrast shadow-xs hover:opacity-90 active:scale-95"
+          }`}
         >
-          <Layers size={16} aria-hidden />
-          {showUnitConversion ? "Hide" : "Advanced"}
+          {showUnitConversion ? "Remove pack pricing" : "+ Add pack pricing"}
         </button>
       </div>
 
+      {/* Expanded Friendly Form */}
       {showUnitConversion && (
-        <div id="unit-conversion-panel" className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container p-4">
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-            Note : Use this if you sell the same item two ways, like by retail or wholesale.
-          </p>
+        <div
+          id="unit-conversion-panel"
+          className="flex flex-col gap-4 border-t border-border/20 bg-surface-container-low/50 p-4"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Single Item Unit Label */}
+            <label className="flex flex-col gap-1">
+              <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                Single item name *
+              </span>
+              <TextInput
+                {...register("unitLabel")}
+                placeholder="e.g. piece, bottle, sachet"
+                hasError={Boolean(errors.unitLabel)}
+                errorId="field-error-unit-label"
+              />
+              <span className="text-[11px] text-on-surface-muted">
+                Name of 1 single item for the price above
+              </span>
+              <FieldError id="field-error-unit-label" error={errors.unitLabel?.message} />
+            </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-label)] text-on-surface-muted">
-              What unit is the price above for? *
-            </span>
-            <TextInput
-              {...register("unitLabel")}
-              placeholder="e.g. piece, kg, bag"
-              hasError={Boolean(errors.unitLabel)}
-              errorId="field-error-unit-label"
-            />
-            <FieldError id="field-error-unit-label" error={errors.unitLabel?.message} />
-          </label>
+            {/* Bulk Pack Unit Label */}
+            <label className="flex flex-col gap-1">
+              <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                Pack or bulk name
+              </span>
+              <TextInput
+                {...register("altUnitLabel")}
+                placeholder="e.g. carton, crate, roll, bag"
+              />
+              <span className="text-[11px] text-on-surface-muted">
+                Name of the larger box or wholesale pack
+              </span>
+            </label>
+          </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-label)] text-on-surface-muted">
-              Also sold as a bigger unit? (optional)
-            </span>
-            <TextInput {...register("altUnitLabel")} placeholder="e.g. carton, dozen, bag" />
-          </label>
+          {displayAlt && (
+            <div className="flex flex-col gap-3 rounded-xl bg-surface-container p-3.5 border border-border/20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Quantity in Pack */}
+                <label className="flex flex-col gap-1">
+                  <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                    How many {displayUnit}s in 1 {displayAlt}? *
+                  </span>
+                  <TextInput
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    {...register("altUnitConversionFactor")}
+                    placeholder="e.g. 24"
+                    hasError={Boolean(errors.altUnitConversionFactor)}
+                    errorId="field-error-alt-unit-factor"
+                  />
+                  <FieldError id="field-error-alt-unit-factor" error={errors.altUnitConversionFactor?.message} />
+                </label>
 
-          {altUnitLabel.trim() && (
-            <>
-              <label className="flex flex-col gap-1">
-                <span className="text-[length:var(--font-size-label)] text-on-surface-muted">
-                  1 {altUnitLabel} = how many {unitLabel}? *
-                </span>
-                <TextInput
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...register("altUnitConversionFactor")}
-                  placeholder="e.g. 24"
-                  hasError={Boolean(errors.altUnitConversionFactor)}
-                  errorId="field-error-alt-unit-factor"
-                />
-                <FieldError id="field-error-alt-unit-factor" error={errors.altUnitConversionFactor?.message} />
-              </label>
+                {/* Selling Price for Pack */}
+                <label className="flex flex-col gap-1">
+                  <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                    Selling price for 1 whole {displayAlt} *
+                  </span>
+                  <TextInput
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    {...register("altUnitSellPrice")}
+                    placeholder="0.00"
+                    hasError={Boolean(errors.altUnitSellPrice)}
+                    errorId="field-error-alt-unit-price"
+                  />
+                  <FieldError id="field-error-alt-unit-price" error={errors.altUnitSellPrice?.message} />
+                </label>
+              </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-[length:var(--font-size-label)] text-on-surface-muted">
-                  Price for one whole {altUnitLabel} *
-                </span>
-                <TextInput
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...register("altUnitSellPrice")}
-                  placeholder="0.00"
-                  hasError={Boolean(errors.altUnitSellPrice)}
-                  errorId="field-error-alt-unit-price"
-                />
-                <FieldError id="field-error-alt-unit-price" error={errors.altUnitSellPrice?.message} />
-              </label>
-            </>
+              {/* Informational Guidance */}
+              <div className="rounded-lg bg-brand-accent/5 p-2.5 text-[11px] text-on-surface-muted">
+                💡 <strong className="text-on-surface">At checkout:</strong> Cashiers can tap either <span className="font-semibold text-brand-accent">1 {displayUnit}</span> or <span className="font-semibold text-brand-accent">1 {displayAlt}</span>. Inventory will automatically deduct accurately.
+              </div>
+            </div>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

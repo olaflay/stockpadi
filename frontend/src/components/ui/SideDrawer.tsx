@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  UserCircle,
   Truck,
   LogOut,
   Store,
@@ -98,8 +97,8 @@ export function SideDrawer() {
   const isCloseDayActive = pathname === closeDayHref || pathname.startsWith(`${closeDayHref}/`);
 
   /**
-   * Secondary menu items strictly isolated from bottom navigation tabs:
-   * Business Profile | Staff | Customers | Suppliers | Import/Export | Backup | Help
+   * Drawer menu items organized for rapid daily retail access:
+   * Business Profile | Contacts & Debtors | Purchases & Restock | Staff | Import/Export | Backup & Data | Help
    */
   const navItems: NavItem[] = [
     {
@@ -108,32 +107,32 @@ export function SideDrawer() {
       icon: Store,
     },
     {
+      label: "Contacts & Debtors",
+      href: "/contacts",
+      icon: Users,
+      capability: "VIEW_CUSTOMERS",
+    },
+    {
+      label: "Purchases & Restock",
+      href: "/purchases",
+      icon: Truck,
+      capability: "RECEIVE_STOCK",
+    },
+    {
       label: "Staff & Access",
       href: "/staff",
       icon: Users,
       ownerOnly: true,
     },
     {
-      label: "Customers",
-      href: "/customers",
-      icon: UserCircle,
-      capability: "VIEW_CUSTOMERS",
-    },
-    {
-      label: "Purchases & Suppliers",
-      href: "/purchases",
-      icon: Truck,
-      capability: "RECEIVE_STOCK",
-    },
-    {
-      label: "Import / Export",
+      label: "Import / Export Catalog",
       href: "/products/import",
       icon: FileSpreadsheet,
       capability: "MANAGE_PRODUCTS",
     },
     {
       label: "Backup & Data",
-      href: "/settings/sharing",
+      href: "/settings/data",
       icon: Database,
       ownerOnly: true,
     },
