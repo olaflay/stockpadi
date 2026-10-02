@@ -69,6 +69,21 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     };
 
     const handleViewportResize = () => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      if (isInput) {
+        const type = (activeEl as HTMLInputElement).type;
+        if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
+          setIsKeyboardVisible(true);
+          return;
+        }
+      }
+
       const vv = window.visualViewport;
       if (!vv) return;
       // If visual viewport shrinks by > 120px compared to window inner height, keyboard is open

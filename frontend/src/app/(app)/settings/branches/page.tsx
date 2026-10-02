@@ -30,7 +30,7 @@ export default function BranchesSettingsPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Branches" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Branches" backHref="/settings" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -39,7 +39,7 @@ export default function BranchesSettingsPage() {
   if (loadError) {
     return (
       <div>
-        <ScreenHeader title="Branches" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Branches" backHref="/settings" />
         <ErrorState message="Couldn't load branches." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -48,7 +48,7 @@ export default function BranchesSettingsPage() {
   if (branches === undefined) {
     return (
       <div>
-        <ScreenHeader title="Branches" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Branches" backHref="/settings" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -88,7 +88,7 @@ export default function BranchesSettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title={`Branches (${branches.length}/6)`} onBack={() => router.push("/settings")} />
+      <ScreenHeader title={`Branches (${branches.length}/6)`} backHref="/settings" />
 
       <ul className="flex flex-col gap-2">
         {branches.filter((branch) => branch.isActive).map((branch) => (

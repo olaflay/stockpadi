@@ -18,6 +18,10 @@ export default function ReportsPage() {
   const {
     period,
     setPeriod,
+    customRange,
+    setCustomRange,
+    hasAnyHistoricalSales,
+    dayOfWeekStats,
     result,
     lowStockProducts,
     periodSales,
@@ -58,7 +62,7 @@ export default function ReportsPage() {
     );
   }
 
-  if (result.sales.length === 0) {
+  if (!hasAnyHistoricalSales && result.sales.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Reports" hideBack={true} />
@@ -78,6 +82,9 @@ export default function ReportsPage() {
       <ReportsBody
         period={period}
         onSelectPeriod={setPeriod}
+        customRange={customRange}
+        onSelectCustomRange={setCustomRange}
+        dayOfWeekStats={dayOfWeekStats}
         periodSales={periodSales}
         periodExpenses={periodExpenses}
         periodExpensesTotal={periodExpensesTotal}

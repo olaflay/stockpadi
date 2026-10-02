@@ -10,11 +10,18 @@ import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
 import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
 import { tenantArray } from "@/lib/local-tenant";
-import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
+import { getPeriodStartIso, getPeriodBoundsIso, type ReportPeriod } from "@/lib/date";
 
 export type Period = ReportPeriod;
 
-export const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
+export const PERIOD_LABELS: Record<Period, string> = {
+  today: "Today",
+  yesterday: "Yesterday",
+  week: "This week",
+  month: "This month",
+  all_time: "All time",
+  custom: "Custom",
+};
 
 type ReportPayment = { method: "cash" | "transfer" | "pos_terminal" | "credit"; amount: number };
 type ReportItem = {
@@ -37,6 +44,12 @@ type ReportPurchase = { id: string; client_id?: string; branch_id: string; suppl
 type ReportStock = { product_id: string; quantity: number };
 type ReportResponse = { sales?: ReportSale[]; products?: ReportProduct[]; expenses?: ReportExpense[]; purchases?: ReportPurchase[]; stock?: ReportStock[] };
 
+export interface DayOfWeekStat {
+  day: string;
+  count: number;
+  total: number;
+}
+
 interface LocalReportData {
   sales: Sale[];
   products: Product[];
@@ -46,7 +59,23 @@ interface LocalReportData {
   purchases: Purchase[];
   creditMovements: CustomerCreditMovement[];
   lowStockIds: Set<string>;
+  hasAnyHistoricalSales: boolean;
+  dayOfWeekStats: DayOfWeekStat[];
   error: string | null;
+}
+
+function computeDayOfWeekStats(sales: Sale[]): DayOfWeekStat[] {
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const stats: DayOfWeekStat[] = dayNames.map((day) => ({ day, count: 0, total: 0 }));
+  for (const s of sales) {
+    if (s.voidedAt) continue;
+    const d = new Date(s.createdAtLocal || s.createdAt).getDay();
+    if (stats[d]) {
+      stats[d].count += 1;
+      stats[d].total += s.total;
+    }
+  }
+  return stats;
 }
 
 /**
@@ -61,21 +90,53 @@ interface LocalReportData {
  */
 export function useReportsData() {
   const [period, setPeriod] = useState<Period>("today");
+  const [customRange, setCustomRange] = useState<{ start: string; end: string } | undefined>(undefined);
   const [remoteData, setRemoteData] = useState<LocalReportData | undefined>(undefined);
   const cancelledRef = useRef(false);
 
   /* ---- Local Dexie live queries (instant render, <16ms) ---- */
   const localData = useLiveQuery(async (): Promise<LocalReportData> => {
     try {
-      const start = getPeriodStartIso(period);
-      const [sales, products, profile, expenses, purchases, creditMovements] = await Promise.all([
-        tenantArray<Sale>(db.sales.where("createdAtLocal").aboveOrEqual(start)),
+      const bounds = getPeriodBoundsIso(period, new Date(), customRange);
+      const [allSalesCount, rawSales, products, profile, rawExpenses, rawPurchases, rawCredit] = await Promise.all([
+        db.sales.count(),
+        tenantArray<Sale>(db.sales.where("createdAtLocal").aboveOrEqual(bounds.start)),
         tenantArray<Product>(db.products),
         db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
-        tenantArray<Expense>(db.expenses.where("createdAtLocal").aboveOrEqual(start)),
-        tenantArray<Purchase>(db.purchases.where("createdAtLocal").aboveOrEqual(start)),
-        tenantArray<CustomerCreditMovement>(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(start)),
+        tenantArray<Expense>(db.expenses.where("createdAtLocal").aboveOrEqual(bounds.start)),
+        tenantArray<Purchase>(db.purchases.where("createdAtLocal").aboveOrEqual(bounds.start)),
+        tenantArray<CustomerCreditMovement>(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(bounds.start)),
       ]);
+
+      let sales = rawSales;
+      let expenses = rawExpenses;
+      let purchases = rawPurchases;
+      let creditMovements = rawCredit;
+
+      if (bounds.end) {
+        sales = sales.filter((s) => s.createdAtLocal <= bounds.end!);
+        expenses = expenses.filter((e) => e.createdAtLocal <= bounds.end!);
+        purchases = purchases.filter((p) => p.createdAtLocal <= bounds.end!);
+        creditMovements = creditMovements.filter((c) => c.createdAtLocal <= bounds.end!);
+      }
+
+      const dayOfWeekStats: DayOfWeekStat[] = [
+        { day: "Sun", count: 0, total: 0 },
+        { day: "Mon", count: 0, total: 0 },
+        { day: "Tue", count: 0, total: 0 },
+        { day: "Wed", count: 0, total: 0 },
+        { day: "Thu", count: 0, total: 0 },
+        { day: "Fri", count: 0, total: 0 },
+        { day: "Sat", count: 0, total: 0 },
+      ];
+      for (const s of sales) {
+        if (s.voidedAt) continue;
+        const d = new Date(s.createdAtLocal).getDay();
+        if (dayOfWeekStats[d]) {
+          dayOfWeekStats[d].count += 1;
+          dayOfWeekStats[d].total += s.total;
+        }
+      }
 
       const stockByProduct = new Map<string, number>();
       const movements = await tenantArray<StockMovement>(db.stockMovements);
@@ -88,7 +149,19 @@ export function useReportsData() {
 
       const lowStockIds = await getLowStockProductIds(undefined, null, products, stockByProduct);
 
-      return { sales, products, stockByProduct, profile, expenses, purchases, creditMovements, lowStockIds, error: null };
+      return {
+        sales,
+        products,
+        stockByProduct,
+        profile,
+        expenses,
+        purchases,
+        creditMovements,
+        lowStockIds,
+        hasAnyHistoricalSales: allSalesCount > 0,
+        dayOfWeekStats,
+        error: null,
+      };
     } catch (err) {
       return {
         sales: [],
@@ -99,10 +172,12 @@ export function useReportsData() {
         expenses: [],
         purchases: [],
         creditMovements: [],
+        hasAnyHistoricalSales: false,
+        dayOfWeekStats: [],
         error: err instanceof Error ? err.message : "Could not load report data.",
       };
     }
-  }, [period]);
+  }, [period, customRange]);
 
   /* ---- Background async revalidation (fires only when online, non-blocking) ---- */
   useEffect(() => {
@@ -207,7 +282,19 @@ export function useReportsData() {
             .map((product) => product.id)
         );
 
-        setRemoteData({ sales, products, stockByProduct, profile: undefined, expenses, purchases, creditMovements: [], lowStockIds, error: null });
+        setRemoteData({
+          sales,
+          products,
+          stockByProduct,
+          profile: undefined,
+          expenses,
+          purchases,
+          creditMovements: [],
+          lowStockIds,
+          hasAnyHistoricalSales: sales.length > 0,
+          dayOfWeekStats: computeDayOfWeekStats(sales),
+          error: null,
+        });
       } catch (error) {
         if (!(error instanceof NetworkUnavailableError) && !(error instanceof BackendConfigurationError)) {
           console.warn("Background reports revalidation failed (local data still shown):", error);
@@ -270,6 +357,10 @@ export function useReportsData() {
   return {
     period,
     setPeriod,
+    customRange,
+    setCustomRange,
+    hasAnyHistoricalSales: result?.hasAnyHistoricalSales ?? false,
+    dayOfWeekStats: result?.dayOfWeekStats ?? [],
     result,
     lowStockProducts,
     periodSales,

@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   getStartOfTodayIso,
   getEndOfTodayIso,
+  getStartOfYesterdayIso,
+  getEndOfYesterdayIso,
   getStartOfWeekIso,
   getStartOfMonthIso,
   getPeriodStartIso,
+  getPeriodBoundsIso,
   isSameLocalDay,
   formatExpiryForDisplay,
   parseShortExpiryInput,
@@ -53,11 +56,25 @@ describe("Date and Time Utilities", () => {
     expect(monthStartDate.getMonth()).toBe(7); // August (0-indexed 7)
   });
 
-  it("maps period correctly using getPeriodStartIso", () => {
+  it("maps period correctly using getPeriodStartIso and getPeriodBoundsIso", () => {
     const testDate = new Date("2026-08-30T12:00:00.000Z");
     expect(getPeriodStartIso("today", testDate)).toBe(getStartOfTodayIso(testDate));
     expect(getPeriodStartIso("week", testDate)).toBe(getStartOfWeekIso(testDate));
     expect(getPeriodStartIso("month", testDate)).toBe(getStartOfMonthIso(testDate));
+    expect(getPeriodStartIso("all_time", testDate)).toBe("1970-01-01T00:00:00.000Z");
+
+    const yesterdayBounds = getPeriodBoundsIso("yesterday", testDate);
+    expect(yesterdayBounds.start).toBe(getStartOfYesterdayIso(testDate));
+    expect(yesterdayBounds.end).toBe(getEndOfYesterdayIso(testDate));
+
+    const customBounds = getPeriodBoundsIso("custom", testDate, {
+      start: "2026-08-01",
+      end: "2026-08-05",
+    });
+    expect(customBounds.start).toBe(new Date("2026-08-01").toISOString());
+    // End date should extend through 23:59:59.999 of the end day
+    expect(new Date(customBounds.end!).getHours()).toBe(23);
+    expect(new Date(customBounds.end!).getMinutes()).toBe(59);
   });
 
   it("correctly identifies same local calendar day", () => {

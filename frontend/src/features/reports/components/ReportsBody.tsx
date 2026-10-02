@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Wallet, Truck, TrendingUp, TrendingDown, Sparkles, ChevronDown, ChevronUp, Calendar, BarChart2 } from "lucide-react";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
 import { formatCurrency } from "@/lib/format";
-import { PERIOD_LABELS, type Period } from "@/features/reports/use-reports-data";
+import { PERIOD_LABELS, type Period, type DayOfWeekStat } from "@/features/reports/use-reports-data";
 import type { Sale } from "@/types/sale";
 import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
@@ -16,6 +16,9 @@ import type { Product } from "@/types/product";
 export function ReportsBody({
   period,
   onSelectPeriod,
+  customRange,
+  onSelectCustomRange,
+  dayOfWeekStats = [],
   periodSales,
   periodExpenses,
   periodExpensesTotal,
@@ -29,6 +32,9 @@ export function ReportsBody({
 }: {
   period: Period;
   onSelectPeriod: (period: Period) => void;
+  customRange?: { start: string; end: string };
+  onSelectCustomRange?: (range: { start: string; end: string } | undefined) => void;
+  dayOfWeekStats?: DayOfWeekStat[];
   periodSales: Sale[];
   periodExpenses: Expense[];
   periodExpensesTotal: number;
@@ -63,9 +69,13 @@ export function ReportsBody({
   }, 0);
   const computedNetCashFlow = periodNetCashFlow;
 
+  const maxDayRevenue = Math.max(1, ...dayOfWeekStats.map((d) => d.total));
+  const peakDay = dayOfWeekStats.find((d) => d.total > 0 && d.total === maxDayRevenue);
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2" role="tablist" aria-label="Report period">
+      {/* Scrollable Period Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label="Report period">
         {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
           <button
             key={key}
@@ -73,10 +83,10 @@ export function ReportsBody({
             role="tab"
             aria-selected={period === key}
             onClick={() => onSelectPeriod(key)}
-            className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium transition-colors ${
+            className={`min-h-[var(--touch-target-min)] shrink-0 rounded-2xl px-4 text-xs font-semibold transition-all ${
               period === key
-                ? "bg-brand-accent text-brand-accent-contrast"
-                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+                ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
+                : "bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-95"
             }`}
           >
             {PERIOD_LABELS[key]}
@@ -84,10 +94,51 @@ export function ReportsBody({
         ))}
       </div>
 
-      <section className="min-w-0 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
+      {/* Custom Date Range Picker when Custom tab is selected */}
+      {period === "custom" && (
+        <div className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 border border-border/30 animate-step-in">
+          <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
+            <Calendar size={16} className="text-brand-accent" />
+            <span>Select Date Range</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+              Start date
+              <input
+                type="date"
+                value={customRange?.start ? customRange.start.slice(0, 10) : ""}
+                onChange={(e) =>
+                  onSelectCustomRange?.({
+                    start: e.target.value,
+                    end: customRange?.end ?? new Date().toISOString().slice(0, 10),
+                  })
+                }
+                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+              End date
+              <input
+                type="date"
+                value={customRange?.end ? customRange.end.slice(0, 10) : ""}
+                onChange={(e) =>
+                  onSelectCustomRange?.({
+                    start: customRange?.start ?? new Date().toISOString().slice(0, 10),
+                    end: e.target.value,
+                  })
+                }
+                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Hero Revenue Card */}
+      <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
         <RippleLink href="/sales" className="block w-full text-left">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
+            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-on-surface-muted">
               Sales, {PERIOD_LABELS[period].toLowerCase()}
             </p>
             <PerformancePill
@@ -96,14 +147,60 @@ export function ReportsBody({
               label={periodSales.length > 0 ? "Sales Recorded" : "No Activity"}
             />
           </div>
-          <p className="mt-2 truncate text-[length:var(--font-size-display)] font-number font-semibold tabular-nums text-on-surface">
+          <p className="mt-2 truncate text-3xl font-number font-bold tabular-nums text-on-surface">
             {formatCurrency(periodSales.reduce((sum, s) => sum + s.total, 0))}
           </p>
-          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-            {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"}
+          <p className="mt-1 text-xs text-on-surface-muted">
+            {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"} recorded
           </p>
         </RippleLink>
       </section>
+
+      {/* Day-of-Week Analytics Breakdown */}
+      {dayOfWeekStats.length > 0 && periodSales.length > 0 && (
+        <section className="rounded-3xl bg-surface-container p-4 sm:p-5 border border-border/20 shadow-xs">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart2 size={16} className="text-brand-accent" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
+                Sales by Day of Week
+              </h3>
+            </div>
+            {peakDay && (
+              <span className="text-[10px] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Peak: {peakDay.day}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 items-end pt-2">
+            {dayOfWeekStats.map((stat) => {
+              const heightPercent = maxDayRevenue > 0 && stat.total > 0 ? Math.max(12, Math.round((stat.total / maxDayRevenue) * 100)) : 6;
+              const isPeak = peakDay?.day === stat.day;
+
+              return (
+                <div key={stat.day} className="flex flex-col items-center gap-1.5 min-w-0">
+                  <div className="w-full flex items-end justify-center h-20 bg-surface-container-low rounded-xl p-1">
+                    <div
+                      style={{ height: `${heightPercent}%` }}
+                      className={`w-full rounded-lg transition-all duration-300 ${
+                        isPeak ? "bg-brand-accent shadow-xs" : stat.total > 0 ? "bg-brand-container" : "bg-transparent"
+                      }`}
+                      title={`${stat.day}: ${stat.count} sales (${formatCurrency(stat.total)})`}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-semibold ${isPeak ? "text-brand-accent" : "text-on-surface-muted"}`}>
+                    {stat.day}
+                  </span>
+                  <span className="text-[10px] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
+                    {stat.count > 0 ? stat.count : "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="flex flex-col gap-4">
         {/* Net Profit Card — expandable drill-down */}

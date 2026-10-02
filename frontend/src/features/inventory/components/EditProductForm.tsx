@@ -81,7 +81,7 @@ export function EditProductForm({
   }
 
   return (
-    <div className="pb-6">
+    <div className="pb-72 md:pb-36 scroll-pb-64">
       <div className="mb-4 rounded-[var(--radius-card)] bg-surface-container p-4">
         <div className="flex items-center justify-between gap-3 mb-2">
           <div>

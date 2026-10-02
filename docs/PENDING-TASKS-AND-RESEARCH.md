@@ -139,6 +139,54 @@ Per `.agents/rules/testing-and-qa.md`, before pilot deployment to Branch 1, the 
 
 ---
 
+## Pending Task 4: Multi-Sales Representative Concurrency & Cashier Shift Wallet Reconciliation
+
+### 4.1 Problem Statement & Retail Reality
+In Nigerian retail and emerging market stores (e.g. Balogun, Trade Fair, Alaba, supermarkets, pharmacies):
+1. **Shared Counter Tablet**: Often 1 or 2 tablets/phones are shared across shifts between multiple sales girls/cashiers (e.g., Morning Shift: Blessing, Afternoon Shift: Chioma).
+2. **Cash Float Discrepancies**: A cashier starts the morning with an opening cash float (e.g., ₦5,000 in small change). During their shift:
+   - Cash sales are collected.
+   - Customers pay down previous debts (credit recoveries).
+   - Petty cash expenses are paid directly from the till (diesel, sweeping, packaging bags).
+3. **Closing Shift Friction**: At handover or store close, the owner must verify whether physical cash in the drawer matches the sales record without blaming the wrong cashier.
+
+### 4.2 Mathematical Model & Shift Reconciliation Ledger
+Every shift operates as an immutable session:
+$$\text{Expected Cash} = \text{Opening Float} + \text{Cash Sales} + \text{Credit Recoveries} - \text{Cash Expenses}$$
+
+$$\text{Drawer Variance} = \text{Actual Counted Cash} - \text{Expected Cash}$$
+- **Variance = 0**: Balanced drawer.
+- **Variance < 0**: Shortage (unaccounted cash loss / drawer leak).
+- **Variance > 0**: Overage (unrecorded sale or cashier counting error).
+
+### 4.3 Target Architecture & Data Model (Planned V1.1)
+1. **`cashier_shifts` Table (Append-only session ledger)**:
+   ```sql
+   create table cashier_shifts (
+     id uuid primary key default gen_random_uuid(),
+     business_id uuid not null references businesses(id),
+     branch_id uuid not null references branches(id),
+     cashier_id uuid not null references local_users(id),
+     device_id text not null,
+     opened_at timestamptz not null default now(),
+     closed_at timestamptz,
+     opening_float_kobo bigint not null,
+     expected_cash_kobo bigint,
+     counted_cash_kobo bigint,
+     variance_kobo bigint,
+     closing_note text,
+     status text not null default 'OPEN' check (status in ('OPEN', 'CLOSED', 'AUDITED'))
+   );
+   ```
+2. **Multi-Sales Rep Rapid PIN Switch**:
+   - Instead of logging out of Supabase Auth, cashiers tap their avatar on the POS header and enter a 4-digit numeric PIN.
+   - POS stamps `cashier_id` and `shift_id` immutably onto every `sale` record.
+   - When Blessing ends her morning shift, she counts the cash with the owner, signs off the shift report, and Chioma starts an afternoon shift with her own opening float.
+3. **Receipt & Shift Printout**:
+   - Prints or generates WhatsApp handover slip showing Shift Duration, Opening Float, Cash In, Cash Out, Expected, Counted, and Variance.
+
+---
+
 ## Summary of Completed vs Pending Scope
 
 | Capability / Architecture | Status | Reference |
@@ -150,3 +198,5 @@ Per `.agents/rules/testing-and-qa.md`, before pilot deployment to Branch 1, the 
 | **Compact Stock-Count List Flow** | **CLOSED & VERIFIED** | `frontend/src/app/(app)/stock-count/page.tsx` |
 | **Cloudflare R2 $0 Backup Workflow** | **PENDING INDEPENDENT TASK** | Section 1 above |
 | **Physical 2GB Android Field Pilot** | **PENDING INDEPENDENT TASK** | Section 3 above |
+| **Multi-Sales Rep & Cashier Shift Wallet Reconciliation** | **PENDING INDEPENDENT TASK** | Section 4 above |
+

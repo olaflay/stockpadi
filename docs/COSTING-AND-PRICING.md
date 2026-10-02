@@ -315,25 +315,26 @@ rather than a checkbox.
 
 ## 2.3 Recommended pricing
 
-FX ₦1,350/USD for planning.
+FX **₦1,550/USD** for base planning rate.
 
 > ### ✅ Resolved: Free tier confirmed by owner for launch
 >
 > **Decision (2026-10-01):** The owner confirmed: *"Let's do a free tier for now."*
 >
 > **Reconciled plan structure across documents:**
-> - **Free Tier (₦0 / Forever):** 1 branch, up to 75 products, core offline POS, credit/debt tracking. Zero risk for new shops to onboard and build daily trust.
-> - **Starter / Pro (₦5,000 / month / ₦50,000 annual):** 1 branch, unlimited products & barcodes, staff logins with role permissions, net profit reporting.
-> - **Growth / Enterprise (₦12,000–₦15,000 / month):** Up to 6 branches, immutable cost snapshots, audit exports, inter-branch stock visibility, and branch P&L rollups.
+> - **Free Tier (₦0 / Forever):** 1 branch, up to 75 products, core offline POS, credit/debt tracking. Zero risk for new shops to onboard and build daily trust. Runs local-first on IndexedDB at virtually $0.00/month cloud cost.
+> - **Starter / Pro (₦5,000 / month / ₦50,000 annual):** 1 branch, unlimited products & barcodes, staff logins with role permissions, net profit reporting. (~$3.23/mo or $32.25/yr at ₦1,550/USD).
+> - **Growth / Enterprise (₦12,000–₦15,000 / month):** Up to 6 branches, immutable cost snapshots, audit exports, inter-branch stock visibility, and branch P&L rollups. (~$7.74–$9.68/mo at ₦1,550/USD).
 >
 > **Unit economics of the free tier:**
-> Because variable marginal cost is under $0.10/shop/month (with database footprint under 1 MB at a 75-product cap), the free tier does not endanger infrastructure margins while driving time-to-first-sale and word-of-mouth acquisition across Nigerian retail merchants.
+> Because variable marginal cost is under $0.02–$0.10/shop/month (with database footprint under 500 KB at a 75-product cap), the free tier does not endanger infrastructure margins while driving time-to-first-sale and word-of-mouth acquisition across Nigerian retail merchants.
 
 | | **Free** | **Starter (Pro)** | **Growth (Enterprise)** |
 |---|---|---|---|
 | **Naira** | **₦0 / forever** | **₦5,000 / month** | **₦12,000–₦15,000 / month** |
-| **USD** | $0 | ~$3.70 | ~$8.89–$11.11 |
-| Annual | — | ₦50,000 (2 months free) | ₦120,000–₦150,000 (2 months free) |
+| **USD (@ ₦1,550)** | $0 | **$3.23 / mo** | **$7.74–$9.68 / mo** |
+| **Annual (Naira)** | — | **₦50,000** (2 months free) | **₦120,000–₦150,000** (2 months free) |
+| **Annual (USD)** | — | **$32.25 / yr** | **$77.42–$96.77 / yr** |
 | Branches | 1 | 1 (up to 3 in roadmap) | up to 6 |
 | Products | 75 | 1,000 (unlimited in roadmap) | unlimited |
 | Staff | 1 cashier | unlimited | unlimited |
@@ -348,10 +349,37 @@ variable = $1.50):
 
 | Tier | Revenue | Allocated cost | Gross margin |
 |---|---|---|---|
-| Starter | $3.70 | $1.50 | ~59% |
-| Growth | $8.89 | $1.50 | ~83% |
+| Free | $0.00 | $0.05 | - |
+| Starter | $3.23 | $1.50 | ~53% |
+| Growth | $7.74–$9.68 | $1.50 | ~80–84% |
 
-**The real insight: Starter carries ~59% gross margin, Growth ~83%, on identical infrastructure.**
+---
+
+## 2.4 Nigerian MSME Buying Psychology & Conversion Triggers
+
+In the Nigerian retail ecosystem (traders in Balogun, Alaba, Trade Fair, Onitsha Main Market, Kano, Ibadan, and neighborhood supermarkets/pharmacies), software purchase decisions are driven by concrete operational pain and emotional security, not abstract technical features:
+
+### 1. Fear of Pilferage / Sales Girl Theft
+- **The Reality**: The biggest recurring anxiety of a Nigerian store owner is arriving at the shop at 7:00 PM to find that stock is depleted, cash in the drawer is short, and the attendant claims *"it was a math mistake"* or *"I gave wrong change."*
+- **Conversion Value**: Transparent, instantaneous recording where cashiers cannot modify prices or delete past sales without owner notification.
+- **Conversion Copy**: *"Never wonder where your money went. Every single item sold is recorded the second it leaves the counter."*
+
+### 2. The "Book of Debt" (Kudin Bashi / Iwe Gbese)
+- **The Reality**: Shop owners lose millions annually because debts jotted down in paper notebooks (*exercise books*) get torn, soaked in rain, misplaced, or disputed by customers who insist: *"I already sent Chioma that transfer last Wednesday!"*
+- **Conversion Value**: Clear, unalterable customer debt ledgers with single-tap WhatsApp reminder links including line-item receipts and date timestamps.
+- **Conversion Copy**: *"WhatsApp reminders with exact timestamps that customers cannot dispute. Get paid what you are owed without arguing."*
+
+### 3. Disaster Proofing (Phone Lost, Dropped, or Stolen)
+- **The Reality**: If a shopkeeper loses their physical notebook or has their phone stolen, a traditional shop loses its entire customer contact and receivables history overnight.
+- **Conversion Value**: Local-first offline capability with encrypted cloud sync. Logging in from any replacement phone immediately restores every product, price, and customer debt balance.
+- **Conversion Copy**: *"Even if your phone falls into water or gets stolen today, your shop's full records and customer debts are safe."*
+
+### 4. Zero-Friction Trust Ladder (The Free Tier Bridge)
+- **Phase 1**: Merchant uses Free Tier ($0 forever, up to 75 products, 1 branch) on their existing phone with zero upfront card/payment barrier.
+- **Phase 2**: Within 7–14 days, the merchant discovers a stock discrepancy caught by the ledger or recovers a ₦50,000 forgotten debt via WhatsApp reminders.
+- **Phase 3**: The software has now paid for itself 10x over before asking for ₦5,000/month. Upgrading to Starter or Growth becomes a no-brainer commercial investment.
+
+**The real insight: Starter carries ~53% gross margin, Growth ~80–84%, on identical infrastructure.**
 Starter is an acquisition tier. Growth is where the business lives. Plan for Starter to carry a
 higher support burden per naira — single-branch owners are hands-on with price and margin — so do not
 let Starter's thin margin quietly subsidise Growth's unstaffed support load.

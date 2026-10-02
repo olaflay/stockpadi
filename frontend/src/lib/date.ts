@@ -4,7 +4,7 @@
  * so that offline ledger queries never clip transactions across days.
  */
 
-export type ReportPeriod = "today" | "week" | "month";
+export type ReportPeriod = "today" | "yesterday" | "week" | "month" | "all_time" | "custom";
 
 /**
  * Returns the ISO 8601 UTC timestamp representing 00:00:00.000 local time today.
@@ -21,6 +21,26 @@ export function getStartOfTodayIso(referenceDate = new Date()): string {
  */
 export function getEndOfTodayIso(referenceDate = new Date()): string {
   const d = new Date(referenceDate);
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+}
+
+/**
+ * Returns the ISO 8601 UTC timestamp representing 00:00:00.000 local time yesterday.
+ */
+export function getStartOfYesterdayIso(referenceDate = new Date()): string {
+  const d = new Date(referenceDate);
+  d.setDate(d.getDate() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+/**
+ * Returns the ISO 8601 UTC timestamp representing 23:59:59.999 local time yesterday.
+ */
+export function getEndOfYesterdayIso(referenceDate = new Date()): string {
+  const d = new Date(referenceDate);
+  d.setDate(d.getDate() - 1);
   d.setHours(23, 59, 59, 999);
   return d.toISOString();
 }
@@ -49,17 +69,46 @@ export function getStartOfMonthIso(referenceDate = new Date()): string {
 }
 
 /**
- * Maps a report period ("today" | "week" | "month") to its start ISO timestamp.
+ * Maps a report period to its start and optional end bounds.
  */
-export function getPeriodStartIso(period: ReportPeriod, referenceDate = new Date()): string {
+export function getPeriodBoundsIso(
+  period: ReportPeriod,
+  referenceDate = new Date(),
+  customRange?: { start: string; end: string }
+): { start: string; end?: string } {
   switch (period) {
     case "today":
-      return getStartOfTodayIso(referenceDate);
+      return { start: getStartOfTodayIso(referenceDate) };
+    case "yesterday":
+      return { start: getStartOfYesterdayIso(referenceDate), end: getEndOfYesterdayIso(referenceDate) };
     case "week":
-      return getStartOfWeekIso(referenceDate);
+      return { start: getStartOfWeekIso(referenceDate) };
     case "month":
-      return getStartOfMonthIso(referenceDate);
+      return { start: getStartOfMonthIso(referenceDate) };
+    case "all_time":
+      return { start: "1970-01-01T00:00:00.000Z" };
+    case "custom": {
+      let endIso: string | undefined = undefined;
+      if (customRange?.end) {
+        const endDate = new Date(customRange.end);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(customRange.end)) {
+          endDate.setHours(23, 59, 59, 999);
+        }
+        endIso = endDate.toISOString();
+      }
+      return {
+        start: customRange?.start ? new Date(customRange.start).toISOString() : getStartOfTodayIso(referenceDate),
+        end: endIso,
+      };
+    }
   }
+}
+
+/**
+ * Backwards-compatible period start mapping.
+ */
+export function getPeriodStartIso(period: ReportPeriod, referenceDate = new Date()): string {
+  return getPeriodBoundsIso(period, referenceDate).start;
 }
 
 /**

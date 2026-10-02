@@ -241,4 +241,100 @@ describe("useReportsData", () => {
 
     expect(result.current.lowStockProducts.map((p: Product) => p.id)).not.toContain("product-1");
   });
+
+  it("flags hasAnyHistoricalSales true even if today has 0 sales", async () => {
+    // Sale from 3 days ago (not today)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    await db.sales.add(
+      sale({
+        createdAtLocal: threeDaysAgo.toISOString(),
+        createdAt: threeDaysAgo.toISOString(),
+      })
+    );
+
+    const { result } = renderHook(() => useReportsData());
+    await waitFor(() => expect(result.current.result).toBeDefined());
+
+    // Today's sales should be empty
+    expect(result.current.result?.sales.length).toBe(0);
+    // But store has historical sales, so empty state doesn't wipe dashboard
+    expect(result.current.hasAnyHistoricalSales).toBe(true);
+  });
+
+  it("filters accurately when switching to yesterday period", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(14, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(10, 0, 0, 0);
+
+    await db.sales.add(
+      sale({
+        id: "yesterday-sale",
+        createdAtLocal: yesterday.toISOString(),
+        createdAt: yesterday.toISOString(),
+      })
+    );
+    await db.sales.add(
+      sale({
+        id: "today-sale",
+        createdAtLocal: today.toISOString(),
+        createdAt: today.toISOString(),
+      })
+    );
+
+    const { result } = renderHook(() => useReportsData());
+    await waitFor(() => expect(result.current.result).toBeDefined());
+
+    act(() => {
+      result.current.setPeriod("yesterday");
+    });
+
+    await waitFor(() => {
+      expect(result.current.period).toBe("yesterday");
+      expect(result.current.result?.sales[0]?.id).toBe("yesterday-sale");
+    });
+
+    expect(result.current.result?.sales.length).toBe(1);
+  });
+
+  it("returns all historical sales when period is all_time and computes dayOfWeekStats", async () => {
+    const d1 = new Date("2026-09-01T12:00:00Z"); // Tuesday
+    const d2 = new Date("2026-09-02T12:00:00Z"); // Wednesday
+
+    await db.sales.add(
+      sale({
+        id: "old-sale-1",
+        createdAtLocal: d1.toISOString(),
+        createdAt: d1.toISOString(),
+        total: 2000,
+      })
+    );
+    await db.sales.add(
+      sale({
+        id: "old-sale-2",
+        createdAtLocal: d2.toISOString(),
+        createdAt: d2.toISOString(),
+        total: 3000,
+      })
+    );
+
+    const { result } = renderHook(() => useReportsData());
+    await waitFor(() => expect(result.current.result).toBeDefined());
+
+    act(() => {
+      result.current.setPeriod("all_time");
+    });
+
+    await waitFor(() => {
+      expect(result.current.result?.sales.length).toBe(2);
+    });
+
+    // Check dayOfWeekStats includes the sales
+    const dayStats = result.current.dayOfWeekStats;
+    const totalCount = dayStats.reduce((sum, d) => sum + d.count, 0);
+    expect(totalCount).toBe(2);
+  });
 });

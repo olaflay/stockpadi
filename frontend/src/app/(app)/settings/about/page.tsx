@@ -12,7 +12,7 @@ export default function AboutSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="About" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="About" backHref="/settings" />
 
       <div className="rounded-2xl bg-surface-container p-4">
         <p className="text-[length:var(--font-size-body-lg)] text-on-surface">{branding.businessName}</p>

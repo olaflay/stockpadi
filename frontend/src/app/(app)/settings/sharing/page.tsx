@@ -34,7 +34,7 @@ export default function SharingSettingsPage() {
   if (profile === undefined) {
     return (
       <div>
-        <ScreenHeader title="Sharing" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Sharing" backHref="/settings" />
         <Skeleton className="h-24" />
       </div>
     );
@@ -71,7 +71,7 @@ export default function SharingSettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Sharing" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="Sharing" backHref="/settings" />
 
       <label className="flex flex-col gap-1">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Your WhatsApp number</span>

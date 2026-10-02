@@ -305,15 +305,15 @@ export default function DashboardPage() {
             {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
           </p>
 
-          {/* Improved Tonal View Sales Action: Thin green stroke, subtle green hint background, standard text, clean arrow */}
+          {/* M3 / One UI Tonal Action Card for View Sales & Receipts */}
           <RippleLink
             href="/sales"
-            className="mt-3.5 flex items-center justify-between rounded-xl border border-brand-accent/35 bg-brand-accent/[0.06] hover:bg-brand-accent/[0.12] active:scale-[0.99] px-3.5 py-2.5 text-xs text-on-surface transition-all group"
+            className="mt-3.5 flex items-center justify-between rounded-2xl bg-surface-container-high hover:bg-surface-container-highest active:scale-[0.99] px-4 py-3 text-xs text-on-surface transition-all shadow-xs border border-border/40 group"
           >
-            <span className="font-medium text-on-surface">View sales & receipts</span>
-            <div className="flex items-center gap-1.5 text-on-surface-muted group-hover:text-brand-accent transition-colors">
-              <span className="text-[11px] font-normal">{metrics.todaysSalesCount} recorded</span>
-              <ArrowRight size={14} className="text-brand-accent group-hover:translate-x-0.5 transition-transform" />
+            <span className="font-semibold text-on-surface text-[13px]">View sales & receipts</span>
+            <div className="flex items-center gap-1.5 text-on-surface-variant group-hover:text-brand-accent transition-colors">
+              <span className="text-[12px] font-medium">{metrics.todaysSalesCount} recorded</span>
+              <ArrowRight size={15} className="text-brand-accent group-hover:translate-x-0.5 transition-transform" />
             </div>
           </RippleLink>
         </div>
@@ -363,7 +363,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* 4-GRID ACTION TILES: Positioned under the 2x2 cards without redundant label */}
+      {/* 4-GRID ACTION TILES: Unified containers with brand-green icons across all actions */}
       {quickActions.length > 0 && (
         <div
           className={`mt-3.5 rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
@@ -383,22 +383,10 @@ export default function DashboardPage() {
                   href={action.href}
                   className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
                 >
-                  <div
-                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
-                      action.isPrimary
-                        ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
-                        : "bg-surface-container-highest text-on-surface group-hover:bg-brand-container group-hover:text-on-brand-container"
-                    }`}
-                  >
-                    <Icon size={22} strokeWidth={action.isPrimary ? 2.2 : 2.4} aria-hidden />
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container/40 group-hover:text-brand-accent transition-all">
+                    <Icon size={22} strokeWidth={2.4} aria-hidden />
                   </div>
-                  <span
-                    className={`mt-2 text-xs sm:text-[13px] text-center leading-tight truncate w-full transition-colors ${
-                      action.isPrimary
-                        ? "font-semibold text-brand-accent"
-                        : "font-medium text-on-surface group-hover:text-brand-accent"
-                    }`}
-                  >
+                  <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                     {action.label}
                   </span>
                 </RippleLink>
@@ -411,8 +399,8 @@ export default function DashboardPage() {
                 onClick={action.onClick}
                 className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
               >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-on-surface shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                  <Icon size={22} strokeWidth={2.2} aria-hidden />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container/40 group-hover:text-brand-accent transition-all">
+                  <Icon size={22} strokeWidth={2.4} aria-hidden />
                 </div>
                 <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
                   {action.label}

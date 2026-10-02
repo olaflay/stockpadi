@@ -38,7 +38,7 @@ export default function DataSettingsPage() {
   if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
     return (
       <div>
-        <ScreenHeader title="Backup" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Backup" backHref="/settings" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -197,7 +197,7 @@ export default function DataSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Backup" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="Backup" backHref="/settings" />
 
       <section className="rounded-2xl bg-surface-container p-4">
         <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Sync status</h2>

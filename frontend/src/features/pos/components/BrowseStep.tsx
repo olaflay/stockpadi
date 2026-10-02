@@ -88,6 +88,7 @@ export function BrowseStep(props: {
   const [prevProductsLength, setPrevProductsLength] = useState(0);
   const [prevCategoryId, setPrevCategoryId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [scannedProductIds, setScannedProductIds] = useState<string[]>([]);
 
   // Best-seller products in rank order (Set insertion order is the rank).
   // Only shown when browsing the full catalog — never during a search or
@@ -233,29 +234,100 @@ export function BrowseStep(props: {
       {scanning && (
         <BarcodeScanner
           onResult={(res) => {
-            // Exact barcode hit on a single-unit product: auto-add and
-            // immediately reopen the camera — "scan-add-repeat" loop.
-            // No tap needed per item. The cashier never leaves scan mode.
-            // Multi-match or dual-unit falls through to manual selection.
-            const exactMatch = allProducts.filter(
-              (p) => p.barcode === res && !p.altUnitLabel
-            );
-            if (exactMatch.length === 1) {
+            const match = allProducts.find((p) => p.barcode === res);
+            if (match) {
               feedbackScanSuccess();
-              const p = exactMatch[0];
-              handleFreshAdd(p.id, p.sellPrice, p.unitLabel, 1);
-              setScanning(false);
-              // Reopen camera after React flushes so the BarcodeScanner
-              // component fully unmounts/remounts rather than receiving a
-              // stale stream from the previous instance.
-              requestAnimationFrame(() => setScanning(true));
+              const baseKey = cartLineKey(match.id, match.unitLabel);
+              const currentQty = cart[baseKey]?.quantity ?? 0;
+              if (currentQty === 0) {
+                handleFreshAdd(match.id, match.sellPrice, match.unitLabel, 1);
+              } else {
+                onIncrementLine(baseKey);
+              }
+              setScannedProductIds((prev) => [match.id, ...prev.filter((id) => id !== match.id)]);
+              showToast(`Scanned: ${match.name}`, "success");
             } else {
-              onQueryChange(res);
-              setScanning(false);
+              feedbackError();
+              showToast(`No product with barcode "${res}"`, "warning");
             }
           }}
           onCancel={() => setScanning(false)}
-        />
+          bottomBar={
+            <div className="flex items-center justify-between gap-3 max-w-xl mx-auto w-full">
+              <div className="min-w-0">
+                <p className="text-xs text-on-surface-muted truncate">
+                  {itemCount} {itemCount === 1 ? "item" : "items"} in cart
+                </p>
+                <p className="font-number font-bold text-base text-on-surface truncate">
+                  {formatCurrency(total)}
+                </p>
+              </div>
+              <RippleButton
+                type="button"
+                onClick={() => setScanning(false)}
+                className="shrink-0 rounded-2xl bg-brand-accent px-5 py-2.5 text-xs font-semibold text-brand-accent-contrast shadow-sm hover:brightness-105 active:scale-95 transition-all"
+              >
+                Done / Return to POS
+              </RippleButton>
+            </div>
+          }
+        >
+          {scannedProductIds.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-brand-container/40 text-brand-accent flex items-center justify-center mb-3">
+                <Camera size={24} aria-hidden />
+              </div>
+              <p className="text-sm font-semibold text-on-surface">Ready to scan items</p>
+              <p className="text-xs text-on-surface-muted mt-1 max-w-xs">
+                Hold barcode in the camera view above. Scanned items appear here with instant + and − buttons.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-muted">
+                  Scanned Products ({scannedProductIds.length})
+                </h3>
+                <span className="text-[11px] text-brand-accent font-medium">
+                  Tap + to bump quantity fast
+                </span>
+              </div>
+              {scannedProductIds.map((id) => {
+                const product = allProducts.find((p) => p.id === id);
+                if (!product) return null;
+                const baseKey = cartLineKey(product.id, product.unitLabel);
+                const qty = cart[baseKey]?.quantity ?? 0;
+                const stock = stockByProduct?.[product.id];
+                const canAdd = stock === undefined || qty + 1 <= stock;
+
+                return (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3 border border-border/30"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-on-surface truncate">{product.name}</p>
+                      <p className="text-xs font-number text-brand-accent mt-0.5">
+                        {formatCurrency(product.sellPrice)} <span className="text-on-surface-muted font-sans font-normal">/ {product.unitLabel}</span>
+                      </p>
+                    </div>
+
+                    <InlineStepper
+                      qty={qty}
+                      label={product.name}
+                      onDecrement={() => onDecrementLine(baseKey)}
+                      onIncrement={() => onIncrementLine(baseKey)}
+                      incrementDisabled={!canAdd}
+                      onIncrementBlocked={() =>
+                        showToast(`Only ${stock} of "${product.name}" in stock.`, "warning")
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </BarcodeScanner>
       )}
 
       {/* Category filter chips */}

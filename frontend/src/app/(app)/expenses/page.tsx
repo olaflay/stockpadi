@@ -22,7 +22,7 @@ import type { Expense } from "@/types/expense";
 
 import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
 
-type Period = ReportPeriod;
+type Period = "today" | "week" | "month";
 const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
 
 export default function ExpensesPage() {

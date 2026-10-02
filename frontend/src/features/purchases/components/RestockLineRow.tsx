@@ -151,9 +151,22 @@ export function RestockLineRow(props: {
         </label>
       </div>
 
-      <p className="text-right font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
-        Line total: {formatCurrency(line.quantity * line.unitCost)}
-      </p>
+      <div className="flex items-center justify-between text-[length:var(--font-size-caption)] text-on-surface-muted">
+        <div>
+          {line.unitCost > 0 && product.costPrice > 0 && line.unitCost !== product.costPrice ? (
+            <span className="text-[11px] text-brand-accent font-medium">
+              Cost restatement: {formatCurrency(product.costPrice)} → {formatCurrency(line.unitCost)}
+            </span>
+          ) : (
+            <span className="text-[11px]">
+              Current cost: {formatCurrency(product.costPrice)}
+            </span>
+          )}
+        </div>
+        <p className="font-number tabular-nums font-medium text-on-surface">
+          Line total: {formatCurrency(line.quantity * line.unitCost)}
+        </p>
+      </div>
     </li>
   );
 }

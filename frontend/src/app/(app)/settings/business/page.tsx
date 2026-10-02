@@ -38,7 +38,7 @@ export default function BusinessSettingsPage() {
   if (profile === undefined) {
     return (
       <div>
-        <ScreenHeader title="Business" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Business" backHref="/settings" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -47,7 +47,7 @@ export default function BusinessSettingsPage() {
   if (!profile) {
     return (
       <div>
-        <ScreenHeader title="Business" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Business" backHref="/settings" />
         <p className="text-center text-[length:var(--font-size-body)] text-on-surface-muted">
           Complete{" "}
           <a href="/onboarding" className="underline">
@@ -80,7 +80,7 @@ export default function BusinessSettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Business" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="Business" backHref="/settings" />
 
 
       <form id="business-settings-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="flex flex-col gap-4 pb-24">

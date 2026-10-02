@@ -73,7 +73,7 @@ export function NewProductForm({
   onSkuChange?: (value: string) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 pb-24">
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 pb-72 md:pb-36 scroll-pb-64">
       <ProductCoreFields
         register={register}
         setValue={setValue}

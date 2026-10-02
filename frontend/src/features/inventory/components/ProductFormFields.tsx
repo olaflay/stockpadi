@@ -267,20 +267,13 @@ export function ProductUnitConversionFields({
 
   return (
     <div className="flex flex-col rounded-2xl bg-surface-container border border-border/30 overflow-hidden">
-      {/* Banner / Toggle Card */}
-      <div className="flex items-center justify-between gap-3 p-4">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-container text-on-brand-container">
-            <Layers size={20} aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-on-surface">
-              Sell in cartons, crates, or packs?
-            </p>
-            <p className="text-xs text-on-surface-muted mt-0.5">
-              Sell both single items (e.g. bottle) and bulk packs (e.g. crate)
-            </p>
-          </div>
+      {/* Banner / Toggle Card — Streamlined to minimal footprint */}
+      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-semibold text-on-surface truncate">
+            Pack / carton pricing
+          </p>
+          <InfoTooltip text="Sell single items (e.g. bottle) and bulk packs (e.g. carton/crate) with automatic stock deduction." />
         </div>
 
         <button
@@ -288,62 +281,58 @@ export function ProductUnitConversionFields({
           onClick={onToggleUnitConversion}
           aria-expanded={showUnitConversion}
           aria-controls="unit-conversion-panel"
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
             showUnitConversion
               ? "bg-danger/10 text-danger hover:bg-danger/20"
-              : "bg-brand-accent text-brand-accent-contrast shadow-xs hover:opacity-90 active:scale-95"
+              : "bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/25 active:scale-95"
           }`}
         >
-          {showUnitConversion ? "Remove pack pricing" : "+ Add pack pricing"}
+          {showUnitConversion ? "Remove" : "+ Add pack"}
         </button>
       </div>
 
-      {/* Expanded Friendly Form */}
+      {/* Expanded Compact Form */}
       {showUnitConversion && (
         <div
           id="unit-conversion-panel"
-          className="flex flex-col gap-4 border-t border-border/20 bg-surface-container-low/50 p-4"
+          className="flex flex-col gap-3 border-t border-border/20 bg-surface-container-low/40 p-3.5"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Single Item Unit Label */}
             <label className="flex flex-col gap-1">
-              <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-                Single item name *
+              <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                Single unit name *
+                <InfoTooltip text="e.g. piece, bottle, sachet" />
               </span>
               <TextInput
                 {...register("unitLabel")}
-                placeholder="e.g. piece, bottle, sachet"
+                placeholder="piece, bottle, etc."
                 hasError={Boolean(errors.unitLabel)}
                 errorId="field-error-unit-label"
               />
-              <span className="text-[11px] text-on-surface-muted">
-                Name of 1 single item for the price above
-              </span>
               <FieldError id="field-error-unit-label" error={errors.unitLabel?.message} />
             </label>
 
             {/* Bulk Pack Unit Label */}
             <label className="flex flex-col gap-1">
-              <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-                Pack or bulk name
+              <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
+                Pack name
+                <InfoTooltip text="e.g. carton, crate, roll, bag" />
               </span>
               <TextInput
                 {...register("altUnitLabel")}
-                placeholder="e.g. carton, crate, roll, bag"
+                placeholder="carton, crate, etc."
               />
-              <span className="text-[11px] text-on-surface-muted">
-                Name of the larger box or wholesale pack
-              </span>
             </label>
           </div>
 
           {displayAlt && (
-            <div className="flex flex-col gap-3 rounded-xl bg-surface-container p-3.5 border border-border/20">
+            <div className="flex flex-col gap-3 rounded-xl bg-surface-container p-3 border border-border/20">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Quantity in Pack */}
                 <label className="flex flex-col gap-1">
                   <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-                    How many {displayUnit}s in 1 {displayAlt}? *
+                    Qty in 1 {displayAlt} *
                   </span>
                   <TextInput
                     type="number"
@@ -360,7 +349,7 @@ export function ProductUnitConversionFields({
                 {/* Selling Price for Pack */}
                 <label className="flex flex-col gap-1">
                   <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-                    Selling price for 1 whole {displayAlt} *
+                    {displayAlt} selling price *
                   </span>
                   <TextInput
                     type="number"
@@ -373,11 +362,6 @@ export function ProductUnitConversionFields({
                   />
                   <FieldError id="field-error-alt-unit-price" error={errors.altUnitSellPrice?.message} />
                 </label>
-              </div>
-
-              {/* Informational Guidance */}
-              <div className="rounded-lg bg-brand-accent/5 p-2.5 text-[11px] text-on-surface-muted">
-                💡 <strong className="text-on-surface">At checkout:</strong> Cashiers can tap either <span className="font-semibold text-brand-accent">1 {displayUnit}</span> or <span className="font-semibold text-brand-accent">1 {displayAlt}</span>. Inventory will automatically deduct accurately.
               </div>
             </div>
           )}
@@ -421,7 +405,13 @@ export function ProductExpiryFields({
           <Controller
             name="expiryDate"
             control={control}
-            render={({ field }) => <ShortDateInput value={field.value ?? ""} onChange={field.onChange} />}
+            render={({ field }) => (
+              <ShortDateInput
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                autoFocus={true}
+              />
+            )}
           />
           {errors.expiryDate && (
             <span className="text-[length:var(--font-size-caption)] text-danger">{errors.expiryDate.message}</span>

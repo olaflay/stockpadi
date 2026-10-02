@@ -89,8 +89,8 @@ export default function SyncHealthPage() {
   // Workers need read-only diagnostics and a manual retry too: a branch pull
   // failure is actionable on their device even though conflict choices remain
   // an owner responsibility.
-  if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "WORKER") return <><ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} /><PermissionDenied requiredAccountType="BUSINESS_OWNER" /></>;
-  if (!snapshot) return <><ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} /><Skeleton className="h-48" /></>;
+  if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "WORKER") return <><ScreenHeader title="Sync and system health" backHref="/settings" /><PermissionDenied requiredAccountType="BUSINESS_OWNER" /></>;
+  if (!snapshot) return <><ScreenHeader title="Sync and system health" backHref="/settings" /><Skeleton className="h-48" /></>;
 
   const pullFailed = snapshot.state?.lastPullStatus === "failed" || Boolean(snapshot.state?.partialErrors.length) || snapshot.diagnostics.some((item) => !item.success);
   const complete = online && cloud === "connected" && Boolean(snapshot.state?.lastCompletePullAt) && snapshot.pending === 0 && snapshot.blocked === 0 && snapshot.issues === 0 && !pullFailed && !safety.required;
@@ -154,7 +154,7 @@ export default function SyncHealthPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-12">
-      <ScreenHeader title="Sync and system health" onBack={() => router.push("/settings")} />
+      <ScreenHeader title="Sync and system health" backHref="/settings" />
 
       <section className={`rounded-[var(--radius-card)] p-4 ${pullFailed ? "bg-warning-container text-on-warning-container" : "bg-surface-container"}`}>
         <div className="flex items-start gap-3">
