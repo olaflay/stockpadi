@@ -47,8 +47,8 @@ describe("More Page — Operations & Settings Hub", () => {
     expect(screen.getByText("Close Day")).toBeInTheDocument();
     expect(screen.getByText("Store & Staff Settings")).toBeInTheDocument();
     expect(screen.getByText("Import / Export Catalog")).toBeInTheDocument();
-    expect(screen.getByText("Data, Sync & Backups")).toBeInTheDocument();
-    expect(screen.getByText("Help & Support")).toBeInTheDocument();
+    expect(screen.queryByText("Data, Sync & Backups")).not.toBeInTheDocument();
+    expect(screen.queryByText("Help & Support")).not.toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
 
@@ -68,9 +68,8 @@ describe("More Page — Operations & Settings Hub", () => {
     expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
     expect(screen.queryByText("Contacts & Debtors")).not.toBeInTheDocument();
     expect(screen.queryByText("Store & Staff Settings")).not.toBeInTheDocument();
-    expect(screen.queryByText("Data, Sync & Backups")).not.toBeInTheDocument();
-    // Still has access to Help and Sign Out
-    expect(screen.getByText("Help & Support")).toBeInTheDocument();
+    // Worker has access to App Settings and Sign Out
+    expect(screen.getByText("App Settings")).toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
 });

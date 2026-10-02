@@ -268,7 +268,7 @@ export default function CloseDayPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-12">
-      <ScreenHeader title="Close day" backHref="/reports" />
+      <ScreenHeader title="Close day" backHref="/dashboard" />
 
       {/* Top Sales & Profit Overview */}
       <div className="flex flex-col gap-3 rounded-2xl depth-card p-4.5 sm:p-5">

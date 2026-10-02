@@ -97,7 +97,7 @@ export default function SalesPage() {
   if (!hasCapability(user, "VIEW_OWN_SALES")) {
     return (
       <div>
-        <ScreenHeader title="Sales history" hideBack={true} />
+        <ScreenHeader title="Sales history" backHref="/more" />
         <PermissionDenied requiredCapabilities={["VIEW_OWN_SALES"]} />
       </div>
     );
@@ -106,7 +106,7 @@ export default function SalesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -124,7 +124,7 @@ export default function SalesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
         <ErrorState message="Couldn't load sales history." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -133,7 +133,7 @@ export default function SalesPage() {
   if (visibleSales.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
+        <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
         <EmptyState
           icon={Receipt}
           title={range === "all" ? "No sales yet" : "No sales in this period"}
@@ -150,7 +150,7 @@ export default function SalesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Sales history" hideBack={true} action={reportsAction} />
+      <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-on-surface-muted">{visibleSales.length} recorded sale{visibleSales.length === 1 ? "" : "s"}</p>
         <div className="flex gap-1.5" role="tablist" aria-label="Sales history period">

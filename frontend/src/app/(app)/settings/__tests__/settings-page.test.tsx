@@ -51,6 +51,11 @@ vi.mock("@/components/ui/Ripple", () => ({
       {children}
     </button>
   ),
+  RippleLink: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 describe("SettingsPage component", () => {

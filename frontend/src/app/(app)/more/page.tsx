@@ -9,8 +9,6 @@ import {
   ClipboardCheck,
   CalendarCheck,
   Settings,
-  Database,
-  HelpCircle,
   LogOut,
   ChevronRight,
   Store,
@@ -22,20 +20,19 @@ import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { RippleButton } from "@/components/ui/Ripple";
+import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
 
 /**
  * The More Page — Streamlined operations & store management cockpit.
- * Designed for immediate clarity so a new user is never overwhelmed:
+ * Dedicated to high-frequency shop floor workflows:
  * 1. Store Profile & User Card
- * 2. Daily Cash & Relationships (Contacts, Expenses, Close Day)
+ * 2. Daily Cash & Relationships (Contacts, Sales, Expenses, Close Day)
  * 3. Inventory & Stock Tools (Purchases, Stock Count, Import/Export)
- * 4. Store & System (Settings, Data & Sync, Help & Support)
- * 5. Display Preferences & Sign Out
+ * 4. Store & System (Single entry point to Settings)
+ * 5. Sign Out
  */
 export default function MorePage() {
   const router = useRouter();
@@ -66,9 +63,8 @@ export default function MorePage() {
       <ScreenHeader title="More" hideBack={true} />
 
       {/* Store Identity & Profile Card */}
-      <RippleButton
-        type="button"
-        onClick={() => router.push("/profile")}
+      <RippleLink
+        href="/profile"
         className="flex items-center justify-between gap-3.5 rounded-2xl bg-surface-container px-4 py-3.5 text-left hover:bg-surface-container-high transition-colors active:scale-[0.99]"
       >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-container text-on-brand-container">
@@ -86,7 +82,7 @@ export default function MorePage() {
           </p>
         </div>
         <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
-      </RippleButton>
+      </RippleLink>
 
       {/* 1. Daily Cash & Relationships */}
       <section className="flex flex-col">
@@ -100,7 +96,7 @@ export default function MorePage() {
               tone="brand"
               label="Contacts & Debtors"
               description="Customers, debtors owing you money, and wholesale suppliers"
-              onClick={() => router.push("/contacts")}
+              href="/contacts"
             />
           )}
 
@@ -110,7 +106,7 @@ export default function MorePage() {
               tone="brand"
               label="Sales & Receipts"
               description="Past sales history and receipt reprinting"
-              onClick={() => router.push("/sales")}
+              href="/sales"
             />
           )}
 
@@ -120,7 +116,7 @@ export default function MorePage() {
               tone="warning"
               label="Expenses"
               description="Record daily shop spending, bills, transport, and cash payouts"
-              onClick={() => router.push("/expenses")}
+              href="/expenses"
             />
           )}
 
@@ -130,7 +126,7 @@ export default function MorePage() {
               tone="brand"
               label="Close Day"
               description="End-of-day register settlement and cash drawer tally"
-              onClick={() => router.push("/close-day")}
+              href="/close-day"
             />
           )}
         </div>
@@ -148,7 +144,7 @@ export default function MorePage() {
               tone="neutral"
               label="Purchases & Restock"
               description="Record new inventory received from suppliers"
-              onClick={() => router.push("/purchases")}
+              href="/purchases"
             />
           )}
 
@@ -158,7 +154,7 @@ export default function MorePage() {
               tone="neutral"
               label="Stock Count"
               description="Physical shelf count and inventory reconciliation"
-              onClick={() => router.push("/stock-count")}
+              href="/stock-count"
             />
           )}
 
@@ -168,7 +164,7 @@ export default function MorePage() {
               tone="neutral"
               label="Import / Export Catalog"
               description="Bulk upload or download products via Excel / CSV"
-              onClick={() => router.push("/products/import")}
+              href="/products/import"
             />
           )}
         </div>
@@ -179,50 +175,24 @@ export default function MorePage() {
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
           Store & System
         </h2>
-        <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
-          {isOwnerOrAdmin && (
+        <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
+          {isOwnerOrAdmin ? (
             <SettingsRow
               icon={Settings}
               tone="neutral"
               label="Store & Staff Settings"
-              description="Receipt details, branches, staff accounts & outlets"
-              onClick={() => router.push("/settings")}
+              description="Receipt details, branches, staff accounts & system backup"
+              href="/settings"
             />
-          )}
-
-          {isOwnerOrAdmin && (
+          ) : (
             <SettingsRow
-              icon={Database}
+              icon={Settings}
               tone="neutral"
-              label="Data, Sync & Backups"
-              description="Sync diagnostics, offline outbox, and device backup"
-              onClick={() => router.push("/settings/data")}
+              label="App Settings"
+              description="Display theme, help guides & about"
+              href="/settings"
             />
           )}
-
-          <SettingsRow
-            icon={HelpCircle}
-            tone="neutral"
-            label="Help & Support"
-            description="User guide, offline FAQs, and customer support"
-            onClick={() => router.push("/settings/help")}
-          />
-        </div>
-      </section>
-
-      {/* 4. Display Preferences */}
-      <section className="flex flex-col">
-        <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Preferences
-        </h2>
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-4">
-          <div className="min-w-0">
-            <p className="text-[length:var(--font-size-body)] font-semibold text-on-surface">Appearance</p>
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">Toggle light or dark theme</p>
-          </div>
-          <div className="shrink-0">
-            <ThemeToggle variant="capsule-pill" />
-          </div>
         </div>
       </section>
 

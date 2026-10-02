@@ -11,6 +11,8 @@ import {
   Plus,
   CalendarCheck,
   Receipt,
+  ReceiptText,
+  ArrowRight,
   ClipboardCheck,
 } from "lucide-react";
 import { db } from "@/lib/db";
@@ -30,6 +32,19 @@ import { hasCapability } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
+
+/** Format hero card date with ordinal suffix, e.g. "Today • Friday, 2nd of October" */
+function formatDashboardHeroDate(date: Date = new Date()): string {
+  const weekday = date.toLocaleDateString("en-GB", { weekday: "long" });
+  const day = date.getDate();
+  const month = date.toLocaleDateString("en-GB", { month: "long" });
+  const getOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+  };
+  return `Today • ${weekday}, ${day}${getOrdinal(day)} of ${month}`;
+}
 
 /**
  * One KPI tile: label up top, big number + caption below, and optional actionable prompt.
@@ -54,14 +69,14 @@ function KpiCard({
 }) {
   const content = (
     <>
-      <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted leading-tight truncate">
+      <p className="text-[11px] sm:text-xs font-medium text-on-surface-muted leading-tight truncate">
         {label}
       </p>
-      <div className="mt-2 min-w-0">
+      <div className="mt-1.5 min-w-0">
         <p className={`truncate font-number text-lg font-bold tracking-tight tabular-nums sm:text-xl ${valueClassName}`}>
           {value}
         </p>
-        <p className="mt-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight truncate">
+        <p className="mt-0.5 text-[11px] sm:text-xs text-on-surface-muted leading-tight truncate">
           {sub}
         </p>
       </div>
@@ -73,7 +88,7 @@ function KpiCard({
     </>
   );
 
-  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-4 text-left hover:bg-surface-container-high transition-colors";
+  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high transition-colors";
 
   if (href) {
     return (
@@ -174,12 +189,6 @@ export default function DashboardPage() {
     ? (metrics.todaysCashSalesTotal - metrics.todaysExpensesTotal - metrics.todaysPurchasesTotal + metrics.todaysCreditCollected)
     : 0;
 
-  const todayFormatted = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-  }).format(new Date());
-
   if (metrics === undefined) {
     return (
       <div className="flex flex-col gap-4">
@@ -237,13 +246,6 @@ export default function DashboardPage() {
     <div className="pb-16">
       <ScreenHeader title="Dashboard" hideBack={true} />
 
-      {/* Today Date Context */}
-      <div className="mb-3 flex items-center justify-between text-on-surface-muted">
-        <p className="text-[length:var(--font-size-label)] font-medium">
-          Today · {todayFormatted}
-        </p>
-      </div>
-
       {/* Email verification banner — shown only to owner until email confirmed */}
       {showVerificationBanner && (
         <div className="mb-4">
@@ -283,41 +285,52 @@ export default function DashboardPage() {
 
       {/* PRIMARY HERO CARD: Today's Sales */}
       {canSeeOwnSales && (
-        <div className="mb-3.5 flex w-full flex-col rounded-3xl bg-surface-container p-5 text-left border border-border/20 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-              {user.accountType === "WORKER" ? "Your sales today" : "Today's sales"}
+        <div className="mb-3 flex w-full flex-col rounded-3xl bg-surface-container p-4 sm:p-5 text-left border border-border/20 shadow-xs">
+          {/* Small top header with label and dynamic date */}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-on-surface-muted">
+              {user.accountType === "WORKER" ? "Your Sales Today" : "Today's Sales"}
             </p>
-            <span className="inline-flex items-center rounded-full bg-brand-container px-2 py-0.5 text-[11px] font-semibold text-on-brand-container">
-              Today
+            <span className="text-[11px] sm:text-xs font-medium text-on-surface-muted/90 shrink-0">
+              {formatDashboardHeroDate()}
             </span>
           </div>
-          <p className="mt-1.5 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
+
+          {/* Bold Tabular Total */}
+          <p className="mt-2 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
             {formatCurrency(metrics.todaysSalesTotal)}
           </p>
+
+          {/* High-signal Breakdown */}
           <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
             {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
           </p>
-          <div className="mt-3.5 pt-2.5 border-t border-border/20 flex justify-end">
-            <RippleLink
-              href="/sales"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-accent hover:underline"
-            >
-              <span>View sales</span>
-              <span aria-hidden>→</span>
-            </RippleLink>
-          </div>
+
+          {/* Improved Full-width View Sales Action */}
+          <RippleLink
+            href="/sales"
+            className="mt-3.5 flex items-center justify-between rounded-xl bg-surface-container-high/70 px-3.5 py-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container-highest transition-colors group"
+          >
+            <div className="flex items-center gap-2">
+              <ReceiptText size={15} className="text-brand-accent shrink-0" />
+              <span>View sales & receipts</span>
+            </div>
+            <div className="flex items-center gap-1 text-on-surface-muted group-hover:text-brand-accent transition-colors">
+              <span className="text-[11px]">{metrics.todaysSalesCount} recorded</span>
+              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </RippleLink>
         </div>
       )}
 
-      {/* SECONDARY METRICS: 2x2 Actionable Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* SECONDARY METRICS: 2x2 Grid */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
         {canSeeStoreMoney && (
           <KpiCard
-            label="Net cash flow"
+            label="Net Cash"
             value={formatCurrency(netCashFlow)}
-            sub="After expenses & stock"
-            actionLabel="View reports →"
+            sub="After expenses"
+            actionLabel="Reports →"
             valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
             href="/reports"
           />
@@ -325,34 +338,94 @@ export default function DashboardPage() {
 
         {canSeeStoreMoney && (
           <KpiCard
-            label="Inventory value"
+            label="Inventory"
             value={formatCurrency(metrics.inventoryValue)}
-            sub={`${metrics.stockedProductCount} products on hand`}
-            actionLabel="View inventory →"
+            sub={`${metrics.stockedProductCount} products`}
+            actionLabel="Stock →"
             href="/products"
           />
         )}
 
         {canSeeCustomers && (
           <KpiCard
-            label="Customers owing"
+            label="Owed to You"
             value={customersOwingData !== undefined ? formatCurrency(customersOwingData.totalOwed) : "…"}
-            sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "customer" : "customers"}` : "No debt"}
-            actionLabel="View debts →"
+            sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "debtor" : "debtors"}` : "Cleared"}
+            actionLabel="Debtors →"
             valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-danger" : "text-on-surface"}
-            href="/customers"
+            href="/contacts?tab=debtors"
           />
         )}
 
         <KpiCard
-          label="Low stock"
+          label="Low Stock"
           value={String(metrics.lowStockCount)}
-          sub={metrics.lowStockCount > 0 ? "Restock soon" : "All healthy"}
+          sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} items low` : "All healthy"}
           actionLabel={metrics.lowStockCount > 0 ? "Restock →" : undefined}
           valueClassName={metrics.lowStockCount > 0 ? "text-warning" : "text-on-surface"}
           href="/products?filter=low-stock"
         />
       </div>
+
+      {/* 4-GRID ACTION TILES: Positioned under the 2x2 cards without redundant label */}
+      {quickActions.length > 0 && (
+        <div
+          className={`mt-3.5 rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
+            quickActions.length === 2
+              ? "grid-cols-2"
+              : quickActions.length === 3
+              ? "grid-cols-3"
+              : "grid-cols-4"
+          }`}
+        >
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            if ("href" in action && action.href) {
+              return (
+                <RippleLink
+                  key={action.key}
+                  href={action.href}
+                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                >
+                  <div
+                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                      action.isPrimary
+                        ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                        : "bg-surface-container-highest text-on-surface group-hover:bg-brand-container group-hover:text-on-brand-container"
+                    }`}
+                  >
+                    <Icon size={22} strokeWidth={action.isPrimary ? 2.2 : 2.4} aria-hidden />
+                  </div>
+                  <span
+                    className={`mt-2 text-xs sm:text-[13px] text-center leading-tight truncate w-full transition-colors ${
+                      action.isPrimary
+                        ? "font-semibold text-brand-accent"
+                        : "font-medium text-on-surface group-hover:text-brand-accent"
+                    }`}
+                  >
+                    {action.label}
+                  </span>
+                </RippleLink>
+              );
+            }
+            return (
+              <RippleButton
+                key={action.key}
+                type="button"
+                onClick={action.onClick}
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+              >
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-on-surface shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
+                  <Icon size={22} strokeWidth={2.2} aria-hidden />
+                </div>
+                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
+                  {action.label}
+                </span>
+              </RippleButton>
+            );
+          })}
+        </div>
+      )}
 
       {/* Expiring Products Alert */}
       {metrics.expiringCount > 0 && (
@@ -364,71 +437,6 @@ export default function DashboardPage() {
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
           </span>
         </RippleLink>
-      )}
-
-      {/* QUICK ACTIONS HUB: Essential routine actions */}
-      {quickActions.length > 0 && (
-        <section className="mt-5">
-          <h2 className="mb-2.5 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Quick Actions
-          </h2>
-          <div
-            className={`rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
-              quickActions.length === 2
-                ? "grid-cols-2"
-                : quickActions.length === 3
-                ? "grid-cols-3"
-                : "grid-cols-4"
-            }`}
-          >
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              if ("href" in action && action.href) {
-                return (
-                  <RippleLink
-                    key={action.key}
-                    href={action.href}
-                    className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-                  >
-                    <div
-                      className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
-                        action.isPrimary
-                          ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
-                          : "bg-surface-container-highest text-on-surface group-hover:bg-brand-container group-hover:text-on-brand-container"
-                      }`}
-                    >
-                      <Icon size={22} strokeWidth={action.isPrimary ? 2.2 : 2.4} aria-hidden />
-                    </div>
-                    <span
-                      className={`mt-2 text-xs sm:text-[13px] text-center leading-tight truncate w-full transition-colors ${
-                        action.isPrimary
-                          ? "font-semibold text-brand-accent"
-                          : "font-medium text-on-surface group-hover:text-brand-accent"
-                      }`}
-                    >
-                      {action.label}
-                    </span>
-                  </RippleLink>
-                );
-              }
-              return (
-                <RippleButton
-                  key={action.key}
-                  type="button"
-                  onClick={action.onClick}
-                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-                >
-                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-on-surface shadow-xs group-hover:bg-brand-container group-hover:text-on-brand-container transition-all">
-                    <Icon size={22} strokeWidth={2.2} aria-hidden />
-                  </div>
-                  <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                    {action.label}
-                  </span>
-                </RippleButton>
-              );
-            })}
-          </div>
-        </section>
       )}
 
       {/* QUICK SELL / TOP SELLERS: Compact product rows with 1-tap + Sell */}
@@ -479,8 +487,8 @@ export default function DashboardPage() {
                 <CalendarCheck size={20} aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-on-surface truncate">Close today&apos;s books</p>
-                <p className="text-xs text-on-surface-muted truncate">End-of-day register settlement & cash tally</p>
+                <p className="text-sm font-semibold text-on-surface truncate">Close Today&apos;s Register</p>
+                <p className="text-xs text-on-surface-muted truncate">End-of-day cash reconciliation</p>
               </div>
             </div>
             <span className="shrink-0 text-xs font-semibold text-brand-accent hover:underline flex items-center gap-1">

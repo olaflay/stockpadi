@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight, ShieldCheck } from "lucide-react";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
@@ -9,7 +10,8 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { useTheme } from "@/features/settings/use-theme";
 import { signOut } from "@/features/auth/logout";
-import { RippleButton } from "@/components/ui/Ripple";
+import { RippleButton, RippleLink } from "@/components/ui/Ripple";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Grouped settings document arranged by hierarchy of need per One UI / M3:
@@ -29,6 +31,7 @@ export default function SettingsPage() {
   const { theme } = useTheme();
   const branding = getBrandingConfig();
   const canManageBusiness = hasAccountType(user, CAN_MANAGE_BUSINESS_SETTINGS);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
   async function handleLogout() {
     await signOut();
@@ -46,10 +49,9 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6 pb-12">
       <ScreenHeader title="Settings" backHref="/more" />
 
-      {/* Account Identity Header — Clean profile surface, not an isolated floating card */}
-      <RippleButton
-        type="button"
-        onClick={() => router.push("/profile")}
+      {/* Account Identity Header — Clean profile surface */}
+      <RippleLink
+        href="/profile"
         className="flex items-center justify-between gap-3.5 rounded-2xl bg-surface-container px-4 py-3.5 text-left hover:bg-surface-container-high transition-colors active:scale-[0.99]"
       >
         <div className="min-w-0 flex-1">
@@ -62,7 +64,7 @@ export default function SettingsPage() {
           <p className="truncate text-xs text-on-surface-muted mt-0.5">Manage profile & account details</p>
         </div>
         <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
-      </RippleButton>
+      </RippleLink>
 
       {/* Appearance Section */}
       <section className="flex flex-col">
@@ -99,14 +101,9 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Contacts & Debtors"
-              description="Manage customers, debtor book and wholesale suppliers"
-              onClick={() => router.push("/contacts")}
-            />
-            <SettingsRow
               label="Staff and access"
               description="Add cashiers, workers and manage permissions"
-              onClick={() => router.push("/staff")}
+              href="/staff"
             />
           </div>
         </section>
@@ -122,12 +119,12 @@ export default function SettingsPage() {
             <SettingsRow
               label="Business details"
               description="Store name, receipt headers and contact info"
-              onClick={() => router.push("/settings/business")}
+              href="/settings/business"
             />
             <SettingsRow
               label="Branches and outlets"
               description="Store locations and staff assignments"
-              onClick={() => router.push("/settings/branches")}
+              href="/settings/branches"
             />
           </div>
         </section>
@@ -143,17 +140,17 @@ export default function SettingsPage() {
             <SettingsRow
               label="Data and backup"
               description="Sync health, outbox queue and local backup"
-              onClick={() => router.push("/settings/data")}
+              href="/settings/data"
             />
             <SettingsRow
               label="Sync and system health"
               description="Cloud connection, pull completeness and pending changes"
-              onClick={() => router.push("/settings/sync-health")}
+              href="/settings/sync-health"
             />
             <SettingsRow
               label="WhatsApp reports"
               description="Automated daily sales and register close summary"
-              onClick={() => router.push("/settings/sharing")}
+              href="/settings/sharing"
             />
           </div>
         </section>
@@ -177,17 +174,17 @@ export default function SettingsPage() {
           <SettingsRow
             label="Help & Support"
             description="User guides, offline FAQs & feedback"
-            onClick={() => router.push("/settings/help")}
+            href="/settings/help"
           />
           <SettingsRow
             label={`About ${branding.businessName}`}
             description="Version 0.1.0 • Offline-first architecture"
-            onClick={() => router.push("/settings/about")}
+            onClick={() => setIsAboutModalOpen(true)}
           />
         </div>
       </section>
 
-      {/* Exit / Logout Action — Clean row at document bottom */}
+      {/* Exit / Logout Action */}
       <section className="pt-2">
         <RippleButton
           type="button"
@@ -203,6 +200,39 @@ export default function SettingsPage() {
           </div>
         </RippleButton>
       </section>
+
+      {/* Instant About Modal */}
+      {isAboutModalOpen && (
+        <Modal
+          title={`About ${branding.businessName}`}
+          isOpen={isAboutModalOpen}
+          onClose={() => setIsAboutModalOpen(false)}
+        >
+          <div className="flex flex-col gap-4 text-left">
+            <div className="rounded-2xl bg-surface-container p-4">
+              <p className="text-[length:var(--font-size-body-lg)] font-bold text-on-surface">{branding.businessName}</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
+                Version 0.1.0 • Offline-first retail inventory and point-of-sale.
+              </p>
+            </div>
+
+            <section className="flex items-start gap-3 rounded-2xl bg-surface-container p-4">
+              <ShieldCheck size={20} className="mt-0.5 shrink-0 text-brand-accent" aria-hidden />
+              <p className="text-[length:var(--font-size-caption)] leading-relaxed text-on-surface-muted">
+                <strong className="text-on-surface font-semibold">NDPR Compliance Statement:</strong> All sales, inventory, and staff data are stored locally in IndexedDB on this device. No information is transmitted to external servers unless synchronizing with your secure business database.
+              </p>
+            </section>
+
+            <RippleButton
+              type="button"
+              onClick={() => setIsAboutModalOpen(false)}
+              className="mt-2 w-full rounded-2xl bg-brand-accent py-3 text-sm font-semibold text-brand-accent-contrast hover:opacity-90 transition-opacity"
+            >
+              Close
+            </RippleButton>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

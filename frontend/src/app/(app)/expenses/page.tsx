@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Wallet, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
@@ -28,7 +27,6 @@ const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week
 
 export default function ExpensesPage() {
   const user = useCurrentUser();
-  const router = useRouter();
   const { showToast } = useToast();
   const [period, setPeriod] = useState<Period>("today");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -68,7 +66,7 @@ export default function ExpensesPage() {
   if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
-        <ScreenHeader title="Expenses" onBack={() => router.back()} />
+        <ScreenHeader title="Expenses" backHref="/more" />
         <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
@@ -77,7 +75,7 @@ export default function ExpensesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Expenses" onBack={() => router.back()} />
+        <ScreenHeader title="Expenses" backHref="/more" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
@@ -92,7 +90,7 @@ export default function ExpensesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Expenses" onBack={() => router.back()} />
+        <ScreenHeader title="Expenses" backHref="/more" />
         <ErrorState message="Couldn't load your expenses." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -101,7 +99,7 @@ export default function ExpensesPage() {
   if (result.expenses.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Expenses" onBack={() => router.back()} />
+        <ScreenHeader title="Expenses" backHref="/more" />
         <EmptyState
           icon={Wallet}
           title="No expenses recorded"
@@ -131,7 +129,7 @@ export default function ExpensesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Expenses" onBack={() => router.back()} />
+      <ScreenHeader title="Expenses" backHref="/more" />
 
       <div
         role="tablist"
