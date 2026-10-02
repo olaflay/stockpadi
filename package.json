@@ -12,10 +12,12 @@
     "backend:start": "npm --prefix backend run start",
     "start": "npm --prefix frontend run start",
     "lint": "npm --prefix frontend run lint",
-    "typecheck": "npm run contracts:build && npm --prefix frontend run typecheck && npm --prefix backend run typecheck",
-    "test": "npm --prefix frontend test && npm --prefix backend test",
+    "typecheck": "npm run contracts:build && npm --prefix frontend run typecheck && npm --prefix backend run typecheck && npm --prefix supabase run typecheck",
+    "test": "npm --prefix frontend test && npm --prefix backend test && npm --prefix supabase test",
     "backend:test": "npm --prefix backend test",
     "backend:typecheck": "npm --prefix backend run typecheck",
+    "supabase:test": "npm --prefix supabase test",
+    "supabase:typecheck": "npm --prefix supabase run typecheck",
     "provision:admin": "npm --prefix backend run provision:admin",
     "contracts:build": "npm --prefix packages/contracts run build"
   }

@@ -4,7 +4,7 @@ import { completeSale, type CartLine } from "@/features/pos/complete-sale";
 import { getCurrentStock } from "@/features/inventory/stock";
 import { getCustomerCreditBalance } from "@/features/customers/credit";
 import type { CurrentUser } from "@/features/auth/use-current-user";
-import type { SalePayment } from "@/types/sale";
+import type { Sale, SalePayment } from "@/types/sale";
 
 /**
  * completeSale is the highest-stakes write path in the app: it's the only
@@ -276,5 +276,87 @@ describe("completeSale", () => {
         actor: CASHIER,
       })
     ).rejects.toThrow('Out of stock: "Cold Water" has 0 in stock.');
+  });
+
+  it("applies an order discount, reducing total and verifying payments match discounted total", async () => {
+    // 2 items @ 500 = 1000 subtotal, 250 discount = 750 total
+    const sale = await completeSale({
+      branchId: BRANCH_ID,
+      customerId: null,
+      discount: 250,
+      payments: [{ method: "cash", amount: 750 }],
+      lines: [line({ quantity: 2, unitPrice: 500 })],
+      createdByUserId: CASHIER.id,
+      actor: CASHIER,
+    });
+
+    expect(sale.subtotal).toBe(1000);
+    expect(sale.discount).toBe(250);
+    expect(sale.total).toBe(750);
+
+    const saved = await db.sales.get(sale.id);
+    expect(saved?.discount).toBe(250);
+    expect(saved?.total).toBe(750);
+
+    const outbox = await db.outbox.where("clientId").equals(sale.id).first();
+    const payload = outbox?.payload as Sale;
+    expect(payload?.discount).toBe(250);
+    expect(payload?.total).toBe(750);
+  });
+
+  it("applies line-level discounts and accurately populates item.discount", async () => {
+    const sale = await completeSale({
+      branchId: BRANCH_ID,
+      customerId: null,
+      payments: [{ method: "cash", amount: 900 }],
+      lines: [line({ quantity: 2, unitPrice: 500, discount: 100 })],
+      createdByUserId: CASHIER.id,
+      actor: CASHIER,
+    });
+
+    expect(sale.subtotal).toBe(1000);
+    expect(sale.discount).toBe(100);
+    expect(sale.total).toBe(900);
+    expect(sale.items[0].discount).toBe(100);
+  });
+
+  it("rejects discounts that are negative or exceed subtotal", async () => {
+    await expect(
+      completeSale({
+        branchId: BRANCH_ID,
+        customerId: null,
+        discount: -50,
+        payments: [{ method: "cash", amount: 1000 }],
+        lines: [line()],
+        createdByUserId: CASHIER.id,
+        actor: CASHIER,
+      })
+    ).rejects.toThrow("Sale discount cannot be negative.");
+
+    await expect(
+      completeSale({
+        branchId: BRANCH_ID,
+        customerId: null,
+        discount: 1500, // exceeds 1000 subtotal
+        payments: [{ method: "cash", amount: 100 }],
+        lines: [line()],
+        createdByUserId: CASHIER.id,
+        actor: CASHIER,
+      })
+    ).rejects.toThrow("Discount cannot exceed the sale subtotal.");
+  });
+
+  it("rejects payments that do not add up to the discounted total", async () => {
+    await expect(
+      completeSale({
+        branchId: BRANCH_ID,
+        customerId: null,
+        discount: 200, // total should be 800
+        payments: [{ method: "cash", amount: 1000 }], // paying undiscounted 1000
+        lines: [line()],
+        createdByUserId: CASHIER.id,
+        actor: CASHIER,
+      })
+    ).rejects.toThrow("Payments don't add up to the total yet.");
   });
 });

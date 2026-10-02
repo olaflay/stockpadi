@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { MessageCircle, Printer, Ban } from "lucide-react";
+import { MessageCircle, Printer, Ban, RotateCcw } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import type { LocalCustomer } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -15,6 +15,8 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { voidSale, VoidSaleError } from "@/features/pos/void-sale";
+import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
+import { Modal } from "@/components/ui/Modal";
 import { ReceiptIllustration } from "@/components/illustrations";
 import { WhatsAppReceiptModal } from "@/components/pos/WhatsAppReceiptModal";
 import type { PaymentMethod, Sale } from "@/types/sale";
@@ -46,6 +48,9 @@ export default function SaleDetailPage({ params }: PageProps) {
   const isOnline = useOnlineStatus();
 
   const [voiding, setVoiding] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   const sale = useLiveQuery(async () => (await tenantGet<Sale>(db.sales, id)) ?? null, [id]);
@@ -159,6 +164,39 @@ export default function SaleDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleRefund() {
+    if (!sale || sale.voidedAt) return;
+    if (!refundReason.trim()) {
+      showToast("Please enter a reason for the refund.", "danger");
+      return;
+    }
+
+    setRefunding(true);
+    try {
+      await refundSale({
+        saleId: sale.id,
+        branchId: sale.branchId,
+        reason: refundReason.trim(),
+        items: sale.items.map((it) => ({
+          productId: it.productId,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+        })),
+        payments: sale.payments.map((p) => ({
+          method: p.method,
+          amount: p.amount,
+        })),
+      });
+      setShowRefundModal(false);
+      setRefundReason("");
+      showToast("Refund processed. Stock restored.", "success");
+    } catch (err) {
+      showToast(err instanceof RefundSaleError ? err.message : "Couldn't process refund.", "danger");
+    } finally {
+      setRefunding(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-6">
       <ScreenHeader title="Sale receipt" backHref="/sales" />
@@ -256,7 +294,7 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4 print:hidden">
+      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] print:hidden">
         <RippleButton
           type="button"
           onClick={shareReceipt}
@@ -274,18 +312,80 @@ export default function SaleDetailPage({ params }: PageProps) {
           Print receipt
         </RippleButton>
         {!sale.voidedAt && hasAccountType(user, CAN_VOID_SALE) && (
-          <RippleButton
-            type="button"
-            onClick={handleVoid}
-            disabled={voiding || !isOnline}
-            title={!isOnline ? "Voiding a sale requires an internet connection" : undefined}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-danger/30 bg-surface px-5 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 disabled:opacity-50 transition-colors"
-          >
-            <Ban size={18} aria-hidden />
-            {voiding ? "Voiding…" : isOnline ? "Void sale" : "Void sale (needs internet)"}
-          </RippleButton>
+          <div className="flex gap-2 w-full">
+            <RippleButton
+              type="button"
+              onClick={() => setShowRefundModal(true)}
+              disabled={refunding || voiding || !isOnline}
+              title={!isOnline ? "Refunding a sale requires an internet connection" : undefined}
+              className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-warning/30 bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-warning hover:bg-warning/5 disabled:opacity-50 transition-colors"
+            >
+              <RotateCcw size={18} aria-hidden />
+              {isOnline ? "Refund sale" : "Refund (needs internet)"}
+            </RippleButton>
+            <RippleButton
+              type="button"
+              onClick={handleVoid}
+              disabled={voiding || refunding || !isOnline}
+              title={!isOnline ? "Voiding a sale requires an internet connection" : undefined}
+              className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-danger/30 bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 disabled:opacity-50 transition-colors"
+            >
+              <Ban size={18} aria-hidden />
+              {voiding ? "Voiding…" : isOnline ? "Void sale" : "Void (needs internet)"}
+            </RippleButton>
+          </div>
         )}
       </div>
+
+      {showRefundModal && (
+        <Modal
+          isOpen={showRefundModal}
+          onClose={() => setShowRefundModal(false)}
+          title="Refund Sale"
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
+              Processing a refund will return all items to inventory stock and reverse payments of{" "}
+              <strong className="text-on-surface">{formatCurrency(sale.total)}</strong>.
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="refund-reason"
+                className="text-[length:var(--font-size-caption)] font-medium text-on-surface"
+              >
+                Reason for refund <span className="text-danger">*</span>
+              </label>
+              <input
+                id="refund-reason"
+                type="text"
+                placeholder="e.g. Defective item, customer return"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                className="min-h-[44px] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <RippleButton
+                type="button"
+                onClick={() => setShowRefundModal(false)}
+                className="min-h-[44px] flex-1 rounded-[var(--radius-control)] border border-border bg-surface text-on-surface font-medium hover:bg-surface-container"
+              >
+                Cancel
+              </RippleButton>
+              <RippleButton
+                type="button"
+                onClick={handleRefund}
+                disabled={refunding || !refundReason.trim() || !isOnline}
+                className="min-h-[44px] flex-1 rounded-[var(--radius-control)] bg-brand-accent text-brand-accent-contrast font-medium hover:opacity-95 disabled:opacity-50"
+              >
+                {refunding ? "Processing…" : "Confirm Refund"}
+              </RippleButton>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {showWhatsAppModal && (
         <WhatsAppReceiptModal

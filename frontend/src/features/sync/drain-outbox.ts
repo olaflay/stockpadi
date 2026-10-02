@@ -32,13 +32,27 @@ interface SyncPushItemResult {
   error?: { code: string; message: string };
 }
 
-// Keep a single sync-push call under the server's MAX_BATCH_SIZE
-// (sync-push/index.ts). A device that goes offline for a long stretch can
-// queue far more than one drain's worth; sending it all in one call would
-// 413. The last slice is always a partial, so a drain that is already under
-// the cap stays a single call.
-const DRAIN_BATCH_SIZE = 500;
-const STOCK_AFFECTING_TYPES = new Set(["sale", "stock_adjustment", "stock_count_submission", "purchase_receipt"]);
+// Keep a single sync-push call under the server's MAX_BATCH_SIZE (100).
+// Sized so even slow 3G network conditions complete well inside PUSH_TIMEOUT_MS.
+const DRAIN_BATCH_SIZE = 100;
+const PUSH_TIMEOUT_MS = 60_000;
+
+// Types whose acknowledgement is NOT sufficient to retire the row, because the
+// server mutates a stock projection this device must still download before its
+// local copy of that projection is authoritative.
+//
+// stock_count_submission is deliberately absent. sync_apply_stock_count is a
+// review workflow: it records counted-vs-expected with review='pending' and
+// writes no stock_movements, so it cannot move inventory_stock_rollup (whose
+// only writer is the stock_movements_bump_rollup trigger). A stock count also
+// writes no local ledger row and returns quantityDelta 0, so there is no local
+// delta to protect. Parking it here made the row wait on an inventory pull that
+// would never return the key; both crash sweepers skip awaitingConfirmation
+// rows, so every count leaked permanently and 100 leaks bricked all high-risk
+// writes. A push ack is therefore terminal for it, exactly like expense and
+// credit_payment. It stays in HIGH_RISK_SYNC_ENTITY_TYPES, which is backpressure
+// on queue depth - a separate concern from projection confirmation.
+const STOCK_AFFECTING_TYPES = new Set(["sale", "stock_adjustment", "purchase_receipt"]);
 
 let isDraining = false;
 
@@ -303,7 +317,9 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
 
   let results: SyncPushItemResult[];
   try {
-    const response = await serverPost<{ results: SyncPushItemResult[] }>("/api/sync/push", {
+    const response = await serverPost<{ results: SyncPushItemResult[] }>(
+      "/api/sync/push",
+      {
         device_id: null,
         batch: slice.map((item) => ({
           client_id: item.mutationId ?? item.clientId,
@@ -316,7 +332,9 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
           payload: item.payload,
           created_at_local: item.createdAtLocal,
         })),
-    });
+      },
+      { timeoutMs: PUSH_TIMEOUT_MS }
+    );
     ({ results } = response);
   } catch (err) {
     // Network failure (including the case Background Sync will retry the
@@ -577,6 +595,50 @@ export async function recoverStaleSyncingItems(maxAgeMs = 30000): Promise<void> 
   await db.outbox.bulkUpdate(
     stale.map((item) => ({ key: item.clientId, changes: { status: "pending" as const } }))
   );
+}
+
+/**
+ * Repairs rows stranded by the previously shipped build, which parked an
+ * acknowledged stock count at awaitingConfirmation even though no inventory
+ * projection change would ever confirm it. Without this, a shop that already
+ * accumulated 100+ such rows stays permanently unable to record a sale, stock
+ * adjustment, purchase receipt, credit payment or expense, and no amount of
+ * retrying clears them because the confirming pull never returns the key.
+ *
+ * Returned to "pending" rather than deleted, so the normal drain re-pushes them.
+ * That is safe and lossless: sync_apply_stock_count dedupes on client_id and
+ * replies "skipped", which is now terminal, so the row retires without
+ * re-recording the submission. Only rows that are genuinely stuck
+ * (awaitingConfirmation, older than maxAgeMs) are touched, so a count that is
+ * legitimately in flight is never disturbed.
+ *
+ * Returns the number of rows repaired, for the sync-health screen to report.
+ */
+export async function healStrandedStockCountSubmissions(maxAgeMs = 60000): Promise<number> {
+  const threshold = new Date(Date.now() - maxAgeMs).toISOString();
+  const stranded = (await db.outbox.where("status").equals("syncing").toArray()).filter(
+    (item) =>
+      matchesActiveTenant(item) &&
+      item.type === "stock_count_submission" &&
+      item.awaitingConfirmation &&
+      (item.lastAttemptAt ?? item.createdAtLocal) < threshold
+  );
+  if (stranded.length === 0) return 0;
+  await db.outbox.bulkUpdate(
+    stranded.map((item) => ({
+      key: item.clientId,
+      changes: {
+        status: "pending" as const,
+        awaitingConfirmation: false,
+        nextAttemptAt: null,
+        errorCode: null,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        lastError: null,
+      },
+    }))
+  );
+  return stranded.length;
 }
 
 async function revertToPending(items: SyncQueueItem[], message: string): Promise<void> {

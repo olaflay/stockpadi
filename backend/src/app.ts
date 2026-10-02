@@ -1,6 +1,6 @@
 import { handleAccountContext } from "./modules/accounts/account.controller.js";
 import { handleAdminRequest } from "./modules/admin/admin.controller.js";
-import { handleSalesList, handleVoidSale } from "./modules/sales/sales.controller.js";
+import { handleSalesList, handleVoidSale, handleRefundSale } from "./modules/sales/sales.controller.js";
 import { handleWorkerAudit, handleWorkerList, handleWorkerMember, handleWorkerRequest } from "./modules/workers/worker.controller.js";
 import { handleBusinessRegistration } from "./modules/businesses/business.controller.js";
 import { handleBranchCreate, handleBranchList, handleBranchMutation } from "./modules/businesses/branch.controller.js";
@@ -34,6 +34,10 @@ import { handleSyncPush } from "./modules/sync/sync.controller.js";
 import { handleSyncPull } from "./modules/sync/sync-pull.controller.js";
 import { handleSyncHealth } from "./modules/sync/sync-health.controller.js";
 import { syncRoutes } from "./modules/sync/sync.routes.js";
+
+// Resolved from the environment rather than written into the source, so a
+// forked deployment reports its own service name on the health route.
+const serviceName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
 
 // Cap request bodies to bound memory use on a raw http server with no
 // framework-level body size guard. 1 MiB is ample for every endpoint here
@@ -84,7 +88,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
 
   try {
     if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
-    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: "ojapadi-backend" }, requestOrigin);
+    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: `${serviceName}-backend` }, requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.categories) return jsonResponse(200, await handleCategoryList(request), requestOrigin);
@@ -119,6 +123,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (pathname === workerRoutes.create.path) return jsonResponse(200, await handleWorkerRequest(request, body), requestOrigin);
     if (pathname === adminRoutes.path) return jsonResponse(200, await handleAdminRequest(request, body), requestOrigin);
     if (pathname === salesRoutes.path) return jsonResponse(200, await handleVoidSale(request, body), requestOrigin);
+    if (pathname === salesRoutes.refund) return jsonResponse(200, await handleRefundSale(request, body), requestOrigin);
     if (pathname === accountRoutes.path) return jsonResponse(200, await handleAccountContext(request), requestOrigin);
     if (pathname === businessRoutes.path) return jsonResponse(200, await handleBusinessRegistration(request, body), requestOrigin);
     if (pathname === profileRoutes.path && request.method === "PATCH") return jsonResponse(200, await handleBusinessProfileUpdate(request, body), requestOrigin);

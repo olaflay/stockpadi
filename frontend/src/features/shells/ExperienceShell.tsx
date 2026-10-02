@@ -67,13 +67,32 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
           {children}
         </main>
-        <nav
-          aria-label={`${shell} navigation`}
-          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
+        {/* Global safe-area bottom blanket: guarantees every subpage, form, and detail screen blankets the curved chin */}
+        <div
+          aria-hidden
+          className="fixed bottom-0 inset-x-0 pointer-events-none z-30 bg-surface"
           style={{
-            paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
+            height: "max(16px, env(safe-area-inset-bottom, 16px))",
+          }}
+        />
+        {/* Deep overscroll blanket: guards against bounce/pull down to ensure zero black void */}
+        <div
+          aria-hidden
+          className="fixed -bottom-32 inset-x-0 h-40 pointer-events-none z-20 bg-surface"
+        />
+        <nav
+          data-bottom-nav
+          aria-label={`${shell} navigation`}
+          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-transform duration-200"
+          style={{
+            paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
           }}
         >
+          {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
+          <div
+            aria-hidden
+            className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
+          />
           {navItems.map((item) => {
             const Icon = item.icon;
             const active =

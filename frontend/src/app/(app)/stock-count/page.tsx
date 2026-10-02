@@ -18,6 +18,7 @@ import { SelectInput } from "@/components/ui/SelectInput";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
+import { useNavigation } from "@/components/ui/NavigationContext";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { Product } from "@/types/product";
@@ -28,7 +29,14 @@ import type { LocalBranch } from "@/lib/db";
 export default function StockCountPage() {
   const user = useCurrentUser();
   const { showToast } = useToast();
+  const { setSearchActive } = useNavigation();
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (query.trim().length > 0) {
+      setSearchActive(true);
+    }
+  }, [query, setSearchActive]);
   const [branchId, setBranchId] = useDraft<string | null>("stockpadi-draft-stockcount-branch", null);
   const [activeProduct, setActiveProduct] = useDraft<Product | null>("stockpadi-draft-stockcount-product", null);
   const [countedQuantity, setCountedQuantity, clearCountedQuantity] = useDraft("stockpadi-draft-stockcount-qty", "");
@@ -230,6 +238,11 @@ export default function StockCountPage() {
           onChange={(e) => {
             setQuery(e.target.value);
             setVisibleLimit(50);
+            setSearchActive(Boolean(e.target.value.trim()));
+          }}
+          onFocus={() => setSearchActive(true)}
+          onBlur={() => {
+            if (!query.trim()) setSearchActive(false);
           }}
           placeholder="Search by name, SKU, or barcode"
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"

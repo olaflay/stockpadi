@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const recoverStaleSyncingItems = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const recoverStuckSyncingItems = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const healStrandedStockCountSubmissions = vi.hoisted(() => vi.fn().mockResolvedValue(0));
 const refreshActiveAccountContext = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const drainOutbox = vi.hoisted(() => vi.fn());
 const preloadSessionData = vi.hoisted(() => vi.fn().mockResolvedValue({ fullySynced: true }));
 
 vi.mock("@/features/sync/drain-outbox", () => ({
   drainOutbox,
+  healStrandedStockCountSubmissions,
   recoverStaleSyncingItems,
   recoverStuckSyncingItems,
   refreshActiveAccountContext,
@@ -30,6 +32,9 @@ describe("runSyncCycle", () => {
     await runSyncCycle("poll");
 
     expect(recoverStaleSyncingItems).toHaveBeenCalledBefore(recoverStuckSyncingItems);
+    // Stranded stock counts must be made retryable before the push, otherwise
+    // the drain cannot retire them until the following cycle.
+    expect(healStrandedStockCountSubmissions).toHaveBeenCalledBefore(drainOutbox);
     expect(refreshActiveAccountContext).toHaveBeenCalledOnce();
     expect(drainOutbox).toHaveBeenCalledOnce();
     expect(preloadSessionData).toHaveBeenCalledWith(true, "push-success");

@@ -1,4 +1,4 @@
-# StockPadi — Simple Business Model & Feature Roadmap
+# OjàPadi — Simple Business Model & Feature Roadmap
 
 > **In Plain English:** A clear guide to what features exist now, what Pro users get, what is coming in Phase 2 & 3, and how this business makes money.
 

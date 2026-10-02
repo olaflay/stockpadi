@@ -49,10 +49,17 @@ async function currentAccessToken(allowRefresh: boolean, allowUnauthenticated = 
   throw new BackendConfigurationError("Your session has expired. Sign in again.");
 }
 
-async function request<T>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown, retried = false, allowUnauthenticated = false): Promise<T> {
+async function request<T>(
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  body?: unknown,
+  retried = false,
+  allowUnauthenticated = false,
+  timeoutMs = REQUEST_TIMEOUT_MS
+): Promise<T> {
   const token = await currentAccessToken(true, allowUnauthenticated);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(requestUrl(path), {
       method,
@@ -66,7 +73,7 @@ async function request<T>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", p
       const supabase = getSupabase();
       if (supabase && typeof supabase.auth.refreshSession === "function") {
         const refreshed = await supabase.auth.refreshSession();
-        if (refreshed.data.session) return request<T>(method, path, body, true);
+        if (refreshed.data.session) return request<T>(method, path, body, true, allowUnauthenticated, timeoutMs);
       }
     }
     if (!response.ok) {
@@ -89,7 +96,15 @@ async function request<T>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", p
 }
 
 export function serverGet<T>(path: string): Promise<T> { return request<T>("GET", path); }
-export function serverPost<T>(path: string, body: unknown): Promise<T> { return request<T>("POST", path, body); }
-export function serverPostPublic<T>(path: string, body: unknown): Promise<T> { return request<T>("POST", path, body, false, true); }
-export function serverPut<T>(path: string, body: unknown): Promise<T> { return request<T>("PUT", path, body); }
-export function serverPatch<T>(path: string, body: unknown): Promise<T> { return request<T>("PATCH", path, body); }
+export function serverPost<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
+  return request<T>("POST", path, body, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}
+export function serverPostPublic<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
+  return request<T>("POST", path, body, false, true, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}
+export function serverPut<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
+  return request<T>("PUT", path, body, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}
+export function serverPatch<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
+  return request<T>("PATCH", path, body, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}

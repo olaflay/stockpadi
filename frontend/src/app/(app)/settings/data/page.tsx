@@ -13,6 +13,11 @@ import { usePendingSyncCount, useFailedSyncCount } from "@/lib/use-pending-sync-
 import { useLiveQuery } from "dexie-react-hooks";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { retryFailedOutboxItems } from "@/features/sync/drain-outbox";
+import {
+  UnsyncedBackupRestoreBlocked,
+  countUnsyncedOutbox,
+  restoreBackup,
+} from "@/features/data/restore-backup";
 import { buildProductsCsv, buildSalesCsv } from "@/features/reports/csv-export";
 import { getBrandingConfig } from "@/config/branding";
 
@@ -98,8 +103,8 @@ export default function DataSettingsPage() {
         return;
       }
 
-      const { profile, branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases } = backup.data;
-      const activeBusinessId = getLocalBusinessId();
+      const { branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases } = backup.data;
+      const activeBusinessId = await getLocalBusinessId();
       const importedRows = [branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases]
         .flatMap((rows) => Array.isArray(rows) ? rows : []);
       if (!activeBusinessId || importedRows.some((row) => row.businessId && row.businessId !== activeBusinessId)) {
@@ -108,61 +113,45 @@ export default function DataSettingsPage() {
         return;
       }
 
-      await db.transaction(
-        "rw",
-        [db.businessProfile, db.branches, db.products, db.categories, db.customers, db.customerCreditMovements, db.stockMovements, db.sales, db.expenses, db.suppliers, db.purchases],
-        async () => {
-          if (profile) {
-            await db.businessProfile.clear();
-            await db.businessProfile.bulkPut(profile);
-          }
-          if (branches) {
-            await db.branches.clear();
-            await db.branches.bulkPut(branches);
-          }
-          if (products) {
-            await db.products.clear();
-            await db.products.bulkPut(products);
-          }
-          if (categories) {
-            await db.categories.clear();
-            await db.categories.bulkPut(categories);
-          }
-          if (customers) {
-            await db.customers.clear();
-            await db.customers.bulkPut(customers);
-          }
-          if (creditMovements) {
-            await db.customerCreditMovements.clear();
-            await db.customerCreditMovements.bulkPut(creditMovements);
-          }
-          if (stockMovements) {
-            await db.stockMovements.clear();
-            await db.stockMovements.bulkPut(stockMovements);
-          }
-          if (sales) {
-            await db.sales.clear();
-            await db.sales.bulkPut(sales);
-          }
-          if (expenses) {
-            await db.expenses.clear();
-            await db.expenses.bulkPut(expenses);
-          }
-          if (suppliers) {
-            await db.suppliers.clear();
-            await db.suppliers.bulkPut(suppliers);
-          }
-          if (purchases) {
-            await db.purchases.clear();
-            await db.purchases.bulkPut(purchases);
-          }
+      // The outbox is not part of a backup file. Restoring while this device
+      // still holds unsynced changes would revert the ledger to the backup's
+      // point in time while those newer changes stay queued, so the operator is
+      // asked to resolve the queue first rather than losing it silently.
+      const unsyncedCount = await countUnsyncedOutbox(activeBusinessId);
+      let discardOutbox = false;
+      if (unsyncedCount > 0) {
+        discardOutbox = confirm(
+          `${unsyncedCount} change${unsyncedCount === 1 ? "" : "s"} on this device ${unsyncedCount === 1 ? "has" : "have"} not synced yet.\n\n` +
+            `Restoring now rolls this device back to the backup, but it cannot keep those changes. ` +
+            `If you haven't synced yet, cancel and sync first. If these changes are already gone or you no longer need them, continue and discard them.`
+        );
+        if (!discardOutbox) {
+          showToast("Restore cancelled. Your unsynced changes are untouched.", "danger");
+          event.target.value = "";
+          return;
         }
-      );
+      }
 
-      showToast("Backup restored.", "success");
+      const result = await restoreBackup(backup.data, {
+        businessId: activeBusinessId,
+        discardOutbox,
+      });
+
+      if (result.discardedOutboxCount > 0) {
+        showToast(
+          `Backup restored. ${result.discardedOutboxCount} unsynced change${result.discardedOutboxCount === 1 ? "" : "s"} discarded.`,
+          "danger"
+        );
+      } else {
+        showToast("Backup restored.", "success");
+      }
       window.location.reload();
-    } catch {
-      showToast("Couldn't restore the backup. Try a different file.", "danger");
+    } catch (error) {
+      if (error instanceof UnsyncedBackupRestoreBlocked) {
+        showToast(error.message, "danger");
+      } else {
+        showToast("Couldn't restore the backup. Try a different file.", "danger");
+      }
       event.target.value = "";
     }
   }

@@ -27,6 +27,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
 import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
+import { useNavigation } from "@/components/ui/NavigationContext";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -48,6 +49,14 @@ const FILTER_LABELS: Record<ProductFilter, string> = {
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
+  const { setSearchActive } = useNavigation();
+
+  useEffect(() => {
+    if (query.trim().length > 0) {
+      setSearchActive(true);
+    }
+  }, [query, setSearchActive]);
+
   const filterParam = searchParams.get("filter");
   const [filter, setFilter] = useState<ProductFilter>(
     filterParam !== null && filterParam in FILTER_LABELS ? (filterParam as ProductFilter) : "all"
@@ -350,7 +359,14 @@ export default function ProductsPage() {
               type="search"
               aria-label="Search by name, SKU, or barcode"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSearchActive(Boolean(event.target.value.trim()));
+              }}
+              onFocus={() => setSearchActive(true)}
+              onBlur={() => {
+                if (!query.trim()) setSearchActive(false);
+              }}
               placeholder="Search by name, SKU, or barcode"
               className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
             />

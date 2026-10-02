@@ -22,6 +22,8 @@ const TRANSFER_PROVIDERS = ["OPay", "Moniepoint", "PalmPay", "Kuda", "Commercial
 
 export function PaymentStep(props: {
   itemCount: number;
+  subtotal?: number;
+  discount?: number;
   total: number;
   effectivePayments: SalePayment[];
   remaining: number;
@@ -43,6 +45,8 @@ export function PaymentStep(props: {
 }) {
   const {
     itemCount,
+    subtotal,
+    discount,
     total,
     effectivePayments,
     remaining,
@@ -150,13 +154,21 @@ export function PaymentStep(props: {
       <ScreenHeader title="Payment" onBack={onBack} />
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
-          <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
-            {itemCount} item{itemCount === 1 ? "" : "s"}
-          </span>
-          <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
-            {formatCurrency(total)}
-          </span>
+        <div className="flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
+              {itemCount} item{itemCount === 1 ? "" : "s"}
+            </span>
+            <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
+              {formatCurrency(total)}
+            </span>
+          </div>
+          {discount !== undefined && discount > 0 && (
+            <div className="flex items-center justify-between text-xs border-t border-border/40 pt-1.5 text-on-surface-muted">
+              <span>Subtotal {formatCurrency(subtotal ?? total)}</span>
+              <span className="text-brand-accent font-medium">−{formatCurrency(discount)} discount</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -429,7 +441,7 @@ export function PaymentStep(props: {
         )}
       </div>
 
-      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 border-t border-border/60 bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
+      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <RippleButton
           id="tour-pos-checkout"
           type="button"

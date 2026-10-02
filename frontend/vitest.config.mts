@@ -19,5 +19,9 @@ export default defineConfig({
     // boot a real WASM Postgres in beforeAll, which reliably exceeds vitest's
     // default 10s hook timeout on CI-grade hardware.
     hookTimeout: 30000,
+    // Suites that exercise a full 500-item outbox against fake-indexeddb write
+    // several thousand records per case, which overruns the 5s default on
+    // slower machines.
+    testTimeout: 60000,
   },
 });

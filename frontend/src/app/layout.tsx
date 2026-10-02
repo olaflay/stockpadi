@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: branding.businessName,
   },
   openGraph: {
@@ -101,14 +101,17 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: branding.accentColor,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#121516" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  // Let mobile browsers resize the app viewport for the on-screen keyboard
-  // so account inputs remain reachable instead of being covered by it.
-  interactiveWidget: "resizes-content",
+  // Virtual keyboard overlays content (matching native iOS & Android),
+  // preventing fixed bottom navigation from jumping into the middle of the screen.
+  interactiveWidget: "overlays-content",
 };
 
 const JSON_LD_SCHEMA = {
@@ -152,7 +155,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD_SCHEMA) }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-surface text-on-surface">
         <ThemeProvider>
           <ServiceWorkerRegister />
           <PwaReadiness />

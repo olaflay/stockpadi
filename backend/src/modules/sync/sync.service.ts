@@ -5,7 +5,7 @@ import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireCapability, requireAssignedBranch, type Capability } from "../authorization/capabilities.js";
 import { isSyncEntityType, type SyncEntityType } from "../../shared/contracts.generated.js";
 
-const MAX_BATCH_SIZE = 500;
+const MAX_BATCH_SIZE = 100;
 
 const RPC_BY_ENTITY: Record<SyncEntityType, string> = {
   sale: "sync_apply_sale",
@@ -202,50 +202,91 @@ export async function pushSyncBatch(db: SupabaseClient, actor: User, input: unkn
   }
 
   const results: SyncResult[] = [];
+  const authorizedItems: SyncBatchItem[] = [];
+
   for (const item of request.batch) {
-    const startedAt = Date.now();
     const id = item.entity_id ?? entityId(item.payload, item.client_id);
     try {
       authorizeMutation(context, item);
-      const { data, error } = await db.rpc(RPC_BY_ENTITY[item.type], { payload: item.payload, actor_id: actor.id });
-      if (error) {
-        const classified = classifyRpcError(error);
-        results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: isRetryableCode(classified.code) ? "retryable_error" : "permanent_failure", error: classified });
-        logger.warn("sync mutation rejected", {
-          userId: actor.id,
-          businessId: context.businessId,
-          entityType: item.type,
-          mutationId: item.client_id,
-          resultCode: classified.code,
-          rpcCode: error.code ?? null,
-          rpcMessage: typeof error.message === "string" ? error.message.slice(0, 200) : null,
-          durationMs: Date.now() - startedAt,
-        });
-        continue;
-      }
-      const rpcResult = isRecord(data) ? data : {};
-      const status = rpcResult.status === "conflict" || rpcResult.conflict === true ? "conflict" : rpcResult.status === "skipped" ? "skipped" : "applied";
-      const authoritativeEntityId = typeof rpcResult.id === "string" ? rpcResult.id : undefined;
-      results.push({
-        clientId: item.client_id,
-        mutationId: item.mutation_id,
-        entityId: authoritativeEntityId ?? id,
-        submittedEntityId: id,
-        ...(authoritativeEntityId ? { authoritativeEntityId, canonicalized: authoritativeEntityId !== id } : {}),
-        status,
-        ...(typeof rpcResult.version === "number" ? { version: rpcResult.version } : {}),
-        ...(typeof rpcResult.conflict === "boolean" ? { conflict: rpcResult.conflict } : {}),
-        ...(status === "conflict" ? { error: { code: "VERSION_CONFLICT", message: "This record changed on another device." } } : {}),
-      });
-      logger.info("sync mutation applied", { userId: actor.id, businessId: context.businessId, entityType: item.type, mutationId: item.client_id, resultCode: status, durationMs: Date.now() - startedAt });
+      authorizedItems.push(item);
     } catch (error) {
       if (error instanceof HttpError) {
         results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: isRetryableCode(error.code) ? "retryable_error" : "permanent_failure", error: { code: error.code, message: error.message } });
-        continue;
+      } else {
+        results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: "retryable_error", error: { code: "TEMPORARY_UNAVAILABLE", message: "The server could not complete this mutation; it will be retried." } });
       }
-      logger.error("sync mutation failed", { userId: actor.id, businessId: context.businessId, entityType: item.type, mutationId: item.client_id, durationMs: Date.now() - startedAt }, error);
-      results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: "retryable_error", error: { code: "TEMPORARY_UNAVAILABLE", message: "The server could not complete this mutation; it will be retried." } });
     }
   }
+
+  if (authorizedItems.length > 0) {
+    const startedAt = Date.now();
+    try {
+      const { data, error } = await db.rpc("sync_apply_batch", {
+        items: authorizedItems.map((item) => ({
+          type: item.type,
+          client_id: item.client_id,
+          mutation_id: item.mutation_id,
+          entity_id: item.entity_id ?? entityId(item.payload, item.client_id),
+          payload: item.payload,
+        })),
+        actor_id: actor.id,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (Array.isArray(data)) {
+        for (const r of data as SyncResult[]) {
+          results.push(r);
+        }
+        logger.info("sync batch applied via sync_apply_batch", {
+          userId: actor.id,
+          businessId: context.businessId,
+          itemCount: authorizedItems.length,
+          durationMs: Date.now() - startedAt,
+        });
+      } else {
+        throw new Error("sync_apply_batch did not return an array");
+      }
+    } catch (batchError) {
+      logger.warn("sync_apply_batch failed or unavailable, falling back to per-item RPC execution", {
+        error: batchError instanceof Error ? batchError.message : String(batchError),
+      });
+      for (const item of authorizedItems) {
+        const itemStartedAt = Date.now();
+        const id = item.entity_id ?? entityId(item.payload, item.client_id);
+        try {
+          const { data, error } = await db.rpc(RPC_BY_ENTITY[item.type], { payload: item.payload, actor_id: actor.id });
+          if (error) {
+            const classified = classifyRpcError(error);
+            results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: isRetryableCode(classified.code) ? "retryable_error" : "permanent_failure", error: classified });
+            continue;
+          }
+          const rpcResult = isRecord(data) ? data : {};
+          const status = rpcResult.status === "conflict" || rpcResult.conflict === true ? "conflict" : rpcResult.status === "skipped" ? "skipped" : "applied";
+          const authoritativeEntityId = typeof rpcResult.id === "string" ? rpcResult.id : undefined;
+          results.push({
+            clientId: item.client_id,
+            mutationId: item.mutation_id,
+            entityId: authoritativeEntityId ?? id,
+            submittedEntityId: id,
+            ...(authoritativeEntityId ? { authoritativeEntityId, canonicalized: authoritativeEntityId !== id } : {}),
+            status,
+            ...(typeof rpcResult.version === "number" ? { version: rpcResult.version } : {}),
+            ...(typeof rpcResult.conflict === "boolean" ? { conflict: rpcResult.conflict } : {}),
+            ...(status === "conflict" ? { error: { code: "VERSION_CONFLICT", message: "This record changed on another device." } } : {}),
+          });
+          logger.info("sync mutation applied", { userId: actor.id, businessId: context.businessId, entityType: item.type, mutationId: item.client_id, resultCode: status, durationMs: Date.now() - itemStartedAt });
+        } catch (itemError) {
+          results.push({ clientId: item.client_id, mutationId: item.mutation_id, entityId: id, status: "retryable_error", error: { code: "TEMPORARY_UNAVAILABLE", message: "The server could not complete this mutation; it will be retried." } });
+        }
+      }
+    }
+  }
+
+  const orderMap = new Map(request.batch.map((item, idx) => [item.client_id, idx]));
+  results.sort((a, b) => (orderMap.get(a.clientId) ?? 0) - (orderMap.get(b.clientId) ?? 0));
+
   return { ok: true, results };
 }

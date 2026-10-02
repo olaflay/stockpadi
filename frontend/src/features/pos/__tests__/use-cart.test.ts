@@ -139,4 +139,46 @@ describe("useCart", () => {
     expect(result.current.total).toBe(500 * 2 + 1200);
     expect(result.current.itemCount).toBe(3);
   });
+
+  it("applies a discount, updating total while preserving subtotal", () => {
+    const { result } = renderHook(() => useCart());
+    act(() => {
+      result.current.addToCart("product-1", 1000, "piece", 1, 2); // subtotal 2000
+    });
+    expect(result.current.subtotal).toBe(2000);
+    expect(result.current.total).toBe(2000);
+    expect(result.current.discount).toBe(0);
+
+    act(() => {
+      result.current.setDiscount(300);
+    });
+    expect(result.current.subtotal).toBe(2000);
+    expect(result.current.discount).toBe(300);
+    expect(result.current.total).toBe(1700);
+
+    // clearCart resets discount back to 0
+    act(() => {
+      result.current.clearCart();
+    });
+    expect(result.current.discount).toBe(0);
+    expect(result.current.total).toBe(0);
+  });
+
+  it("loads a parked cart and discount with loadCart", () => {
+    const { result } = renderHook(() => useCart());
+    const savedLines = [
+      { productId: "p1", quantity: 3, unitPrice: 400, unitLabel: "piece", conversionFactor: 1 },
+      { productId: "p2", quantity: 1, unitPrice: 800, unitLabel: "piece", conversionFactor: 1 },
+    ];
+
+    act(() => {
+      result.current.loadCart(savedLines, 200);
+    });
+
+    expect(result.current.cartLines).toHaveLength(2);
+    expect(result.current.subtotal).toBe(2000); // 3*400 + 800 = 2000
+    expect(result.current.discount).toBe(200);
+    expect(result.current.total).toBe(1800);
+    expect(result.current.itemCount).toBe(4);
+  });
 });

@@ -15,8 +15,12 @@ export async function GET() {
 - Multi-Unit Support: Sell products by base unit or alt unit with automatic stock conversions.
 - Customer Credit & Debt Ledger: Keep track of customer debt balances, partial repayments, and credit limits.
 - Instant WhatsApp Receipts: Generate and share digital receipts with customers over WhatsApp with 1 tap.
-- Wireless Bluetooth Printing: Direct ESC/POS printing for 58mm and 80mm thermal receipt printers.
 - Multi-Tenant & Branch Support: Multi-tenant shared database architecture supporting 1 to 6 branches per business profile.
+
+## Not Yet Available
+Stated plainly so nothing here overstates the product: discounts at checkout, refunds, held/parked
+sales, and hardware receipt printing. A void cancels a sale; it does not yet reverse the payment
+leg. Current verified status: docs/LAUNCH_SCOPE.md
 
 ## Technology Stack
 - Next.js (App Router PWA) + TypeScript + React

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { drainOutbox, recoverStuckSyncingItems, recoverStaleSyncingItems, refreshActiveAccountContext } from "@/features/sync/drain-outbox";
+import { drainOutbox, healStrandedStockCountSubmissions, recoverStuckSyncingItems, recoverStaleSyncingItems, refreshActiveAccountContext } from "@/features/sync/drain-outbox";
 import { preloadSessionData, type SyncPullTrigger } from "@/features/sync/preload-session-data";
 import { getSupabase } from "@/lib/supabase";
 import { setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
@@ -59,6 +59,10 @@ async function executeSyncCycle(trigger: SyncPullTrigger): Promise<SyncCycleResu
   try {
     await recoverStaleSyncingItems();
     await recoverStuckSyncingItems();
+    // Runs before the push so rows stranded by the previously shipped build are
+    // retryable again in this same cycle, instead of permanently blocking every
+    // high-risk write behind an unsatisfiable "sync first" instruction.
+    await healStrandedStockCountSubmissions();
     await refreshActiveAccountContext();
     setSyncRuntimePhase("uploading");
     const pushResult = await drainOutbox();

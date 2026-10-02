@@ -14,6 +14,8 @@ export interface CartLine {
   /** Quantity in unitLabel terms (e.g. 2 cartons), not necessarily the product's base unit. */
   quantity: number;
   unitPrice: number;
+  /** Optional discount applied directly to this line item. */
+  discount?: number;
   /** The unit this line is sold by — product.unitLabel or product.altUnitLabel. */
   unitLabel: string;
   /** How many of the product's base unit one unitLabel unit represents; 1 for the base unit. */
@@ -33,6 +35,7 @@ export async function completeSale(params: {
   customerId: string | null;
   payments: SalePayment[];
   lines: CartLine[];
+  discount?: number;
   createdByUserId: string;
   actor: CurrentUser;
 }): Promise<Sale> {
@@ -55,16 +58,42 @@ export async function completeSale(params: {
   if (params.lines.some((l) => l.unitPrice < 0 || !Number.isFinite(l.unitPrice))) {
     throw new Error("A line cannot have a negative price.");
   }
+  if (params.lines.some((l) => l.discount !== undefined && (!Number.isFinite(l.discount) || l.discount < 0))) {
+    throw new Error("A line discount cannot be negative.");
+  }
 
-  const items: SaleItem[] = params.lines.map((line) => ({
-    productId: line.productId,
-    quantity: line.quantity,
-    unitPrice: line.unitPrice,
-    discount: 0,
-    unitLabel: line.unitLabel,
-    conversionFactor: line.conversionFactor,
-    movementClientId: crypto.randomUUID(),
-  }));
+  const orderDiscount = params.discount ?? 0;
+  if (!Number.isFinite(orderDiscount) || orderDiscount < 0) {
+    throw new Error("Sale discount cannot be negative.");
+  }
+
+  const productIds = Array.from(new Set(params.lines.map((l) => l.productId)));
+  const productRecords = await db.products.bulkGet(productIds);
+  const productMap = new Map<string, Product>();
+  for (const prod of productRecords) {
+    if (prod) productMap.set(prod.id, prod);
+  }
+
+  const items: SaleItem[] = params.lines.map((line) => {
+    const prod = productMap.get(line.productId);
+    const baseCost = prod?.costPrice ?? 0;
+    const factor = line.conversionFactor || 1;
+    const unitCost = baseCost > 0 ? Number((baseCost * factor).toFixed(2)) : null;
+    const itemDiscount = line.discount && line.discount > 0 ? Number(line.discount.toFixed(2)) : 0;
+    return {
+      productId: line.productId,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      discount: itemDiscount,
+      unitLabel: line.unitLabel,
+      conversionFactor: line.conversionFactor,
+      movementClientId: crypto.randomUUID(),
+      unitCost,
+      costBasis: unitCost !== null ? "snapshot" : null,
+      productVersion: prod?.version ?? null,
+      costFlags: [],
+    };
+  });
 
   // Requested base-unit quantity per product — aggregated up front since the
   // same product could appear on more than one cart line. The actual
@@ -78,6 +107,18 @@ export async function completeSale(params: {
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const lineDiscountSum = items.reduce((sum, item) => sum + item.discount, 0);
+  const totalDiscount = Math.max(orderDiscount, lineDiscountSum);
+
+  if (totalDiscount > subtotal) {
+    throw new Error("Discount cannot exceed the sale subtotal.");
+  }
+
+  const total = Number((subtotal - totalDiscount).toFixed(2));
+  const totalPayments = params.payments.reduce((sum, p) => sum + p.amount, 0);
+  if (Math.abs(totalPayments - total) > 0.01) {
+    throw new Error("Payments don't add up to the total yet.");
+  }
 
   const sale: Sale = {
     id: saleId,
@@ -87,8 +128,8 @@ export async function completeSale(params: {
     items,
     payments: params.payments,
     subtotal,
-    discount: 0,
-    total: subtotal,
+    discount: totalDiscount,
+    total,
     createdAtLocal: now,
     createdAt: now,
     createdByUserId: params.createdByUserId,

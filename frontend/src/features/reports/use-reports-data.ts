@@ -17,7 +17,18 @@ export type Period = ReportPeriod;
 export const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
 
 type ReportPayment = { method: "cash" | "transfer" | "pos_terminal" | "credit"; amount: number };
-type ReportItem = { product_id: string; quantity: number; unit_price: number; discount: number; unit_label: string; unit_conversion_factor: number };
+type ReportItem = {
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  unit_label: string;
+  unit_conversion_factor: number;
+  unit_cost?: number | null;
+  cost_basis?: string | null;
+  product_version?: number | null;
+  cost_flags?: string[] | null;
+};
 type ReportSale = { id: string; client_id?: string; branch_id: string; customer_id?: string | null; subtotal: number; discount: number; total: number; created_at: string; created_by_user_id: string; voided_at?: string | null; items?: ReportItem[]; payments?: ReportPayment[] };
 type ReportProduct = { id: string; name: string; sku: string; cost_price: number; sell_price: number; low_stock_threshold: number | null };
 type ReportExpense = { id: string; branch_id: string | null; category: string; amount: number; note: string | null; created_at: string; created_by_user_id: string };
@@ -128,6 +139,10 @@ export function useReportsData() {
             unitLabel: item.unit_label,
             conversionFactor: Number(item.unit_conversion_factor),
             movementClientId: "server",
+            unitCost: item.unit_cost !== null && item.unit_cost !== undefined ? Number(item.unit_cost) : null,
+            costBasis: (item.cost_basis as Sale["items"][0]["costBasis"]) ?? null,
+            productVersion: item.product_version !== null && item.product_version !== undefined ? Number(item.product_version) : null,
+            costFlags: (item.cost_flags as Sale["items"][0]["costFlags"]) ?? null,
           })),
           payments: (sale.payments ?? []).map((payment) => ({
             method: payment.method,

@@ -21,7 +21,40 @@ Why this matters concretely: two cashiers at the same branch can both sell the l
 
 ## What every stock-affecting feature must do
 
-Any code path that changes stock (a sale, a purchase receipt, a manual adjustment, a future stock transfer) must write a row to `stock_movements` with a signed quantity, a source reference (which sale, purchase, or adjustment caused it), a timestamp, and the device ID that generated it. Nothing writes directly to a computed stock total. If `inventory_stock` is implemented as a materialized view or a trigger-maintained aggregate, that implementation detail can change, the rule that nothing bypasses the ledger cannot.
+Any code path that changes stock (a sale, a purchase receipt, a manual adjustment, a future stock transfer) must write a row to `stock_movements` with a signed quantity, a source reference (which sale, purchase, or adjustment caused it), a timestamp, and the device ID that generated it. Nothing writes directly to a computed stock total. If `inventory_stock_rollup` is implemented as a materialized view or a trigger-maintained aggregate, that implementation detail can change, the rule that nothing bypasses the ledger cannot.
+
+## Money is immutable too, and this one is separate
+
+The ledger rule above covers quantity. Cost and profit have their own rule, and it exists because a
+plausible-looking cost change silently corrupts financial history.
+
+`sale_items` carries the **cost the item was sold at** (`unit_cost` plus a `cost_basis` tag),
+snapshotted immutably at the moment of sale. It never carries a live reference to the product's
+current cost.
+
+Why, concretely: if profit is computed as `sale price − today's cost`, then editing a product's cost
+today silently rewrites what yesterday's profit was. Soft-deleting the product makes every historical
+sale containing it report the full sale price as pure profit. Both look like working software. Both
+are a false financial record, and the owner has no way to detect it.
+
+The rules:
+
+- **Moving weighted average cost, snapshotted.** LIFO is prohibited (IAS 2 BC19); weighted average is
+  permitted (IAS 2 paras 25 and 27). Derivation: `docs/COSTING-AND-PRICING.md`.
+- **Never backfill.** Sales that predate the snapshot stay `NULL` and render as "cost unknown".
+  Backfilling would invent a figure the system never recorded, which is fabrication, not repair.
+- **Never store derived totals.** `gross_profit`, `cost_total`, and margin are computed at read time
+  from the snapshot. Storing them creates a second source of truth that can disagree with the first.
+- **The snapshot must survive the offline path.** A sale recorded offline carries the snapshot with
+  it and the sync layer must not recompute or refresh it server-side.
+- **Negative stock still costs something.** Cost the sale at the last known positive cost, and report
+  the stock carrying value as zero with an exception flag, because there is no quantity to value.
+- **When actual purchase cost later differs** from the provisional hand-entered cost, record the
+  difference as a separate append-only `cost_variance` row against the purchase. Do not rewrite the
+  sale.
+
+A change that recomputes historical profit from current costs is a critical violation of this rule,
+even when the new number looks more accurate.
 
 ## Before merging any change that touches this path
 

@@ -180,9 +180,12 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
   await pullEntity(entities, "inventory", async () => {
     if (!hasCapability(context, "VIEW_BRANCH_STOCK")) return skip("inventory");
     allow("inventory");
-    // inventory_stock is a view over a rollup keyed only by product/branch;
-    // this request uses the service-role client, so RLS cannot provide the
-    // tenant filter for us. Resolve the tenant's product IDs first.
+    // Defence in depth, not the control. `db` is the caller's own access-token
+    // client, so RLS does apply on this path and inventory_stock_rollup_select
+    // already restricts rows to the branches this account may read. Both filters
+    // below are kept deliberately: the handler must not depend on a database
+    // policy staying correct, and the product-id filter additionally bounds the
+    // rows the keyset page has to walk.
     const { data: tenantProducts, error: tenantProductsError } = await db
       .from("products")
       .select("id")
@@ -210,7 +213,7 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
     const page = takePage(cursor, "sales", data ?? [], position);
     const ids = page.records.map((row) => (row as { id: string }).id);
     const [{ data: items, error: itemError }, { data: payments, error: paymentError }] = ids.length ? await Promise.all([
-      db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor").in("sale_id", ids),
+      db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids),
       db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids),
     ]) : [{ data: [], error: null }, { data: [], error: null }];
     if (itemError || paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", itemError?.message ?? paymentError?.message ?? "Could not load sale details");

@@ -523,7 +523,9 @@ function stockKeysForMutation(item: SyncQueueItem): string[] {
   if (!isRecord(item.payload)) return [];
   const branchId = item.payload.branchId;
   if (typeof branchId !== "string" || !branchId) return [];
-  if (item.type === "stock_adjustment" || item.type === "stock_count_submission") {
+  // No stock_count_submission branch: a stock count moves no projection, so it
+  // is never parked awaitingConfirmation and has no inventory key to match.
+  if (item.type === "stock_adjustment") {
     const productId = item.payload.productId;
     return typeof productId === "string" && productId ? [`${productId}:${branchId}`] : [];
   }
@@ -627,7 +629,19 @@ async function applySales(records: unknown[], businessId: string): Promise<numbe
   await db.sales.bulkPut(sales.map((sale) => ({
     id: sale.id as string, clientId: (sale.client_id as string) || (sale.id as string), businessId, branchId: (sale.branch_id as string) || "", customerId: (sale.customer_id as string) || null,
     subtotal: Number(sale.subtotal ?? 0), discount: Number(sale.discount ?? 0), total: Number(sale.total ?? 0), payments: (sale.payments as Array<{ method: string; amount: number; tendered_amount?: number; note?: string }> ?? []).map((payment) => ({ method: payment.method as Sale["payments"][0]["method"], amount: Number(payment.amount), ...(payment.tendered_amount !== undefined ? { tenderedAmount: Number(payment.tendered_amount) } : {}), ...(payment.note !== undefined ? { note: payment.note } : {}) })),
-    items: (sale.items as Array<Record<string, unknown>> ?? []).map((item) => ({ productId: (item.product_id as string) || "", quantity: Number(item.quantity ?? 0), unitPrice: Number(item.unit_price ?? 0), discount: Number(item.discount ?? 0), unitLabel: (item.unit_label as string) || "piece", conversionFactor: Number(item.unit_conversion_factor ?? 1), movementClientId: (item.movement_client_id as string) || `sync-mvt-${sale.id}` })),
+    items: (sale.items as Array<Record<string, unknown>> ?? []).map((item) => ({
+      productId: (item.product_id as string) || "",
+      quantity: Number(item.quantity ?? 0),
+      unitPrice: Number(item.unit_price ?? 0),
+      discount: Number(item.discount ?? 0),
+      unitLabel: (item.unit_label as string) || "piece",
+      conversionFactor: Number(item.unit_conversion_factor ?? 1),
+      movementClientId: (item.movement_client_id as string) || `sync-mvt-${sale.id}`,
+      unitCost: item.unit_cost !== null && item.unit_cost !== undefined ? Number(item.unit_cost) : null,
+      costBasis: (item.cost_basis as Sale["items"][0]["costBasis"]) ?? null,
+      productVersion: item.product_version !== null && item.product_version !== undefined ? Number(item.product_version) : null,
+      costFlags: (item.cost_flags as Sale["items"][0]["costFlags"]) ?? null,
+    })),
     createdAtLocal: (sale.created_at_local as string) || (sale.created_at as string) || new Date().toISOString(), createdAt: (sale.created_at as string) || new Date().toISOString(), createdByUserId: (sale.created_by_user_id as string) || "server-sync", voidedAt: (sale.voided_at as string) || null,
   } as Sale)));
   return sales.length;

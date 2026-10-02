@@ -187,10 +187,10 @@ describe("drainOutbox", () => {
     const { drainOutbox } = await import("@/features/sync/drain-outbox");
     await drainOutbox();
 
-    expect(batchSizes).toEqual([500, 100]);
-    for (const size of batchSizes) expect(size).toBeLessThanOrEqual(500);
+    expect(batchSizes).toEqual([100, 100, 100, 100, 100, 100]);
+    for (const size of batchSizes) expect(size).toBeLessThanOrEqual(100);
     expect((await db.outbox.where("status").equals("syncing").toArray()).filter((item) => item.awaitingConfirmation)).toHaveLength(600);
-  }, 20000);
+  }, 60000);
 
   it("keeps an item retryable (pending) when the server response has no per-item result, rather than deleting it as if applied", async () => {
     mockSession = { access_token: "test-token" };

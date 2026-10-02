@@ -11,9 +11,14 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 | File | What it is |
 |---|---|
 | `README.md` | Setup and day-to-day dev commands |
-| `docs/PRD.md` | The product requirements doc: users, journeys, functional/non-functional requirements, architecture, milestones |
+| `docs/PRD.md` | The product requirements doc: users, journeys, functional/non-functional requirements, architecture, milestones. Section 8.1 carries the TRUST standard as a product requirement |
 | `docs/REBRANDING-PLAN.md` | Master rebranding specification, zero-hardcoding rules, visual identity, and touchpoint audit |
 | `docs/SCAFFOLD.md` | Log of the initial scaffold: what was built, why, verification performed, known gaps |
+| `docs/LAUNCH_SCOPE.md` | The frozen Must / V1.1 / Future boundary, with every capability classified against real evidence. Read before starting any feature work |
+| `docs/COSTING-AND-PRICING.md` | The costing decision (how cost is calculated and snapshotted) and the customer pricing decision, with citations |
+| `docs/complete-improvement-audit.md` | Consolidated vetted master plan: what is kept, what gets built, what was rejected and why |
+| `docs/BUSINESS-MODEL-AND-ROADMAP.md` | Plan tiers, phased feature value, and scaling economics |
+| `questions.md` | Open findings and decisions still requiring the owner's answer. Unverified things live here rather than being smoothed over |
 
 ## Stack
 
@@ -32,12 +37,15 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, W
    - In `stockpadi-landing/`: ALWAYS consume `getBusinessName()` from `src/config/env.ts` (e.g. `${brandDisplay}`).
    - In `backend/` & Edge Functions: ALWAYS resolve from environment variables (`process.env.BUSINESS_NAME`, `Deno.env.get("BUSINESS_NAME")`).
    - Any commit or edit that hardcodes a brand string directly in JSX or UI templates is an immediate critical governance violation. Full rule: `.agents/rules/reusability-and-multi-client.md`.
+8. **THE TRUST STANDARD IS A GATE, NOT A VALUES STATEMENT.** This product is optimised for trust, not feature count. Every change must name which of the ten TRUST promises it serves and what executed evidence proves it. When forced to choose between a new feature and making an existing workflow more reliable, **choose reliability** — and a known open reliability defect blocks new feature work outright, so "later" must be a written decision, never a silent gap. Full rule, with the enforcement and evidence bar for each promise: `.agents/rules/trust-standard.md`. It binds every human and every agent, now and any agent added later. Section 8.1 of the PRD carries the same standard as a product requirement.
+9. **HISTORICAL MONEY FIGURES ARE IMMUTABLE.** A financial figure the app showed yesterday must not silently change today. `sale_items` carries the cost it was sold at, never the cost the product happens to have now. The costing method is **moving weighted average cost, snapshotted immutably onto the sale line at the moment of sale and never recomputed** — permitted under IAS 2 paras 25 and 27; LIFO is prohibited under IAS 2 BC19. Existing sales with no snapshot stay NULL and render as "cost unknown"; **never backfill, because that fabricates a financial record**. Derivation and citations: `docs/COSTING-AND-PRICING.md`.
 
 ## Rules index (`.agents/rules/`)
 
 | File | Governs |
 |---|---|
 | `offline-sync-and-ledger.md` | The delta-merge ledger, conflict resolution per entity, what must never become a mutable field |
+| `trust-standard.md` | **The ten TRUST promises, the precedence rule, and the evidence bar. This is the gate that decides whether new work may start** |
 | `database-and-rls.md` | Schema conventions, single-tenant RLS by role, migration discipline |
 | `hosting-and-deployment.md` | Vercel app hosting plus Supabase Cloud, backups, secrets, why this over the previous self-hosted VPS plan |
 | `payment-and-pci-scope.md` | The payment-method-as-tag boundary, what to do if asked to add real payment processing |

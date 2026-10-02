@@ -7,7 +7,19 @@ export async function fetchServerSales(): Promise<Sale[]> {
     id: sale.id, clientId: sale.client_id, branchId: sale.branch_id, customerId: sale.customer_id ?? null,
     subtotal: Number(sale.subtotal), discount: Number(sale.discount), total: Number(sale.total),
     createdAtLocal: sale.created_at_local, createdAt: sale.created_at, createdByUserId: sale.created_by_user_id, voidedAt: sale.voided_at ?? null,
-    items: (sale.items as Record<string, unknown>[] ?? []).map((item) => ({ productId: item.product_id, quantity: Number(item.quantity), unitPrice: Number(item.unit_price), discount: Number(item.discount), unitLabel: item.unit_label, conversionFactor: Number(item.unit_conversion_factor), movementClientId: "server" })),
+    items: (sale.items as Record<string, unknown>[] ?? []).map((item) => ({
+      productId: item.product_id as string,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unit_price),
+      discount: Number(item.discount),
+      unitLabel: item.unit_label as string,
+      conversionFactor: Number(item.unit_conversion_factor),
+      movementClientId: "server",
+      unitCost: item.unit_cost !== null && item.unit_cost !== undefined ? Number(item.unit_cost) : null,
+      costBasis: (item.cost_basis as Sale["items"][0]["costBasis"]) ?? null,
+      productVersion: item.product_version !== null && item.product_version !== undefined ? Number(item.product_version) : null,
+      costFlags: (item.cost_flags as Sale["items"][0]["costFlags"]) ?? null,
+    })),
     payments: (sale.payments as Record<string, unknown>[] ?? []).map((payment) => ({ method: payment.method, amount: Number(payment.amount) })),
   })) as Sale[];
 }

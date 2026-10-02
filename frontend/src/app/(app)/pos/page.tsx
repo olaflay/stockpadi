@@ -14,6 +14,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { useToast } from "@/components/ui/Toast";
+import { useNavigation } from "@/components/ui/NavigationContext";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { completeSale } from "@/features/pos/complete-sale";
@@ -24,6 +25,13 @@ import { useSplitPayment, AMOUNT_EPSILON } from "@/features/pos/use-split-paymen
 import { BrowseStep } from "@/features/pos/components/BrowseStep";
 import { CartStep } from "@/features/pos/components/CartStep";
 import { PaymentStep } from "@/features/pos/components/PaymentStep";
+import {
+  getParkedSales,
+  parkSale,
+  resumeParkedSale,
+  deleteParkedSale,
+  type ParkedSale,
+} from "@/features/pos/parked-sales";
 import { formatCurrency } from "@/lib/format";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { tenantArray } from "@/lib/local-tenant";
@@ -41,6 +49,17 @@ function PosPageContent() {
   const isOnline = useOnlineStatus();
   const { showToast } = useToast();
   const [step, setStep] = useState<"browse" | "cart" | "payment">("browse");
+  const { setOverrideHidden } = useNavigation();
+
+  useEffect(() => {
+    if (step === "cart" || step === "payment") {
+      setOverrideHidden(true);
+      return () => setOverrideHidden(false);
+    } else {
+      setOverrideHidden(false);
+    }
+  }, [step, setOverrideHidden]);
+
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 80);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -49,6 +68,41 @@ function PosPageContent() {
 
   const cart = useCart();
   const payment = useSplitPayment(cart.total);
+  const [parkedSales, setParkedSales] = useState<ParkedSale[]>(() => getParkedSales());
+
+  function handleParkSale() {
+    try {
+      parkSale({
+        lines: cart.cartLines,
+        discount: cart.discount,
+        customerId: payment.hasCreditLine ? payment.creditCustomerId : null,
+      });
+      setParkedSales(getParkedSales());
+      cart.clearCart();
+      setStep("browse");
+      showToast("Cart held. Ready for next customer.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not hold cart", "warning");
+    }
+  }
+
+  function handleResumeParkedSale(id: string) {
+    const resumed = resumeParkedSale(id);
+    if (resumed) {
+      cart.loadCart(resumed.lines, resumed.discount);
+      if (resumed.customerId) {
+        payment.setCreditCustomerId(resumed.customerId);
+      }
+      setParkedSales(getParkedSales());
+      showToast("Held cart restored to till.", "success");
+    }
+  }
+
+  function handleDeleteParkedSale(id: string) {
+    deleteParkedSale(id);
+    setParkedSales(getParkedSales());
+    showToast("Held cart discarded.", "neutral");
+  }
 
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   const categories = useLiveQuery(() => tenantArray<LocalCategory>(db.categories), [], []);
@@ -190,6 +244,7 @@ function PosPageContent() {
         customerId: payment.hasCreditLine ? payment.creditCustomerId : null,
         payments: payment.effectivePayments,
         lines: cart.cartLines,
+        discount: cart.discount,
         createdByUserId: user.id,
         actor: user,
       });
@@ -261,7 +316,14 @@ function PosPageContent() {
         cartLines={cart.cartLines}
         products={result.products}
         itemCount={cart.itemCount}
+        subtotal={cart.subtotal}
+        discount={cart.discount}
         total={cart.total}
+        onSetDiscount={cart.setDiscount}
+        parkedSales={parkedSales}
+        onParkSale={handleParkSale}
+        onResumeParkedSale={handleResumeParkedSale}
+        onDeleteParkedSale={handleDeleteParkedSale}
         onBack={() => setStep("browse")}
         onClearCart={() => {
           cart.clearCart();
@@ -281,6 +343,8 @@ function PosPageContent() {
     return (
       <PaymentStep
         itemCount={cart.itemCount}
+        subtotal={cart.subtotal}
+        discount={cart.discount}
         total={cart.total}
         effectivePayments={payment.effectivePayments}
         remaining={payment.remaining}

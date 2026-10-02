@@ -29,6 +29,9 @@ export interface SalePayment {
   note?: string;
 }
 
+export type CostBasis = "snapshot" | "provisional" | "estimated_backfill";
+export type CostFlag = "out_of_band" | "backfilled" | "negative_stock" | "provisional";
+
 export interface SaleItem {
   productId: string;
   /** Quantity in whichever unit was sold (unitLabel), not necessarily the product's base unit. */
@@ -48,6 +51,18 @@ export interface SaleItem {
    * .agents/rules/offline-sync-and-ledger.md.
    */
   movementClientId: string;
+  /**
+   * The immutable cost snapshot per sold unit at the moment of sale.
+   * NULL means unknown (historical sale before snapshotting); never guessed or backfilled.
+   * IAS 2 para 25/27 and docs/COSTING-AND-PRICING.md.
+   */
+  unitCost?: number | null;
+  /** Basis of the unit cost figure: snapshot | provisional | estimated_backfill. */
+  costBasis?: CostBasis | null;
+  /** Pins the product row version so soft-delete or updates cannot alter history. */
+  productVersion?: number | null;
+  /** Audit flags for costing exceptions: out_of_band, backfilled, negative_stock, provisional. */
+  costFlags?: CostFlag[] | null;
 }
 
 export interface Sale {

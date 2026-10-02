@@ -418,7 +418,7 @@ export default function NewPurchasePage() {
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border bg-surface px-gutter sm:px-gutter-lg pt-3 pb-4">
+      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="flex items-end justify-between gap-3">
           <div className="flex flex-col">
             <span className="font-semibold text-on-surface">Total cost</span>

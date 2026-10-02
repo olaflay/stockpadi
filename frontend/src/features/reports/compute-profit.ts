@@ -1,4 +1,4 @@
-import type { Sale } from "@/types/sale";
+import type { Sale, SaleItem } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
@@ -9,10 +9,25 @@ function purchaseTotal(purchase: Purchase): number {
 }
 
 /**
- * Computes the gross profit for a set of sales, using the *current* cost price
- * of the products. Note: Since `SaleItem` doesn't snapshot cost at the time of sale,
- * this is an estimate that may diverge from actual margins if costs have changed
- * significantly since the sale was made.
+ * Resolves the unit cost for a sale line item.
+ *
+ * TRUST Promise 4 (docs/COSTING-AND-PRICING.md):
+ * Prioritizes the immutable snapshot recorded on the sale line at the point of sale.
+ * If no snapshot exists (historical sale prior to snapshot migration), falls back
+ * to the product's current cost if available, else 0.
+ */
+export function resolveItemUnitCost(item: SaleItem, products: Product[]): number {
+  if (item.unitCost !== undefined && item.unitCost !== null) {
+    return item.unitCost;
+  }
+  const prod = products.find((p) => p.id === item.productId);
+  return prod ? prod.costPrice * (item.conversionFactor || 1) : 0;
+}
+
+/**
+ * Computes the gross profit for a set of sales.
+ * Uses the immutable unitCost snapshot on each line item whenever available,
+ * guaranteeing that historical profit does not rewrite when product costs change.
  */
 export function computeGrossProfit(sales: Sale[], products: Product[]): number {
   let grossProfit = 0;
@@ -20,9 +35,8 @@ export function computeGrossProfit(sales: Sale[], products: Product[]): number {
     if (sale.voidedAt) continue;
     let saleGross = 0;
     for (const item of sale.items) {
-      const prod = products.find((p) => p.id === item.productId);
-      const cost = prod ? prod.costPrice : 0;
-      saleGross += (item.unitPrice - item.discount - cost) * item.quantity;
+      const cost = resolveItemUnitCost(item, products);
+      saleGross += (item.unitPrice - (item.discount ?? 0) - cost) * item.quantity;
     }
     // Subtract sale-level discount if present
     saleGross -= sale.discount ?? 0;
@@ -32,15 +46,14 @@ export function computeGrossProfit(sales: Sale[], products: Product[]): number {
 }
 
 /**
- * Computes Cost of Goods Sold (COGS) based on current product cost prices.
+ * Computes Cost of Goods Sold (COGS) based on immutable line snapshots.
  */
 export function computeCogs(sales: Sale[], products: Product[]): number {
   let totalCogs = 0;
   for (const sale of sales) {
     if (sale.voidedAt) continue;
     for (const item of sale.items) {
-      const prod = products.find((p) => p.id === item.productId);
-      const cost = prod ? prod.costPrice : 0;
+      const cost = resolveItemUnitCost(item, products);
       totalCogs += cost * item.quantity;
     }
   }

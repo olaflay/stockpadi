@@ -19,6 +19,7 @@ jobs:
             package-lock.json
             frontend/package-lock.json
             backend/package-lock.json
+            supabase/package-lock.json
 
       - run: npm ci
 
@@ -28,6 +29,11 @@ jobs:
       - run: npm --prefix frontend ci
 
       - run: npm --prefix backend ci
+
+      # supabase/ holds the PGlite suites that boot every shipped migration and
+      # assert the sync_apply_* merge logic and RLS policies. Without this the
+      # database layer had no automated coverage in CI at all.
+      - run: npm --prefix supabase ci
 
       - run: npm run lint
 

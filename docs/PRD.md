@@ -1,4 +1,4 @@
-# PRD: StockPadi (working title)
+# PRD: OjàPadi
 
 ## Offline-First Inventory & Sales Management PWA, Multi-Tenant Architecture
 
@@ -8,7 +8,7 @@ Version 1.0 | Status: Final draft for engineering review | Author: Product (deve
 
 ## 1. Executive Summary
 
-StockPadi is an offline-first inventory and point-of-sale PWA built for retail businesses with 1 to 6 branches, deployed on a multi-tenant shared database architecture via PostgreSQL Row Level Security (RLS). The product exists to close a gap the competitor research confirmed directly: Zoho Inventory has no offline mode in its core product at all, Loyverse and Square restrict what you can do while offline, and none of them are built around 2G reality the way this product is. The build is architected as a reusable multi-tenant core (configurable by business type) so that scaling to new clients requires zero infrastructure forks—just a new business profile.
+OjàPadi is an offline-first inventory and point-of-sale PWA built for retail businesses with 1 to 6 branches, deployed on a multi-tenant shared database architecture via PostgreSQL Row Level Security (RLS). The product exists to close a gap the competitor research confirmed directly: Zoho Inventory has no offline mode in its core product at all, Loyverse and Square restrict what you can do while offline, and none of them are built around 2G reality the way this product is. The build is architected as a reusable multi-tenant core (configurable by business type) so that scaling to new clients requires zero infrastructure forks—just a new business profile.
 
 ## 2. Product Vision
 
@@ -100,6 +100,47 @@ A short onboarding step where the owner picks a business-type template. This set
 | Localization | English (Nigerian) at launch; currency and date format never hardcoded |
 | Uptime | 99.5% target, tied to the hosting choice in Section 9 |
 
+## 8.1 The TRUST Standard
+
+**This is a product requirement, not a values statement. It gates feature work.**
+
+OjàPadi is optimised for trust, not feature count. A business owner stakes their livelihood on the
+numbers this app shows. They do not care how many features exist; they care whether they can close
+their book at night and believe it.
+
+A business owner must be able to trust that:
+
+1. **A sale will not disappear.**
+2. **A sale will not duplicate.**
+3. **Stock numbers are explainable.**
+4. **Profit numbers are consistent.**
+5. **Employee actions are traceable.**
+6. **Offline work will synchronize safely.**
+7. **Their data will not be lost.**
+8. **Their business data is isolated from other businesses.**
+9. **The interface will remain understandable as the business grows.**
+10. **AI will never silently invent financial truth or execute sensitive actions without authorization.**
+
+### The precedence rule
+
+> When forced to choose between a new feature and making an existing workflow more reliable,
+> **choose reliability.**
+
+A new feature cannot be started while a known reliability defect in an existing workflow is open and
+unowned. "Later" is a decision, and this rule requires that decision to be made explicitly, in
+writing, with the defect named — never by silent omission.
+
+### The evidence bar
+
+- A claim that something "works" must resolve to a file, a function, or an executed test.
+- A claim that something "is safe" must resolve to a test that would **fail** if it broke.
+- Anything unverified is labelled unverified. It is never presented as resolved.
+
+Per-promise enforcement detail, the specific way each promise gets broken, and the full citations
+live in `.agents/rules/trust-standard.md`, which binds every human and every agent working on this
+codebase. Current implementation status against these promises, and the nine open launch blockers,
+are tracked in `docs/LAUNCH_SCOPE.md`.
+
 ## 9. Technical Architecture
 
 ```mermaid
@@ -170,21 +211,34 @@ Service worker precaches the app shell and the branch's product catalog images o
 
 ## 11. Database Design
 
+> Corrected against the actual migrations in `supabase/migrations/`. An earlier draft of this section
+> referenced `roles` and `units` tables and an `inventory_stock` table, none of which exist. The
+> schema below is what is actually deployed and exercised by the PGlite test suite.
+
 ```mermaid
 erDiagram
     BUSINESS_PROFILE ||--o{ BRANCHES : has
-    BRANCHES ||--o{ INVENTORY_STOCK : holds
-    PRODUCTS ||--o{ INVENTORY_STOCK : tracked_in
+    BUSINESS_PROFILE ||--o{ USERS : staffs
+    BUSINESS_PROFILE ||--o{ BUSINESS_MEMBERSHIPS : grants
+    USERS ||--o{ BUSINESS_MEMBERSHIPS : holds
+    USERS }o--o{ USER_BRANCHES : scoped_to
+    BRANCHES ||--o{ USER_BRANCHES : covers
+    BUSINESS_MEMBERSHIPS ||--o{ WORKER_PERMISSIONS : grants
+    BRANCHES ||--o{ INVENTORY_STOCK_ROLLUP : holds
+    PRODUCTS ||--o{ INVENTORY_STOCK_ROLLUP : tracked_in
     PRODUCTS }o--|| CATEGORIES : belongs_to
+    PRODUCTS }o--o| BRANDS : carries
     PRODUCTS ||--o{ STOCK_MOVEMENTS : generates
+    PRODUCTS ||--o{ STOCK_COUNT_SUBMISSIONS : counted_by
     SALES ||--o{ SALE_ITEMS : contains
+    SALES ||--o{ SALE_PAYMENTS : settled_by
     SALES }o--o| CUSTOMERS : sold_to
+    CUSTOMERS ||--o{ CUSTOMER_CREDIT_MOVEMENTS : owes
     BRANCHES ||--o{ SALES : occurs_at
     PURCHASES }o--|| SUPPLIERS : from
+    PURCHASES ||--o{ PURCHASE_ITEMS : contains
     PURCHASE_ITEMS ||--o{ STOCK_MOVEMENTS : generates
     STOCK_ADJUSTMENTS ||--o{ STOCK_MOVEMENTS : generates
-    USERS }o--|| ROLES : assigned
-    USERS }o--o{ BRANCHES : scoped_to
     BUSINESS_PROFILE ||--o{ EXPENSES : records
     BUSINESS_PROFILE ||--o{ AUDIT_LOGS : logged_in
 ```
@@ -193,20 +247,34 @@ erDiagram
 | --- | --- |
 | `business_profile` | Single settings row: name, branding, business-type template, currency |
 | `branches` | Up to 6 rows, each with independent stock and staff |
-| `users`, `roles` | Staff accounts and the Owner/Manager/Cashier/Inventory Staff/Accountant/Admin role set |
-| `products`, `categories`, `brands`, `units` | Catalog and lookup tables |
-| `inventory_stock` | Current stock per product per branch, computed from `stock_movements`, never hand-edited |
+| `users` | Staff accounts. Role is a column on the user, not a separate lookup table |
+| `business_memberships` | Which user belongs to which business, and as what role. This is the tenant membership record |
+| `user_branches` | Per-user branch scope, the basis of branch-level access control |
+| `worker_permissions` | Per-membership capability grants. The write-path authorization check reads this |
+| `platform_admins` | Platform-operator accounts, separate from tenant staff |
+| `products`, `categories`, `brands` | Catalogue and lookups. **No `units` table**; product unit is a text field on the product |
+| `inventory_stock_rollup` | Computed stock per product per branch, derived from `stock_movements`, never hand-edited |
 | `stock_movements` | Append-only ledger, source of truth for all stock changes, referenced by sales, purchases, and adjustments |
 | `stock_adjustments` | Manual corrections with mandatory reason code |
-| `sales`, `sale_items` | Immutable once created, per Section 10.2 |
-| `purchases`, `purchase_items`, `suppliers` | Purchase orders and supplier balances |
-| `customers` | Contact info and running credit balance |
+| `stock_count_submissions` | Physical stock count sessions and their submissions, distinct from adjustments |
+| `sales`, `sale_items`, `sale_payments` | Immutable once created, per Section 10.2. Payment legs live in `sale_payments` |
+| `purchases`, `purchase_items`, `suppliers` | Purchase orders, receipts, and supplier balances |
+| `customers` | Contact info; credit balance is computed, never stored |
+| `customer_credit_movements` | Append-only credit ledger; balance is the sum of its movements |
 | `expenses` | Category, amount, note, date |
 | `receipts` | Generated receipt metadata for reprint/resend |
+| `reconciliation_records` | Cash reconciliation and inter-branch transfer records |
 | `audit_logs` | Every sensitive action: voids, adjustments, role changes, PIN resets |
 | `devices` | Registered device tokens, supports offline auth and push targeting |
+| `broadcasts` | Realtime broadcast fan-out channel per business or branch |
 
-No SaaS subscription/billing table currently exists in MVP, but the database uses a strict `business_id` multi-tenant structure on every core table to allow for future SaaS billing integrations.
+**`sale_items` carries an immutable cost snapshot.** `unit_cost` and `cost_basis` are written at the
+moment of sale and never recomputed, so historical profit cannot be rewritten by a later price or
+cost change. Existing rows with no snapshot are `NULL` and render as "cost unknown"; they are never
+backfilled. Method and citations in `docs/COSTING-AND-PRICING.md`.
+
+No SaaS subscription/billing table currently exists, but the database uses a strict `business_id`
+multi-tenant structure on every core table to allow for future SaaS billing integrations.
 
 ## 12. API Design
 
@@ -351,5 +419,8 @@ Figures are modeled from published 2026 rates and comparable real-world deployme
 6. Payment method is recorded as a tag in MVP, not processed live.
 7. Hosting: originally self-hosted Supabase and Next.js on one VPS via Coolify, chosen over Vercel plus Supabase Cloud after checking real developer cost sentiment; Render as the zero-ops fallback. **Superseded** — current hosting is Vercel + Supabase Cloud, see `.agents/rules/hosting-and-deployment.md`.
 8. PocketBase considered and rejected in favor of keeping Postgres's transactional and RLS guarantees for financial/stock data.
+9. **The TRUST standard (Section 8.1) is a product requirement and a gate.** Reliability outranks feature count, and an open reliability defect blocks new feature work. Full rule: `.agents/rules/trust-standard.md`.
+10. **Costing is moving weighted average cost, snapshotted immutably onto `sale_items` at the moment of sale.** Historical profit is never recomputed; existing sales with no snapshot stay NULL and are never backfilled, because backfilling fabricates a financial record. Derivation and citations: `docs/COSTING-AND-PRICING.md`.
+11. **Launch scope is frozen.** The Must / V1.1 / Future boundary and the current verified status of every capability are recorded in `docs/LAUNCH_SCOPE.md`. Adding to launch scope is a written decision, never a side effect.
 
 **Primary sources:** Loyverse Support Center, Square Developer Docs, Zoho Inventory user forum, PowerSync documentation, Reddit-sourced Supabase/Vercel alternative discussions (via selfhost.dev's vote-sorted summary and independent developer write-ups), Statista/StatCounter Nigeria mobile data, Konga PWA case coverage.

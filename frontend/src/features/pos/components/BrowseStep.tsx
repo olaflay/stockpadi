@@ -21,6 +21,7 @@ import { parsePosQuery } from "@/lib/parse-pos-query";
 import type { CartLine } from "@/features/pos/complete-sale";
 import type { Product } from "@/types/product";
 import type { LocalCategory } from "@/lib/db";
+import { useNavigation } from "@/components/ui/NavigationContext";
 
 export function BrowseStep(props: {
   query: string;
@@ -62,6 +63,17 @@ export function BrowseStep(props: {
 
   const router = useRouter();
   const { showToast } = useToast();
+  const { setSearchActive, setOverrideHidden } = useNavigation();
+
+  useEffect(() => {
+    setOverrideHidden(itemCount > 0);
+  }, [itemCount, setOverrideHidden]);
+
+  useEffect(() => {
+    if (query.trim().length > 0) {
+      setSearchActive(true);
+    }
+  }, [query, setSearchActive]);
 
   function handleOutOfStockAttempt(product: Product) {
     feedbackError();
@@ -165,7 +177,14 @@ export function BrowseStep(props: {
               type="search"
               aria-label="Search products"
               value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
+              onChange={(event) => {
+                onQueryChange(event.target.value);
+                setSearchActive(Boolean(event.target.value.trim()));
+              }}
+              onFocus={() => setSearchActive(true)}
+              onBlur={() => {
+                if (!query.trim()) setSearchActive(false);
+              }}
               onKeyDown={(e) => {
                 // Enter → immediately add the first visible single-unit result.
                 // Dual-unit products are skipped: the cashier must still pick
@@ -571,7 +590,7 @@ export function BrowseStep(props: {
       )}
 
       {itemCount > 0 && (
-        <div className="sticky bottom-0 -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 border-t border-border/60 bg-surface px-gutter sm:px-gutter-lg py-3 shadow-[var(--shadow-elevation-2)] animate-step-in">
+        <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] animate-step-in">
           <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
             {itemCount} item{itemCount === 1 ? "" : "s"} · <span key={total} className="animate-count-pop font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
           </span>
@@ -579,7 +598,7 @@ export function BrowseStep(props: {
             id="tour-pos-cart"
             type="button"
             onClick={onReviewCart}
-            className="flex min-h-[var(--touch-target-min)] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast transition-[opacity,transform] active:scale-[0.98] hover:opacity-95"
+            className="flex min-h-[var(--touch-target-min)] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast transition-[opacity,transform] active:scale-[0.98] hover:opacity-95 shadow-sm"
           >
             Review cart →
           </RippleButton>

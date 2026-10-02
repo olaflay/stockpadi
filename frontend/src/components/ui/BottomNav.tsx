@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +15,7 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { AlertBadge } from "@/components/ui/AlertBadge";
+import { useNavigation } from "@/components/ui/NavigationContext";
 
 /**
  * Samsung One UI bottom interaction area:
@@ -43,63 +43,19 @@ const WORKER_NAV = [
 export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const { isNavVisible } = useNavigation();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const vv = window.visualViewport;
-    const updateKeyboardState = () => {
-      const activeEl = document.activeElement as HTMLElement | null;
-      const isInputFocused =
-        activeEl &&
-        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable) &&
-        (activeEl as HTMLInputElement).type !== "checkbox" &&
-        (activeEl as HTMLInputElement).type !== "radio";
-
-      if (vv && isInputFocused) {
-        // True virtual keyboard causes visualViewport height to shrink by at least 180px or 25% of window
-        const isShrunkByKeyboard = vv.height < window.innerHeight - 180 || vv.height < window.innerHeight * 0.75;
-        setIsKeyboardOpen(Boolean(isShrunkByKeyboard));
-      } else {
-        setIsKeyboardOpen(false);
-      }
-    };
-
-    if (vv) {
-      vv.addEventListener("resize", updateKeyboardState);
-    }
-
-    const handleFocusIn = () => {
-      window.setTimeout(updateKeyboardState, 150);
-    };
-
-    const handleFocusOut = () => {
-      window.setTimeout(updateKeyboardState, 150);
-    };
-
-    window.addEventListener("focusin", handleFocusIn);
-    window.addEventListener("focusout", handleFocusOut);
-
-    return () => {
-      if (vv) vv.removeEventListener("resize", updateKeyboardState);
-      window.removeEventListener("focusin", handleFocusIn);
-      window.removeEventListener("focusout", handleFocusOut);
-    };
-  }, []);
-
-  // Only render BottomNav on primary top-level tabs. All child/sub-routes (forms, sub-settings, details)
-  // have full screen space with their own action buttons without navigation collision.
+  // Strict route whitelist: Only top-level destinations render the nav container.
+  // Child routes, forms, modals, and settings sub-pages never render BottomNav.
   const isMainTab =
     pathname === "/dashboard" ||
     pathname === "/pos" ||
     pathname === "/products" ||
     pathname === "/reports" ||
     pathname === "/more" ||
-    pathname === "/settings" ||
     pathname === "/stock-count";
 
-  if (!isMainTab || isKeyboardOpen) {
+  if (!isMainTab) {
     return null;
   }
 
@@ -110,17 +66,23 @@ export function BottomNav() {
 
   return (
     <nav
+      data-bottom-nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-8 after:bg-surface-container after:pointer-events-none"
+      className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
+        isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+      }`}
       style={{
-        paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0.25rem))",
+        paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
+        willChange: "transform, opacity",
       }}
     >
+      {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
+      <div
+        aria-hidden
+        className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
+      />
       {items.map((item) => {
-        const isActive =
-          pathname === item.href ||
-          (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)) ||
-          (item.href === "/more" && (pathname === "/settings" || pathname.startsWith("/settings/")));
+        const isActive = pathname === item.href;
         const Icon = item.icon;
         return (
           <Link

@@ -322,12 +322,12 @@ describe("sync_apply_product: optimistic concurrency and canonical fields", () =
 
     // A second device that started from the same original version, but
     // syncs after the first device already bumped it.
-    const second = await db.query<{ result: { conflict: boolean } }>(
+    const second = await db.query<{ result: { conflict: boolean; status: string } }>(
       `select sync_apply_product($1::jsonb, $2::uuid) as result;`,
       [JSON.stringify({ ...basePayload, sellPrice: 160, version: startVersion }), actorId]
     );
     expect(second.rows[0].result.conflict).toBe(true);
-    expect((second.rows[0].result as { status: string }).status).toBe("conflict");
+    expect(second.rows[0].result.status).toBe("conflict");
     const afterConflict = await db.query<{ sell_price: string }>(`select sell_price from products where id = $1`, [productId]);
     expect(afterConflict.rows[0].sell_price).toBe("175.00");
   });

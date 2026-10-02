@@ -24,6 +24,15 @@ export function useCart() {
     CART_DRAFT_KEY,
     {}
   );
+  const [discount, setDiscountState, clearDiscountDraft] = useDraft<number>(
+    "stockpadi-cart-discount",
+    0
+  );
+
+  function setDiscount(amount: number) {
+    const clamped = Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : 0;
+    setDiscountState(clamped);
+  }
 
   function addToCart(productId: string, unitPrice: number, unitLabel: string, conversionFactor: number, qty = 1) {
     const key = cartLineKey(productId, unitLabel);
@@ -86,13 +95,40 @@ export function useCart() {
 
   function clearCart() {
     clearCartDraft();
+    clearDiscountDraft();
+  }
+
+  function loadCart(lines: CartLine[], loadDiscount = 0) {
+    const nextCart: Record<string, CartLine> = {};
+    for (const line of lines) {
+      const key = cartLineKey(line.productId, line.unitLabel);
+      nextCart[key] = line;
+    }
+    setCart(nextCart);
+    setDiscount(loadDiscount);
   }
 
   const cartLines = Object.values(cart);
-  const total = fromKobo(
+  const subtotal = fromKobo(
     cartLines.reduce((sumKobo, line) => sumKobo + toKobo(line.unitPrice) * line.quantity, 0)
   );
+  const total = Math.max(0, fromKobo(toKobo(subtotal) - toKobo(discount)));
   const itemCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
 
-  return { cart, cartLines, total, itemCount, addToCart, incrementLine, decrementLine, setLineQuantity, removeLine, clearCart };
+  return {
+    cart,
+    cartLines,
+    subtotal,
+    discount,
+    setDiscount,
+    total,
+    itemCount,
+    addToCart,
+    incrementLine,
+    decrementLine,
+    setLineQuantity,
+    removeLine,
+    clearCart,
+    loadCart,
+  };
 }

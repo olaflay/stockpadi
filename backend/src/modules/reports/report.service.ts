@@ -38,7 +38,7 @@ export async function reportSummary(db: SupabaseClient, actor: User, input: unkn
   const saleIds = salesRows.map((sale) => sale.id as string);
   const [paymentResult, itemResult] = saleIds.length ? await Promise.all([
     db.from("sale_payments").select("sale_id, method, amount").in("sale_id", saleIds),
-    db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor").in("sale_id", saleIds),
+    db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", saleIds),
   ]) : [{ data: [], error: null }, { data: [], error: null }];
   if (paymentResult.error || itemResult.error) throw new HttpError(500, "REPORT_FAILED", paymentResult.error?.message ?? itemResult.error?.message ?? "Could not load report details");
   const detailedSales = salesRows.map((sale) => ({ ...sale, payments: (paymentResult.data ?? []).filter((payment) => payment.sale_id === sale.id), items: (itemResult.data ?? []).filter((item) => item.sale_id === sale.id) }));
