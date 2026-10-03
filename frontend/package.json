@@ -16,9 +16,9 @@
     "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
-    "@stockpadi/contracts": "file:../packages/contracts",
     "@hookform/resolvers": "^5.7.1",
     "@serwist/next": "^9.5.12",
+    "@stockpadi/contracts": "file:../packages/contracts",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.2",
     "@zxing/browser": "^0.2.1",
@@ -26,6 +26,7 @@
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
     "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.29.0",
     "next": "16.3.0",
     "papaparse": "^5.5.4",

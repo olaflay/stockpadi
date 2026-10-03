@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Check, Plus, X, ChevronDown } from "lucide-react";
+import { Check, Plus, X, ChevronDown, Trash2 } from "lucide-react";
 
 export interface CategoryOption {
   id: string;
@@ -17,6 +17,7 @@ interface CategoryAutocompleteProps {
   valueName: string;
   /** Fires on every pick or committed edit. `categoryId` is "" for a name with no existing match. */
   onSelect: (categoryId: string, name: string) => void;
+  onDeleteCategory?: (categoryId: string) => Promise<void> | void;
   placeholder?: string;
 }
 
@@ -58,7 +59,8 @@ export function CategoryAutocomplete({
   value,
   valueName,
   onSelect,
-  placeholder = "Type or pick a category",
+  onDeleteCategory,
+  placeholder = "e.g. General Goods, Drinks...",
 }: CategoryAutocompleteProps) {
   const [query, setQuery] = useState(valueName);
   const [isOpen, setIsOpen] = useState(false);
@@ -231,56 +233,114 @@ export function CategoryAutocomplete({
             </p>
           )}
           {recentMatches.map((category) => (
-            <button
+            <div
               key={category.id}
-              type="button"
-              role="option"
-              aria-selected={category.id === value}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectCategory(category);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectCategory(category);
-              }}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container active:bg-surface-container-high transition-colors"
+              className="flex w-full items-center justify-between hover:bg-surface-container active:bg-surface-container-high transition-colors"
             >
-              <HighlightMatch text={category.name} query={trimmedQuery} />
-              {category.id === value && (
-                <Check size={16} className="text-brand-accent shrink-0" aria-hidden />
+              <button
+                type="button"
+                role="option"
+                aria-selected={category.id === value}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
+                  selectCategory(category);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
+                  selectCategory(category);
+                }}
+                className="flex flex-1 items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface"
+              >
+                <HighlightMatch text={category.name} query={trimmedQuery} />
+                {category.id === value && (
+                  <Check size={16} className="text-brand-accent shrink-0 ml-2" aria-hidden />
+                )}
+              </button>
+              {onDeleteCategory && (
+                <button
+                  type="button"
+                  title={`Delete category ${category.name}`}
+                  aria-label={`Delete category ${category.name}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.confirm(`Delete category "${category.name}"? Products in this category will become uncategorized.`)) {
+                      if (value === category.id) {
+                        setQuery("");
+                        onSelect("", "");
+                      }
+                      await onDeleteCategory(category.id);
+                    }
+                  }}
+                  className="mr-2 p-1.5 rounded-lg text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                >
+                  <Trash2 size={14} aria-hidden />
+                </button>
               )}
-            </button>
+            </div>
           ))}
 
           {otherMatches.length > 0 && recentMatches.length > 0 && (
             <div className="border-t border-border/60" />
           )}
           {otherMatches.map((category) => (
-            <button
+            <div
               key={category.id}
-              type="button"
-              role="option"
-              aria-selected={category.id === value}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectCategory(category);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectCategory(category);
-              }}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container active:bg-surface-container-high transition-colors"
+              className="flex w-full items-center justify-between hover:bg-surface-container active:bg-surface-container-high transition-colors"
             >
-              <HighlightMatch text={category.name} query={trimmedQuery} />
-              {category.id === value && (
-                <Check size={16} className="text-brand-accent shrink-0" aria-hidden />
+              <button
+                type="button"
+                role="option"
+                aria-selected={category.id === value}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
+                  selectCategory(category);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
+                  selectCategory(category);
+                }}
+                className="flex flex-1 items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface"
+              >
+                <HighlightMatch text={category.name} query={trimmedQuery} />
+                {category.id === value && (
+                  <Check size={16} className="text-brand-accent shrink-0 ml-2" aria-hidden />
+                )}
+              </button>
+              {onDeleteCategory && (
+                <button
+                  type="button"
+                  title={`Delete category ${category.name}`}
+                  aria-label={`Delete category ${category.name}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.confirm(`Delete category "${category.name}"? Products in this category will become uncategorized.`)) {
+                      if (value === category.id) {
+                        setQuery("");
+                        onSelect("", "");
+                      }
+                      await onDeleteCategory(category.id);
+                    }
+                  }}
+                  className="mr-2 p-1.5 rounded-lg text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                >
+                  <Trash2 size={14} aria-hidden />
+                </button>
               )}
-            </button>
+            </div>
           ))}
 
           {isNewName && (

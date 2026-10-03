@@ -14,6 +14,8 @@ import {
 import type { ProductFormInput, ProductFormValues } from "@/features/inventory/product-schema";
 import { TextInput } from "@/components/ui/TextInput";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { formatCurrency } from "@/lib/format";
+import type { AddedProductSummary } from "@/features/inventory/use-new-product-form";
 
 export function NewProductForm({
   onSubmit,
@@ -43,9 +45,15 @@ export function NewProductForm({
   onInitialStockBranchChange,
   onNameChange,
   onSkuChange,
+  onSaveAndAddAnother,
+  lastAddedProduct,
+  onDismissLastAddedProduct,
 }: {
   onSubmit: (event?: BaseSyntheticEvent) => Promise<void>;
   onCancel?: () => void;
+  onSaveAndAddAnother?: (event?: BaseSyntheticEvent) => Promise<void>;
+  lastAddedProduct?: AddedProductSummary | null;
+  onDismissLastAddedProduct?: () => void;
   register: UseFormRegister<ProductFormInput>;
   setValue: UseFormSetValue<ProductFormInput>;
   watch?: UseFormWatch<ProductFormInput>;
@@ -74,6 +82,38 @@ export function NewProductForm({
 }) {
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 pb-72 md:pb-36 scroll-pb-64">
+      {lastAddedProduct && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-success-container/25 p-3.5 border border-success/30 text-xs animate-step-in">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-success-contrast font-bold text-sm">
+              ✓
+            </div>
+            <div>
+              <div className="font-semibold text-on-surface text-sm">
+                {lastAddedProduct.name} added!
+              </div>
+              <div className="text-on-surface-muted flex items-center gap-1.5 mt-0.5 font-medium">
+                <span>{formatCurrency(lastAddedProduct.sellPrice)}</span>
+                <span>·</span>
+                <span className="text-success font-semibold">
+                  +{formatCurrency(lastAddedProduct.profit)}/pc ({Math.round(lastAddedProduct.margin)}% margin)
+                </span>
+              </div>
+            </div>
+          </div>
+          {onDismissLastAddedProduct && (
+            <button
+              type="button"
+              onClick={onDismissLastAddedProduct}
+              aria-label="Dismiss banner"
+              className="text-on-surface-muted hover:text-on-surface p-1 text-base font-semibold"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+
       <ProductCoreFields
         register={register}
         setValue={setValue}
@@ -91,8 +131,8 @@ export function NewProductForm({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
-            Opening stock
-            <InfoTooltip text="How many units you currently have on hand right now." />
+            Starting stock on hand
+            <InfoTooltip text="How many units you currently have in the shop right now." />
           </span>
           <TextInput
             type="number"
@@ -142,21 +182,31 @@ export function NewProductForm({
       <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
 
       <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] bg-surface/95 backdrop-blur-md border-t border-border/60 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface after:pointer-events-none">
-        <div className="flex items-center gap-3 max-w-xl md:max-w-2xl mx-auto w-full">
+        <div className="flex items-center gap-2.5 max-w-xl md:max-w-2xl mx-auto w-full">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-[42px] px-3.5 text-[length:var(--font-size-body)] font-medium text-on-surface-muted hover:text-on-surface transition-colors shrink-0"
+              className="min-h-[42px] px-3 text-[length:var(--font-size-body)] font-medium text-on-surface-muted hover:text-on-surface transition-colors shrink-0"
             >
               Cancel
+            </button>
+          )}
+          {onSaveAndAddAnother && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={onSaveAndAddAnother}
+              className="min-h-[44px] flex-1 rounded-2xl border border-brand-accent/40 bg-surface-container-low px-3 text-xs sm:text-[length:var(--font-size-body)] font-semibold text-brand-accent disabled:opacity-50 hover:bg-surface-container transition-all"
+            >
+              Save & add another
             </button>
           )}
           <RippleButton
             id="tour-save-product"
             type="submit"
             disabled={isSubmitting}
-            className="min-h-[44px] flex-1 rounded-2xl bg-brand-accent px-5 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:brightness-105 active:scale-[0.99] transition-all"
+            className="min-h-[44px] flex-1 rounded-2xl bg-brand-accent px-4 text-xs sm:text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast disabled:opacity-50 hover:brightness-105 active:scale-[0.99] transition-all"
           >
             {isSubmitting ? "Saving…" : "Save product"}
           </RippleButton>

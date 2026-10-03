@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { MessageCircle, Printer, Ban, RotateCcw } from "lucide-react";
+import { MessageCircle, Download, Ban, RotateCcw } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import type { LocalCustomer } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -19,6 +19,8 @@ import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
 import { Modal } from "@/components/ui/Modal";
 import { ReceiptIllustration } from "@/components/illustrations";
 import { WhatsAppReceiptModal } from "@/components/pos/WhatsAppReceiptModal";
+import { PdfReceiptDownloadModal } from "@/components/pos/PdfReceiptDownloadModal";
+import { getBrandingConfig } from "@/config/branding";
 import type { PaymentMethod, Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -52,6 +54,8 @@ export default function SaleDetailPage({ params }: PageProps) {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const branding = getBrandingConfig();
 
   const sale = useLiveQuery(async () => (await tenantGet<Sale>(db.sales, id)) ?? null, [id]);
   const products = useLiveQuery(() => tenantArray<Product>(db.products), [], []);
@@ -305,11 +309,11 @@ export default function SaleDetailPage({ params }: PageProps) {
         </RippleButton>
         <RippleButton
           type="button"
-          onClick={handlePrint}
+          onClick={() => setShowPdfModal(true)}
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-5 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
         >
-          <Printer size={18} aria-hidden />
-          Print receipt
+          <Download size={18} aria-hidden />
+          Download PDF receipt
         </RippleButton>
         {!sale.voidedAt && hasAccountType(user, CAN_VOID_SALE) && (
           <div className="flex gap-2 w-full">
@@ -394,6 +398,42 @@ export default function SaleDetailPage({ params }: PageProps) {
           customer={customer}
           businessName={businessProfile?.name ?? "Receipt"}
           onClose={() => setShowWhatsAppModal(false)}
+        />
+      )}
+
+      {showPdfModal && (
+        <PdfReceiptDownloadModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          initialData={{
+            businessName: businessProfile?.name || branding.businessName,
+            branchName: sale.branchId ? "Main Branch" : undefined,
+            receiptNumber: sale.id.slice(0, 8).toUpperCase(),
+            dateStr: new Date(sale.createdAt).toLocaleString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            cashierName: user.fullName || "Attendant",
+            customerName: customer?.name || undefined,
+            customerPhone: customer?.phone || undefined,
+            items: (sale.items ?? []).map((item) => {
+              const product = products?.find((p) => p.id === item.productId);
+              return {
+                name: product?.name || "Item",
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.quantity * item.unitPrice - (item.discount || 0),
+              };
+            }),
+            subtotal: sale.subtotal,
+            discount: sale.discount,
+            total: sale.total,
+            payments: sale.payments,
+            footerNote: "Thank you for your patronage! Goods sold in good condition are not returnable.",
+          }}
         />
       )}
     </div>

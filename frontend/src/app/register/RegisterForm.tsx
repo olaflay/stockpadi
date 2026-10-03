@@ -155,7 +155,8 @@ export default function RegisterForm() {
           businessTypeId: defaultTemplate.id,
           currency: "NGN",
         });
-        const categoryRecords = await withLocalBusinessIds(defaultTemplate.defaultCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })));
+        const starterCategories = ["General Goods"];
+        const categoryRecords = await withLocalBusinessIds(starterCategories.map((catName) => ({ id: crypto.randomUUID(), name: catName })));
         await db.categories.bulkPut(categoryRecords);
         for (const category of categoryRecords) {
           await enqueueOutboxWrite(category.id, "category", category, new Date().toISOString(), { entityId: category.id });

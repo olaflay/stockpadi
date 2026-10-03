@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { User, Phone, Check, AlertCircle } from "lucide-react";
+import { User, Phone, Check, AlertCircle, BookUser } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui/TextInput";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { saveNewContact, type SaveContactKind } from "../contact-save";
 import { useToast } from "@/components/ui/Toast";
+import { isContactPickerSupported, openNativeContactPicker } from "@/lib/contact-picker";
 
 interface AddContactModalProps {
   isOpen: boolean;
@@ -42,6 +43,16 @@ export function AddContactModal({
   function handleClose() {
     resetForm();
     onClose();
+  }
+
+  async function handlePickContact() {
+    const picked = await openNativeContactPicker();
+    if (picked) {
+      if (picked.name) setName(picked.name);
+      if (picked.phone) setPhone(picked.phone);
+      if (error) setError(null);
+      showToast(`Selected ${picked.name || "contact"}`, "success");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,6 +91,17 @@ export function AddContactModal({
             <AlertCircle size={16} className="shrink-0" />
             <span>{error}</span>
           </div>
+        )}
+
+        {isContactPickerSupported() && (
+          <button
+            type="button"
+            onClick={handlePickContact}
+            className="flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-surface-container-low px-4 py-2 text-xs font-semibold text-brand-accent hover:bg-surface-container transition-all active:scale-[0.98]"
+          >
+            <BookUser size={15} />
+            <span>Pick from phone contacts</span>
+          </button>
         )}
 
         {/* Contact Type Chips */}

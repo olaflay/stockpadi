@@ -22,6 +22,14 @@ import { generateFallbackSku } from "@/features/inventory/generate-sku";
 import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP } from "@/config/limits";
 
+export interface AddedProductSummary {
+  name: string;
+  sellPrice: number;
+  costPrice: number;
+  profit: number;
+  margin: number;
+}
+
 /**
  * All state and the create-product write path for the Add Product screen:
  * category autocomplete state, the optional starting-stock + branch fields
@@ -112,85 +120,137 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     if (branchId) setInitialStockBranchError(null);
   }
 
-  const onSubmit = handleSubmit(
-    async (values) => {
-      try {
-        const stockResult = validateStartingStock(initialStock, effectiveStockBranchId, branches?.length ?? 0);
-        if (!stockResult.ok) {
-          const stockError = stockResult.error ?? "Check the highlighted fields.";
-          if (stockResult.reason === "branch") {
-            setInitialStockBranchError(stockError);
-          } else {
-            setInitialStockError(stockError);
-          }
-          showToast(stockError, "warning");
-          return;
+  const [lastAddedProduct, setLastAddedProduct] = useState<AddedProductSummary | null>(null);
+
+  async function executeSave(values: ProductFormValues, addAnother: boolean) {
+    try {
+      const stockResult = validateStartingStock(initialStock, effectiveStockBranchId, branches?.length ?? 0);
+      if (!stockResult.ok) {
+        const stockError = stockResult.error ?? "Check the highlighted fields.";
+        if (stockResult.reason === "branch") {
+          setInitialStockBranchError(stockError);
+        } else {
+          setInitialStockError(stockError);
         }
+        showToast(stockError, "warning");
+        return;
+      }
 
-        const capStatus = productCapStatusFor((await countActiveProducts()) + 1);
-        if (capStatus === "blocked") {
-          showToast(`This store is at its ${PRODUCT_CAP}-product cap. Remove some to free space.`, "danger");
-          return;
+      const capStatus = productCapStatusFor((await countActiveProducts()) + 1);
+      if (capStatus === "blocked") {
+        showToast(`This store is at its ${PRODUCT_CAP}-product cap. Remove some to free space.`, "danger");
+        return;
+      }
+      if (capStatus === "warn") {
+        showToast(`Getting close to the ${PRODUCT_CAP}-product cap.`, "warning");
+      }
+
+      let resolvedCategoryId: string | null = categoryId || null;
+      let newCategory: { id: string; name: string } | null = null;
+      const newCategoryName = categoryInputName.trim();
+      if (!resolvedCategoryId && newCategoryName) {
+        const existingCategory = categories?.find((category) => category.name.trim().toLocaleLowerCase() === newCategoryName.toLocaleLowerCase());
+        if (existingCategory) {
+          resolvedCategoryId = existingCategory.id;
+        } else {
+          resolvedCategoryId = crypto.randomUUID();
+          newCategory = { id: resolvedCategoryId, name: newCategoryName };
         }
-        if (capStatus === "warn") {
-          showToast(`Getting close to the ${PRODUCT_CAP}-product cap.`, "warning");
-        }
+      }
 
-        let resolvedCategoryId: string | null = categoryId || null;
-        let newCategory: { id: string; name: string } | null = null;
-        const newCategoryName = categoryInputName.trim();
-        if (!resolvedCategoryId && newCategoryName) {
-          const existingCategory = categories?.find((category) => category.name.trim().toLocaleLowerCase() === newCategoryName.toLocaleLowerCase());
-          if (existingCategory) {
-            resolvedCategoryId = existingCategory.id;
-          } else {
-            resolvedCategoryId = crypto.randomUUID();
-            newCategory = { id: resolvedCategoryId, name: newCategoryName };
-          }
-        }
+      const finalSku = values.sku?.trim() || generateFallbackSku(values.name);
+      const hasAltUnit = Boolean(values.altUnitLabel?.trim());
+      const product: Product = {
+        id: crypto.randomUUID(),
+        sku: finalSku,
+        barcode: values.barcode || null,
+        name: values.name.trim(),
+        categoryId: resolvedCategoryId,
+        brandId: null,
+        unitLabel: values.unitLabel.trim() || "piece",
+        altUnitLabel: hasAltUnit ? values.altUnitLabel!.trim() : null,
+        altUnitConversionFactor: hasAltUnit ? (values.altUnitConversionFactor ?? null) : null,
+        altUnitSellPrice: hasAltUnit ? (values.altUnitSellPrice ?? null) : null,
+        costPrice: values.costPrice,
+        sellPrice: values.sellPrice,
+        expiryTracking: values.expiryTracking,
+        expiryDate: values.expiryTracking === "off" ? null : values.expiryDate || null,
+        lowStockThreshold: values.lowStockThreshold ?? null,
+        version: 1,
+        updatedAt: new Date().toISOString(),
+      };
 
-        const finalSku = values.sku?.trim() || generateFallbackSku(values.name);
-        const hasAltUnit = Boolean(values.altUnitLabel?.trim());
-        const product: Product = {
-          id: crypto.randomUUID(),
-          sku: finalSku,
-          barcode: values.barcode || null,
-          name: values.name.trim(),
-          categoryId: resolvedCategoryId,
-          brandId: null,
-          unitLabel: values.unitLabel.trim() || "piece",
-          altUnitLabel: hasAltUnit ? values.altUnitLabel!.trim() : null,
-          altUnitConversionFactor: hasAltUnit ? (values.altUnitConversionFactor ?? null) : null,
-          altUnitSellPrice: hasAltUnit ? (values.altUnitSellPrice ?? null) : null,
-          costPrice: values.costPrice,
-          sellPrice: values.sellPrice,
-          expiryTracking: values.expiryTracking,
-          expiryDate: values.expiryTracking === "off" ? null : values.expiryDate || null,
-          lowStockThreshold: values.lowStockThreshold ?? null,
-          version: 1,
-          updatedAt: new Date().toISOString(),
-        };
+      const conflict = await findProductReferenceConflict(product);
+      if (conflict) {
+        showToast(`A product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
+        return;
+      }
 
-        const conflict = await findProductReferenceConflict(product);
-        if (conflict) {
-          showToast(`A product already uses this ${conflict.field}: "${conflict.value}".`, "danger");
-          return;
-        }
+      await writeNewProductOffline(product, {
+        branchId: effectiveStockBranchId!,
+        quantity: stockResult.quantity!,
+        createdByUserId: user.id,
+      }, newCategory, user);
 
-        await writeNewProductOffline(product, {
-          branchId: effectiveStockBranchId!,
-          quantity: stockResult.quantity!,
-          createdByUserId: user.id,
-        }, newCategory, user);
+      if (product.categoryId) markCategoryUsed(product.categoryId);
 
-        if (product.categoryId) markCategoryUsed(product.categoryId);
+      const costNum = typeof values.costPrice === "number" ? values.costPrice : parseFloat(String(values.costPrice || "0"));
+      const sellNum = typeof values.sellPrice === "number" ? values.sellPrice : parseFloat(String(values.sellPrice || "0"));
+      const profit = sellNum - costNum;
+      const margin = sellNum > 0 ? (profit / sellNum) * 100 : 0;
+
+      if (addAnother) {
+        setLastAddedProduct({
+          name: product.name,
+          sellPrice: sellNum,
+          costPrice: costNum,
+          profit,
+          margin,
+        });
+
+        // Retain category and unit, reset specific product details
+        form.reset({
+          ...PRODUCT_FORM_DEFAULTS,
+          name: "",
+          sku: "",
+          barcode: "",
+          sellPrice: "" as unknown as number,
+          costPrice: "" as unknown as number,
+          unitLabel: values.unitLabel || "piece",
+          altUnitLabel: values.altUnitLabel || "",
+          altUnitConversionFactor: values.altUnitConversionFactor,
+          altUnitSellPrice: values.altUnitSellPrice,
+          expiryTracking: values.expiryTracking || "off",
+        });
+        setInitialStock("");
+        setAutoSkuEnabled(true);
+        lastAutoSku.current = "";
+        lastSkuPrefix.current = null;
+        showToast(`${product.name} added! Ready for next product.`, "success");
+
+        setTimeout(() => {
+          document.getElementById("field-product-name")?.focus();
+        }, 50);
+      } else {
         showToast(`${product.name} added`, "success");
         router.push("/products");
-      } catch (err) {
-        console.error("Failed to save product:", err);
-        showToast(err instanceof Error ? err.message : "Could not save product.", "danger");
       }
-    },
+    } catch (err) {
+      console.error("Failed to save product:", err);
+      showToast(err instanceof Error ? err.message : "Could not save product.", "danger");
+    }
+  }
+
+  const onSubmit = handleSubmit(
+    (values) => executeSave(values, false),
+    (formErrors) => {
+      const firstError = Object.values(formErrors)[0]?.message;
+      showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
+    }
+  );
+
+  const onSaveAndAddAnother = handleSubmit(
+    (values) => executeSave(values, true),
     (formErrors) => {
       const firstError = Object.values(formErrors)[0]?.message;
       showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
@@ -225,6 +285,9 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     altUnitLabel,
     hasInitialStock,
     onSubmit,
+    onSaveAndAddAnother,
+    lastAddedProduct,
+    clearLastAddedProduct: () => setLastAddedProduct(null),
     setValue: form.setValue,
     watch: form.watch,
   };

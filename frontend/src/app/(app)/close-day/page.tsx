@@ -25,7 +25,7 @@ import { resolveDefaultBranch } from "@/features/branches/resolve-default-branch
 import type { Expense } from "@/types/expense";
 import type { Product } from "@/types/product";
 import type { Sale } from "@/types/sale";
-import { Banknote, Smartphone, CreditCard, Check, AlertTriangle } from "lucide-react";
+import { Banknote, Smartphone, CreditCard, Check, AlertTriangle, ChevronDown } from "lucide-react";
 
 export default function CloseDayPage() {
   const user = useCurrentUser();
@@ -535,22 +535,27 @@ export default function CloseDayPage() {
         </RippleButton>
       </div>
 
-      {/* Recent History */}
+      {/* Compressible Recent Close Days History (Zero page drain & minimal cognitive load) */}
       {history.length > 0 && (
-        <section className="flex flex-col gap-2 mt-4">
-          <h3 className="font-bold text-[length:var(--font-size-body)] text-on-surface">Recent close days</h3>
-          {history.slice(0, 5).map((record) => (
-            <div
-              key={record.id}
-              className="flex justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-[length:var(--font-size-body-sm)]"
-            >
-              <span className="font-medium text-on-surface">{record.business_date}</span>
-              <span className="text-on-surface-muted">
-                Cash {formatCurrency(record.actual_cash)} · Difference {formatCurrency(record.discrepancy)}
-              </span>
-            </div>
-          ))}
-        </section>
+        <details className="group mt-2 rounded-2xl border border-border/50 bg-surface-container-low p-3.5 transition-all">
+          <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-xs text-on-surface select-none">
+            <span>Recent close days ({history.length} on record)</span>
+            <ChevronDown size={16} className="text-on-surface-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-3 flex flex-col gap-2 pt-2 border-t border-border/40">
+            {history.slice(0, 5).map((record) => (
+              <div
+                key={record.id}
+                className="flex items-center justify-between rounded-xl bg-surface px-3.5 py-2.5 text-xs border border-border/30"
+              >
+                <span className="font-semibold text-on-surface">{record.business_date}</span>
+                <span className="text-on-surface-muted font-number tabular-nums">
+                  Cash {formatCurrency(record.actual_cash)} · Diff {formatCurrency(record.discrepancy)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );

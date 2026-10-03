@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +17,20 @@ import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { AlertBadge } from "@/components/ui/AlertBadge";
 import { useNavigation } from "@/components/ui/NavigationContext";
+import { MoreSheetModal } from "@/components/ui/MoreSheetModal";
+
+const MORE_ROUTES = [
+  "/more",
+  "/contacts",
+  "/sales",
+  "/expenses",
+  "/purchases",
+  "/close-day",
+  "/stock-count",
+  "/settings",
+  "/profile",
+  "/products/import",
+];
 
 /**
  * Samsung One UI bottom interaction area:
@@ -44,16 +59,19 @@ export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
   const { isNavVisible } = useNavigation();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const isMoreRoute = MORE_ROUTES.includes(pathname);
 
   // Strict route whitelist: Only top-level destinations render the nav container.
-  // Child routes, forms, modals, and settings sub-pages never render BottomNav.
+  // Child routes, forms, and modals outside main navigation never render BottomNav.
   const isMainTab =
     pathname === "/dashboard" ||
     pathname === "/pos" ||
     pathname === "/products" ||
     pathname === "/reports" ||
-    pathname === "/more" ||
-    pathname === "/stock-count";
+    pathname === "/stock-count" ||
+    isMoreRoute;
 
   if (!isMainTab) {
     return null;
@@ -65,48 +83,87 @@ export function BottomNav() {
   );
 
   return (
-    <nav
-      data-bottom-nav
-      aria-label="Main navigation"
-      className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
-        isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
-      }`}
-      style={{
-        paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
-        willChange: "transform, opacity",
-      }}
-    >
-      {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
-      <div
-        aria-hidden
-        className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
-      />
-      {items.map((item) => {
-        const isActive = pathname === item.href;
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            id={`tour-nav-${item.label.toLowerCase()}`}
-            prefetch={true}
-            className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
-              isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
-            }`}
-            aria-current={isActive ? "page" : undefined}
-          >
-            <span
-              className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
-                isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
+    <>
+      <nav
+        data-bottom-nav
+        aria-label="Main navigation"
+        className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
+          isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+        }`}
+        style={{
+          paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
+          willChange: "transform, opacity",
+        }}
+      >
+        {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
+        <div
+          aria-hidden
+          className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
+        />
+        {items.map((item) => {
+          const isMore = item.href === "/more";
+          const isActive = isMore ? isMoreRoute : pathname === item.href;
+          const Icon = item.icon;
+
+          if (isMore) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                id={`tour-nav-${item.label.toLowerCase()}`}
+                onClick={() => setIsMoreOpen(true)}
+                className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+                  isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
+                }`}
+                aria-expanded={isMoreOpen}
+                aria-label="Open more options menu"
+              >
+                <span
+                  className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
+                    isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
+                  }`}
+                >
+                  <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
+                  {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
+                </span>
+                {item.label}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              id={`tour-nav-${item.label.toLowerCase()}`}
+              prefetch={true}
+              className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+                isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
               }`}
+              aria-current={isActive ? "page" : undefined}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
-              {"badge" in item && item.badge && <AlertBadge />}
-            </span>
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+              <span
+                className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
+                  isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
+                }`}
+              >
+                <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
+                {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* More Modal Overlay */}
+      {isMoreOpen && (
+        <MoreSheetModal
+          isOpen={isMoreOpen}
+          onClose={() => setIsMoreOpen(false)}
+          activePath={pathname}
+        />
+      )}
+    </>
   );
 }

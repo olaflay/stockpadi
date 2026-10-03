@@ -88,8 +88,8 @@ function computeDayOfWeekStats(sales: Sale[]): DayOfWeekStat[] {
  * the UI or showing a spinner. The "pendingSyncCount" tells the UI how
  * many local outbox items haven't backed up to the server yet.
  */
-export function useReportsData() {
-  const [period, setPeriod] = useState<Period>("today");
+export function useReportsData(initialPeriod: Period = "today") {
+  const [period, setPeriod] = useState<Period>(initialPeriod);
   const [customRange, setCustomRange] = useState<{ start: string; end: string } | undefined>(undefined);
   const [remoteData, setRemoteData] = useState<LocalReportData | undefined>(undefined);
   const cancelledRef = useRef(false);
@@ -369,6 +369,7 @@ export function useReportsData() {
     periodPurchases,
     periodPurchasesTotal,
     bestSellers,
+    products: products ?? [],
     periodGrossProfit,
     periodNetProfit,
     periodNetCashFlow,

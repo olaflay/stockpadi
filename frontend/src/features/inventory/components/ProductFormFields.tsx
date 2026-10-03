@@ -16,6 +16,9 @@ import type { ProductFormInput, ProductFormValues } from "@/features/inventory/p
 import { TextInput } from "@/components/ui/TextInput";
 import { formatCurrency } from "@/lib/format";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useCurrentUser } from "@/features/auth/use-current-user";
+import { useToast } from "@/components/ui/Toast";
+import { deleteCategoryOffline } from "@/features/inventory/category-offline-delete";
 
 /**
  * Shared red caption under a control, wired to that control's aria-describedby
@@ -63,6 +66,18 @@ export function ProductCoreFields({
   onSkuChange?: (value: string) => void;
 }) {
   const [scanning, setScanning] = useState(false);
+  const user = useCurrentUser();
+  const { showToast } = useToast();
+
+  const handleDeleteCategory = async (catId: string) => {
+    try {
+      await deleteCategoryOffline(catId, user);
+      showToast("Category deleted", "success");
+    } catch {
+      showToast("Could not delete category", "danger");
+    }
+  };
+
   const nameRegister = register("name");
   const skuRegister = register("sku");
 
@@ -79,6 +94,7 @@ export function ProductCoreFields({
       <label className="flex flex-col gap-1">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Name *</span>
         <TextInput
+          id="field-product-name"
           {...nameRegister}
           onChange={(e) => {
             nameRegister.onChange(e);
@@ -100,6 +116,7 @@ export function ProductCoreFields({
           value={categoryId}
           valueName={categories?.find((c) => c.id === categoryId)?.name ?? categoryInputName}
           onSelect={onCategorySelect}
+          onDeleteCategory={handleDeleteCategory}
         />
       </label>
 

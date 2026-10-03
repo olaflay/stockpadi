@@ -27,6 +27,8 @@ export interface BusinessTypeTemplate {
   notes: string;
 }
 
+export const DEFAULT_GENERAL_CATEGORIES = ["General Goods"];
+
 export const BUSINESS_TYPE_TEMPLATES: BusinessTypeTemplate[] = [
   {
     id: "retail",

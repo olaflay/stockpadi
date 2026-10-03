@@ -67,7 +67,7 @@ export function ShortDateInput({ value, onChange, className = "", autoFocus = fa
       ref={inputRef}
       type="text"
       inputMode="numeric"
-      placeholder="dd/mm/yy"
+      placeholder="day / month / year"
       value={text}
       onChange={handleChange}
       onFocus={handleFocus}

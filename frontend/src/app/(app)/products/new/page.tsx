@@ -43,6 +43,9 @@ function NewProductContent() {
     altUnitLabel,
     hasInitialStock,
     onSubmit,
+    onSaveAndAddAnother,
+    lastAddedProduct,
+    clearLastAddedProduct,
     setValue,
     watch,
   } = useNewProductForm({ prefillName, prefillBarcode });
@@ -83,6 +86,9 @@ function NewProductContent() {
       </div>
       <NewProductForm
         onSubmit={onSubmit}
+        onSaveAndAddAnother={onSaveAndAddAnother}
+        lastAddedProduct={lastAddedProduct}
+        onDismissLastAddedProduct={clearLastAddedProduct}
         onCancel={() => router.push("/products")}
         register={register}
         setValue={setValue}

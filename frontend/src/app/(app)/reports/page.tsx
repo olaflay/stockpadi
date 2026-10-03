@@ -30,10 +30,11 @@ export default function ReportsPage() {
     periodPurchases,
     periodPurchasesTotal,
     bestSellers,
+    products,
     periodGrossProfit,
     periodNetProfit,
     periodNetCashFlow,
-  } = useReportsData();
+  } = useReportsData("week");
 
   if (!hasCapability(user, "VIEW_REPORTS")) {
     return (
@@ -92,6 +93,7 @@ export default function ReportsPage() {
         periodPurchasesTotal={periodPurchasesTotal}
         bestSellers={bestSellers}
         lowStockProducts={lowStockProducts}
+        products={products}
         periodGrossProfit={periodGrossProfit}
         periodNetProfit={periodNetProfit}
         periodNetCashFlow={periodNetCashFlow}

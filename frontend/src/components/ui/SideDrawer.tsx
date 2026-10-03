@@ -13,6 +13,9 @@ import {
   Database,
   HelpCircle,
   CalendarCheck,
+  Settings,
+  X,
+  UserCheck,
 } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getBrandingConfig } from "@/config/branding";
@@ -30,6 +33,11 @@ interface NavItem {
   badge?: React.ReactNode;
   ownerOnly?: boolean;
   capability?: WorkerCapability;
+}
+
+interface DrawerSection {
+  title: string;
+  items: NavItem[];
 }
 
 export function SideDrawer() {
@@ -93,53 +101,71 @@ export function SideDrawer() {
     };
   }, [isOpen]);
 
-  const closeDayHref = "/close-day";
-  const isCloseDayActive = pathname === closeDayHref || pathname.startsWith(`${closeDayHref}/`);
-
   /**
-   * Drawer menu items organized for rapid daily retail access:
-   * Business Profile | Contacts & Debtors | Purchases & Restock | Staff | Import/Export | Backup & Data | Help
+   * Material UI / M3 standard grouped drawer navigation:
+   * Categorized into concise, non-overwhelming sections with clear hierarchy.
    */
-  const navItems: NavItem[] = [
+  const sections: DrawerSection[] = [
     {
-      label: "Business Profile",
-      href: "/profile",
-      icon: Store,
+      title: "Store Operations",
+      items: [
+        {
+          label: "Close Day Register",
+          href: "/close-day",
+          icon: CalendarCheck,
+          capability: "SUBMIT_RECONCILIATION",
+        },
+        {
+          label: "Contacts & Debtors",
+          href: "/contacts",
+          icon: Users,
+          capability: "VIEW_CUSTOMERS",
+        },
+        {
+          label: "Purchases & Restock",
+          href: "/purchases",
+          icon: Truck,
+          capability: "RECEIVE_STOCK",
+        },
+      ],
     },
     {
-      label: "Contacts & Debtors",
-      href: "/contacts",
-      icon: Users,
-      capability: "VIEW_CUSTOMERS",
+      title: "Management",
+      items: [
+        {
+          label: "Business Profile",
+          href: "/profile",
+          icon: Store,
+        },
+        {
+          label: "Staff & Permissions",
+          href: "/staff",
+          icon: UserCheck,
+          ownerOnly: true,
+        },
+        {
+          label: "Import / Export Catalog",
+          href: "/products/import",
+          icon: FileSpreadsheet,
+          capability: "MANAGE_PRODUCTS",
+        },
+      ],
     },
     {
-      label: "Purchases & Restock",
-      href: "/purchases",
-      icon: Truck,
-      capability: "RECEIVE_STOCK",
-    },
-    {
-      label: "Staff & Access",
-      href: "/staff",
-      icon: Users,
-      ownerOnly: true,
-    },
-    {
-      label: "Import / Export Catalog",
-      href: "/products/import",
-      icon: FileSpreadsheet,
-      capability: "MANAGE_PRODUCTS",
-    },
-    {
-      label: "Backup & Data",
-      href: "/settings/data",
-      icon: Database,
-      ownerOnly: true,
-    },
-    {
-      label: "Help & Support",
-      href: "/settings/help",
-      icon: HelpCircle,
+      title: "System & Safety",
+      items: [
+        {
+          label: "Backup & Offline Storage",
+          href: "/settings/data",
+          icon: Database,
+          ownerOnly: true,
+        },
+        {
+          label: "App Settings",
+          href: "/settings",
+          icon: Settings,
+        },
+      ],
     },
   ];
 
@@ -154,7 +180,7 @@ export function SideDrawer() {
         aria-hidden="true"
       />
 
-      {/* Slide-out Drawer Panel (Google Drive / One UI style, 60fps GPU accelerated) */}
+      {/* Slide-out Drawer Panel (M3 / Material UI specification, 60fps GPU accelerated) */}
       <aside
         ref={drawerRef}
         className={`fixed inset-y-0 top-0 bottom-0 left-0 z-50 flex h-full w-[310px] max-w-[85vw] flex-col bg-surface shadow-2xl gpu-layer transition-transform duration-[280ms] will-change-transform ${
@@ -167,16 +193,15 @@ export function SideDrawer() {
         aria-hidden={!isOpen}
         inert={!isOpen || undefined}
       >
-        {/* Drawer Header: Business Name prominently at the top */}
-        <div className="flex flex-col px-4 pt-6 pb-4.5 bg-brand-accent text-brand-accent-contrast select-none shadow-sm">
+        {/* Drawer Header: Clean Identity Banner */}
+        <div className="flex items-center justify-between px-4 pt-5 pb-4 bg-brand-accent text-brand-accent-contrast select-none shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white shadow-xs">
               <Store size={20} aria-hidden />
             </div>
             <div className="min-w-0 flex-1">
-              {/* Store name with Owner pill by its side */}
               <div className="flex items-center gap-2 min-w-0">
-                <p className="truncate text-base sm:text-lg font-bold text-white tracking-tight" title={storeName}>
+                <p className="truncate text-base font-bold text-white tracking-tight" title={storeName}>
                   {storeName}
                 </p>
                 <span className="shrink-0 inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white uppercase tracking-wider">
@@ -187,71 +212,79 @@ export function SideDrawer() {
                     : "Staff"}
                 </span>
               </div>
-              {/* User name only */}
               <p className="truncate text-xs text-white/80 font-medium mt-0.5" title={user.fullName || "User"}>
                 {user.fullName || "User"}
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={closeDrawer}
+            aria-label="Close navigation drawer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all shrink-0 ml-2"
+          >
+            <X size={18} aria-hidden />
+          </button>
         </div>
 
-        {/* Navigation Items (Core 6 items with generous breathing room) */}
-        <nav className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1.5">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            Operations
-          </p>
-          {navItems
-            .filter((item) => (!item.ownerOnly || isOwnerOrAdmin) && (!item.capability || hasCapability(user, item.capability)))
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+        {/* Grouped Navigation Items (Material UI standard) */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+          {sections.map((section, sIdx) => {
+            const visibleItems = section.items.filter(
+              (item) => (!item.ownerOnly || isOwnerOrAdmin) && (!item.capability || hasCapability(user, item.capability))
+            );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closeDrawer}
-                  prefetch={true}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[length:var(--font-size-body)] font-medium transition-colors ${
-                    isActive
-                      ? "bg-brand-accent/10 text-brand-accent-active font-semibold shadow-xs"
-                      : "text-on-surface hover:bg-surface-container"
-                  }`}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  <Icon
-                    size={19}
-                    className={isActive ? "text-brand-accent-active" : "text-on-surface-muted"}
-                    aria-hidden
-                  />
-                  <span className="flex-1 truncate">{item.label}</span>
-                  {item.badge && <span className="shrink-0 ml-2 flex items-center">{item.badge}</span>}
-                </Link>
-              );
-            })}
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={section.title} className="space-y-1">
+                {sIdx > 0 && <div className="border-t border-border/40 my-2.5 mx-2" />}
+                <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-muted">
+                  {section.title}
+                </p>
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeDrawer}
+                      prefetch={true}
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[length:var(--font-size-body)] font-medium transition-all ${
+                        isActive
+                          ? "bg-brand-accent/15 text-brand-accent-active font-semibold shadow-xs"
+                          : "text-on-surface hover:bg-surface-container active:scale-[0.99]"
+                      }`}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon
+                        size={19}
+                        className={isActive ? "text-brand-accent-active" : "text-on-surface-muted"}
+                        aria-hidden
+                      />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {item.badge && <span className="shrink-0 ml-2 flex items-center">{item.badge}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
-        {/* Core Action: Close Day (Clean tonal/solid button without border strokes) */}
-        {hasCapability(user, "SUBMIT_RECONCILIATION") && (
-          <div className="px-3.5 py-3 bg-surface-container-low/60">
-            <Link
-              href={closeDayHref}
-              onClick={closeDrawer}
-              prefetch={true}
-              className={`flex items-center justify-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-[var(--motion-duration-short)] ${
-                isCloseDayActive
-                  ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
-                  : "bg-brand-accent/15 text-brand-accent hover:bg-brand-accent/20 active:scale-[0.98]"
-              }`}
-            >
-              <CalendarCheck size={18} aria-hidden />
-              <span>Close Day</span>
-            </Link>
-          </div>
-        )}
+        {/* Drawer Footer: Support, Appearance & Sign Out */}
+        <div className="px-3.5 py-3 border-t border-border/40 bg-surface-container-low space-y-2">
+          <Link
+            href="/settings/help"
+            onClick={closeDrawer}
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
+          >
+            <HelpCircle size={16} className="text-on-surface-muted" aria-hidden />
+            <span>Help & Support</span>
+          </Link>
 
-        {/* Drawer Footer: Appearance Row & Sign Out with comfortable breathing room */}
-        <div className="px-3.5 py-3 bg-surface-container-low space-y-2.5">
           <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3.5 py-2">
             <span className="text-xs font-semibold text-on-surface">Appearance</span>
             <ThemeToggle variant="pill-icons" />

@@ -14,6 +14,7 @@ let currentUser: CurrentUser = {
 
 vi.mock("next/navigation", () => ({
   usePathname: () => currentPath,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 vi.mock("@/features/auth/use-current-user", () => ({

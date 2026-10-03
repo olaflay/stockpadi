@@ -107,9 +107,9 @@ export function ContactsHubView({
     );
   }
 
-  // Prioritize "Owing (Debtors)" as the primary retention action tab
+  // Prioritize "Who Owes You" as the primary retention action tab
   const chips: { key: ContactKind; label: string; count: number }[] = [
-    { key: "debtors", label: "Owing (Debtors)", count: counts.debtors },
+    { key: "debtors", label: "Who Owes You", count: counts.debtors },
     { key: "customers", label: "Customers", count: counts.customers },
     { key: "suppliers", label: "Suppliers", count: counts.suppliers },
     { key: "all", label: "All Contacts", count: counts.all },
@@ -140,7 +140,7 @@ export function ContactsHubView({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-on-surface-muted">
-                Total Customer Debt
+                Money outside (Customer debt)
               </p>
               <p className="mt-0.5 font-number text-2xl font-bold tabular-nums text-danger">
                 {formatCurrency(totalOwed)}
