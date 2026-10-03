@@ -36,28 +36,39 @@ export function Modal({
   const startTimeRef = useRef(0);
   const canDragFromContentRef = useRef(false);
 
-  // Dynamic visual viewport height for mobile keyboards
+  // Dynamic visual viewport height and keyboard offset for mobile
   const [maxHeightStyle, setMaxHeightStyle] = React.useState<string>("90vh");
+  const [bottomOffset, setBottomOffset] = React.useState<number>(0);
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
 
     const handleResize = () => {
       const vv = window.visualViewport;
-      if (vv && vv.height < window.innerHeight) {
-        // Keyboard is up on mobile, constrain modal so it stays visible above keyboard
-        setMaxHeightStyle(`${Math.floor(vv.height * 0.94)}px`);
+      if (vv) {
+        // Calculate software keyboard height if visual viewport is reduced
+        const kbHeight = Math.max(0, window.innerHeight - Math.round(vv.height + (vv.offsetTop || 0)));
+        setBottomOffset(kbHeight);
+        if (vv.height < window.innerHeight - 80) {
+          // Keyboard is up on mobile, constrain modal so it fits cleanly above keyboard
+          setMaxHeightStyle(`${Math.floor(vv.height * 0.92)}px`);
+        } else {
+          setMaxHeightStyle("90vh");
+        }
       } else {
+        setBottomOffset(0);
         setMaxHeightStyle("90vh");
       }
     };
 
     handleResize();
     window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
       window.removeEventListener("resize", handleResize);
     };
   }, [isOpen]);
@@ -201,7 +212,10 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--color-scrim)] transition-opacity animate-step-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--color-scrim)] transition-all animate-step-in"
+      style={{
+        paddingBottom: bottomOffset > 0 ? `${bottomOffset}px` : undefined,
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -260,7 +274,10 @@ export function Modal({
         {/* Modal Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto p-5"
+          className="flex-1 overflow-y-auto p-5 scroll-smooth"
+          style={{
+            scrollPaddingBottom: "2.5rem",
+          }}
           onTouchStart={(e) => {
             if (contentRef.current && contentRef.current.scrollTop <= 2) {
               handleDragStart(e.touches[0].clientY, true);

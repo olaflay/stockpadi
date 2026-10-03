@@ -247,23 +247,45 @@ export function PaymentStep(props: {
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Payment method</span>
           {effectivePayments.map((payment, index) => (
-            <div key={index} className="flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  aria-label={`Payment method ${index + 1}`}
-                  value={payment.method}
-                  onChange={(event) => onUpdatePaymentMethod(index, event.target.value as PaymentMethod)}
-                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[120px] rounded-[var(--radius-control)] bg-surface-container-low px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
-                >
-                  {PAYMENT_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {PAYMENT_LABELS[method]}
-                    </option>
-                  ))}
-                </select>
+            <div key={index} className="flex flex-col gap-2 rounded-[var(--radius-control)] bg-surface-container-low p-2.5 sm:p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={`Payment method ${index + 1}`}>
+                  {PAYMENT_METHODS.map((method) => {
+                    const isSelected = payment.method === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => onUpdatePaymentMethod(index, method)}
+                        aria-pressed={isSelected}
+                        className={`min-h-[36px] px-3 rounded-xl text-xs font-semibold transition-all border ${
+                          isSelected
+                            ? "bg-brand-accent text-on-brand border-brand-accent shadow-xs font-bold"
+                            : "bg-surface text-on-surface border-border/40 hover:bg-surface-container"
+                        }`}
+                      >
+                        {PAYMENT_LABELS[method]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {effectivePayments.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => onRemovePaymentLine(index)}
+                    aria-label="Remove this payment method"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-on-surface-muted shrink-0">Amount</span>
                 <input
                   type="number"
                   aria-label={`Payment amount ${index + 1}`}
@@ -271,18 +293,8 @@ export function PaymentStep(props: {
                   step="0.01"
                   value={payment.amount}
                   onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
-                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface-container-low px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body)] font-number font-semibold text-on-surface outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                 />
-                {effectivePayments.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRemovePaymentLine(index)}
-                    aria-label="Remove this payment method"
-                    className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
-                  >
-                    ×
-                  </button>
-                )}
               </div>
               {/* Bank transfer audit metadata: provider chips + sender/session ID,
                   composed into the payment's note and printed on the receipt (§9.3) */}
@@ -309,7 +321,7 @@ export function PaymentStep(props: {
                     placeholder="Sender name / session ID"
                     value={transferMeta[index]?.sender ?? ""}
                     onChange={(e) => setTransferSender(index, e.target.value)}
-                    className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface-muted"
+                    className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                   />
                 </div>
               )}

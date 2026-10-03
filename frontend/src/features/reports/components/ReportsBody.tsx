@@ -14,11 +14,16 @@ import {
   Receipt,
   ArrowRight,
   Filter,
+  Package,
+  Layers,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { formatCurrency } from "@/lib/format";
 import { PERIOD_LABELS, type Period, type DayOfWeekStat } from "@/features/reports/use-reports-data";
 import { computeGrossProfit } from "@/features/reports/compute-profit";
@@ -51,6 +56,9 @@ export function ReportsBody({
   periodGrossProfit,
   periodNetProfit,
   periodNetCashFlow,
+  stockCostValue = 0,
+  stockRetailValue = 0,
+  stockByProduct,
 }: {
   period: Period;
   onSelectPeriod: (period: Period) => void;
@@ -68,17 +76,22 @@ export function ReportsBody({
   periodGrossProfit: number;
   periodNetProfit: number;
   periodNetCashFlow: number;
+  stockCostValue?: number;
+  stockRetailValue?: number;
+  stockByProduct?: Map<string, number>;
 }) {
+  const [activeTab, setActiveTab] = useState<"overview" | "sales" | "inventory">("overview");
   const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
   const [showCashFlowBreakdown, setShowCashFlowBreakdown] = useState(false);
   const [selectedDayTab, setSelectedDayTab] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
-  // Compute macro values aligned with shared formulas
+  // Macro metrics
   const totalRevenue = periodSales.reduce((sum, s) => sum + s.total, 0);
   const totalExpenses = periodExpensesTotal;
   const totalRestocks = periodPurchasesTotal;
   const totalCogs = Math.max(0, totalRevenue - periodGrossProfit);
+  const averageSaleValue = periodSales.length > 0 ? Math.round(totalRevenue / periodSales.length) : 0;
 
   // Real cash received from sales (excluding unpaid credit)
   const cashReceivedFromSales = periodSales.reduce((sum, s) => {
@@ -87,6 +100,17 @@ export function ReportsBody({
       sum +
       (s.payments ?? [])
         .filter((p) => p.method !== "credit")
+        .reduce((pSum, p) => pSum + p.amount, 0)
+    );
+  }, 0);
+
+  // Credit sales ("Money outside")
+  const totalCreditSales = periodSales.reduce((sum, s) => {
+    if (s.voidedAt) return sum;
+    return (
+      sum +
+      (s.payments ?? [])
+        .filter((p) => p.method === "credit")
         .reduce((pSum, p) => pSum + p.amount, 0)
     );
   }, 0);
@@ -188,566 +212,713 @@ export function ReportsBody({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* 1. Filter Dropdown Menu */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3 border border-border/30">
-        <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
-          <Filter size={16} className="text-brand-accent shrink-0" />
-          <span>Report Period:</span>
+    <div className="flex flex-col gap-5">
+      {/* 1. Header Toolbar: Period Selector & Segmented Tabs */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3 border border-border/30">
+          <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
+            <Filter size={16} className="text-brand-accent shrink-0" />
+            <span>Time Window:</span>
+          </div>
+
+          <div className="relative min-w-[130px]">
+            <select
+              value={period}
+              onChange={(e) => {
+                onSelectPeriod(e.target.value as Period);
+                setSelectedDayTab(null);
+              }}
+              aria-label="Filter report period"
+              className="w-full appearance-none rounded-xl border border-border bg-surface px-3 py-2 pr-8 text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
+            >
+              {DROPDOWN_PERIODS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={14}
+              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted"
+            />
+          </div>
         </div>
 
-        <div className="relative min-w-[130px]">
-          <select
-            value={period}
-            onChange={(e) => {
-              onSelectPeriod(e.target.value as Period);
-              setSelectedDayTab(null);
-            }}
-            aria-label="Filter report period"
-            className="w-full appearance-none rounded-xl border border-border bg-surface px-3 py-2 pr-8 text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
+        {/* Custom Date Range Picker */}
+        {period === "custom" && (
+          <div className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 border border-border/30 animate-step-in">
+            <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
+              <Calendar size={16} className="text-brand-accent" />
+              <span>Select Date Range</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+                Start date
+                <input
+                  type="date"
+                  value={customRange?.start ? customRange.start.slice(0, 10) : ""}
+                  onChange={(e) =>
+                    onSelectCustomRange?.({
+                      start: e.target.value,
+                      end: customRange?.end ?? new Date().toISOString().slice(0, 10),
+                    })
+                  }
+                  className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+                End date
+                <input
+                  type="date"
+                  value={customRange?.end ? customRange.end.slice(0, 10) : ""}
+                  onChange={(e) =>
+                    onSelectCustomRange?.({
+                      start: customRange?.start ?? new Date().toISOString().slice(0, 10),
+                      end: e.target.value,
+                    })
+                  }
+                  className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
+                />
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* 3 Segmented Anti-Overwhelm View Tabs */}
+        <div className="flex items-center gap-1.5 rounded-2xl bg-surface-container p-1 border border-border/20">
+          <button
+            type="button"
+            onClick={() => setActiveTab("overview")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === "overview"
+                ? "bg-surface shadow-xs text-brand-accent font-bold"
+                : "text-on-surface-muted hover:text-on-surface"
+            }`}
           >
-            {DROPDOWN_PERIODS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            size={14}
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted"
-          />
+            <BarChart2 size={15} />
+            <span>Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("sales")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === "sales"
+                ? "bg-surface shadow-xs text-brand-accent font-bold"
+                : "text-on-surface-muted hover:text-on-surface"
+            }`}
+          >
+            <Receipt size={15} />
+            <span>Daily Sales</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("inventory")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === "inventory"
+                ? "bg-surface shadow-xs text-brand-accent font-bold"
+                : "text-on-surface-muted hover:text-on-surface"
+            }`}
+          >
+            <Package size={15} />
+            <span>Stock & Shelves</span>
+          </button>
         </div>
       </div>
 
-      {/* Custom Date Range Picker when Custom tab is selected */}
-      {period === "custom" && (
-        <div className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 border border-border/30 animate-step-in">
-          <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
-            <Calendar size={16} className="text-brand-accent" />
-            <span>Select Date Range</span>
+      {/* ==================== TAB 1: OVERVIEW ==================== */}
+      {activeTab === "overview" && (
+        <div className="flex flex-col gap-4 animate-step-in">
+          {/* Hero Revenue Card */}
+          <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                <span>Total Sales ({PERIOD_LABELS[period]?.toLowerCase()})</span>
+                <InfoTooltip text="Total gross revenue recorded across all branches during this period." />
+              </span>
+              <PerformancePill
+                tone={periodSales.length > 0 ? "success" : "neutral"}
+                icon={TrendingUp}
+                label={periodSales.length > 0 ? "Recorded" : "No Sales"}
+              />
+            </div>
+            <p className="mt-2 truncate text-3xl font-number font-bold tabular-nums text-on-surface">
+              {formatCurrency(totalRevenue)}
+            </p>
+            <div className="mt-3 flex items-center justify-between border-t border-border/20 pt-2.5 text-xs text-on-surface-muted">
+              <span>
+                {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"} recorded
+              </span>
+              <span>Avg: {formatCurrency(averageSaleValue)} / sale</span>
+            </div>
+          </section>
+
+          {/* 7-Day Performance Bar Chart */}
+          {dayOfWeekStats.length > 0 && periodSales.length > 0 && (
+            <section className="rounded-3xl bg-surface-container p-4 sm:p-5 border border-border/20 shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart2 size={16} className="text-brand-accent" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                    <span>Weekly Sales Flow</span>
+                    <InfoTooltip text="Daily comparison of sales revenue. Tap any day column to jump to that day's receipts." />
+                  </h3>
+                </div>
+                {peakDay && (
+                  <span className="text-[10px] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Peak: {peakDay.day}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 items-end pt-2">
+                {dayOfWeekStats.map((stat) => {
+                  const heightPercent =
+                    maxDayRevenue > 0 && stat.total > 0
+                      ? Math.max(14, Math.round((stat.total / maxDayRevenue) * 100))
+                      : 8;
+                  const isSelected = selectedDayTab?.toLowerCase() === stat.day.toLowerCase();
+                  const isPeak = peakDay?.day === stat.day;
+
+                  return (
+                    <button
+                      key={stat.day}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDayTab(stat.day);
+                        setActiveTab("sales");
+                      }}
+                      className="flex flex-col items-center gap-1.5 min-w-0 rounded-xl p-1 hover:bg-surface-container-high transition-colors"
+                      title={`Tap to see ${stat.day} sales`}
+                    >
+                      <div className="w-full flex items-end justify-center h-20 bg-surface-container-low rounded-xl p-1">
+                        <div
+                          style={{ height: `${heightPercent}%` }}
+                          className={`w-full rounded-lg transition-all duration-300 ${
+                            isPeak
+                              ? "bg-brand-accent shadow-sm"
+                              : stat.total > 0
+                                ? "bg-brand-container"
+                                : "bg-surface-container"
+                          }`}
+                        />
+                      </div>
+                      <span
+                        className={`text-[11px] font-semibold ${
+                          isPeak ? "text-brand-accent font-bold" : "text-on-surface-muted"
+                        }`}
+                      >
+                        {stat.day}
+                      </span>
+                      <span className="text-[10px] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
+                        {stat.count > 0 ? stat.count : "—"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Clean Profit (Compressible Card) */}
+          <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowProfitBreakdown((v) => !v)}
+              className="w-full p-5 text-left transition-colors hover:bg-surface-container-high flex flex-col gap-1"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                    <span>Clean Profit</span>
+                    <InfoTooltip text="Sales revenue minus product cost (what you paid) and shop operational expenses." />
+                  </p>
+                  <p className="text-[11px] text-on-surface-muted">
+                    Sales minus product cost and shop expenses
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PerformancePill
+                    tone={periodNetProfit >= 0 ? "success" : "danger"}
+                    icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
+                    label={periodNetProfit >= 0 ? "Profitable" : "Deficit"}
+                  />
+                  {showProfitBreakdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+              <p
+                className={`mt-1 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
+                  periodNetProfit >= 0 ? "text-success" : "text-danger"
+                }`}
+              >
+                {formatCurrency(periodNetProfit)}
+              </p>
+            </button>
+
+            {showProfitBreakdown && (
+              <div className="border-t border-border/30 bg-surface-container-low px-5 py-4 space-y-2.5 animate-step-in text-xs">
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Sales Revenue</span>
+                  <span className="font-number tabular-nums font-semibold text-on-surface">
+                    {formatCurrency(totalRevenue)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Product Cost (what you paid)</span>
+                  <span className="font-number tabular-nums text-danger font-semibold">
+                    -{formatCurrency(totalCogs)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Shop Expenses</span>
+                  <span className="font-number tabular-nums text-danger font-semibold">
+                    -{formatCurrency(totalExpenses)}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-border/20 font-bold">
+                  <span className="text-on-surface">Clean Profit</span>
+                  <span
+                    className={`font-number tabular-nums ${
+                      periodNetProfit >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {formatCurrency(periodNetProfit)}
+                  </span>
+                </div>
+
+                <div className="pt-2">
+                  <RippleLink
+                    href="/expenses"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-accent hover:underline"
+                  >
+                    <span>Manage shop expenses</span>
+                    <ArrowRight size={13} />
+                  </RippleLink>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Money in Hand / Cash Flow (Compressible Card) */}
+          <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowCashFlowBreakdown((v) => !v)}
+              className="w-full p-5 text-left transition-colors hover:bg-surface-container-high flex flex-col gap-1"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                    <span>Money in Hand (Cash Flow)</span>
+                    <InfoTooltip text="Actual physical cash and transfers collected in your till minus money paid out for restocks and expenses." />
+                  </p>
+                  <p className="text-[11px] text-on-surface-muted">
+                    Real cash collected minus shop cash spent
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PerformancePill
+                    tone={periodNetCashFlow >= 0 ? "success" : "danger"}
+                    icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
+                    label={periodNetCashFlow >= 0 ? "Cash Positive" : "Deficit"}
+                  />
+                  {showCashFlowBreakdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+              <p
+                className={`mt-1 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
+                  periodNetCashFlow >= 0 ? "text-success" : "text-danger"
+                }`}
+              >
+                {formatCurrency(periodNetCashFlow)}
+              </p>
+            </button>
+
+            {showCashFlowBreakdown && (
+              <div className="border-t border-border/30 bg-surface-container-low px-5 py-4 space-y-2.5 animate-step-in text-xs">
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Cash received (sales)</span>
+                  <span className="font-number tabular-nums font-semibold text-on-surface">
+                    {formatCurrency(cashReceivedFromSales)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Shop expenses paid</span>
+                  <span className="font-number tabular-nums text-danger font-semibold">
+                    -{formatCurrency(totalExpenses)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Restock deliveries paid</span>
+                  <span className="font-number tabular-nums text-danger font-semibold">
+                    -{formatCurrency(totalRestocks)}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-border/20 font-bold">
+                  <span className="text-on-surface">Net cash in hand</span>
+                  <span
+                    className={`font-number tabular-nums ${
+                      periodNetCashFlow >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {formatCurrency(periodNetCashFlow)}
+                  </span>
+                </div>
+
+                <div className="pt-2">
+                  <RippleLink
+                    href="/purchases"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-accent hover:underline"
+                  >
+                    <span>View restocks & supplier deliveries</span>
+                    <ArrowRight size={13} />
+                  </RippleLink>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Outflow Shortcuts */}
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
-              Start date
-              <input
-                type="date"
-                value={customRange?.start ? customRange.start.slice(0, 10) : ""}
-                onChange={(e) =>
-                  onSelectCustomRange?.({
-                    start: e.target.value,
-                    end: customRange?.end ?? new Date().toISOString().slice(0, 10),
-                  })
-                }
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
-              End date
-              <input
-                type="date"
-                value={customRange?.end ? customRange.end.slice(0, 10) : ""}
-                onChange={(e) =>
-                  onSelectCustomRange?.({
-                    start: customRange?.start ?? new Date().toISOString().slice(0, 10),
-                    end: e.target.value,
-                  })
-                }
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
-              />
-            </label>
+            <RippleLink
+              href="/expenses"
+              className="flex flex-col gap-2 rounded-2xl bg-surface-container p-3.5 border border-border/20 hover:bg-surface-container-high transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-on-surface">Shop Expenses</span>
+                <Wallet size={16} className="text-warning" />
+              </div>
+              <p className="font-number text-base font-bold text-on-surface tabular-nums">
+                {formatCurrency(periodExpensesTotal)}
+              </p>
+              <span className="text-[10px] text-on-surface-muted">
+                {periodExpenses.length} entries recorded →
+              </span>
+            </RippleLink>
+
+            <RippleLink
+              href="/purchases"
+              className="flex flex-col gap-2 rounded-2xl bg-surface-container p-3.5 border border-border/20 hover:bg-surface-container-high transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-on-surface">Restocks</span>
+                <Truck size={16} className="text-success" />
+              </div>
+              <p className="font-number text-base font-bold text-on-surface tabular-nums">
+                {formatCurrency(periodPurchasesTotal)}
+              </p>
+              <span className="text-[10px] text-on-surface-muted">
+                {periodPurchases.length} deliveries received →
+              </span>
+            </RippleLink>
           </div>
         </div>
       )}
 
-      {/* 2. Hero Revenue & Summary Card */}
-      <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
-        <RippleLink href="/sales" className="block w-full text-left">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-              Sales, {PERIOD_LABELS[period]?.toLowerCase() || "selected period"}
-            </p>
-            <PerformancePill
-              tone={periodSales.length > 0 ? "success" : "neutral"}
-              icon={TrendingUp}
-              label={periodSales.length > 0 ? "Sales Recorded" : "No Activity"}
-            />
-          </div>
-          <p className="mt-2 truncate text-3xl font-number font-bold tabular-nums text-on-surface">
-            {formatCurrency(totalRevenue)}
-          </p>
-          <p className="mt-1 text-xs text-on-surface-muted">
-            {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"} recorded
-          </p>
-        </RippleLink>
-      </section>
-
-      {/* 3. Interactive Bar Chart: Weekly Sales & Cash Flow Performance */}
-      {dayOfWeekStats.length > 0 && periodSales.length > 0 && (
-        <section className="rounded-3xl bg-surface-container p-4 sm:p-5 border border-border/20 shadow-xs">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <BarChart2 size={16} className="text-brand-accent" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-                Weekly Sales & Cash Flow Performance
-              </h3>
+      {/* ==================== TAB 2: DAILY SALES & RECEIPTS ==================== */}
+      {activeTab === "sales" && (
+        <div className="flex flex-col gap-4 animate-step-in">
+          {/* Quick Cash vs Debt Snapshot */}
+          <div className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-container p-3.5 border border-border/20">
+            <div>
+              <p className="text-[11px] text-on-surface-muted">Cash in Hand</p>
+              <p className="font-number text-base font-bold text-success tabular-nums">
+                {formatCurrency(cashReceivedFromSales)}
+              </p>
             </div>
-            {peakDay && (
-              <span className="text-[10px] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Peak: {peakDay.day}
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-on-surface-muted mb-2">
-            Tap any day column to filter and view the full summary card for that day:
-          </p>
-
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 items-end pt-2">
-            {dayOfWeekStats.map((stat) => {
-              const heightPercent =
-                maxDayRevenue > 0 && stat.total > 0
-                  ? Math.max(14, Math.round((stat.total / maxDayRevenue) * 100))
-                  : 8;
-              const isSelected = selectedDayTab?.toLowerCase() === stat.day.toLowerCase();
-              const isPeak = peakDay?.day === stat.day;
-
-              return (
-                <button
-                  key={stat.day}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDayTab((prev) =>
-                      prev?.toLowerCase() === stat.day.toLowerCase() ? null : stat.day
-                    );
-                  }}
-                  className={`flex flex-col items-center gap-1.5 min-w-0 rounded-xl p-1 transition-all ${
-                    isSelected
-                      ? "ring-2 ring-brand-accent bg-brand-container/30"
-                      : "hover:bg-surface-container-high"
-                  }`}
-                  aria-pressed={isSelected}
-                  title={`Tap to see ${stat.day}'s summary report`}
-                >
-                  <div className="w-full flex items-end justify-center h-20 bg-surface-container-low rounded-xl p-1">
-                    <div
-                      style={{ height: `${heightPercent}%` }}
-                      className={`w-full rounded-lg transition-all duration-300 ${
-                        isSelected
-                          ? "bg-brand-accent shadow-sm"
-                          : isPeak
-                            ? "bg-brand-accent/80"
-                            : stat.total > 0
-                              ? "bg-brand-container"
-                              : "bg-surface-container"
-                      }`}
-                    />
-                  </div>
-                  <span
-                    className={`text-[11px] font-semibold ${
-                      isSelected
-                        ? "text-brand-accent font-bold"
-                        : isPeak
-                          ? "text-brand-accent"
-                          : "text-on-surface-muted"
-                    }`}
-                  >
-                    {stat.day}
-                  </span>
-                  <span className="text-[10px] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
-                    {stat.count > 0 ? stat.count : "—"}
-                  </span>
-                </button>
-              );
-            })}
+            <div>
+              <p className="text-[11px] text-on-surface-muted">Money Outside (Credit)</p>
+              <p className="font-number text-base font-bold text-warning tabular-nums">
+                {formatCurrency(totalCreditSales)}
+              </p>
+            </div>
           </div>
 
           {selectedDayTab && (
-            <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-2.5 text-xs">
-              <span className="text-on-surface-muted">
-                Showing day filter: <strong>{selectedDayTab}</strong>
+            <div className="flex items-center justify-between rounded-xl bg-brand-container/40 px-3 py-2 text-xs">
+              <span className="font-semibold text-brand-accent">
+                Filtering by: {selectedDayTab}
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedDayTab(null)}
-                className="text-brand-accent font-semibold hover:underline"
+                className="font-bold text-brand-accent hover:underline"
               >
                 Clear filter
               </button>
             </div>
           )}
-        </section>
-      )}
 
-      {/* 4. Daily Performance Summary Cards (Grouped by Day) */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-            Daily Summaries {selectedDayTab ? `(${selectedDayTab})` : ""}
-          </h2>
-          <span className="text-[11px] text-on-surface-muted">
-            {filteredDailySummaries.length}{" "}
-            {filteredDailySummaries.length === 1 ? "day recorded" : "days recorded"}
-          </span>
-        </div>
+          {/* Grouped Daily Summaries */}
+          {filteredDailySummaries.length === 0 ? (
+            <div className="rounded-3xl bg-surface-container p-8 text-center text-xs text-on-surface-muted">
+              No sales recorded for this period.
+            </div>
+          ) : (
+            filteredDailySummaries.map((day) => {
+              const isExpanded = expandedDays.has(day.dateIso);
+              const isProfitPositive = day.netProfit >= 0;
 
-        {filteredDailySummaries.length === 0 ? (
-          <div className="rounded-2xl bg-surface-container p-6 text-center text-xs text-on-surface-muted">
-            No sales or cash activity found for the selected period.
-          </div>
-        ) : (
-          filteredDailySummaries.map((day) => {
-            const isExpanded = expandedDays.has(day.dateIso);
-            const isProfitPositive = day.netProfit >= 0;
-            const isCashPositive = day.netCashFlow >= 0;
-
-            return (
-              <div
-                key={day.dateIso}
-                className="flex flex-col rounded-3xl bg-surface-container border border-border/30 overflow-hidden shadow-xs transition-all"
-              >
-                {/* Master Day Card Header */}
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-brand-accent" />
-                      <h3 className="text-sm font-bold text-on-surface">{day.dayName}</h3>
+              return (
+                <div
+                  key={day.dateIso}
+                  className="rounded-3xl bg-surface-container border border-border/30 overflow-hidden shadow-xs"
+                >
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-brand-accent" />
+                        <h4 className="text-sm font-bold text-on-surface">{day.dayName}</h4>
+                      </div>
+                      <PerformancePill
+                        tone={isProfitPositive ? "success" : "danger"}
+                        icon={isProfitPositive ? TrendingUp : TrendingDown}
+                        label={isProfitPositive ? "Profit" : "Deficit"}
+                      />
                     </div>
-                    <PerformancePill
-                      tone={isProfitPositive ? "success" : "danger"}
-                      icon={isProfitPositive ? TrendingUp : TrendingDown}
-                      label={isProfitPositive ? "Profitable" : "Deficit"}
-                    />
+
+                    <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-container-high/60 p-3 text-xs">
+                      <div>
+                        <span className="text-[10px] text-on-surface-muted">Sales Recorded</span>
+                        <p className="font-number font-bold text-on-surface text-sm tabular-nums">
+                          {formatCurrency(day.totalSales)}
+                        </p>
+                        <span className="text-[10px] text-on-surface-muted">
+                          {day.saleCount} {day.saleCount === 1 ? "sale" : "sales"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-on-surface-muted">Clean Profit</span>
+                        <p
+                          className={`font-number font-bold text-sm tabular-nums ${
+                            isProfitPositive ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          {formatCurrency(day.netProfit)}
+                        </p>
+                        <span className="text-[10px] text-on-surface-muted">
+                          Expenses: -{formatCurrency(day.expensesTotal)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {day.sales.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleDayExpanded(day.dateIso)}
+                        className="mt-3 flex w-full items-center justify-between rounded-xl bg-surface-container-high/40 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-colors"
+                        aria-expanded={isExpanded}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Receipt size={14} className="text-brand-accent" />
+                          {isExpanded ? "Hide receipts" : `View ${day.sales.length} receipts`}
+                        </span>
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                    )}
                   </div>
 
-                  {/* 4 Core Arranged Metrics: Sales, Cash Flow, Profits, Expenses */}
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3 rounded-2xl bg-surface-container-high/60 p-3.5 border border-border/20">
-                    <div>
-                      <p className="text-[11px] text-on-surface-muted font-medium">Sales Recorded</p>
-                      <p className="text-base font-number font-bold text-on-surface tabular-nums">
-                        {formatCurrency(day.totalSales)}
-                      </p>
-                      <p className="text-[10px] text-on-surface-muted">
-                        {day.saleCount} {day.saleCount === 1 ? "sale" : "sales"}
-                      </p>
-                    </div>
+                  {/* Expanded Individual Sales Receipts */}
+                  {isExpanded && day.sales.length > 0 && (
+                    <div className="border-t border-border/30 bg-surface-container-low px-4 py-3 divide-y divide-border/20">
+                      {day.sales.map((sale) => {
+                        const saleTime = new Date(
+                          sale.createdAtLocal || sale.createdAt
+                        ).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                        const primaryPayment = sale.payments?.[0]?.method || "cash";
+                        const itemCount = sale.items?.reduce((c, i) => c + i.quantity, 0) || 0;
 
-                    <div>
-                      <p className="text-[11px] text-on-surface-muted font-medium">Net Cash Flow</p>
-                      <p
-                        className={`text-base font-number font-bold tabular-nums ${
-                          isCashPositive ? "text-success" : "text-danger"
-                        }`}
-                      >
-                        {formatCurrency(day.netCashFlow)}
-                      </p>
-                      <p className="text-[10px] text-on-surface-muted">Exact cash in/out</p>
+                        return (
+                          <RippleLink
+                            key={sale.id}
+                            href={`/sales/${sale.id}`}
+                            className="flex items-center justify-between py-2.5 hover:bg-surface-container transition-colors rounded-xl px-2 -mx-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-on-surface">
+                                  {saleTime}
+                                </span>
+                                <span className="rounded-full bg-brand-container px-2 py-0.5 text-[9px] font-semibold text-on-brand-container uppercase">
+                                  {primaryPayment}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-on-surface-muted truncate mt-0.5">
+                                {itemCount} {itemCount === 1 ? "item" : "items"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-number font-bold text-on-surface tabular-nums">
+                                {formatCurrency(sale.total)}
+                              </span>
+                              <ArrowRight size={14} className="text-on-surface-muted" />
+                            </div>
+                          </RippleLink>
+                        );
+                      })}
                     </div>
-
-                    <div className="border-t border-border/20 pt-2">
-                      <p className="text-[11px] text-on-surface-muted font-medium">Est. Net Profit</p>
-                      <p
-                        className={`text-sm font-number font-semibold tabular-nums ${
-                          isProfitPositive ? "text-success" : "text-danger"
-                        }`}
-                      >
-                        {formatCurrency(day.netProfit)}
-                      </p>
-                    </div>
-
-                    <div className="border-t border-border/20 pt-2">
-                      <p className="text-[11px] text-on-surface-muted font-medium">Shop Expenses</p>
-                      <p className="text-sm font-number font-semibold text-danger tabular-nums">
-                        -{formatCurrency(day.expensesTotal)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Drill-down Toggle Button */}
-                  {day.sales.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => toggleDayExpanded(day.dateIso)}
-                      className="mt-3 flex w-full items-center justify-between rounded-xl bg-surface-container-high/40 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-colors"
-                      aria-expanded={isExpanded}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <Receipt size={14} className="text-brand-accent" />
-                        {isExpanded ? "Hide individual sales" : `View ${day.sales.length} sales & receipts`}
-                      </span>
-                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
                   )}
                 </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
-                {/* Expanded Individual Sales List */}
-                {isExpanded && day.sales.length > 0 && (
-                  <div className="border-t border-border/30 bg-surface-container-low px-4 py-3 divide-y divide-border/20">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-muted pb-2">
-                      Sales on {day.dayName} (tap to view receipt)
-                    </p>
-                    {day.sales.map((sale) => {
-                      const saleTime = new Date(sale.createdAtLocal || sale.createdAt).toLocaleTimeString(
-                        "en-GB",
-                        { hour: "2-digit", minute: "2-digit" }
-                      );
-                      const primaryPayment = sale.payments?.[0]?.method || "cash";
-                      const itemCount = sale.items?.reduce((c, i) => c + i.quantity, 0) || 0;
+      {/* ==================== TAB 3: STOCK & SHELVES ==================== */}
+      {activeTab === "inventory" && (
+        <div className="flex flex-col gap-4 animate-step-in">
+          {/* Money on Shelves (Store Valuation Card) */}
+          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                <span>Money on Shelves (Stock Worth)</span>
+                <InfoTooltip text="Selling Value is what you expect to make when sold; Cost Value is what you spent buying the items from suppliers." />
+              </h3>
+              <Package size={16} className="text-brand-accent" />
+            </div>
+            <p className="text-[11px] text-on-surface-muted mb-3">
+              Total value of all items currently sitting in your shop
+            </p>
 
-                      return (
+            <div className="grid grid-cols-2 gap-2.5 rounded-2xl bg-surface-container-high/60 p-3.5 mb-3">
+              <div>
+                <span className="text-[10px] text-on-surface-muted font-medium">
+                  Selling Value (Expected)
+                </span>
+                <p className="font-number text-lg font-bold text-on-surface tabular-nums mt-0.5">
+                  {formatCurrency(stockRetailValue)}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-on-surface-muted font-medium">
+                  Cost Value (What you paid)
+                </span>
+                <p className="font-number text-lg font-bold text-on-surface-muted tabular-nums mt-0.5">
+                  {formatCurrency(stockCostValue)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-on-surface-muted">Potential Gross Margin:</span>
+              <span className="font-number font-bold text-success tabular-nums">
+                +{formatCurrency(Math.max(0, stockRetailValue - stockCostValue))}
+              </span>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-border/20">
+              <RippleLink
+                href="/products"
+                className="flex items-center justify-between text-xs font-semibold text-brand-accent hover:underline"
+              >
+                <span>View full product catalog</span>
+                <ArrowRight size={14} />
+              </RippleLink>
+            </div>
+          </section>
+
+          {/* Running Low Warnings */}
+          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+                <span>Running Low ({lowStockProducts.length})</span>
+                <InfoTooltip text="Products whose on-shelf count has dropped to or below their re-order alert threshold." />
+              </h3>
+              {lowStockProducts.length > 0 && (
+                <RippleLink
+                  href="/purchases"
+                  className="text-[11px] font-semibold text-brand-accent hover:underline flex items-center gap-1"
+                >
+                  <span>Restock</span>
+                  <ArrowRight size={12} />
+                </RippleLink>
+              )}
+            </div>
+
+            {lowStockProducts.length === 0 ? (
+              <p className="text-xs text-on-surface-muted py-2">
+                All product stock levels are healthy right now.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 mt-2">
+                {lowStockProducts.slice(0, 8).map((product) => {
+                  const qty = stockByProduct?.get(product.id) ?? 0;
+                  return (
+                    <li
+                      key={product.id}
+                      className="flex items-center justify-between gap-2 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5 text-xs border border-border/10"
+                    >
+                      <span className="font-medium text-on-surface truncate min-w-0">
+                        {product.name}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-number font-bold text-danger tabular-nums">
+                          {qty} left
+                        </span>
                         <RippleLink
-                          key={sale.id}
-                          href={`/sales/${sale.id}`}
-                          className="flex items-center justify-between py-2.5 hover:bg-surface-container transition-colors rounded-xl px-2 -mx-2"
+                          href="/purchases"
+                          className="rounded-lg bg-brand-container px-2 py-1 text-[10px] font-bold text-on-brand-container hover:opacity-90"
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-on-surface">{saleTime}</span>
-                              <span className="rounded-full bg-brand-container px-2 py-0.5 text-[9px] font-semibold text-on-brand-container uppercase">
-                                {primaryPayment}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-on-surface-muted truncate mt-0.5">
-                              {itemCount} {itemCount === 1 ? "item" : "items"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-number font-bold text-on-surface tabular-nums">
-                              {formatCurrency(sale.total)}
-                            </span>
-                            <ArrowRight size={14} className="text-on-surface-muted" />
-                          </div>
+                          Restock
                         </RippleLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </section>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
 
-      {/* 5. Period Profit & Cash Flow Deep Dives */}
-      <div className="flex flex-col gap-4">
-        {/* Net Profit Card */}
-        <button
-          type="button"
-          onClick={() => setShowProfitBreakdown((v) => !v)}
-          className="min-w-0 rounded-3xl bg-surface-container p-5 text-left transition-colors hover:bg-surface-container-high border border-border/20 shadow-xs"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-              Period Net Profit
-            </p>
-            <div className="flex items-center gap-2">
-              <PerformancePill
-                tone={periodNetProfit >= 0 ? "success" : "danger"}
-                icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
-                label={periodNetProfit >= 0 ? "Profit" : "Loss"}
-              />
-              {showProfitBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </div>
-          </div>
-          <p
-            className={`mt-2 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
-              periodNetProfit >= 0 ? "text-success" : "text-danger"
-            }`}
-          >
-            {formatCurrency(periodNetProfit)}
-          </p>
-          {showProfitBreakdown && (
-            <div className="mt-3 space-y-2 rounded-xl bg-surface-container-high/50 p-3 animate-step-in">
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Revenue (sales)</span>
-                <span className="font-number tabular-nums text-on-surface">
-                  {formatCurrency(totalRevenue)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Cost of goods sold (COGS)</span>
-                <span className="font-number tabular-nums text-danger">
-                  -{formatCurrency(totalCogs)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Expenses</span>
-                <span className="font-number tabular-nums text-danger">
-                  -{formatCurrency(totalExpenses)}
-                </span>
-              </div>
-              <div className="flex justify-between pt-1 text-xs font-semibold border-t border-border/30">
-                <span className="text-on-surface">Net profit</span>
-                <span
-                  className={`font-number tabular-nums ${
-                    periodNetProfit >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {formatCurrency(periodNetProfit)}
-                </span>
-              </div>
-            </div>
-          )}
-        </button>
+          {/* Fast-Moving Goods (Best Sellers) */}
+          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+              <span>Fast-Moving Goods (Top Sellers)</span>
+              <InfoTooltip text="Top items ranked by the total number of units sold during this time period." />
+            </h3>
+            {bestSellers.length === 0 ? (
+              <p className="text-xs text-on-surface-muted py-2">
+                No product sales recorded yet for this period.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {bestSellers.map(({ product, quantity }, idx) => (
+                  <li
+                    key={product?.id ?? quantity}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5 border border-border/10"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <PerformancePill
+                        tone={idx === 0 ? "brand" : "neutral"}
+                        icon={idx === 0 ? Sparkles : undefined}
+                        label={idx === 0 ? "Top Seller" : `#${idx + 1}`}
+                      />
+                      <span className="truncate text-xs font-medium text-on-surface">
+                        {product?.name ?? "Unknown item"}
+                      </span>
+                    </div>
+                    <span className="shrink-0 font-number text-xs font-semibold tabular-nums text-on-surface-muted">
+                      {quantity} sold
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {/* Net Cash Flow Card */}
-        <button
-          type="button"
-          onClick={() => setShowCashFlowBreakdown((v) => !v)}
-          className="min-w-0 rounded-3xl bg-surface-container p-5 text-left transition-colors hover:bg-surface-container-high border border-border/20 shadow-xs"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-              Period Net Cash Flow
-            </p>
-            <div className="flex items-center gap-2">
-              <PerformancePill
-                tone={periodNetCashFlow >= 0 ? "success" : "danger"}
-                icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
-                label={periodNetCashFlow >= 0 ? "Positive" : "Deficit"}
-              />
-              {showCashFlowBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </div>
-          </div>
-          <p
-            className={`mt-2 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
-              periodNetCashFlow >= 0 ? "text-success" : "text-danger"
-            }`}
-          >
-            {formatCurrency(periodNetCashFlow)}
-          </p>
-          {showCashFlowBreakdown && (
-            <div className="mt-3 space-y-2 rounded-xl bg-surface-container-high/50 p-3 animate-step-in">
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Cash received (sales)</span>
-                <span className="font-number tabular-nums text-on-surface">
-                  {formatCurrency(cashReceivedFromSales)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Expenses paid</span>
-                <span className="font-number tabular-nums text-danger">
-                  -{formatCurrency(totalExpenses)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Restock payments</span>
-                <span className="font-number tabular-nums text-danger">
-                  -{formatCurrency(totalRestocks)}
-                </span>
-              </div>
-              <div className="flex justify-between pt-1 text-xs font-semibold border-t border-border/30">
-                <span className="text-on-surface">Net cash flow</span>
-                <span
-                  className={`font-number tabular-nums ${
-                    periodNetCashFlow >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {formatCurrency(periodNetCashFlow)}
-                </span>
-              </div>
-            </div>
-          )}
-        </button>
-      </div>
-
-      {/* 6. Quick Links to Expenses & Restocks */}
-      <RippleLink
-        href="/expenses"
-        className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors border border-border/20"
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ICON_TONE_CLASSES.warning}`}
-          >
-            <Wallet size={18} aria-hidden />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-on-surface">Expenses</p>
-            <p className="text-[10px] text-on-surface-muted">
-              {periodExpenses.length} {periodExpenses.length === 1 ? "entry" : "entries"} recorded
-            </p>
-          </div>
-        </div>
-        <p className="shrink-0 font-number text-sm font-semibold tabular-nums text-on-surface">
-          {formatCurrency(periodExpensesTotal)}
-        </p>
-      </RippleLink>
-
-      <RippleLink
-        href="/purchases"
-        className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors border border-border/20"
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ICON_TONE_CLASSES.success}`}
-          >
-            <Truck size={18} aria-hidden />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-on-surface">Restocks</p>
-            <p className="text-[10px] text-on-surface-muted">
-              {periodPurchases.length} {periodPurchases.length === 1 ? "delivery" : "deliveries"}{" "}
-              recorded
-            </p>
-          </div>
-        </div>
-        <p className="shrink-0 font-number text-sm font-semibold tabular-nums text-on-surface">
-          {formatCurrency(periodPurchasesTotal)}
-        </p>
-      </RippleLink>
-
-      {/* 7. Fast-Moving Goods */}
-      <section>
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-muted px-1">
-          Fast-Moving Goods
-        </h2>
-        {bestSellers.length === 0 ? (
-          <NoResultsState query={PERIOD_LABELS[period]} />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {bestSellers.map(({ product, quantity }, idx) => (
-              <li
-                key={product?.id ?? quantity}
-                className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 border border-border/20"
+            <div className="mt-3 pt-3 border-t border-border/20">
+              <RippleLink
+                href="/products"
+                className="flex items-center justify-between text-xs font-semibold text-brand-accent hover:underline"
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <PerformancePill
-                    tone={idx === 0 ? "brand" : "neutral"}
-                    icon={idx === 0 ? Sparkles : undefined}
-                    label={idx === 0 ? "Top Seller" : `#${idx + 1}`}
-                  />
-                  <span className="truncate text-xs font-medium text-on-surface">
-                    {product?.name ?? "Unknown product"}
-                  </span>
-                </div>
-                <span className="shrink-0 font-number text-xs font-semibold tabular-nums text-on-surface-muted">
-                  {quantity} sold
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* 8. Low Stock Section */}
-      <section>
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-muted px-1">
-          Low stock ({lowStockProducts.length})
-        </h2>
-        {lowStockProducts.length === 0 ? (
-          <p className="text-xs text-on-surface-muted px-1">Nothing is low on stock right now.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {lowStockProducts.map((product) => (
-              <li
-                key={product.id}
-                className="rounded-2xl bg-surface-container px-4 py-3 text-xs text-on-surface border border-border/20"
-              >
-                {product.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                <span>Manage all inventory & items</span>
+                <ArrowRight size={14} />
+              </RippleLink>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

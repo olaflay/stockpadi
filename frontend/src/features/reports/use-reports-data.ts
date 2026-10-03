@@ -354,6 +354,16 @@ export function useReportsData(initialPeriod: Period = "today") {
     .reduce((sum, m) => sum + Math.abs(m.amountDelta), 0);
   const periodNetCashFlow = computeNetCashFlow(periodSales, periodExpenses, periodPurchases, creditCollected);
 
+  // Compute total on-shelf stock valuation (Retail worth vs Capital spent)
+  const stockByProduct = result?.stockByProduct ?? new Map<string, number>();
+  let stockCostValue = 0;
+  let stockRetailValue = 0;
+  for (const product of products) {
+    const qty = Math.max(0, stockByProduct.get(product.id) ?? 0);
+    stockCostValue += qty * (product.costPrice || 0);
+    stockRetailValue += qty * (product.sellPrice || 0);
+  }
+
   return {
     period,
     setPeriod,
@@ -373,5 +383,8 @@ export function useReportsData(initialPeriod: Period = "today") {
     periodGrossProfit,
     periodNetProfit,
     periodNetCashFlow,
+    stockCostValue,
+    stockRetailValue,
+    stockByProduct,
   };
 }

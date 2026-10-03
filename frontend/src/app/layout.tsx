@@ -109,9 +109,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  // Virtual keyboard overlays content (matching native iOS & Android),
-  // preventing fixed bottom navigation from jumping into the middle of the screen.
-  interactiveWidget: "overlays-content",
+  // Virtual keyboard resizes content so form input fields and modals
+  // remain cleanly within the field of view instead of being covered or obstructed.
+  interactiveWidget: "resizes-content",
 };
 
 const JSON_LD_SCHEMA = {

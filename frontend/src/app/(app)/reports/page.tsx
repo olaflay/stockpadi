@@ -34,6 +34,9 @@ export default function ReportsPage() {
     periodGrossProfit,
     periodNetProfit,
     periodNetCashFlow,
+    stockCostValue,
+    stockRetailValue,
+    stockByProduct,
   } = useReportsData("week");
 
   if (!hasCapability(user, "VIEW_REPORTS")) {
@@ -97,6 +100,9 @@ export default function ReportsPage() {
         periodGrossProfit={periodGrossProfit}
         periodNetProfit={periodNetProfit}
         periodNetCashFlow={periodNetCashFlow}
+        stockCostValue={stockCostValue}
+        stockRetailValue={stockRetailValue}
+        stockByProduct={stockByProduct}
       />
     </div>
   );

@@ -62,6 +62,18 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         const type = (activeEl as HTMLInputElement).type;
         if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
           setIsKeyboardVisible(true);
+          // Ensure focused input field comes comfortably into field of view above software keyboard
+          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setTimeout(() => {
+              if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
+                (activeEl as HTMLElement).scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                  inline: "nearest",
+                });
+              }
+            }, 180);
+          }
           return;
         }
       }
@@ -80,7 +92,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         const type = (activeEl as HTMLInputElement).type;
         if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
           setIsKeyboardVisible(true);
-          return;
         }
       }
 
@@ -89,6 +100,18 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       // If visual viewport shrinks by > 120px compared to window inner height, keyboard is open
       const keyboardOpen = vv.height < window.innerHeight - 120;
       setIsKeyboardVisible(keyboardOpen);
+
+      if (keyboardOpen && activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+        setTimeout(() => {
+          if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
+            (activeEl as HTMLElement).scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest",
+            });
+          }
+        }, 100);
+      }
     };
 
     window.addEventListener("focusin", handleFocusChange, { passive: true });
