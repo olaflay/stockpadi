@@ -1,7 +1,6 @@
 "use client";
 
 import { use } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -25,7 +24,6 @@ interface PageProps {
 export default function PurchaseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const user = useCurrentUser();
-  const router = useRouter();
 
   const data = useLiveQuery(async () => {
     const purchase = await tenantGet<Purchase>(db.purchases, id);

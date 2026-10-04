@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Truck } from "lucide-react";
 import { db } from "@/lib/db";
@@ -26,7 +25,6 @@ type RestockPeriod = "all" | "month" | "week";
 
 export default function PurchasesPage() {
   const user = useCurrentUser();
-  const router = useRouter();
   const [period, setPeriod] = useState<RestockPeriod>("all");
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);

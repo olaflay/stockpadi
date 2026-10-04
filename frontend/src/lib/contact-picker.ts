@@ -42,7 +42,7 @@ export async function openNativeContactPicker(): Promise<PickedContact | null> {
         phone: rawTel.replace(/\s+/g, ""),
       };
     }
-  } catch (err) {
+  } catch {
     // User cancelled contact selection or permission was denied
     return null;
   }

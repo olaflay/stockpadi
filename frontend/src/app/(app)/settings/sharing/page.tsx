@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -15,7 +14,6 @@ import { renderOwingMessage } from "@/lib/whatsapp";
 import { serverPatch } from "@/features/operations/server-client";
 
 export default function SharingSettingsPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [whatsappInput, setWhatsappInput] = useState<string | null>(null);

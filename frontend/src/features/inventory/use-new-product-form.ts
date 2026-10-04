@@ -58,23 +58,25 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
 
   // Restore saved draft if user previously refreshed the page
-  const initialDraft = useRef<ProductFormDraftState | null>(null);
-  if (initialDraft.current === null && typeof window !== "undefined") {
-    initialDraft.current = loadDraft<ProductFormDraftState | null>(PRODUCT_FORM_DRAFT_KEY, null);
-  }
+  const [initialDraft] = useState<ProductFormDraftState | null>(() => {
+    if (typeof window !== "undefined") {
+      return loadDraft<ProductFormDraftState | null>(PRODUCT_FORM_DRAFT_KEY, null);
+    }
+    return null;
+  });
 
-  const [initialStock, setInitialStock] = useState(initialDraft.current?.initialStock ?? "");
+  const [initialStock, setInitialStock] = useState(initialDraft?.initialStock ?? "");
   const [initialStockBranchId, setInitialStockBranchId] = useState<string | null>(
-    initialDraft.current?.initialStockBranchId ?? null
+    initialDraft?.initialStockBranchId ?? null
   );
   const [categoryId, setCategoryId] = useState(
-    initialDraft.current?.categoryId ?? getLastCategoryId() ?? ""
+    initialDraft?.categoryId ?? getLastCategoryId() ?? ""
   );
   const [categoryInputName, setCategoryInputName] = useState(
-    initialDraft.current?.categoryInputName ?? ""
+    initialDraft?.categoryInputName ?? ""
   );
   const [showUnitConversion, setShowUnitConversion] = useState(
-    initialDraft.current?.showUnitConversion ?? false
+    initialDraft?.showUnitConversion ?? false
   );
 
   const [initialStockError, setInitialStockError] = useState<string | null>(null);
@@ -91,18 +93,18 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       ...PRODUCT_FORM_DEFAULTS,
-      ...(initialDraft.current?.values ?? {}),
-      name: prefillName ?? initialDraft.current?.values?.name ?? "",
-      barcode: prefillBarcode ?? initialDraft.current?.values?.barcode ?? "",
+      ...(initialDraft?.values ?? {}),
+      name: prefillName ?? initialDraft?.values?.name ?? "",
+      barcode: prefillBarcode ?? initialDraft?.values?.barcode ?? "",
     },
   });
-  const { register, handleSubmit, control, formState, watch } = form;
+  const { register, handleSubmit, control, formState } = form;
   const expiryTracking = useWatch({ control, name: "expiryTracking" });
   const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
   const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
 
   // Auto-save form draft to localStorage on changes (debounced 250ms)
-  const watchedFormValues = watch();
+  const watchedFormValues = useWatch({ control });
   useEffect(() => {
     const hasUserContent =
       Boolean(watchedFormValues.name?.trim()) ||
@@ -321,21 +323,25 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     }, 50);
   }
 
-  const onSubmit = handleSubmit(
-    (values) => executeSave(values, false),
-    (formErrors) => {
-      const firstError = Object.values(formErrors)[0]?.message;
-      showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
-    }
-  );
+  const onSubmit = (e?: React.BaseSyntheticEvent) => {
+    return handleSubmit(
+      (values) => executeSave(values, false),
+      (formErrors) => {
+        const firstError = Object.values(formErrors)[0]?.message;
+        showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
+      }
+    )(e);
+  };
 
-  const onSaveAndAddAnother = handleSubmit(
-    (values) => executeSave(values, true),
-    (formErrors) => {
-      const firstError = Object.values(formErrors)[0]?.message;
-      showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
-    }
-  );
+  const onSaveAndAddAnother = (e?: React.BaseSyntheticEvent) => {
+    return handleSubmit(
+      (values) => executeSave(values, true),
+      (formErrors) => {
+        const firstError = Object.values(formErrors)[0]?.message;
+        showToast(typeof firstError === "string" ? firstError : "Please fix the highlighted fields.", "warning");
+      }
+    )(e);
+  };
 
   return {
     user,

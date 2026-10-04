@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Search, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 

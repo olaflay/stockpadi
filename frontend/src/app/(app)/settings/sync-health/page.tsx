@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertTriangle, CheckCircle2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -36,7 +35,6 @@ function formatResult(status: "success" | "failed" | null | undefined, code: str
  * codes are collapsed by default and contain only allow-listed diagnostics.
  */
 export default function SyncHealthPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const online = useOnlineStatus();
   const safety = useSyncSafety();

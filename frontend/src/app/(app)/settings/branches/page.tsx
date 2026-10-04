@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Archive, Check, Pencil, RotateCcw } from "lucide-react";
 import { db, type LocalBranch } from "@/lib/db";
@@ -16,7 +15,6 @@ import { useCurrentUser } from "@/features/auth/use-current-user";
 import { writeBranchOffline, setPrimaryBranchOffline } from "@/features/branches/write-branch-offline";
 
 export default function BranchesSettingsPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [newBranchName, setNewBranchName] = useState("");

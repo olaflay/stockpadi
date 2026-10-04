@@ -21,7 +21,7 @@ import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch, LocalUser } from "@/lib/db";
 import type { Expense } from "@/types/expense";
 
-import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
+import { getPeriodStartIso } from "@/lib/date";
 
 type Period = "today" | "week" | "month" | "all_time";
 const PERIOD_OPTIONS = [

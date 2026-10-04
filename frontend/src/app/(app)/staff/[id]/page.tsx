@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/db";
 import { callManageStaff, fetchStaffMember, ManageStaffError, type StaffListItem } from "@/features/auth/manage-staff-client";
@@ -36,20 +36,21 @@ export default function StaffDetailPage({ params }: PageProps) {
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   const localUser = useLiveQuery(() => db.localUsers.get(id), [id]);
 
-  const cachedMember: StaffListItem | null = localUser
-    ? {
-        id: localUser.id,
-        fullName: localUser.fullName,
-        email: null,
-        accountType: (localUser.accountType as StaffListItem["accountType"]) ?? "WORKER",
-        status: localUser.isActive ? "active" : "deactivated",
-        branchIds: localUser.branchIds ?? [],
-        capabilities: ((localUser.permissions as unknown) as WorkerCapability[]) ?? [],
-        isActive: localUser.isActive,
-        deactivatedAt: null,
-        managerBranchIds: [],
-      }
-    : null;
+  const cachedMember: StaffListItem | null = useMemo(() => {
+    if (!localUser) return null;
+    return {
+      id: localUser.id,
+      fullName: localUser.fullName,
+      email: null,
+      accountType: (localUser.accountType as StaffListItem["accountType"]) ?? "WORKER",
+      status: localUser.isActive ? "active" : "deactivated",
+      branchIds: localUser.branchIds ?? [],
+      capabilities: ((localUser.permissions as unknown) as WorkerCapability[]) ?? [],
+      isActive: localUser.isActive,
+      deactivatedAt: null,
+      managerBranchIds: [],
+    };
+  }, [localUser]);
 
   const member = staffMember ?? cachedMember;
 
@@ -72,7 +73,7 @@ export default function StaffDetailPage({ params }: PageProps) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, cachedMember]);
 
   if (user.accountType !== "BUSINESS_OWNER") return <PermissionDenied requiredAccountType="BUSINESS_OWNER" />;
   if (loading && !member) return <Skeleton className="h-40" />;

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Search, Package, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
+import { Plus, Package, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,

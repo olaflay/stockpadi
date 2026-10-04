@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, X, Edit3, CheckCircle2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui/TextInput";
 import { RippleButton } from "@/components/ui/Ripple";

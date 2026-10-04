@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
@@ -18,7 +17,6 @@ const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface";
 
 export default function BusinessSettingsPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const profile = useLiveQuery(() => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID), []);

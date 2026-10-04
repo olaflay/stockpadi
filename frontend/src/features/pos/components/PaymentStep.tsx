@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserPlus, BookUser, Phone, AlertCircle } from "lucide-react";
+import { UserPlus, BookUser, AlertCircle } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
 import { Chip } from "@/components/ui/Chip";

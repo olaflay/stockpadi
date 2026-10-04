@@ -58,8 +58,8 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
     onClose();
     if (router && typeof router.push === "function") {
       router.push(href);
-    } else if (typeof window !== "undefined") {
-      window.location.href = href;
+    } else if (typeof window !== "undefined" && typeof window.location.assign === "function") {
+      window.location.assign(href);
     }
   }
 

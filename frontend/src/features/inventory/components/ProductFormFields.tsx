@@ -1,6 +1,6 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Layers, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
 import { Controller, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue, type UseFormWatch } from "react-hook-form";
 
 // Loaded on demand — see the matching comment in
@@ -269,17 +269,15 @@ export function ProductUnitConversionFields({
   errors,
   showUnitConversion,
   onToggleUnitConversion,
-  unitLabel,
   altUnitLabel,
 }: {
   register: UseFormRegister<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
   showUnitConversion: boolean;
   onToggleUnitConversion: () => void;
-  unitLabel: string;
+  unitLabel?: string;
   altUnitLabel: string;
 }) {
-  const displayUnit = unitLabel?.trim() || "piece";
   const displayAlt = altUnitLabel?.trim();
 
   return (

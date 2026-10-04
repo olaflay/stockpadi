@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Download, Upload, RefreshCw } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, getLocalBusinessId } from "@/lib/local-tenant";
@@ -22,7 +21,6 @@ import { buildProductsCsv, buildSalesCsv } from "@/features/reports/csv-export";
 import { getBrandingConfig } from "@/config/branding";
 
 export default function DataSettingsPage() {
-  const router = useRouter();
   const user = useCurrentUser();
   const { showToast } = useToast();
   const pendingCount = usePendingSyncCount();

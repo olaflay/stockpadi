@@ -13,14 +13,8 @@ import {
   BarChart2,
   Receipt,
   ArrowRight,
-  Filter,
   Package,
-  Layers,
-  ShoppingBag,
-  ExternalLink,
 } from "lucide-react";
-import { NoResultsState } from "@/components/ui/NoResultsState";
-import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -306,7 +300,9 @@ export function ReportsBody({
                         setSelectedDayTab(stat.day);
                         setActiveTab("sales");
                       }}
-                      className="flex flex-col items-center gap-1.5 min-w-0 rounded-xl p-1 hover:bg-surface-container-high transition-colors"
+                      className={`flex flex-col items-center gap-1.5 min-w-0 rounded-xl p-1 transition-colors ${
+                        isSelected ? "bg-surface-container-high ring-1 ring-brand-accent/50" : "hover:bg-surface-container-high"
+                      }`}
                       title={`Tap to see ${stat.day} sales`}
                     >
                       <div className="w-full flex items-end justify-center h-20 bg-surface-container-low rounded-xl p-1">

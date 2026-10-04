@@ -149,6 +149,26 @@ function PosPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addProductId, result, router]);
 
+  // Strip the optional quantity prefix (e.g. "5 sugar" → search "sugar")
+  // using deferred value to keep checkout/cart steppers at 60fps
+  const deferredQuery = useDeferredValue(debouncedQuery);
+  const { term: filterTerm } = useMemo(() => parsePosQuery(deferredQuery), [deferredQuery]);
+
+  const rawProducts = result?.products;
+  const availableProducts = useMemo(() => {
+    if (!rawProducts) return [];
+    return rawProducts.filter((product) => {
+      if (product.archived) return false;
+      if (selectedCategoryId !== null && product.categoryId !== selectedCategoryId) return false;
+      return true;
+    });
+  }, [rawProducts, selectedCategoryId]);
+
+  const filtered = useMemo(() => {
+    const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
+    return [...exact, ...suggestions];
+  }, [availableProducts, filterTerm]);
+
   if (!hasCapability(user, "POS_SELL")) {
     return (
       <div>
@@ -189,24 +209,6 @@ function PosPageContent() {
       </div>
     );
   }
-
-  // Strip the optional quantity prefix (e.g. "5 sugar" → search "sugar")
-  // using deferred value to keep checkout/cart steppers at 60fps
-  const deferredQuery = useDeferredValue(debouncedQuery);
-  const { term: filterTerm } = useMemo(() => parsePosQuery(deferredQuery), [deferredQuery]);
-
-  const availableProducts = useMemo(() => {
-    return result.products.filter((product) => {
-      if (product.archived) return false;
-      if (selectedCategoryId !== null && product.categoryId !== selectedCategoryId) return false;
-      return true;
-    });
-  }, [result.products, selectedCategoryId]);
-
-  const filtered = useMemo(() => {
-    const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
-    return [...exact, ...suggestions];
-  }, [availableProducts, filterTerm]);
 
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;

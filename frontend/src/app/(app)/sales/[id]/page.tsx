@@ -112,46 +112,7 @@ export default function SaleDetailPage({ params }: PageProps) {
     setShowWhatsAppModal(true);
   }
 
-  function handlePrint() {
-    // Hide everything except the thermal receipt for clean printing
-    const receipt = document.getElementById("printable-thermal-receipt");
-    if (!receipt) {
-      window.print();
-      return;
-    }
-    // Create a print-only window with just the thermal receipt
-    const printWindow = window.open("", "_blank", "width=320,height=600");
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Receipt</title>
-      <style>
-        @page { size: 58mm auto; margin: 2mm 3mm; }
-        body { font-family: "Courier New", Courier, monospace; font-size: 11px; line-height: 1.25; color: #000; margin: 0; padding: 0; width: 52mm; }
-        .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-        .text-sm { font-size: 13px; }
-        .text-xs { font-size: 10px; }
-        .mt-1 { margin-top: 4px; }
-        .my-1 { margin-top: 4px; margin-bottom: 4px; }
-        .my-2 { margin-top: 8px; margin-bottom: 8px; }
-        .mb-1 { margin-bottom: 4px; }
-        .flex { display: flex; }
-        .justify-between { justify-content: space-between; }
-        .uppercase { text-transform: uppercase; }
-      </style>
-      </head>
-      <body>${receipt.innerHTML}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-    setTimeout(() => printWindow.close(), 500);
-  }
+
 
   async function handleVoid() {
     if (!sale || sale.voidedAt) return;

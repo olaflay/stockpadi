@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LocalBillingProvider, TIER_LIMITS } from "@/features/billing/billing-provider";
+import { LocalBillingProvider } from "@/features/billing/billing-provider";
 
 describe("Billing Provider Architecture", () => {
   it("defaults to FREE tier with 75 products, 1 branch, 1 device and zero cloud egress", async () => {

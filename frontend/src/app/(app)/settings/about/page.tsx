@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { getBrandingConfig } from "@/config/branding";
 
 /** Open to every role — nothing here is sensitive. */
 export default function AboutSettingsPage() {
-  const router = useRouter();
   const branding = getBrandingConfig();
 
   return (
