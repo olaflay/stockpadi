@@ -20,8 +20,11 @@ jobs:
             frontend/package-lock.json
             backend/package-lock.json
             supabase/package-lock.json
+            packages/contracts/package-lock.json
 
       - run: npm ci
+
+      - run: npm run contracts:build
 
       # frontend/ and backend/ are independently locked packages, not root
       # workspaces. Root npm ci alone therefore cannot install ESLint or the

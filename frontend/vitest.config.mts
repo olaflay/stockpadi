@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(dirname, "./src"),
+      "@stockpadi/contracts": path.resolve(dirname, "../packages/contracts/src/index.ts"),
     },
   },
   test: {
