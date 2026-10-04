@@ -47,8 +47,20 @@ const geistMono = Geist_Mono({
 
 const branding = getBrandingConfig();
 
+// Guard against an empty / malformed NEXT_PUBLIC_APP_URL during `next build`.
+// new URL('') throws TypeError: Invalid URL which breaks /_not-found config
+// collection. The localhost fallback mirrors what getAppUrl() already documents
+// as its own build-time safety net.
+function safeMetadataBase(url: string): URL {
+  try {
+    return new URL(url);
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(branding.appUrl),
+  metadataBase: safeMetadataBase(branding.appUrl),
   title: {
     default: `${branding.businessName} | Free Offline POS & Inventory App`,
     template: `%s | ${branding.businessName}`,
