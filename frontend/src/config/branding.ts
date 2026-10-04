@@ -17,10 +17,14 @@ export interface BrandingConfig {
 /**
  * Single source of truth for the application's base URL across the entire frontend.
  * Priority:
- *   1. NEXT_PUBLIC_APP_URL environment variable
- *   2. NEXT_PUBLIC_SITE_URL environment variable
- *   3. window.location.origin (if running in browser)
- *   4. "https://ojapadi.com" (production default fallback)
+ *   1. NEXT_PUBLIC_APP_URL environment variable  (required in production)
+ *   2. NEXT_PUBLIC_SITE_URL environment variable  (Supabase convention, optional)
+ *   3. window.location.origin                     (browser runtime)
+ *   4. http://localhost:3000                       (build-time / SSR fallback only)
+ *
+ * The localhost fallback exists solely so that `new URL(path, getAppUrl())` never
+ * throws during `next build`. Production deployments MUST set NEXT_PUBLIC_APP_URL
+ * in their Vercel environment variables.
  */
 export function getAppUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
@@ -30,7 +34,8 @@ export function getAppUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin.replace(/\/$/, "");
   }
-  return "https://ojapadi.com";
+  // Build-time / SSR only — never reached in a correctly configured deployment.
+  return "http://localhost:3000";
 }
 
 export function getBrandingConfig(): BrandingConfig {
@@ -45,7 +50,7 @@ export function getBrandingConfig(): BrandingConfig {
     accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || "#0B7A55",
     logoUrl: process.env.NEXT_PUBLIC_BRAND_LOGO_URL || null,
     appUrl: getAppUrl(),
-    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@ojapadi.com",
+    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "",
     currency: process.env.NEXT_PUBLIC_CURRENCY || "NGN",
   };
 }
