@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronRight, ScrollText } from "lucide-react";
@@ -148,7 +150,7 @@ export default function StaffPage() {
       {nonOwnerActiveCount < STAFF_CAP ? (
         <RippleLink
           href="/staff/new"
-          className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+          className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-on-brand"
         >
           <Plus size={18} aria-hidden />
           Add staff
@@ -161,7 +163,7 @@ export default function StaffPage() {
 
       <RippleLink
         href="/staff/audit"
-        className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container transition-colors"
+        className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-on-surface"
       >
         <ScrollText size={18} aria-hidden />
         View audit log
