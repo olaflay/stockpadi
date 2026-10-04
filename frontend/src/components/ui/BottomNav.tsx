@@ -19,13 +19,13 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
 import { useNavigation } from "@/components/ui/NavigationContext";
 import { MoreSheetModal } from "@/components/ui/MoreSheetModal";
 
-const MORE_ROUTES = [
+const SECONDARY_ROUTES_PREFIXES = [
   "/more",
   "/contacts",
+  "/customers",
   "/sales",
   "/expenses",
   "/purchases",
-  "/close-day",
   "/settings",
   "/profile",
   "/staff",
@@ -33,8 +33,30 @@ const MORE_ROUTES = [
   "/products/import",
 ];
 
+const DELICATE_FORM_FLOWS = [
+  "/products/new",
+  "/expenses/new",
+  "/purchases/new",
+  "/staff/new",
+  "/close-day",
+  "/welcome",
+  "/onboarding",
+];
+
+export function isDelicateFormRoute(pathname: string): boolean {
+  if (!pathname) return false;
+  return DELICATE_FORM_FLOWS.some((flow) => pathname === flow || pathname.startsWith(`${flow}/`));
+}
+
+export function isSecondaryDestination(pathname: string): boolean {
+  if (!pathname) return false;
+  return SECONDARY_ROUTES_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 /**
- * Samsung One UI bottom interaction area:
+ * Samsung One UI & M3 bottom interaction area:
  * Exactly 5 buttons keep touch targets roomy and thumb-reachable on mobile.
  * Adapts dynamically:
  * - Business Owner & Admin: Dashboard | Sell | Products | Reports | More
@@ -62,19 +84,9 @@ export function BottomNav() {
   const { isNavVisible } = useNavigation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
-  const isMoreRoute = MORE_ROUTES.includes(pathname);
-
-  // Strict route whitelist: Only top-level destinations render the nav container.
-  // Child routes, forms, and modals outside main navigation never render BottomNav.
-  const isMainTab =
-    pathname === "/dashboard" ||
-    pathname === "/pos" ||
-    pathname === "/products" ||
-    pathname === "/reports" ||
-    pathname === "/stock-count" ||
-    isMoreRoute;
-
-  if (!isMainTab) {
+  // Delicate exclusion: Hide BottomNav ONLY on full-screen creation forms & onboarding wizards
+  // where sticky save buttons and inputs own the viewport. Shows on all other app pages.
+  if (isDelicateFormRoute(pathname)) {
     return null;
   }
 
@@ -82,6 +94,7 @@ export function BottomNav() {
   const items = (isOwnerOrAdmin ? OWNER_NAV : WORKER_NAV).filter(
     (item) => !("capability" in item) || hasCapability(user, item.capability as WorkerCapability),
   );
+  const isSecondary = isSecondaryDestination(pathname);
 
   return (
     <>
@@ -103,7 +116,17 @@ export function BottomNav() {
         />
         {items.map((item) => {
           const isMore = item.href === "/more";
-          const isActive = isMore ? (isMoreRoute && !isMoreOpen) : pathname === item.href;
+          // M3 guideline: When More modal is open, navigation is NOT in state until user picks a page.
+          let isActive = false;
+          if (!isMoreOpen) {
+            if (isMore) {
+              isActive = isSecondary;
+            } else if (item.href === "/dashboard") {
+              isActive = pathname === "/dashboard";
+            } else {
+              isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            }
+          }
           const Icon = item.icon;
 
           if (isMore) {

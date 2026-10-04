@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Wallet, Trash2 } from "lucide-react";
+import { Plus, Wallet, Trash2, Fuel, Car, Lightbulb, Wrench, Package, Building2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
+import { FilterDropdownBar, type FilterGroup } from "@/components/ui/FilterDropdownBar";
+import { MonthGroupHeader } from "@/components/ui/MonthGroupHeader";
+import { TransactionItemRow } from "@/components/ui/TransactionItemRow";
 import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
-import { formatCurrency } from "@/lib/format";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { getPeriodStartIso, formatTransactionTimestamp, getMonthYearKey, formatMonthYear } from "@/lib/date";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { deleteExpense } from "@/features/expenses/add-expense";
@@ -21,117 +23,98 @@ import { tenantArray } from "@/lib/local-tenant";
 import type { LocalBranch, LocalUser } from "@/lib/db";
 import type { Expense } from "@/types/expense";
 
-import { getPeriodStartIso } from "@/lib/date";
-
 type Period = "today" | "week" | "month" | "all_time";
-const PERIOD_OPTIONS = [
-  { value: "today", label: "Today" },
-  { value: "week", label: "This week" },
-  { value: "month", label: "This month" },
-  { value: "all_time", label: "All time" },
-];
-const PERIOD_LABELS: Record<Period, string> = {
-  today: "Today",
-  week: "This week",
-  month: "This month",
-  all_time: "All time",
+
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  Fuel: <Fuel size={18} />,
+  Transport: <Car size={18} />,
+  Utilities: <Lightbulb size={18} />,
+  Maintenance: <Wrench size={18} />,
+  Packaging: <Package size={18} />,
+  Rent: <Building2 size={18} />,
 };
 
 export default function ExpensesPage() {
   const user = useCurrentUser();
   const { showToast } = useToast();
-  const [period, setPeriod] = useState<Period>("today");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [period, setPeriod] = useState<Period>("month");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const periodStart = getPeriodStartIso(period);
-
   const result = useLiveQuery(async () => {
     try {
-      const expensesPromise =
-        period === "all_time"
-          ? tenantArray<Expense>(db.expenses.orderBy("createdAtLocal").reverse())
-          : tenantArray<Expense>(
-              db.expenses.where("createdAtLocal").aboveOrEqual(periodStart).reverse()
-            );
-
+      const periodStart = getPeriodStartIso(period);
       const [branches, users, expenses] = await Promise.all([
         tenantArray<LocalBranch>(db.branches),
         tenantArray<LocalUser>(db.localUsers),
-        expensesPromise,
+        tenantArray<Expense>(
+          db.expenses.where("createdAtLocal").aboveOrEqual(periodStart).reverse()
+        ),
       ]);
       return { expenses, branches, users, error: false };
     } catch {
       return { expenses: [] as Expense[], branches: [] as LocalBranch[], users: [] as LocalUser[], error: true };
     }
-  }, [periodStart, period]);
+  }, [period]);
 
-  const periodExpenses = result?.expenses ?? [];
+  const rawExpenses = useMemo(() => result?.expenses ?? [], [result?.expenses]);
+
+  // Distinct categories from actual expense data
+  const distinctCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of rawExpenses) {
+      if (e.category) set.add(e.category);
+    }
+    return Array.from(set).sort();
+  }, [rawExpenses]);
+
+  // Filtered expenses
+  const filteredExpenses = useMemo(() => {
+    return rawExpenses.filter((e) => {
+      if (selectedCategory !== "all" && e.category !== selectedCategory) return false;
+      if (selectedBranchId !== "all" && e.branchId !== selectedBranchId) return false;
+      return true;
+    });
+  }, [rawExpenses, selectedCategory, selectedBranchId]);
 
   useEffect(() => {
-    if (periodExpenses.length <= visibleLimit) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
-    }, { threshold: 0.1 });
+    if (filteredExpenses.length <= visibleLimit) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisibleLimit((previous) => previous + 50);
+      },
+      { threshold: 0.1 }
+    );
 
     const element = loadMoreRef.current;
     if (element) observer.observe(element);
     return () => {
       if (element) observer.unobserve(element);
     };
-  }, [periodExpenses.length, visibleLimit]);
+  }, [filteredExpenses.length, visibleLimit]);
 
-  if (!hasCapability(user, "MANAGE_EXPENSES")) {
-    return (
-      <div>
-        <ScreenHeader title="Expenses" backHref="/more" />
-        <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
-      </div>
-    );
-  }
+  // Group by month (YYYY-MM)
+  const groupedExpenses = useMemo(() => {
+    const map = new Map<string, Expense[]>();
+    for (const expense of filteredExpenses.slice(0, visibleLimit)) {
+      const key = getMonthYearKey(expense.createdAtLocal);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(expense);
+    }
+    return Array.from(map.entries()).map(([monthKey, expenses]) => {
+      const outflow = expenses.reduce((sum, e) => sum + e.amount, 0);
+      return {
+        monthKey,
+        monthName: formatMonthYear(monthKey),
+        expenses,
+        outflow,
+      };
+    });
+  }, [filteredExpenses, visibleLimit]);
 
-  if (result === undefined) {
-    return (
-      <div className="flex flex-col gap-4">
-        <ScreenHeader title="Expenses" backHref="/more" />
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-        </div>
-      </div>
-    );
-  }
-
-  if (result.error) {
-    return (
-      <div>
-        <ScreenHeader title="Expenses" backHref="/more" />
-        <ErrorState message="Couldn't load your expenses." onRetry={() => window.location.reload()} />
-      </div>
-    );
-  }
-
-  if (result.expenses.length === 0) {
-    return (
-      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Expenses" backHref="/more" />
-        <EmptyState
-          icon={Wallet}
-          title="No expenses recorded"
-          description="Rent, fuel, supplies. Log what goes out so your profit numbers stay accurate."
-          action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
-        />
-        <AddExpenseSheet isOpen={isAddSheetOpen} onClose={() => setIsAddSheetOpen(false)} />
-      </div>
-    );
-  }
-
-  const periodTotal = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
   const canDelete = hasCapability(user, "MANAGE_EXPENSES");
 
   async function handleDelete(id: string, category: string) {
@@ -147,107 +130,148 @@ export default function ExpensesPage() {
     }
   }
 
+  const filterGroups: FilterGroup[] = [
+    {
+      id: "period",
+      label: "Date Range",
+      options: [
+        { value: "today", label: "Today" },
+        { value: "week", label: "7 Days" },
+        { value: "month", label: "30 Days" },
+        { value: "all_time", label: "All Time" },
+      ],
+      selectedValue: period,
+      onChange: (val) => setPeriod(val as Period),
+      renderTriggerLabel: (val) => {
+        if (val === "today") return "Today";
+        if (val === "week") return "7 Days";
+        if (val === "month") return "30 Days";
+        return "All Dates";
+      },
+    },
+    {
+      id: "category",
+      label: "All Categories",
+      options: [
+        { value: "all", label: "All Categories" },
+        ...distinctCategories.map((cat) => ({ value: cat, label: cat })),
+      ],
+      selectedValue: selectedCategory,
+      onChange: (val) => setSelectedCategory(val),
+    },
+    ...(result?.branches && result.branches.length > 1
+      ? [
+          {
+            id: "branch",
+            label: "All Branches",
+            options: [
+              { value: "all", label: "All Branches" },
+              ...result.branches.map((b) => ({ value: b.id, label: b.name })),
+            ],
+            selectedValue: selectedBranchId,
+            onChange: (val: string) => setSelectedBranchId(val),
+          },
+        ]
+      : []),
+  ];
+
+  if (!hasCapability(user, "MANAGE_EXPENSES")) {
+    return (
+      <div>
+        <ScreenHeader title="Expenses" backHref="/more" />
+        <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
+      </div>
+    );
+  }
+
+  if (result === undefined) {
+    return (
+      <div className="flex flex-col gap-4">
+        <ScreenHeader title="Expenses" backHref="/more" />
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-12 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (result.error) {
+    return (
+      <div>
+        <ScreenHeader title="Expenses" backHref="/more" />
+        <ErrorState message="Couldn't load your expenses." onRetry={() => window.location.reload()} />
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="flex flex-col gap-3 pb-12">
       <ScreenHeader title="Expenses" backHref="/more" />
 
-      <div className="mb-3">
-        <SegmentedControl
-          options={PERIOD_OPTIONS}
-          selected={period}
-          onChange={(key) => {
-            setPeriod(key as Period);
-            setVisibleLimit(50);
-          }}
-          size="default"
-          ariaLabel="Expense period"
-        />
-      </div>
+      {/* Top Filter Dropdown Bar with Expanding Pill Tray */}
+      <FilterDropdownBar filters={filterGroups} ariaLabel="Filter expenses by date and category" />
 
-      <section className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
-        <p className="text-[length:var(--font-size-label)] text-on-surface-muted">
-          Spent, {PERIOD_LABELS[period].toLowerCase()}
-        </p>
-        <p className="mt-1 truncate font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
-          {formatCurrency(periodTotal)}
-        </p>
-      </section>
-
-      {periodExpenses.length === 0 ? (
-        <p className="py-8 text-center text-[length:var(--font-size-body)] text-on-surface-muted">
-          No expenses recorded {PERIOD_LABELS[period].toLowerCase()}.
-        </p>
+      {filteredExpenses.length === 0 ? (
+        <div className="py-12">
+          <EmptyState
+            icon={Wallet}
+            title="No expenses found"
+            description="No expenses matched your selected filters."
+            action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
+          />
+        </div>
       ) : (
-        <div>
-          <ul className="flex flex-col gap-2 pb-24">
-            {periodExpenses.slice(0, visibleLimit).map((expense) => {
-              const isExpanded = expandedId === expense.id;
-              const branchName = result.branches.find((b) => b.id === expense.branchId)?.name ?? "Business-wide";
-              const userName = result.users.find((u) => u.id === expense.createdByUserId)?.fullName ?? "You";
+        <div className="flex flex-col gap-6">
+          {groupedExpenses.map((group) => (
+            <section key={group.monthKey} className="flex flex-col gap-2">
+              {/* Month Group Header with Outflow and Analysis Action */}
+              <MonthGroupHeader
+                title={group.monthName}
+                outflow={group.outflow}
+                analysisHref="/reports"
+              />
 
-              return (
-                <li
-                  key={expense.id}
-                  className="flex flex-col rounded-xl bg-surface-container-low px-4 py-3 border border-border/20 hover:bg-surface-container transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      aria-label={`View details for ${expense.category} expense of ${formatCurrency(expense.amount)}`}
-                      onClick={() => setExpandedId(isExpanded ? null : expense.id)}
-                      className="flex min-w-0 flex-1 items-center justify-between text-left"
-                    >
-                      <div>
-                        <p className="text-[length:var(--font-size-body-lg)] font-medium text-on-surface">
-                          {expense.category}
-                        </p>
-                        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                          {new Date(expense.createdAtLocal).toLocaleDateString("en-NG", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </p>
-                      </div>
-                      <p className="text-[length:var(--font-size-body)] font-semibold tabular-nums text-on-surface">
-                        {formatCurrency(expense.amount)}
-                      </p>
-                    </button>
+              {/* Expenses List */}
+              <ul className="flex flex-col gap-2">
+                {group.expenses.map((expense) => {
+                  const branchName = result.branches.find((b) => b.id === expense.branchId)?.name ?? "Branch";
+                  const icon = CATEGORY_ICONS[expense.category] || <Wallet size={18} />;
 
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(expense.id, expense.category)}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-on-surface-muted hover:bg-danger-container hover:text-on-danger-container active:scale-95 transition-all"
-                        aria-label={`Delete ${expense.category} expense of ${formatCurrency(expense.amount)}`}
-                      >
-                        <Trash2 size={18} aria-hidden />
-                      </button>
-                    )}
-                  </div>
-
-                  {isExpanded && (
-                    <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-[length:var(--font-size-caption)] text-on-surface-muted animate-fade-in">
-                      <p>
-                        <span className="font-medium text-on-surface">Branch:</span> {branchName}
-                      </p>
-                      <p>
-                        <span className="font-medium text-on-surface">Recorded by:</span> {userName}
-                      </p>
-                      {expense.note && (
-                        <p className="whitespace-pre-wrap">
-                          <span className="font-medium text-on-surface">Note:</span> {expense.note}
-                        </p>
+                  return (
+                    <li key={expense.id} className="relative group">
+                      <TransactionItemRow
+                        icon={icon}
+                        iconBgClass="bg-rose-500/15 text-rose-400"
+                        title={expense.category}
+                        subtitle={`${formatTransactionTimestamp(expense.createdAtLocal)} · ${branchName}${
+                          expense.note ? ` · ${expense.note}` : ""
+                        }`}
+                        amount={expense.amount}
+                        amountPrefix="−"
+                      />
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(expense.id, expense.category)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 sm:opacity-100 p-2 rounded-full text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-all"
+                          aria-label={`Delete ${expense.category} expense`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {periodExpenses.length > visibleLimit && (
-            <div ref={loadMoreRef} className="py-4 text-center text-sm text-on-surface-muted">
-              Loading more...
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+
+          {filteredExpenses.length > visibleLimit && (
+            <div ref={loadMoreRef} className="py-4 text-center text-xs text-on-surface-muted">
+              Loading more expenses...
             </div>
           )}
         </div>
@@ -261,3 +285,4 @@ export default function ExpensesPage() {
     </div>
   );
 }
+

@@ -151,3 +151,51 @@ export function isoDateFromShort(shortDate: string): string | null {
 // Backwards-compatible aliases
 export const formatExpiryForDisplay = formatShortDate;
 export const parseShortExpiryInput = isoDateFromShort;
+
+/**
+ * Formats an ISO timestamp into "Oct 3rd, 20:02:18" or "Sep 29th, 18:45:01".
+ */
+export function formatTransactionTimestamp(isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[d.getMonth()];
+  const day = d.getDate();
+  const suffix =
+    day === 1 || day === 21 || day === 31
+      ? "st"
+      : day === 2 || day === 22
+      ? "nd"
+      : day === 3 || day === 23
+      ? "rd"
+      : "th";
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+  return `${month} ${day}${suffix}, ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Returns "YYYY-MM" key for grouping by month.
+ */
+export function getMonthYearKey(isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "Unknown";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+/**
+ * Formats "2026-10" -> "Oct 2026".
+ */
+export function formatMonthYear(monthKey: string): string {
+  const match = monthKey.match(/^(\d{4})-(\d{2})$/);
+  if (!match) return monthKey;
+  const [, year, monthNum] = match;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const mIndex = parseInt(monthNum, 10) - 1;
+  const monthName = months[mIndex] || monthNum;
+  return `${monthName} ${year}`;
+}
+

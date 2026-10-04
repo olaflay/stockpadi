@@ -20,26 +20,24 @@ const NavigationContext = createContext<NavigationContextType>({
 });
 
 /**
- * Top-level routes where the bottom navigation bar is permitted.
- * All child routes, forms, modals, and transaction flows hide the navigation bar.
+ * Dedicated form creation flows and transactional wizards where the navigation bar
+ * is delicately hidden to grant full-screen focus to form fields and avoid sticky CTA collision.
+ * On all other standard app pages and sub-routes, the navigation bar remains visible.
  */
-const PRIMARY_NAV_ROUTES = new Set([
-  "/dashboard",
-  "/products",
-  "/reports",
-  "/more",
-  "/stock-count",
-  "/pos",
-  "/expenses",
-  "/sales",
-  "/purchases",
-  "/contacts",
+const DELICATE_FORM_FLOWS = [
+  "/products/new",
+  "/expenses/new",
+  "/purchases/new",
+  "/staff/new",
   "/close-day",
-  "/settings",
-  "/profile",
-  "/staff",
-  "/alerts",
-]);
+  "/welcome",
+  "/onboarding",
+];
+
+export function isNavAllowedOnRoute(pathname: string): boolean {
+  if (!pathname) return false;
+  return !DELICATE_FORM_FLOWS.some((flow) => pathname === flow || pathname.startsWith(`${flow}/`));
+}
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -135,7 +133,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const isPrimaryRoute = useMemo(() => {
-    return PRIMARY_NAV_ROUTES.has(pathname);
+    return isNavAllowedOnRoute(pathname);
   }, [pathname]);
 
   const isNavVisible = useMemo(() => {

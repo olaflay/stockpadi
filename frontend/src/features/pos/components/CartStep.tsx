@@ -29,6 +29,7 @@ export function CartStep(props: {
   onDeleteParkedSale?: (id: string) => void;
   onContinueToPayment: () => void;
   stockByProduct?: Record<string, number>;
+  hideHeader?: boolean;
 }) {
   const {
     cartLines,
@@ -50,6 +51,7 @@ export function CartStep(props: {
     onDeleteParkedSale,
     onContinueToPayment,
     stockByProduct,
+    hideHeader = false,
   } = props;
 
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -81,7 +83,7 @@ export function CartStep(props: {
 
   return (
     <div key="cart" className="flex h-full flex-col gap-4 animate-step-in">
-      <ScreenHeader title="Cart" onBack={onBack} />
+      {!hideHeader && <ScreenHeader title="Cart" onBack={onBack} />}
 
       <div className="flex items-center justify-between">
         <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">

@@ -37,4 +37,40 @@ describe("InfoTooltip singleton behavior", () => {
     expect(screen.queryByText("First explanation text")).not.toBeInTheDocument();
     expect(screen.getByText("Second explanation text")).toBeInTheDocument();
   });
+
+  it("closes tooltip on escape key", () => {
+    render(
+      <TooltipProvider>
+        <div>
+          <InfoTooltip text="Dismissible tooltip" />
+        </div>
+      </TooltipProvider>
+    );
+
+    const button = screen.getByRole("button", { name: "More information" });
+    fireEvent.click(button);
+    expect(screen.getByText("Dismissible tooltip")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByText("Dismissible tooltip")).not.toBeInTheDocument();
+  });
+
+  it("renders in document.body via portal avoiding container overflow clipping", () => {
+    render(
+      <TooltipProvider>
+        <div style={{ overflow: "hidden", width: "100px", height: "50px" }} data-testid="overflow-card">
+          <InfoTooltip text="Non-clipped portalled text" />
+        </div>
+      </TooltipProvider>
+    );
+
+    const button = screen.getByRole("button", { name: "More information" });
+    fireEvent.click(button);
+
+    const tooltipEl = screen.getByRole("tooltip");
+    expect(tooltipEl).toBeInTheDocument();
+    // Verify it is mounted directly into document.body
+    expect(document.body.contains(tooltipEl)).toBe(true);
+    expect(screen.getByTestId("overflow-card").contains(tooltipEl)).toBe(false);
+  });
 });

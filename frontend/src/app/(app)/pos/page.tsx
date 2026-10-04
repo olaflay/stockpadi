@@ -23,8 +23,7 @@ import { useCart } from "@/features/pos/use-cart";
 import { parsePosQuery } from "@/lib/parse-pos-query";
 import { useSplitPayment, AMOUNT_EPSILON } from "@/features/pos/use-split-payment";
 import { BrowseStep } from "@/features/pos/components/BrowseStep";
-import { CartStep } from "@/features/pos/components/CartStep";
-import { PaymentStep } from "@/features/pos/components/PaymentStep";
+import { CheckoutContainer } from "@/features/pos/components/CheckoutContainer";
 import {
   getParkedSales,
   parkSale,
@@ -316,9 +315,9 @@ function PosPageContent() {
     }
   }
 
-  if (step === "cart") {
+  if (step === "cart" || step === "payment") {
     return (
-      <CartStep
+      <CheckoutContainer
         cartLines={cart.cartLines}
         products={result.products}
         itemCount={cart.itemCount}
@@ -330,7 +329,7 @@ function PosPageContent() {
         onParkSale={handleParkSale}
         onResumeParkedSale={handleResumeParkedSale}
         onDeleteParkedSale={handleDeleteParkedSale}
-        onBack={() => setStep("browse")}
+        onBackToBrowse={() => setStep("browse")}
         onClearCart={() => {
           cart.clearCart();
           setStep("browse");
@@ -339,19 +338,7 @@ function PosPageContent() {
         onDecrement={cart.decrementLine}
         onSetQuantity={cart.setLineQuantity}
         onRemoveLine={cart.removeLine}
-        onContinueToPayment={() => setStep("payment")}
         stockByProduct={stockByProduct}
-      />
-    );
-  }
-
-  if (step === "payment") {
-    return (
-      <PaymentStep
-        itemCount={cart.itemCount}
-        subtotal={cart.subtotal}
-        discount={cart.discount}
-        total={cart.total}
         effectivePayments={payment.effectivePayments}
         remaining={payment.remaining}
         hasCreditLine={payment.hasCreditLine}
@@ -367,8 +354,8 @@ function PosPageContent() {
         onRemovePaymentLine={payment.removePaymentLine}
         isSubmitting={isSubmitting}
         isOnline={isOnline}
-        onBack={() => setStep("cart")}
         onCompleteSale={handleCompleteSale}
+        initialTab={step}
       />
     );
   }

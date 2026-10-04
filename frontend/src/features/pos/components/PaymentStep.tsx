@@ -47,6 +47,7 @@ export function PaymentStep(props: {
   isOnline: boolean;
   onBack: () => void;
   onCompleteSale: () => void;
+  hideHeader?: boolean;
 }) {
   const {
     itemCount,
@@ -70,6 +71,7 @@ export function PaymentStep(props: {
     isOnline,
     onBack,
     onCompleteSale,
+    hideHeader = false,
   } = props;
 
   const { showToast } = useToast();
@@ -227,7 +229,7 @@ export function PaymentStep(props: {
 
   return (
     <div key="payment" className="flex h-full flex-col gap-4 animate-step-in">
-      <ScreenHeader title="Payment" onBack={onBack} />
+      {!hideHeader && <ScreenHeader title="Payment" onBack={onBack} />}
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
         <div className="flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">

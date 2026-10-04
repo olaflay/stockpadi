@@ -44,16 +44,31 @@ describe("BottomNav component", () => {
     cleanup();
   });
 
-  it("does not render when on a sub-route or settings page", () => {
-    currentPath = "/settings/profile";
+  it("delicately does not render when on a full-screen creation form or wizard", () => {
+    currentPath = "/products/new";
     const { container } = render(<BottomNav />);
     expect(container.firstChild).toBeNull();
 
     cleanup();
 
-    currentPath = "/sales/sale-123";
-    const { container: saleContainer } = render(<BottomNav />);
-    expect(saleContainer.firstChild).toBeNull();
+    currentPath = "/expenses/new";
+    const { container: expenseContainer } = render(<BottomNav />);
+    expect(expenseContainer.firstChild).toBeNull();
+
+    cleanup();
+
+    currentPath = "/close-day";
+    const { container: closeDayContainer } = render(<BottomNav />);
+    expect(closeDayContainer.firstChild).toBeNull();
+  });
+
+  it("renders on settings sub-routes and secondary hubs with More active", () => {
+    currentPath = "/settings/branches";
+    render(<BottomNav />);
+
+    const moreButton = screen.getByRole("button", { name: /open more options menu/i });
+    expect(moreButton).toBeDefined();
+    expect(moreButton.className).toContain("font-semibold text-on-surface");
   });
 
   it("renders 5 owner tabs when user is a business owner", () => {
