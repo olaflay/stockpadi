@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -16,6 +18,9 @@ import { BackendError, callBackend } from "@/features/auth/backend-client";
  * while a server route can only exchange the OAuth code into a cookie-based
  * session the browser client never sees. Letting the client SDK's own
  * detectSessionInUrl pick up the code here keeps both in the same store.
+ *
+ * This route must be rendered dynamically because it depends on browser-side
+ * OAuth state and cannot be statically generated during build time.
  */
 export default function AuthCallbackPage() {
   const router = useRouter();
