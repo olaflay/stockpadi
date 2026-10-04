@@ -24,6 +24,8 @@ import { ICON_TONE_CLASSES } from "@/components/ui/icon-tone";
 import { RippleLink } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { PeriodFilter } from "@/components/ui/PeriodFilter";
 import { formatCurrency } from "@/lib/format";
 import { PERIOD_LABELS, type Period, type DayOfWeekStat } from "@/features/reports/use-reports-data";
 import { computeGrossProfit } from "@/features/reports/compute-profit";
@@ -213,118 +215,33 @@ export function ReportsBody({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* 1. Header Toolbar: Period Selector & Segmented Tabs */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3 border border-border/30">
-          <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
-            <Filter size={16} className="text-brand-accent shrink-0" />
-            <span>Time Window:</span>
-          </div>
+      {/* 1. Header Toolbar: Flat PeriodFilter & Text-Only SegmentedControl */}
+      <div className="flex flex-col gap-2.5">
+        <PeriodFilter
+          options={DROPDOWN_PERIODS}
+          selected={period}
+          onChange={(newVal) => {
+            onSelectPeriod(newVal as Period);
+            setSelectedDayTab(null);
+          }}
+          enableCustomRange={true}
+          customRange={customRange}
+          onCustomRangeChange={onSelectCustomRange}
+          size="compact"
+          ariaLabel="Filter report period"
+        />
 
-          <div className="relative min-w-[130px]">
-            <select
-              value={period}
-              onChange={(e) => {
-                onSelectPeriod(e.target.value as Period);
-                setSelectedDayTab(null);
-              }}
-              aria-label="Filter report period"
-              className="w-full appearance-none rounded-xl border border-border bg-surface px-3 py-2 pr-8 text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
-            >
-              {DROPDOWN_PERIODS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={14}
-              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted"
-            />
-          </div>
-        </div>
-
-        {/* Custom Date Range Picker */}
-        {period === "custom" && (
-          <div className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 border border-border/30 animate-step-in">
-            <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
-              <Calendar size={16} className="text-brand-accent" />
-              <span>Select Date Range</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
-                Start date
-                <input
-                  type="date"
-                  value={customRange?.start ? customRange.start.slice(0, 10) : ""}
-                  onChange={(e) =>
-                    onSelectCustomRange?.({
-                      start: e.target.value,
-                      end: customRange?.end ?? new Date().toISOString().slice(0, 10),
-                    })
-                  }
-                  className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
-                End date
-                <input
-                  type="date"
-                  value={customRange?.end ? customRange.end.slice(0, 10) : ""}
-                  onChange={(e) =>
-                    onSelectCustomRange?.({
-                      start: customRange?.start ?? new Date().toISOString().slice(0, 10),
-                      end: e.target.value,
-                    })
-                  }
-                  className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-on-surface"
-                />
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* 3 Segmented Anti-Overwhelm View Tabs */}
-        <div className="flex items-center gap-1.5 rounded-2xl bg-surface-container p-1 border border-border/20">
-          <button
-            type="button"
-            onClick={() => setActiveTab("overview")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === "overview"
-                ? "bg-surface shadow-xs text-brand-accent font-bold"
-                : "text-on-surface-muted hover:text-on-surface"
-            }`}
-          >
-            <BarChart2 size={15} />
-            <span>Overview</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("sales")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === "sales"
-                ? "bg-surface shadow-xs text-brand-accent font-bold"
-                : "text-on-surface-muted hover:text-on-surface"
-            }`}
-          >
-            <Receipt size={15} />
-            <span>Daily Sales</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("inventory")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === "inventory"
-                ? "bg-surface shadow-xs text-brand-accent font-bold"
-                : "text-on-surface-muted hover:text-on-surface"
-            }`}
-          >
-            <Package size={15} />
-            <span>Stock & Shelves</span>
-          </button>
-        </div>
+        <SegmentedControl
+          options={[
+            { value: "overview", label: "Overview" },
+            { value: "sales", label: "Daily Sales" },
+            { value: "inventory", label: "Stock & Shelves" },
+          ]}
+          selected={activeTab}
+          onChange={(val) => setActiveTab(val as "overview" | "sales" | "inventory")}
+          size="default"
+          ariaLabel="Report views"
+        />
       </div>
 
       {/* ==================== TAB 1: OVERVIEW ==================== */}
@@ -354,9 +271,9 @@ export function ReportsBody({
             </div>
           </section>
 
-          {/* 7-Day Performance Bar Chart */}
+          {/* 7-Day Performance Bar Chart — Secondary section */}
           {dayOfWeekStats.length > 0 && periodSales.length > 0 && (
-            <section className="rounded-3xl bg-surface-container p-4 sm:p-5 border border-border/20 shadow-xs">
+            <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <BarChart2 size={16} className="text-brand-accent" />
@@ -579,15 +496,15 @@ export function ReportsBody({
             )}
           </div>
 
-          {/* Quick Outflow Shortcuts */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Quick Outflow Shortcuts — flat compact cards */}
+          <div className="grid grid-cols-2 gap-2.5">
             <RippleLink
               href="/expenses"
-              className="flex flex-col gap-2 rounded-2xl bg-surface-container p-3.5 border border-border/20 hover:bg-surface-container-high transition-colors"
+              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 border border-border/20 hover:bg-surface-container transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface">Shop Expenses</span>
-                <Wallet size={16} className="text-warning" />
+                <Wallet size={15} className="text-warning" />
               </div>
               <p className="font-number text-base font-bold text-on-surface tabular-nums">
                 {formatCurrency(periodExpensesTotal)}
@@ -599,11 +516,11 @@ export function ReportsBody({
 
             <RippleLink
               href="/purchases"
-              className="flex flex-col gap-2 rounded-2xl bg-surface-container p-3.5 border border-border/20 hover:bg-surface-container-high transition-colors"
+              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 border border-border/20 hover:bg-surface-container transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface">Restocks</span>
-                <Truck size={16} className="text-success" />
+                <Truck size={15} className="text-success" />
               </div>
               <p className="font-number text-base font-bold text-on-surface tabular-nums">
                 {formatCurrency(periodPurchasesTotal)}
@@ -619,8 +536,8 @@ export function ReportsBody({
       {/* ==================== TAB 2: DAILY SALES & RECEIPTS ==================== */}
       {activeTab === "sales" && (
         <div className="flex flex-col gap-4 animate-step-in">
-          {/* Quick Cash vs Debt Snapshot */}
-          <div className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-container p-3.5 border border-border/20">
+          {/* Quick Cash vs Debt Snapshot — flat inline section */}
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3 border border-border/20">
             <div>
               <p className="text-[11px] text-on-surface-muted">Cash in Hand</p>
               <p className="font-number text-base font-bold text-success tabular-nums">
@@ -770,7 +687,7 @@ export function ReportsBody({
       {activeTab === "inventory" && (
         <div className="flex flex-col gap-4 animate-step-in">
           {/* Money on Shelves (Store Valuation Card) */}
-          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+          <section className="rounded-2xl bg-surface-container p-4 border border-border/20 shadow-xs">
             <div className="flex items-center justify-between gap-2 mb-1">
               <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
                 <span>Money on Shelves (Stock Worth)</span>
@@ -782,7 +699,7 @@ export function ReportsBody({
               Total value of all items currently sitting in your shop
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5 rounded-2xl bg-surface-container-high/60 p-3.5 mb-3">
+            <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-surface-container-high/60 p-3 mb-3">
               <div>
                 <span className="text-[10px] text-on-surface-muted font-medium">
                   Selling Value (Expected)
@@ -820,8 +737,8 @@ export function ReportsBody({
             </div>
           </section>
 
-          {/* Running Low Warnings */}
-          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+          {/* Running Low Warnings — secondary section */}
+          <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
             <div className="flex items-center justify-between gap-2 mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
                 <span>Running Low ({lowStockProducts.length})</span>
@@ -872,8 +789,8 @@ export function ReportsBody({
             )}
           </section>
 
-          {/* Fast-Moving Goods (Best Sellers) */}
-          <section className="rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
+          {/* Fast-Moving Goods (Best Sellers) — secondary section */}
+          <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
               <span>Fast-Moving Goods (Top Sellers)</span>
               <InfoTooltip text="Top items ranked by the total number of units sold during this time period." />

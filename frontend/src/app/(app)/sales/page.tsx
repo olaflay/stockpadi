@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -40,27 +41,33 @@ export default function SalesPage() {
 
   const result = useLiveQuery(async () => {
     try {
-      const sales = await tenantArray<Sale>(db.sales);
-      sales.sort((a, b) => b.createdAtLocal.localeCompare(a.createdAtLocal));
+      let sales: Sale[];
+      if (range === "all") {
+        sales = await tenantArray<Sale>(db.sales.orderBy("createdAtLocal").reverse());
+      } else {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        if (range === "7days") start.setDate(start.getDate() - 6);
+        const startIso = start.toISOString();
+        sales = await tenantArray<Sale>(
+          db.sales.where("createdAtLocal").aboveOrEqual(startIso).reverse()
+        );
+      }
       return { sales, error: null as string | null };
     } catch (err) {
       return { sales: [], error: err instanceof Error ? err.message : "Could not load sales." };
     }
-  }, []);
+  }, [range]);
 
   // Cashiers only ever see their own sales per the PRD §14 permission
   // matrix ("View sales: Own only"); everyone else with sales visibility
   // sees the branch's full history.
   const visibleSales =
     result?.sales.filter((sale) => {
-      if (user.accountType === "WORKER") {
-        if (sale.createdByUserId !== user.id) return false;
+      if (user.accountType === "WORKER" && sale.createdByUserId !== user.id) {
+        return false;
       }
-      if (range === "all") return true;
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      if (range === "7days") start.setDate(start.getDate() - 6);
-      return sale.createdAtLocal >= start.toISOString();
+      return true;
     }) ?? [];
 
   const [visibleLimit, setVisibleLimit] = useState(25);
@@ -151,35 +158,22 @@ export default function SalesPage() {
   return (
     <div>
       <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-col gap-2">
+        <SegmentedControl
+          options={[
+            { value: "today", label: "Today" },
+            { value: "7days", label: "7 days" },
+            { value: "all", label: "All time" },
+          ]}
+          selected={range}
+          onChange={(key) => {
+            setRange(key as "all" | "7days" | "today");
+            setVisibleLimit(25);
+          }}
+          size="compact"
+          ariaLabel="Sales history period"
+        />
         <p className="text-xs text-on-surface-muted">{visibleSales.length} recorded sale{visibleSales.length === 1 ? "" : "s"}</p>
-        <div className="flex gap-1.5" role="tablist" aria-label="Sales history period">
-          {(
-            [
-              { key: "all", label: "All time" },
-              { key: "7days", label: "7 days" },
-              { key: "today", label: "Today" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={range === tab.key}
-              onClick={() => {
-                setRange(tab.key);
-                setVisibleLimit(25);
-              }}
-              className={`min-h-[32px] rounded-full px-3 text-[length:var(--font-size-caption)] font-medium transition-all ${
-                range === tab.key
-                  ? "bg-brand-accent text-brand-accent-contrast shadow-xs"
-                  : "bg-surface-container text-on-surface-muted hover:bg-surface-container-high"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
       </div>
       <div>
         <ul className="flex flex-col gap-2">
@@ -189,10 +183,10 @@ export default function SalesPage() {
               : `${sale.payments.length} methods`;
             const itemCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
             return (
-              <li key={sale.id}>
+              <li key={sale.id} className="contain-list-item">
                 <RippleLink
                   href={`/sales/${sale.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 hover:bg-surface-container-high active:scale-[0.99] transition-all"
+                  className="flex items-center justify-between gap-3 rounded-xl bg-surface-container-low px-4 py-3 border border-border/20 hover:bg-surface-container active:scale-[0.99] transition-all"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-number text-[length:var(--font-size-body-lg)] font-medium tabular-nums text-on-surface">

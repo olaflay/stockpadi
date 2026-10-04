@@ -11,6 +11,7 @@ const inputClass =
 
 export function UpdateStockList({
   onBack,
+  backHref,
   query,
   onQueryChange,
   filtered,
@@ -21,7 +22,8 @@ export function UpdateStockList({
   isSaving,
   onSave,
 }: {
-  onBack: () => void;
+  onBack?: () => void;
+  backHref?: string;
   query: string;
   onQueryChange: (query: string) => void;
   filtered: Product[];
@@ -34,7 +36,7 @@ export function UpdateStockList({
 }) {
   return (
     <div className="flex flex-col gap-4 pb-24">
-      <ScreenHeader title="Update stock" onBack={onBack} />
+      <ScreenHeader title="Update stock" backHref={backHref} onBack={onBack} />
 
       <div className="relative w-full">
         <Search

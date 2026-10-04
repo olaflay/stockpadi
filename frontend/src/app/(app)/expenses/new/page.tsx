@@ -33,7 +33,7 @@ export default function NewExpensePage() {
   if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
-        <ScreenHeader title="Add expense" onBack={() => router.push("/expenses")} />
+        <ScreenHeader title="Add expense" backHref="/expenses" />
         <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
@@ -64,7 +64,7 @@ export default function NewExpensePage() {
       clearAmount();
       clearNote();
       clearBranch();
-      router.push("/expenses");
+      router.replace("/expenses");
     } catch {
       showToast("Couldn't save the expense, try again.", "danger");
     } finally {
@@ -74,7 +74,7 @@ export default function NewExpensePage() {
 
   return (
     <div>
-      <ScreenHeader title="Add expense" onBack={() => router.push("/expenses")} />
+      <ScreenHeader title="Add expense" backHref="/expenses" />
       <form id="new-expense-form" onSubmit={handleSubmit} className="flex flex-col gap-4 pb-24">
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Category *</span>

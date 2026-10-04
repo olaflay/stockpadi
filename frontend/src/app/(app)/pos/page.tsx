@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo, useDeferredValue } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -191,18 +191,22 @@ function PosPageContent() {
   }
 
   // Strip the optional quantity prefix (e.g. "5 sugar" → search "sugar")
-  // so the product list shows correct results regardless of how the cashier
-  // prefixes their quantity. parsePosQuery is zero-cost when no prefix.
-  const { term: filterTerm } = parsePosQuery(debouncedQuery);
+  // using deferred value to keep checkout/cart steppers at 60fps
+  const deferredQuery = useDeferredValue(debouncedQuery);
+  const { term: filterTerm } = useMemo(() => parsePosQuery(deferredQuery), [deferredQuery]);
 
-  const availableProducts = result.products.filter((product) => {
-    if (product.archived) return false;
-    if (selectedCategoryId !== null && product.categoryId !== selectedCategoryId) return false;
-    return true;
-  });
+  const availableProducts = useMemo(() => {
+    return result.products.filter((product) => {
+      if (product.archived) return false;
+      if (selectedCategoryId !== null && product.categoryId !== selectedCategoryId) return false;
+      return true;
+    });
+  }, [result.products, selectedCategoryId]);
 
-  const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
-  const filtered = [...exact, ...suggestions];
+  const filtered = useMemo(() => {
+    const { exact, suggestions } = searchProductsFuzzy(availableProducts, filterTerm);
+    return [...exact, ...suggestions];
+  }, [availableProducts, filterTerm]);
 
   async function handleCompleteSale() {
     if (cart.cartLines.length === 0) return;

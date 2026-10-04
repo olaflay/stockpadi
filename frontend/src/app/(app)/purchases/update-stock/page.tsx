@@ -31,7 +31,7 @@ export default function UpdateStockPage() {
   if (!hasAccountType(user, CAN_BULK_UPDATE)) {
     return (
       <div>
-        <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Update stock" backHref="/purchases" />
         <PermissionDenied requiredAccountTypes={CAN_BULK_UPDATE} />
       </div>
     );
@@ -40,7 +40,7 @@ export default function UpdateStockPage() {
   if (branches === undefined || products === undefined) {
     return (
       <div>
-        <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Update stock" backHref="/purchases" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -51,7 +51,7 @@ export default function UpdateStockPage() {
   if (!effectiveBranchId) {
     return (
       <div>
-        <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Update stock" backHref="/purchases" />
         <BranchSelectStep branches={branches} onSelectBranch={setBranchId} />
       </div>
     );
@@ -60,7 +60,7 @@ export default function UpdateStockPage() {
   if (products.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Update stock" backHref="/purchases" />
         <EmptyState
           icon={ClipboardList}
           title="No products yet"
@@ -101,7 +101,7 @@ function UpdateStockListContainer({
   if (stockByProduct === undefined) {
     return (
       <div>
-        <ScreenHeader title="Update stock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Update stock" backHref="/purchases" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -109,7 +109,7 @@ function UpdateStockListContainer({
 
   return (
     <UpdateStockList
-      onBack={() => router.push("/purchases")}
+      backHref="/purchases"
       query={query}
       onQueryChange={setQuery}
       filtered={filtered}

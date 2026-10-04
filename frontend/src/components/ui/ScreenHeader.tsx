@@ -43,27 +43,28 @@ export function ScreenHeader({
       return;
     }
 
-    // In a browser/PWA, if history has entries, router.back() correctly returns
-    // to the prior screen the user came from (e.g. Dashboard -> Sales -> Dashboard,
-    // or More -> Sales -> More).
+    // When backHref is explicitly provided, it defines the authoritative parent screen.
+    // Use router.replace(backHref) to replace the current history entry, preventing
+    // ping-pong history loops when navigating between parent and child screens.
+    if (backHref) {
+      router.replace(backHref);
+      return;
+    }
+
+    // In a browser/PWA with no explicit backHref, if history has entries, router.back()
+    // returns to the prior screen the user came from.
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
       return;
     }
 
-    // Safe fallback when opened directly in a new tab/session with no history
-    if (backHref) {
-      router.push(backHref);
-      return;
-    }
-
     // Default safe fallbacks so user is never stuck
-    if (pathname.includes("/settings/")) router.push("/settings");
-    else if (pathname.includes("/products/")) router.push("/products");
-    else if (pathname.includes("/staff/")) router.push("/staff");
-    else if (pathname.includes("/sales/")) router.push("/sales");
-    else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.push("/contacts");
-    else router.push("/dashboard");
+    if (pathname.includes("/settings/")) router.replace("/settings");
+    else if (pathname.includes("/products/")) router.replace("/products");
+    else if (pathname.includes("/staff/")) router.replace("/staff");
+    else if (pathname.includes("/sales/")) router.replace("/sales");
+    else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.replace("/contacts");
+    else router.replace("/dashboard");
   };
 
   // On root tab screens, the page title, hamburger menu, and sync indicator

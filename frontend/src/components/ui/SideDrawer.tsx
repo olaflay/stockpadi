@@ -16,6 +16,8 @@ import {
   Settings,
   X,
   UserCheck,
+  ReceiptText,
+  TrendingDown,
 } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getBrandingConfig } from "@/config/branding";
@@ -107,19 +109,19 @@ export function SideDrawer() {
    */
   const sections: DrawerSection[] = [
     {
-      title: "Store Operations",
+      title: "Daily Operations",
       items: [
         {
-          label: "Close Day Register",
-          href: "/close-day",
-          icon: CalendarCheck,
-          capability: "SUBMIT_RECONCILIATION",
+          label: "Sales History",
+          href: "/sales",
+          icon: ReceiptText,
+          capability: "VIEW_OWN_SALES",
         },
         {
-          label: "Contacts & Debtors",
-          href: "/contacts",
-          icon: Users,
-          capability: "VIEW_CUSTOMERS",
+          label: "Expenses",
+          href: "/expenses",
+          icon: TrendingDown,
+          capability: "MANAGE_EXPENSES",
         },
         {
           label: "Purchases & Restock",
@@ -127,15 +129,22 @@ export function SideDrawer() {
           icon: Truck,
           capability: "RECEIVE_STOCK",
         },
+        {
+          label: "Close Day Register",
+          href: "/close-day",
+          icon: CalendarCheck,
+          capability: "SUBMIT_RECONCILIATION",
+        },
       ],
     },
     {
-      title: "Management",
+      title: "People & Contacts",
       items: [
         {
-          label: "Business Profile",
-          href: "/profile",
-          icon: Store,
+          label: "Contacts & Debtors",
+          href: "/contacts",
+          icon: Users,
+          capability: "VIEW_CUSTOMERS",
         },
         {
           label: "Staff & Permissions",
@@ -143,17 +152,22 @@ export function SideDrawer() {
           icon: UserCheck,
           ownerOnly: true,
         },
+      ],
+    },
+    {
+      title: "Business & Settings",
+      items: [
+        {
+          label: "Business Profile",
+          href: "/profile",
+          icon: Store,
+        },
         {
           label: "Import / Export Catalog",
           href: "/products/import",
           icon: FileSpreadsheet,
           capability: "MANAGE_PRODUCTS",
         },
-      ],
-    },
-    {
-      title: "System & Safety",
-      items: [
         {
           label: "Backup & Offline Storage",
           href: "/settings/data",

@@ -131,7 +131,7 @@ export function NewProductForm({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
-            Starting stock on hand
+            Quantity in stock
             <InfoTooltip text="How many units you currently have in the shop right now." />
           </span>
           <TextInput

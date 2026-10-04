@@ -12,6 +12,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { deleteExpense } from "@/features/expenses/add-expense";
@@ -22,8 +23,19 @@ import type { Expense } from "@/types/expense";
 
 import { getPeriodStartIso, type ReportPeriod } from "@/lib/date";
 
-type Period = "today" | "week" | "month";
-const PERIOD_LABELS: Record<Period, string> = { today: "Today", week: "This week", month: "This month" };
+type Period = "today" | "week" | "month" | "all_time";
+const PERIOD_OPTIONS = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "month", label: "This month" },
+  { value: "all_time", label: "All time" },
+];
+const PERIOD_LABELS: Record<Period, string> = {
+  today: "Today",
+  week: "This week",
+  month: "This month",
+  all_time: "All time",
+};
 
 export default function ExpensesPage() {
   const user = useCurrentUser();
@@ -34,21 +46,29 @@ export default function ExpensesPage() {
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  const periodStart = getPeriodStartIso(period);
+
   const result = useLiveQuery(async () => {
     try {
+      const expensesPromise =
+        period === "all_time"
+          ? tenantArray<Expense>(db.expenses.orderBy("createdAtLocal").reverse())
+          : tenantArray<Expense>(
+              db.expenses.where("createdAtLocal").aboveOrEqual(periodStart).reverse()
+            );
+
       const [branches, users, expenses] = await Promise.all([
         tenantArray<LocalBranch>(db.branches),
         tenantArray<LocalUser>(db.localUsers),
-        tenantArray<Expense>(db.expenses.orderBy("createdAtLocal").reverse()),
+        expensesPromise,
       ]);
       return { expenses, branches, users, error: false };
     } catch {
       return { expenses: [] as Expense[], branches: [] as LocalBranch[], users: [] as LocalUser[], error: true };
     }
-  }, []);
+  }, [periodStart, period]);
 
-  const periodStart = getPeriodStartIso(period);
-  const periodExpenses = result?.expenses.filter((expense) => expense.createdAtLocal >= periodStart) ?? [];
+  const periodExpenses = result?.expenses ?? [];
 
   useEffect(() => {
     if (periodExpenses.length <= visibleLimit) return;
@@ -131,30 +151,17 @@ export default function ExpensesPage() {
     <div>
       <ScreenHeader title="Expenses" backHref="/more" />
 
-      <div
-        role="tablist"
-        aria-label="Expense period"
-        className="mb-3 flex gap-2 rounded-[var(--radius-control)] bg-surface-container-low p-1 border border-border/40"
-      >
-        {(Object.keys(PERIOD_LABELS) as Period[]).map((key) => (
-          <button
-            key={key}
-            role="tab"
-            type="button"
-            aria-selected={period === key}
-            onClick={() => {
-              setPeriod(key);
-              setVisibleLimit(50);
-            }}
-            className={`min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium transition-all ${
-              period === key
-                ? "bg-brand-accent text-brand-accent-contrast shadow-sm"
-                : "text-on-surface-muted hover:text-on-surface hover:bg-surface-container"
-            }`}
-          >
-            {PERIOD_LABELS[key]}
-          </button>
-        ))}
+      <div className="mb-3">
+        <SegmentedControl
+          options={PERIOD_OPTIONS}
+          selected={period}
+          onChange={(key) => {
+            setPeriod(key as Period);
+            setVisibleLimit(50);
+          }}
+          size="default"
+          ariaLabel="Expense period"
+        />
       </div>
 
       <section className="mb-4 rounded-[var(--radius-focus-block)] bg-surface-container p-5">
@@ -181,7 +188,7 @@ export default function ExpensesPage() {
               return (
                 <li
                   key={expense.id}
-                  className="flex flex-col rounded-[var(--radius-card)] bg-surface-container p-4 hover:bg-surface-container-high transition-colors"
+                  className="flex flex-col rounded-xl bg-surface-container-low px-4 py-3 border border-border/20 hover:bg-surface-container transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <button

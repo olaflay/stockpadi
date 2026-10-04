@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { cartLineKey, useCart } from "@/features/pos/use-cart";
 
-// useDraft persists to sessionStorage — clear it between tests so each
+// useDraft persists to storage — clear it between tests so each
 // renderHook call starts with an empty cart, not the previous test's state.
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
 /**
  * Pure client-side cart state, extracted from pos/page.tsx. No Dexie

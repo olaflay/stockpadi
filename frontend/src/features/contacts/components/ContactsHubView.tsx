@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { RippleButton } from "@/components/ui/Ripple";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { formatCurrency } from "@/lib/format";
 import { formatDisplayPhone } from "@/lib/phone";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -171,21 +172,12 @@ export function ContactsHubView({
       )}
 
       {/* Search Input */}
-      <div className="relative w-full">
-        <Search
-          size={18}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-muted"
-          aria-hidden
-        />
-        <input
-          type="search"
-          aria-label="Search contacts by name or phone"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name or phone number..."
-          className="min-h-[var(--touch-target-min)] w-full rounded-2xl bg-surface-container pl-10 pr-4 text-sm text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all placeholder:text-on-surface-muted/60"
-        />
-      </div>
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search by name or phone number..."
+        ariaLabel="Search contacts by name or phone"
+      />
 
       {/* Segmented Filter Chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -232,7 +224,7 @@ export function ContactsHubView({
       ) : filteredContacts.length === 0 ? (
         <NoResultsState query={debouncedQuery} />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
           {filteredContacts.map((contact) => {
             const isDebtor = contact.balance > 0;
             const aging =
@@ -241,11 +233,11 @@ export function ContactsHubView({
                 : null;
 
             return (
-              <li key={contact.id}>
+              <li key={contact.id} className="transition-colors hover:bg-surface-container-high/40">
                 <RippleButton
                   type="button"
                   onClick={() => setSelectedContact(contact)}
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors"
                 >
                   {/* Left: Avatar & Info */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">

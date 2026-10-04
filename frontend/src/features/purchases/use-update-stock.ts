@@ -135,7 +135,7 @@ export function useUpdateStockRows(
       }
       showToast(`${dirtyProducts.length} ${dirtyProducts.length === 1 ? "product" : "products"} updated`, "success");
       setRows({});
-      router.push("/purchases");
+      router.replace("/purchases");
     } catch {
       showToast("Couldn't save some updates. Try again.", "danger");
     } finally {

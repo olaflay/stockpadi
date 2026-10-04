@@ -30,6 +30,8 @@ import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { WorkerCapabilityPicker } from "@/features/auth/WorkerCapabilityPicker";
 
+import { useDraft } from "@/hooks/use-draft";
+
 export default function NewStaffPage() {
   const router = useRouter();
   const user = useCurrentUser();
@@ -37,11 +39,11 @@ export default function NewStaffPage() {
   const isOnline = useOnlineStatus();
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [branchId, setBranchId] = useState<string | null>(null);
-  const [capabilities, setCapabilities] = useState<WorkerCapability[]>([]);
+  const [fullName, setFullName, clearFullName] = useDraft("stockpadi-draft-staff-name", "");
+  const [phone, setPhone, clearPhone] = useDraft("stockpadi-draft-staff-phone", "");
+  const [email, setEmail, clearEmail] = useDraft("stockpadi-draft-staff-email", "");
+  const [branchId, setBranchId, clearBranchId] = useDraft<string | null>("stockpadi-draft-staff-branch", null);
+  const [capabilities, setCapabilities, clearCapabilities] = useDraft<WorkerCapability[]>("stockpadi-draft-staff-caps", []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function NewStaffPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Add staff" onBack={() => router.push("/staff")} />
+        <ScreenHeader title="Add staff" backHref="/staff" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -81,6 +83,11 @@ export default function NewStaffPage() {
       });
       setCreatedPassword(result.password ?? null);
       showToast(`${fullName.trim()} added.`, "success");
+      clearFullName();
+      clearPhone();
+      clearEmail();
+      clearBranchId();
+      clearCapabilities();
     } catch (err) {
       setError(err instanceof ManageStaffError ? err.message : "Could not add this staff member. Try again.");
     } finally {
@@ -91,7 +98,7 @@ export default function NewStaffPage() {
   if (createdPassword) {
     return (
       <div className="flex flex-col gap-4 pb-10">
-        <ScreenHeader title="Worker added" onBack={() => router.push("/staff")} />
+        <ScreenHeader title="Worker added" backHref="/staff" />
         <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container p-4">
           <p className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted uppercase tracking-wide">
             {fullName.trim()} is ready to sign in
@@ -106,7 +113,7 @@ export default function NewStaffPage() {
             </RippleButton>
           </div>
         </div>
-        <RippleButton type="button" onClick={() => router.push("/staff")} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent py-3 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast">
+        <RippleButton type="button" onClick={() => router.replace("/staff")} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent py-3 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast">
           Done
         </RippleButton>
       </div>
@@ -115,7 +122,7 @@ export default function NewStaffPage() {
 
   return (
     <div className="flex flex-col gap-0">
-      <ScreenHeader title="Add staff" onBack={() => router.push("/staff")} />
+      <ScreenHeader title="Add staff" backHref="/staff" />
 
       <div className="flex flex-col gap-4 pt-3 pb-10">
         {/* Offline banner */}

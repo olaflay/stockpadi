@@ -28,7 +28,7 @@ const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: 
   { key: "lowStockThreshold", label: "Low-stock alert", note: "Get warned when stock drops to this number. Leave blank to skip." },
   { key: "expiryTracking", label: "Expiry tracking", note: "off, optional, or mandatory." },
   { key: "expiryDate", label: "Expiry date", note: "ISO YYYY-MM-DD, or an Excel date cell. Required when expiry tracking is mandatory." },
-  { key: "initialStock", label: "Starting stock", note: "How many you have now. Leave blank or 0 to start at zero." },
+  { key: "initialStock", label: "Quantity in stock", note: "How many you have now. Leave blank or 0 to start at zero." },
 ];
 
 function StepBadge({ n, text }: { n: number; text: string }) {
@@ -132,7 +132,7 @@ export default function ImportProductsPage() {
       return;
     }
     if (hasInitialStock && !effectiveBranchId) {
-      showToast("Choose which branch this starting stock is at first.", "warning");
+      showToast("Choose which branch this quantity in stock is at first.", "warning");
       return;
     }
     if (willExceedCap) {
@@ -308,7 +308,7 @@ export default function ImportProductsPage() {
           {hasInitialStock && branches && branches.length > 1 && (
             <div className="mb-4">
               <label className="mb-1 block text-[length:var(--font-size-caption)] font-medium text-on-surface">
-                Branch for starting stock
+                Branch for quantity in stock
               </label>
               <SelectInput value={branchId ?? ""} onChange={(e) => setBranchId(e.target.value)}>
                 <option value="" disabled>Select a branch…</option>

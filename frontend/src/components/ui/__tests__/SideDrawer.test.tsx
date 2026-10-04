@@ -56,14 +56,16 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     cleanup();
   });
 
-  it("renders Material UI standard section groupings: Store Operations, Management, System & Safety", () => {
+  it("renders Material UI standard section groupings: Daily Operations, People & Contacts, Business & Settings", () => {
     render(<SideDrawer />);
 
-    expect(screen.getByText("Store Operations")).toBeInTheDocument();
-    expect(screen.getByText("Management")).toBeInTheDocument();
-    expect(screen.getByText("System & Safety")).toBeInTheDocument();
+    expect(screen.getByText("Daily Operations")).toBeInTheDocument();
+    expect(screen.getByText("People & Contacts")).toBeInTheDocument();
+    expect(screen.getByText("Business & Settings")).toBeInTheDocument();
 
     // Check core operations
+    expect(screen.getByText("Sales History")).toBeInTheDocument();
+    expect(screen.getByText("Expenses")).toBeInTheDocument();
     expect(screen.getByText("Close Day Register")).toBeInTheDocument();
     expect(screen.getByText("Contacts & Debtors")).toBeInTheDocument();
     expect(screen.getByText("Purchases & Restock")).toBeInTheDocument();

@@ -114,7 +114,7 @@ describe("useUpdateStockRows", () => {
     const updated = await db.products.get(p.id);
     expect(updated?.sellPrice).toBe(1500);
     expect(showToast).toHaveBeenCalledWith(expect.stringContaining("1 product updated"), "success");
-    expect(router.push).toHaveBeenCalledWith("/purchases");
+    expect(router.replace).toHaveBeenCalledWith("/purchases");
   });
 
   it("handleSave writes a stock adjustment ledger entry when the stock field changes", async () => {

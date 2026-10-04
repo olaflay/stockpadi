@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -25,6 +25,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { RippleButton } from "@/components/ui/Ripple";
 import { FAB } from "@/components/ui/FAB";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
 import { useNavigation } from "@/components/ui/NavigationContext";
@@ -195,19 +196,24 @@ export default function ProductsPage() {
     new Map<string, number>()
   );
 
-  const byFilter = result
-    ? result.products.filter((product) => {
+  const deferredQuery = useDeferredValue(debouncedQuery);
+
+  const byFilter = useMemo(() => {
+    if (!result) return [];
+    return result.products.filter((product) => {
       if (filter === "archived") return Boolean(product.archived);
       if (product.archived) return false;
       if (filter === "low-stock") return result.lowStockIds.has(product.id);
       if (filter === "best-sellers") return result.bestSellerIds.has(product.id);
       if (filter === "expiring") return result.expiringIds.has(product.id);
       return true;
-    })
-    : [];
+    });
+  }, [result, filter]);
 
-  const { exact, suggestions } = searchProductsFuzzy(byFilter, debouncedQuery);
-  const filtered = [...exact, ...suggestions];
+  const filtered = useMemo(() => {
+    const { exact, suggestions } = searchProductsFuzzy(byFilter, deferredQuery);
+    return [...exact, ...suggestions];
+  }, [byFilter, deferredQuery]);
 
   // Ledger-derived current stock for a product (see getStockByProduct above).
   // `undefined` is preserved rather than collapsed to 0: a product created
@@ -348,38 +354,28 @@ export default function ProductsPage() {
       )}
 
       <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-3 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
-        <div className="flex gap-2">
-          <div className="relative flex-1 min-w-0">
-            <Search
-              size={18}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
-              aria-hidden
-            />
-            <input
-              type="search"
-              aria-label="Search by name, SKU, or barcode"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setSearchActive(Boolean(event.target.value.trim()));
-              }}
-              onFocus={() => setSearchActive(true)}
-              onBlur={() => {
-                if (!query.trim()) setSearchActive(false);
-              }}
-              placeholder="Search by name, SKU, or barcode"
-              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 pr-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setScanning(true)}
-            aria-label="Scan barcode to search"
-            className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors"
-          >
-            <Camera size={18} aria-hidden />
-          </button>
-        </div>
+        <SearchBar
+          value={query}
+          onChange={(val) => {
+            setQuery(val);
+            setSearchActive(Boolean(val.trim()));
+          }}
+          onFocus={() => setSearchActive(true)}
+          onBlur={() => {
+            if (!query.trim()) setSearchActive(false);
+          }}
+          placeholder="Search by name, SKU, or barcode"
+          trailingAction={
+            <button
+              type="button"
+              onClick={() => setScanning(true)}
+              aria-label="Scan barcode to search"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface active:scale-95 transition-colors"
+            >
+              <Camera size={18} aria-hidden />
+            </button>
+          }
+        />
       </div>
 
       {scanning && (
@@ -501,9 +497,9 @@ export default function ProductsPage() {
         </div>
       ) : (
         <div>
-          <ul className="flex flex-col gap-2">
+          <ul className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
             {filtered.slice(0, visibleLimit).map((product) => (
-              <li key={product.id}>
+              <li key={product.id} className="contain-list-item transition-colors hover:bg-surface-container-high/40">
                 {deleteMode ? (
                   <button
                     type="button"
@@ -511,9 +507,9 @@ export default function ProductsPage() {
                       if ((event.target as HTMLElement).closest("input")) return;
                       toggleSelect(product.id);
                     }}
-                    className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-all ${selectedIds.has(product.id)
+                    className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-all ${selectedIds.has(product.id)
                         ? "bg-brand-container text-on-brand-container"
-                        : "bg-surface-container hover:bg-surface-container-high"
+                        : ""
                       }`}
                   >
                     <input
@@ -548,7 +544,7 @@ export default function ProductsPage() {
                     onPointerCancel={cancelLongPress}
                     onPointerLeave={cancelLongPress}
                     title="Long press to select for archive"
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 hover:bg-surface-container-high transition-colors"
+                    className="flex items-center justify-between gap-3 px-4 py-3.5 transition-colors"
                   >
                     <RippleLink
                       href={`/products/${product.id}`}
@@ -639,7 +635,7 @@ export default function ProductsPage() {
 
       {/* Batch archive/restore floating action bar */}
       {deleteMode && (
-        <div className="fixed bottom-22 sm:bottom-24 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-[var(--z-fab,50)] flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+        <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-40 flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
           <button
             type="button"
             onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}

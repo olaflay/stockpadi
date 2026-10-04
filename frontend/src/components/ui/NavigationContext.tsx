@@ -30,6 +30,15 @@ const PRIMARY_NAV_ROUTES = new Set([
   "/more",
   "/stock-count",
   "/pos",
+  "/expenses",
+  "/sales",
+  "/purchases",
+  "/contacts",
+  "/close-day",
+  "/settings",
+  "/profile",
+  "/staff",
+  "/alerts",
 ]);
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {

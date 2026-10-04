@@ -116,10 +116,13 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
   }>;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div
+      className="fixed inset-0 z-40 flex flex-col justify-end pointer-events-none"
+      style={{ paddingBottom: "calc(68px + env(safe-area-inset-bottom, 0px))" }}
+    >
       {/* Dimmed backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-fade-in pointer-events-auto"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -130,7 +133,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
         role="dialog"
         aria-modal="true"
         aria-label="More navigation menu"
-        className="relative z-10 flex max-h-[85vh] w-full max-w-lg mx-auto flex-col rounded-t-[28px] border-t border-border/40 bg-surface shadow-2xl animate-sheet-up overflow-hidden"
+        className="relative z-10 flex max-h-[75vh] w-full max-w-lg mx-auto flex-col rounded-2xl border border-border/40 bg-surface shadow-2xl animate-sheet-up overflow-hidden pointer-events-auto mx-2"
       >
         {/* Top Header Bar */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2">

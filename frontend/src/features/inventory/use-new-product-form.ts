@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,18 @@ import { findProductReferenceConflict } from "@/features/inventory/product-refer
 import { generateFallbackSku } from "@/features/inventory/generate-sku";
 import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP } from "@/config/limits";
+import { loadDraft, saveDraft, clearDraftStorage } from "@/hooks/use-draft";
+
+const PRODUCT_FORM_DRAFT_KEY = "stockpadi-draft-product-new";
+
+interface ProductFormDraftState {
+  values?: Partial<ProductFormInput>;
+  initialStock?: string;
+  initialStockBranchId?: string | null;
+  categoryId?: string;
+  categoryInputName?: string;
+  showUnitConversion?: boolean;
+}
 
 export interface AddedProductSummary {
   name: string;
@@ -32,10 +44,9 @@ export interface AddedProductSummary {
 
 /**
  * All state and the create-product write path for the Add Product screen:
- * category autocomplete state, the optional starting-stock + branch fields
- * (kept outside react-hook-form, same reasoning as the category picker —
- * see product-schema.ts), and the product + stock-movement transaction on
- * submit.
+ * category autocomplete state, the optional quantity-in-stock + branch fields,
+ * automatic localStorage draft preservation across accidental reloads,
+ * and the continuous "Add Another" modal flow.
  */
 export function useNewProductForm(options?: { prefillName?: string; prefillBarcode?: string }) {
   const prefillName = options?.prefillName;
@@ -45,23 +56,33 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
   const { showToast } = useToast();
   const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
-  const [initialStock, setInitialStock] = useState("");
-  const [initialStockBranchId, setInitialStockBranchId] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState(getLastCategoryId() ?? "");
-  const [categoryInputName, setCategoryInputName] = useState("");
-  // Off by default — the plain form (one unit, one price) is the whole
-  // story for most products. This only reveals the unit-conversion fields
-  // when someone actually needs to sell the same stock two ways (e.g.
-  // pieces and cartons); nothing changes on screen until they ask for it.
-  const [showUnitConversion, setShowUnitConversion] = useState(false);
-  // Compulsory Starting stock + (multi-branch) branch: validated inside
-  // onSubmit, kept outside react-hook-form like the category picker, and
-  // surfaced as a red control via TextInput/SelectInput hasError.
+
+  // Restore saved draft if user previously refreshed the page
+  const initialDraft = useRef<ProductFormDraftState | null>(null);
+  if (initialDraft.current === null && typeof window !== "undefined") {
+    initialDraft.current = loadDraft<ProductFormDraftState | null>(PRODUCT_FORM_DRAFT_KEY, null);
+  }
+
+  const [initialStock, setInitialStock] = useState(initialDraft.current?.initialStock ?? "");
+  const [initialStockBranchId, setInitialStockBranchId] = useState<string | null>(
+    initialDraft.current?.initialStockBranchId ?? null
+  );
+  const [categoryId, setCategoryId] = useState(
+    initialDraft.current?.categoryId ?? getLastCategoryId() ?? ""
+  );
+  const [categoryInputName, setCategoryInputName] = useState(
+    initialDraft.current?.categoryInputName ?? ""
+  );
+  const [showUnitConversion, setShowUnitConversion] = useState(
+    initialDraft.current?.showUnitConversion ?? false
+  );
+
   const [initialStockError, setInitialStockError] = useState<string | null>(null);
   const [initialStockBranchError, setInitialStockBranchError] = useState<string | null>(null);
-  // Live SKU auto-fill: the SKU field mirrors the name as it's typed; the
-  // first manual edit to the SKU turns auto-fill off for this form.
   const [autoSkuEnabled, setAutoSkuEnabled] = useState(true);
+  const [successModalProduct, setSuccessModalProduct] = useState<AddedProductSummary | null>(null);
+  const [lastAddedProduct, setLastAddedProduct] = useState<AddedProductSummary | null>(null);
+
   const lastAutoSku = useRef("");
   const lastSkuPrefix = useRef<string | null>(null);
   const pendingSkuTail = useRef(0);
@@ -70,22 +91,53 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       ...PRODUCT_FORM_DEFAULTS,
-      name: prefillName ?? "",
-      barcode: prefillBarcode ?? "",
+      ...(initialDraft.current?.values ?? {}),
+      name: prefillName ?? initialDraft.current?.values?.name ?? "",
+      barcode: prefillBarcode ?? initialDraft.current?.values?.barcode ?? "",
     },
   });
-  const { register, handleSubmit, control, formState } = form;
+  const { register, handleSubmit, control, formState, watch } = form;
   const expiryTracking = useWatch({ control, name: "expiryTracking" });
   const unitLabel = useWatch({ control, name: "unitLabel" }) || "piece";
   const altUnitLabel = useWatch({ control, name: "altUnitLabel" }) || "";
+
+  // Auto-save form draft to localStorage on changes (debounced 250ms)
+  const watchedFormValues = watch();
+  useEffect(() => {
+    const hasUserContent =
+      Boolean(watchedFormValues.name?.trim()) ||
+      Boolean(watchedFormValues.barcode?.trim()) ||
+      Boolean(watchedFormValues.sellPrice) ||
+      Boolean(watchedFormValues.costPrice) ||
+      Boolean(initialStock.trim());
+
+    if (!hasUserContent) return;
+
+    const timer = setTimeout(() => {
+      saveDraft<ProductFormDraftState>(PRODUCT_FORM_DRAFT_KEY, {
+        values: watchedFormValues,
+        initialStock,
+        initialStockBranchId,
+        categoryId,
+        categoryInputName,
+        showUnitConversion,
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [
+    watchedFormValues,
+    initialStock,
+    initialStockBranchId,
+    categoryId,
+    categoryInputName,
+    showUnitConversion,
+  ]);
 
   const effectiveStockBranchId = initialStockBranchId ?? (branches?.length === 1 ? branches[0].id : null);
   const earlyInitialStockQty = Number(initialStock);
   const hasInitialStock = initialStock !== "" && Number.isFinite(earlyInitialStockQty) && earlyInitialStockQty > 0;
 
-  // The live SKU-fill keeps its random tail stable while the user keeps
-  // typing within the same name stem, so the field doesn't visibly jitter
-  // on every keystroke.
   function skuSuggestionFor(name: string): string {
     const trimmed = name.trim();
     const prefix = trimmed
@@ -119,8 +171,6 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     setInitialStockBranchId(branchId);
     if (branchId) setInitialStockBranchError(null);
   }
-
-  const [lastAddedProduct, setLastAddedProduct] = useState<AddedProductSummary | null>(null);
 
   async function executeSave(values: ProductFormValues, addAnother: boolean) {
     try {
@@ -199,6 +249,8 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
       const profit = sellNum - costNum;
       const margin = sellNum > 0 ? (profit / sellNum) * 100 : 0;
 
+      clearDraftStorage(PRODUCT_FORM_DRAFT_KEY);
+
       if (addAnother) {
         setLastAddedProduct({
           name: product.name,
@@ -232,13 +284,41 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
           document.getElementById("field-product-name")?.focus();
         }, 50);
       } else {
-        showToast(`${product.name} added`, "success");
-        router.push("/products");
+        setSuccessModalProduct({
+          name: product.name,
+          sellPrice: sellNum,
+          costPrice: costNum,
+          profit,
+          margin,
+        });
+        showToast(`${product.name} added!`, "success");
       }
     } catch (err) {
       console.error("Failed to save product:", err);
       showToast(err instanceof Error ? err.message : "Could not save product.", "danger");
     }
+  }
+
+  function handleAddAnotherFromModal() {
+    setSuccessModalProduct(null);
+    form.reset({
+      ...PRODUCT_FORM_DEFAULTS,
+      name: "",
+      sku: "",
+      barcode: "",
+      sellPrice: "" as unknown as number,
+      costPrice: "" as unknown as number,
+      unitLabel: unitLabel || "piece",
+      altUnitLabel: altUnitLabel || "",
+      expiryTracking: "off",
+    });
+    setInitialStock("");
+    setAutoSkuEnabled(true);
+    lastAutoSku.current = "";
+    lastSkuPrefix.current = null;
+    setTimeout(() => {
+      document.getElementById("field-product-name")?.focus();
+    }, 50);
   }
 
   const onSubmit = handleSubmit(
@@ -288,6 +368,10 @@ export function useNewProductForm(options?: { prefillName?: string; prefillBarco
     onSaveAndAddAnother,
     lastAddedProduct,
     clearLastAddedProduct: () => setLastAddedProduct(null),
+    successModalProduct,
+    setSuccessModalProduct,
+    handleAddAnotherFromModal,
+    clearDraft: () => clearDraftStorage(PRODUCT_FORM_DRAFT_KEY),
     setValue: form.setValue,
     watch: form.watch,
   };

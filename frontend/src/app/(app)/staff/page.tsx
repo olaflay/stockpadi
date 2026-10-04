@@ -1,32 +1,69 @@
-"use client";
-
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronRight, ScrollText } from "lucide-react";
-import { db } from "@/lib/db";
+import { db, type LocalUser } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { fetchStaff } from "@/features/auth/manage-staff-client";
+import { tenantArray } from "@/lib/local-tenant";
 
 /** "Up to 3 staff on top of the owner." docs/RESEARCH-AND-PLAN.md Section 4.2. */
 const STAFF_CAP = 3;
 
+interface DisplayStaffMember {
+  id: string;
+  fullName: string;
+  email?: string | null;
+  accountType?: "ADMIN" | "BUSINESS_OWNER" | "WORKER" | string;
+  isActive: boolean;
+  deactivatedAt?: string | null;
+  updatedAt?: string;
+}
+
 export default function StaffPage() {
   const user = useCurrentUser();
+  const [remoteUsers, setRemoteUsers] = useState<DisplayStaffMember[] | null>(null);
 
-  const result = useLiveQuery(async () => {
+  // 1. Instant local-first query (<5ms)
+  const cachedUsers = useLiveQuery(async () => {
     try {
-      // Cached staff has no trusted tenant boundary. When the backend cannot
-      // answer, show only the signed-in owner rather than risk rendering a
-      // stale user from another business.
-      const cached = (await db.localUsers.toArray()).filter((member) => member.id === user.id);
-      let users = cached;
-      try {
-        const remote = await fetchStaff();
-        users = remote.map((member) => ({
+      const allUsers = await tenantArray<LocalUser>(db.localUsers);
+      const filtered = allUsers.length > 0 ? allUsers : [{
+        id: user.id,
+        fullName: user.fullName,
+        accountType: user.accountType,
+        isActive: true,
+        updatedAt: new Date().toISOString(),
+      }];
+      filtered.sort((a, b) =>
+        a.accountType === "BUSINESS_OWNER"
+          ? -1
+          : b.accountType === "BUSINESS_OWNER"
+          ? 1
+          : a.fullName.localeCompare(b.fullName)
+      );
+      return filtered;
+    } catch {
+      return [{
+        id: user.id,
+        fullName: user.fullName,
+        accountType: user.accountType,
+        isActive: true,
+        updatedAt: new Date().toISOString(),
+      }];
+    }
+  }, [user.id, user.fullName, user.accountType]);
+
+  // 2. Background remote sync (SWR pattern - never blocks page render)
+  useEffect(() => {
+    let cancelled = false;
+    fetchStaff()
+      .then((remote) => {
+        if (cancelled) return;
+        const mapped: DisplayStaffMember[] = remote.map((member) => ({
           id: member.id,
           fullName: member.fullName,
           email: member.email,
@@ -34,17 +71,23 @@ export default function StaffPage() {
           isActive: member.isActive,
           deactivatedAt: member.deactivatedAt,
           updatedAt: new Date().toISOString(),
-          capabilities: member.capabilities,
-          managerBranchIds: member.managerBranchIds,
         }));
-      } catch {
-        // Cached staff is a display fallback only when the backend is unavailable.
-      }
-      users.sort((a, b) => (a.accountType === "BUSINESS_OWNER" ? -1 : b.accountType === "BUSINESS_OWNER" ? 1 : a.fullName.localeCompare(b.fullName)));
-      return { users, error: null as string | null };
-    } catch (err) {
-      return { users: [], error: err instanceof Error ? err.message : "Couldn't load staff." };
-    }
+        mapped.sort((a, b) =>
+          a.accountType === "BUSINESS_OWNER"
+            ? -1
+            : b.accountType === "BUSINESS_OWNER"
+            ? 1
+            : a.fullName.localeCompare(b.fullName)
+        );
+        setRemoteUsers(mapped);
+      })
+      .catch(() => {
+        // Fallback to cached users if network fails or offline
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (user.accountType !== "BUSINESS_OWNER") {
@@ -56,7 +99,9 @@ export default function StaffPage() {
     );
   }
 
-  if (result === undefined) {
+  const staffList = remoteUsers ?? cachedUsers;
+
+  if (staffList === undefined) {
     return (
       <div>
         <ScreenHeader title="Staff" backHref="/settings" />
@@ -65,16 +110,7 @@ export default function StaffPage() {
     );
   }
 
-  if (result.error) {
-    return (
-      <div>
-        <ScreenHeader title="Staff" backHref="/settings" />
-        <ErrorState message="Couldn't load staff." onRetry={() => window.location.reload()} />
-      </div>
-    );
-  }
-
-  const nonOwnerActiveCount = result.users.filter((u) => u.accountType === "WORKER" && u.isActive).length;
+  const nonOwnerActiveCount = staffList.filter((u) => u.accountType === "WORKER" && u.isActive).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -84,15 +120,15 @@ export default function StaffPage() {
         {nonOwnerActiveCount} of {STAFF_CAP} staff used
       </p>
 
-      <div className="flex flex-col gap-2">
-        {result.users.map((staffMember) => (
+      <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
+        {staffList.map((staffMember) => (
           <RippleLink
             key={staffMember.id}
             href={`/staff/${staffMember.id}`}
-            className="flex min-h-[var(--touch-target-min)] items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-surface-container-high/40 transition-colors"
           >
             <div className="min-w-0">
-              <p className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
+              <p className="truncate text-[length:var(--font-size-body-lg)] font-medium text-on-surface">
                 {staffMember.fullName}
                 {!staffMember.isActive && (
                   <span className="ml-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -100,11 +136,11 @@ export default function StaffPage() {
                   </span>
                 )}
               </p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
                 {staffMember.accountType === "BUSINESS_OWNER" ? "Business Owner" : "Worker"}
               </p>
             </div>
-            <ChevronRight size={20} className="shrink-0 text-on-surface-muted" aria-hidden />
+            <ChevronRight size={18} className="shrink-0 text-on-surface-muted" aria-hidden />
           </RippleLink>
         ))}
       </div>

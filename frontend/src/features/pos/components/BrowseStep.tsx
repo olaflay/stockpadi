@@ -13,6 +13,7 @@ const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").th
 });
 import { NoResultsState } from "@/components/ui/NoResultsState";
 import { RippleButton } from "@/components/ui/Ripple";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { formatCurrency } from "@/lib/format";
 import { getRecentCategoryIds, markCategoryUsed } from "@/lib/last-used-category";
 import { cartLineKey } from "@/features/pos/use-cart";
@@ -167,68 +168,53 @@ export function BrowseStep(props: {
       <h1 className="sr-only">Sell</h1>
 
       <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-1 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
-        <div className="flex gap-2">
-          <div className="relative flex-1 min-w-0">
-            <Search
-              size={18}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
-              aria-hidden
-            />
-            <input
-              type="search"
-              aria-label="Search products"
-              value={query}
-              onChange={(event) => {
-                onQueryChange(event.target.value);
-                setSearchActive(Boolean(event.target.value.trim()));
-              }}
-              onFocus={() => setSearchActive(true)}
-              onBlur={() => {
-                if (!query.trim()) setSearchActive(false);
-              }}
-              onKeyDown={(e) => {
-                // Enter → immediately add the first visible single-unit result.
-                // Dual-unit products are skipped: the cashier must still pick
-                // a unit, so Enter would guess wrong. H7: expert accelerator.
-                if (
-                  e.key === "Enter" &&
-                  filteredProducts.length > 0
-                ) {
-                  const first = filteredProducts[0];
-                  if (!first.altUnitLabel) {
-                    const { qty } = parsePosQuery(query);
-                    handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
-                    e.preventDefault();
-                  }
-                }
-              }}
-              placeholder="Search shop..."
-              className={`min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-low pl-10 text-center placeholder:text-center focus:text-left focus:placeholder:text-left text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all ${
-                itemCount > 0 ? "pr-16" : "pr-10"
-              }`}
-            />
-            {/* Live cart count badge — always visible even when the sticky
-                footer is scrolled out of view during a large order. H1:
-                visibility of system status. WCAG 4.1.3: status messages. */}
-            {itemCount > 0 && (
-              <span
-                aria-live="polite"
-                aria-label={`${itemCount} item${itemCount === 1 ? "" : "s"} in cart`}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-brand-accent/15 px-2 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-brand-accent"
+        <SearchBar
+          value={query}
+          onChange={(val) => {
+            onQueryChange(val);
+            setSearchActive(Boolean(val.trim()));
+          }}
+          onFocus={() => setSearchActive(true)}
+          onBlur={() => {
+            if (!query.trim()) setSearchActive(false);
+          }}
+          onKeyDown={(e) => {
+            // Enter → immediately add the first visible single-unit result.
+            // Dual-unit products are skipped: the cashier must still pick
+            // a unit, so Enter would guess wrong. H7: expert accelerator.
+            if (e.key === "Enter" && filteredProducts.length > 0) {
+              const first = filteredProducts[0];
+              if (!first.altUnitLabel) {
+                const { qty } = parsePosQuery(query);
+                handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
+                e.preventDefault();
+              }
+            }
+          }}
+          placeholder="Search shop..."
+          ariaLabel="Search products"
+          trailingAction={
+            <div className="flex items-center gap-1">
+              {itemCount > 0 && (
+                <span
+                  aria-live="polite"
+                  aria-label={`${itemCount} item${itemCount === 1 ? "" : "s"} in cart`}
+                  className="rounded-full bg-brand-container px-2 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-on-brand-container"
+                >
+                  ×{itemCount}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                aria-label="Scan barcode"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface active:scale-95 transition-colors"
               >
-                ×{itemCount}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setScanning(true)}
-            aria-label="Scan barcode"
-            className="flex min-h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-surface-container-low text-on-surface hover:bg-surface-container disabled:opacity-50 transition-colors"
-          >
-            <Camera size={18} aria-hidden />
-          </button>
-        </div>
+                <Camera size={18} aria-hidden />
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {scanning && (

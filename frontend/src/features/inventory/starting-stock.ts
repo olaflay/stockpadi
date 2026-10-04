@@ -28,7 +28,7 @@ export function validateStartingStock(
 
   const quantity = Number(raw);
   if (!Number.isFinite(quantity) || quantity < 1) {
-    return { ok: false, reason: "invalid", error: "Starting stock must be 1 unit or more.", quantity: null };
+    return { ok: false, reason: "invalid", error: "Quantity in stock must be 1 unit or more.", quantity: null };
   }
 
   if (branchCount > 1 && !branchId) {

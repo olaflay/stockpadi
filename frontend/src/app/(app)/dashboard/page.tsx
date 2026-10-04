@@ -434,14 +434,14 @@ export default function DashboardPage() {
               All products →
             </RippleLink>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
             {metrics.topProducts.map((p) => (
               <div
                 key={p.id}
-                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left hover:bg-surface-container-high transition-colors"
+                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-surface-container-high/40 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">{p.name}</p>
+                  <p className="truncate text-[length:var(--font-size-body)] font-semibold text-on-surface">{p.name}</p>
                   <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
                     {formatCurrency(p.sellPrice)} · <span className={p.currentStock <= 5 ? "text-warning font-medium" : ""}>{p.currentStock} in stock</span>
                   </p>

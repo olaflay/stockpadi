@@ -11,6 +11,7 @@ import { GuidedTour } from "@/features/onboarding/components/GuidedTour";
 import { LegacyShellGuard } from "@/features/shells/LegacyShellGuard";
 import { KeyboardScrollHandler } from "@/components/ui/KeyboardScrollHandler";
 import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
+import { TooltipProvider } from "@/components/ui/TooltipContext";
 
 function AppShellBody({ children }: { children: React.ReactNode }) {
   const { isNavVisible } = useNavigation();
@@ -53,8 +54,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <LegacyShellGuard>
         <DrawerProvider>
           <NavigationProvider>
-            <KeyboardScrollHandler />
-            <AppShellBody>{children}</AppShellBody>
+            <TooltipProvider>
+              <KeyboardScrollHandler />
+              <AppShellBody>{children}</AppShellBody>
+            </TooltipProvider>
           </NavigationProvider>
         </DrawerProvider>
       </LegacyShellGuard>

@@ -15,9 +15,24 @@ export function ServiceWorkerRegister() {
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1")
     ) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
+          // Check for service worker updates periodically or on visibility change
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              registration.update().catch(() => {});
+            }
+          });
+
           // Listen for new service worker installation
           registration.addEventListener("updatefound", () => {
             const installingWorker = registration.installing;
@@ -25,7 +40,7 @@ export function ServiceWorkerRegister() {
               installingWorker.addEventListener("statechange", () => {
                 if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
                   // New version available
-                  console.info("[PWA] New update installed and ready.");
+                  console.info("[PWA] New update installed and activating.");
                 }
               });
             }

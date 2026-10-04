@@ -34,6 +34,7 @@ interface SearchableProduct {
   name: string;
   sku: string;
   barcode?: string | null;
+  _searchNorm?: string;
 }
 
 export interface FuzzySearchResult<T extends SearchableProduct> {
@@ -44,8 +45,8 @@ export interface FuzzySearchResult<T extends SearchableProduct> {
 
 /**
  * Two-tier product search:
- * - Tier 1: exact substring match on name/SKU/barcode
- * - Tier 2: fuzzy Levenshtein match (edit distance ≤ 2 for words > 4 chars)
+ * - Tier 1: exact substring match on name/SKU/barcode (zero string allocation via cached _searchNorm)
+ * - Tier 2: fuzzy Levenshtein match (edit distance ≤ 2 for words > 4 chars, only when query >= 3 chars)
  *
  * Barcode queries (pure digits or exact barcode match) bypass fuzzy entirely.
  */
@@ -65,12 +66,13 @@ export function searchProductsFuzzy<T extends SearchableProduct>(
     return { exact, suggestions: [] };
   }
 
-  // Tier 1: exact substring match
-  const exact = products.filter((p) =>
-    `${p.name} ${p.sku} ${p.barcode ?? ""}`.toLowerCase().includes(clean)
-  );
+  // Tier 1: exact substring match with zero GC allocation on repeat searches
+  const exact = products.filter((p) => {
+    const norm = p._searchNorm ?? (p._searchNorm = `${p.name} ${p.sku} ${p.barcode ?? ""}`.toLowerCase());
+    return norm.includes(clean);
+  });
 
-  if (exact.length >= 3) return { exact, suggestions: [] };
+  if (exact.length >= 3 || clean.length < 3) return { exact, suggestions: [] };
 
   // Tier 2: fuzzy match (edit distance ≤ 2 for words > 4 chars)
   const exactIds = new Set(exact.map((p) => p.name));

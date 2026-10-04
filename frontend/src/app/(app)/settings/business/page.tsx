@@ -29,7 +29,7 @@ export default function BusinessSettingsPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Business" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Business" backHref="/settings" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );

@@ -24,8 +24,8 @@ export function FAB({ href, onClick, label, id, size = "md", extended = false, c
   }[size];
 
   const commonClass = extended
-    ? "fixed bottom-22 sm:bottom-24 right-5 sm:right-6 z-[var(--z-fab,50)] flex h-14 min-w-[5rem] px-5 items-center justify-center gap-2.5 rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all"
-    : `fixed bottom-22 sm:bottom-24 right-5 sm:right-6 z-[var(--z-fab,50)] flex ${sizeClasses} items-center justify-center rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all`;
+    ? "fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 right-5 sm:right-6 z-40 flex h-14 min-w-[5rem] px-5 items-center justify-center gap-2.5 rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all"
+    : `fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 right-5 sm:right-6 z-40 flex ${sizeClasses} items-center justify-center rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all`;
 
   const content = (
     <>

@@ -426,4 +426,10 @@ body:has(input:focus, textarea:focus) [data-bottom-nav] {
   transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Layout containment for smooth 60fps scrolling over large lists under load */
+.contain-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 68px;
+}
+
 

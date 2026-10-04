@@ -25,7 +25,7 @@ export default function SharingSettingsPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Sharing" onBack={() => router.push("/settings")} />
+        <ScreenHeader title="Sharing" backHref="/settings" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );

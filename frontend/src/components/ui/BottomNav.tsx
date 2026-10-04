@@ -26,9 +26,10 @@ const MORE_ROUTES = [
   "/expenses",
   "/purchases",
   "/close-day",
-  "/stock-count",
   "/settings",
   "/profile",
+  "/staff",
+  "/alerts",
   "/products/import",
 ];
 
@@ -87,7 +88,7 @@ export function BottomNav() {
       <nav
         data-bottom-nav
         aria-label="Main navigation"
-        className={`fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-50 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
           isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         }`}
         style={{
@@ -102,7 +103,7 @@ export function BottomNav() {
         />
         {items.map((item) => {
           const isMore = item.href === "/more";
-          const isActive = isMore ? isMoreRoute : pathname === item.href;
+          const isActive = isMore ? (isMoreRoute && !isMoreOpen) : pathname === item.href;
           const Icon = item.icon;
 
           if (isMore) {
@@ -111,7 +112,7 @@ export function BottomNav() {
                 key={item.href}
                 type="button"
                 id={`tour-nav-${item.label.toLowerCase()}`}
-                onClick={() => setIsMoreOpen(true)}
+                onClick={() => setIsMoreOpen((prev) => !prev)}
                 className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
                   isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
                 }`}

@@ -44,7 +44,7 @@ export default function NewPurchasePage() {
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
-        <ScreenHeader title="Record restock" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Record restock" backHref="/purchases" />
         <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
@@ -142,7 +142,7 @@ export default function NewPurchasePage() {
       clearBranchDraft();
       clearSupplierDraft();
       clearLinesDraft();
-      router.push("/purchases");
+      router.replace("/purchases");
     } catch {
       showToast("Couldn't save the restock, try again.", "danger");
     } finally {
@@ -152,7 +152,7 @@ export default function NewPurchasePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Record restock" onBack={() => router.push("/purchases")} />
+      <ScreenHeader title="Record restock" backHref="/purchases" />
 
       {branches && branches.length > 1 && (
         <label className="flex flex-col gap-1">

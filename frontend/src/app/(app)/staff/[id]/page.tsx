@@ -34,21 +34,55 @@ export default function StaffDetailPage({ params }: PageProps) {
   const [capabilities, setCapabilities] = useState<WorkerCapability[]>([]);
   const [branchId, setBranchId] = useState<string>("");
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
+  const localUser = useLiveQuery(() => db.localUsers.get(id), [id]);
+
+  const cachedMember: StaffListItem | null = localUser
+    ? {
+        id: localUser.id,
+        fullName: localUser.fullName,
+        email: null,
+        accountType: (localUser.accountType as StaffListItem["accountType"]) ?? "WORKER",
+        status: localUser.isActive ? "active" : "deactivated",
+        branchIds: localUser.branchIds ?? [],
+        capabilities: ((localUser.permissions as unknown) as WorkerCapability[]) ?? [],
+        isActive: localUser.isActive,
+        deactivatedAt: null,
+        managerBranchIds: [],
+      }
+    : null;
+
+  const member = staffMember ?? cachedMember;
+
   useEffect(() => {
     let cancelled = false;
-    fetchStaffMember(id).then((member) => { if (!cancelled) { setStaffMember(member); setCapabilities(member.capabilities); } }).catch(() => { if (!cancelled) setStaffMember(null); }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    fetchStaffMember(id)
+      .then((m) => {
+        if (!cancelled) {
+          setStaffMember(m);
+          setCapabilities(m.capabilities);
+          if (m.branchIds && m.branchIds.length > 0) setBranchId(m.branchIds[0]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !cachedMember) setStaffMember(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (user.accountType !== "BUSINESS_OWNER") return <PermissionDenied requiredAccountType="BUSINESS_OWNER" />;
-  if (loading) return <Skeleton className="h-40" />;
-  if (!staffMember) return <ErrorState message="Could not find this staff member." onRetry={() => router.push("/staff")} />;
-  const member = staffMember;
+  if (loading && !member) return <Skeleton className="h-40" />;
+  if (!member) return <ErrorState message="Could not find this staff member." onRetry={() => router.replace("/staff")} />;
   const memberAccountType = member.accountType;
 
   const canModify = user.accountType === "BUSINESS_OWNER";
 
   async function resetWorkerPassword() {
+    if (!member) return;
     setError(null);
     setBusy(true);
     try {
@@ -60,29 +94,32 @@ export default function StaffDetailPage({ params }: PageProps) {
   }
 
   async function deactivate() {
+    if (!member) return;
     if (!confirm(`Deactivate ${member.fullName}? They will no longer be able to sign in.`)) return;
     setBusy(true);
     try {
       await callManageStaff({ action: "deactivate", userId: member.id });
       await db.localUsers.update(member.id, { isActive: false, updatedAt: new Date().toISOString() });
       showToast(`${member.fullName} deactivated`, "success");
-      router.push("/staff");
+      router.replace("/staff");
     } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not deactivate worker."); }
     finally { setBusy(false); }
   }
 
   async function reactivate() {
+    if (!member) return;
     setBusy(true);
     try {
       await callManageStaff({ action: "reactivate", userId: member.id });
       await db.localUsers.update(member.id, { isActive: true, updatedAt: new Date().toISOString() });
       showToast(`${member.fullName} reactivated`, "success");
-      router.push("/staff");
+      router.replace("/staff");
     } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not reactivate worker."); }
     finally { setBusy(false); }
   }
 
   async function savePermissions() {
+    if (!member) return;
     setBusy(true);
     try {
       await callManageStaff({ action: "update_permissions", userId: member.id, capabilities });
@@ -92,7 +129,7 @@ export default function StaffDetailPage({ params }: PageProps) {
   }
 
   async function saveManagerAssignment() {
-    if (!branchId) return;
+    if (!member || !branchId) return;
     setBusy(true);
     try {
       await callManageStaff({ action: "designate_manager", userId: member.id, branchId, isManager: true });
@@ -102,7 +139,7 @@ export default function StaffDetailPage({ params }: PageProps) {
   }
 
   return <div className="flex flex-col gap-6">
-    <ScreenHeader title={staffMember.fullName} onBack={() => router.push("/staff")} />
+    <ScreenHeader title={member.fullName} backHref="/staff" />
     {error && <div className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-on-danger-container">{error}</div>}
     <section>
       <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Account type</h2>
@@ -137,7 +174,7 @@ export default function StaffDetailPage({ params }: PageProps) {
         <RippleButton type="button" onClick={saveManagerAssignment} disabled={busy || !branchId} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-3 text-brand-accent">Assign</RippleButton>
       </div>
     </section>}
-    {memberAccountType === "WORKER" && staffMember.isActive && <button type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-danger px-4 text-danger disabled:opacity-50">Deactivate</button>}
-    {memberAccountType === "WORKER" && !staffMember.isActive && <button type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-brand-accent px-4 text-brand-accent disabled:opacity-50">Reactivate</button>}
+    {memberAccountType === "WORKER" && member.isActive && <RippleButton type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger px-4 font-semibold text-danger hover:bg-danger-container/20 disabled:opacity-50 transition-colors">Deactivate worker</RippleButton>}
+    {memberAccountType === "WORKER" && !member.isActive && <RippleButton type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-brand-accent px-4 font-semibold text-brand-accent hover:bg-brand-accent/10 disabled:opacity-50 transition-colors">Reactivate worker</RippleButton>}
   </div>;
 }

@@ -31,7 +31,7 @@ export default function StaffAuditPage() {
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
+        <ScreenHeader title="Audit log" backHref="/staff" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -40,7 +40,7 @@ export default function StaffAuditPage() {
   if (logs === undefined) {
     return (
       <div>
-        <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
+        <ScreenHeader title="Audit log" backHref="/staff" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -49,12 +49,12 @@ export default function StaffAuditPage() {
   if (logs.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
+        <ScreenHeader title="Audit log" backHref="/staff" />
         <EmptyState
           icon={ScrollText}
           title="Nothing logged yet"
           description="Staff and role changes will show up here."
-          action={{ label: "Manage Staff", onClick: () => router.push("/staff") }}
+          action={{ label: "Manage Staff", onClick: () => router.replace("/staff") }}
         />
       </div>
     );
@@ -62,7 +62,7 @@ export default function StaffAuditPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Audit log" onBack={() => router.push("/staff")} />
+      <ScreenHeader title="Audit log" backHref="/staff" />
       <div className="flex flex-col divide-y divide-border rounded-[var(--radius-card)] border border-border">
         {logs.map((log) => (
           <div key={log.id} className="flex flex-col gap-0.5 px-4 py-3">

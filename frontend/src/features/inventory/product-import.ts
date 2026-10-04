@@ -246,7 +246,7 @@ function validateRawRows(rawRows: RawRow[], headerErrors: ImportError[] = []): P
       const initialStockRaw = cellToString(cells.initialStock).trim();
       const initialStockQty = initialStockRaw === "" ? 0 : parseFiniteNumber(initialStockRaw);
       if (initialStockQty === undefined || initialStockQty < 0 || !Number.isInteger(initialStockQty)) {
-        errors.push({ rowNum, field: "initialStock", message: "Starting stock must be a non-negative whole number." });
+        errors.push({ rowNum, field: "initialStock", message: "Quantity in stock must be a non-negative whole number." });
         continue;
       }
 

@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["localhost:3000", ...configuredDevOrigins],
   experimental: {
     optimizePackageImports: ["lucide-react", "dexie-react-hooks", "dexie"],
+    staleTimes: {
+      dynamic: 0,
+      static: 60,
+    },
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,

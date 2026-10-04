@@ -43,7 +43,7 @@ export default function PurchaseDetailPage({ params }: PageProps) {
   if (!hasAccountType(user, CAN_VIEW_PURCHASES)) {
     return (
       <div>
-        <ScreenHeader title="Restock Info" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Restock Info" backHref="/purchases" />
         <PermissionDenied requiredAccountTypes={CAN_VIEW_PURCHASES} />
       </div>
     );
@@ -52,7 +52,7 @@ export default function PurchaseDetailPage({ params }: PageProps) {
   if (data === undefined) {
     return (
       <div>
-        <ScreenHeader title="Restock Info" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Restock Info" backHref="/purchases" />
         <Skeleton className="h-64" />
       </div>
     );
@@ -63,7 +63,7 @@ export default function PurchaseDetailPage({ params }: PageProps) {
   if (purchase === null) {
     return (
       <div>
-        <ScreenHeader title="Restock Info" onBack={() => router.push("/purchases")} />
+        <ScreenHeader title="Restock Info" backHref="/purchases" />
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted">Restock record not found.</p>
       </div>
     );
@@ -73,7 +73,7 @@ export default function PurchaseDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <ScreenHeader title="Restock Info" onBack={() => router.push("/purchases")} />
+      <ScreenHeader title="Restock Info" backHref="/purchases" />
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
         <section className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 animate-step-in">

@@ -54,7 +54,7 @@ export default function WelcomePage() {
   if (!hasAccountType(user, CAN_EDIT_PRODUCTS)) {
     return (
       <div>
-        <ScreenHeader title="First product" onBack={() => router.push("/dashboard")} />
+        <ScreenHeader title="First product" backHref="/dashboard" />
         <PermissionDenied requiredAccountTypes={CAN_EDIT_PRODUCTS} />
       </div>
     );
@@ -88,7 +88,7 @@ export default function WelcomePage() {
       // Deep-links into POS with the product pre-added to cart
       // (src/app/(app)/pos/page.tsx reads ?add=), so the very next thing
       // they do is complete a real sale — with or without a connection.
-      router.push(`/pos?add=${product.id}`);
+      router.replace(`/pos?add=${product.id}`);
     } catch {
       showToast("Couldn't save that product, try again.", "danger");
     } finally {
@@ -111,7 +111,7 @@ export default function WelcomePage() {
       
       await seedSampleProducts(profile.businessTypeId, user.id, branch.id);
       showToast("Sample data loaded. Try selling something!", "success");
-      router.push("/pos");
+      router.replace("/pos");
     } catch (err) {
       console.error(err);
       showToast("Couldn't load sample data. Check your connection and try again.", "danger");
@@ -122,7 +122,7 @@ export default function WelcomePage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <ScreenHeader title="First product" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader title="First product" backHref="/dashboard" />
 
       <div className="flex flex-col items-center gap-3 rounded-[var(--radius-focus-block)] bg-surface-container px-6 py-8 text-center animate-step-in">
         <OfflineIllustration className="mb-1 h-24 w-24 text-brand-accent" />
