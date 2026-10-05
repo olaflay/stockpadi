@@ -29,6 +29,7 @@ export async function receivePurchase(params: {
   lines: PurchaseLine[];
   createdByUserId: string;
   actor: CurrentUser;
+  createdAtIso?: string;
 }): Promise<Purchase> {
   assertCapability(params.actor, "RECEIVE_STOCK");
   await assertHighRiskWriteAllowed("purchase_receipt");
@@ -37,6 +38,7 @@ export async function receivePurchase(params: {
   }
 
   const now = new Date().toISOString();
+  const createdAt = params.createdAtIso || now;
   const purchaseId = crypto.randomUUID();
 
   const items: PurchaseItem[] = params.lines.map((line) => ({
@@ -52,8 +54,8 @@ export async function receivePurchase(params: {
     branchId: params.branchId,
     supplierId: params.supplierId,
     items,
-    createdAtLocal: now,
-    createdAt: now,
+    createdAtLocal: createdAt,
+    createdAt: createdAt,
     createdByUserId: params.createdByUserId,
   };
 
@@ -66,8 +68,8 @@ export async function receivePurchase(params: {
     source: "purchase_receipt",
     sourceReferenceId: purchaseId,
     reasonCode: null,
-    createdAtLocal: now,
-    createdAt: now,
+    createdAtLocal: createdAt,
+    createdAt: createdAt,
     createdByUserId: params.createdByUserId,
   }));
 

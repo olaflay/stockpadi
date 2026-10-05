@@ -121,9 +121,11 @@ export function GuidedTour() {
 
       {/* M3 Interactive Tour Sheet */}
       <aside
+        data-modal-container
         role="dialog"
         aria-modal="true"
-        className="fixed inset-x-4 bottom-20 sm:bottom-24 z-50 mx-auto max-w-md rounded-2xl border border-border/80 bg-surface-container-high p-5 shadow-[var(--shadow-elevation-3)] animate-sheet-up"
+        className="fixed inset-x-4 bottom-20 sm:bottom-24 z-50 mx-auto max-w-md rounded-[28px] border border-border/40 bg-surface-container-high p-5 sm:p-6 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up"
+        style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
         aria-label={`${branding.businessName} guided tour`}
       >
         {/* Header with step category, X close */}

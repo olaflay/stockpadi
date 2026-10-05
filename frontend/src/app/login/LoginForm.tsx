@@ -318,13 +318,14 @@ export default function LoginForm() {
 
       {isApprovalModalOpen && (
         <div
+          data-modal-container
           role="dialog"
           aria-modal="true"
           aria-labelledby="approval-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-scrim)] px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[3px] p-4 animate-step-in"
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-surface p-6 border border-border/80"
+            className="w-full max-w-sm rounded-[28px] bg-surface p-6 sm:p-7 border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-step-in"
             style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
           >
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning-container text-on-warning-container mb-3.5 depth-bubble">

@@ -117,34 +117,41 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
 
   return (
     <div
+      data-modal-container
       className="fixed inset-0 z-40 flex flex-col justify-end pointer-events-none"
       style={{ paddingBottom: "calc(68px + env(safe-area-inset-bottom, 0px))" }}
     >
-      {/* Dimmed backdrop */}
+      {/* Dimmed backdrop with M3 blur */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-fade-in pointer-events-auto"
+        className="fixed inset-0 bg-black/45 backdrop-blur-[3px] transition-opacity animate-fade-in pointer-events-auto"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Bottom Sheet Container */}
+      {/* M3 Bottom Sheet Container */}
       <div
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
         aria-label="More navigation menu"
-        className="relative z-10 flex max-h-[75vh] w-full max-w-lg mx-auto flex-col rounded-2xl border border-border/40 bg-surface shadow-2xl animate-sheet-up overflow-hidden pointer-events-auto mx-2"
+        className="relative z-10 flex max-h-[78vh] w-full max-w-lg mx-auto flex-col rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 bg-surface shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up overflow-hidden pointer-events-auto px-2"
+        style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
       >
+        {/* M3 Drag Handle */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="h-1 w-8 rounded-full bg-outline-variant/60" />
+        </div>
+
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex items-center justify-between px-5 pt-2 pb-2">
           <span className="text-xs font-bold tracking-widest text-on-surface-muted uppercase">MORE</span>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container-high hover:text-on-surface active:scale-95 transition-all"
             aria-label="Close menu"
           >
-            <X size={18} />
+            <X size={18} aria-hidden />
           </button>
         </div>
 
@@ -159,7 +166,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
                   key={item.href}
                   type="button"
                   onClick={() => navigateTo(item.href)}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 sm:py-3.5 rounded-2xl transition-all text-center ${
+                  className={`flex flex-col items-center justify-center gap-2 p-3 sm:py-3.5 rounded-[20px] transition-all text-center ${
                     isActive
                       ? "bg-brand-accent/15 border border-brand-accent/40 text-brand-accent font-semibold"
                       : "bg-surface-container-low hover:bg-surface-container border border-border/30 text-on-surface active:scale-95"

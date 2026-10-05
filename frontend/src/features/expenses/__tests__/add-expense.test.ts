@@ -96,4 +96,21 @@ describe("addExpense", () => {
     expect(await db.expenses.count()).toBe(0);
     expect(await db.outbox.count()).toBe(0);
   });
+
+  it("accurately respects custom createdAtIso for backdated expense tracking", async () => {
+    const pastDate = "2026-09-15T10:30:00.000Z";
+    const expense = await addExpense({
+      branchId: "branch-a",
+      category: "Generator",
+      amount: 15000,
+      note: "Diesel for shop gen",
+      createdByUserId: OWNER.id,
+      actor: OWNER,
+      createdAtIso: pastDate,
+    });
+
+    expect(expense.createdAtLocal).toBe(pastDate);
+    const saved = await db.expenses.get(expense.id);
+    expect(saved?.createdAtLocal).toBe(pastDate);
+  });
 });

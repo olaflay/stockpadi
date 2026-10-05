@@ -66,21 +66,34 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         (activeEl as HTMLElement).isContentEditable;
 
       if (isInput) {
+        // If the focused input is inside an overlay modal, dialog or sheet, do not toggle bottom nav
+        if ((activeEl as HTMLElement).closest?.('[role="dialog"], [aria-modal="true"], [data-modal-container]')) {
+          return;
+        }
+
+        // On desktop/non-touch screens, never toggle keyboard visibility on input focus
+        const isTouchMobile =
+          typeof window !== "undefined" &&
+          window.innerWidth < 1024 &&
+          ("ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+
+        if (!isTouchMobile) {
+          return;
+        }
+
         const type = (activeEl as HTMLInputElement).type;
         if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
           setIsKeyboardVisible(true);
           // Ensure focused input field comes comfortably into field of view above software keyboard
-          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-            setTimeout(() => {
-              if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
-                (activeEl as HTMLElement).scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                  inline: "nearest",
-                });
-              }
-            }, 180);
-          }
+          setTimeout(() => {
+            if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
+              (activeEl as HTMLElement).scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+              });
+            }
+          }, 180);
           return;
         }
       }
@@ -89,24 +102,22 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     const handleViewportResize = () => {
       const activeEl = document.activeElement;
+      // Resizing while inside an open modal should not flicker the background nav bar
+      if (activeEl && (activeEl as HTMLElement).closest?.('[role="dialog"], [aria-modal="true"], [data-modal-container]')) {
+        return;
+      }
+
       const isInput =
         activeEl &&
         (activeEl.tagName === "INPUT" ||
           activeEl.tagName === "TEXTAREA" ||
           (activeEl as HTMLElement).isContentEditable);
 
-      if (isInput) {
-        const type = (activeEl as HTMLInputElement).type;
-        if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
-          setIsKeyboardVisible(true);
-        }
-      }
-
       const vv = window.visualViewport;
       if (!vv) return;
       // If visual viewport shrinks by > 120px compared to window inner height, keyboard is open
       const keyboardOpen = vv.height < window.innerHeight - 120;
-      setIsKeyboardVisible(keyboardOpen);
+      setIsKeyboardVisible(keyboardOpen && Boolean(isInput));
 
       if (keyboardOpen && activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
         setTimeout(() => {

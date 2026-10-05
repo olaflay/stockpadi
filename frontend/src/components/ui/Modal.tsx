@@ -210,11 +210,16 @@ export function Modal({
 
   if (!isOpen) return null;
 
+  const isDialog = variant === "dialog";
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--color-scrim)] transition-all animate-step-in"
+      data-modal-container
+      className={`fixed inset-0 z-[60] flex ${
+        isDialog ? "items-center justify-center p-4 sm:p-6" : "items-end sm:items-center justify-center"
+      } bg-black/45 backdrop-blur-[3px] transition-all animate-step-in`}
       style={{
-        paddingBottom: bottomOffset > 0 ? `${bottomOffset}px` : undefined,
+        paddingBottom: bottomOffset > 0 && !isDialog ? `${bottomOffset}px` : undefined,
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -225,46 +230,58 @@ export function Modal({
     >
       <div
         ref={modalRef}
-        className={`w-full ${maxWidth} flex flex-col bg-surface rounded-t-[var(--radius-sheet)] sm:rounded-[var(--radius-sheet)] border-t sm:border border-border/80 shadow-[var(--shadow-elevation-3)] overflow-hidden animate-sheet-up transition-transform`}
+        className={`w-full ${maxWidth} flex flex-col bg-surface ${
+          isDialog
+            ? "rounded-[28px] border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-step-in"
+            : "rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up"
+        } overflow-hidden transition-transform`}
         style={{
           boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)",
           maxHeight: maxHeightStyle,
         }}
       >
         {/* M3 Mobile Drag Handle — Tap & Swipe Zone */}
-        {variant === "sheet" && (
+        {!isDialog && (
           <div
-            className="flex justify-center pt-3.5 pb-2 sm:hidden cursor-grab active:cursor-grabbing touch-none select-none"
+            className="flex justify-center pt-3 pb-1.5 sm:hidden cursor-grab active:cursor-grabbing touch-none select-none"
             aria-label="Swipe down to dismiss"
             onTouchStart={(e) => handleDragStart(e.touches[0].clientY, false)}
             onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
             onTouchEnd={handleDragEnd}
             onTouchCancel={handleDragEnd}
           >
-            <div className="h-1.5 w-12 rounded-full bg-on-surface-muted/40 active:bg-on-surface-muted transition-colors" />
+            <div className="h-1 w-8 rounded-full bg-outline-variant/60 active:bg-on-surface-variant transition-colors" />
           </div>
         )}
 
         {/* Modal Header */}
         <div
-          className="flex items-center justify-between px-6 py-3.5 border-b border-border/60 bg-surface-container-low select-none"
+          className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-surface-container-low/70 select-none"
           onTouchStart={(e) => {
-            const target = e.target as HTMLElement | null;
-            if (target && !target.closest("button")) {
-              handleDragStart(e.touches[0].clientY, false);
+            if (!isDialog) {
+              const target = e.target as HTMLElement | null;
+              if (target && !target.closest("button")) {
+                handleDragStart(e.touches[0].clientY, false);
+              }
             }
           }}
-          onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
-          onTouchEnd={handleDragEnd}
-          onTouchCancel={handleDragEnd}
+          onTouchMove={(e) => {
+            if (!isDialog) handleDragMove(e.touches[0].clientY);
+          }}
+          onTouchEnd={() => {
+            if (!isDialog) handleDragEnd();
+          }}
+          onTouchCancel={() => {
+            if (!isDialog) handleDragEnd();
+          }}
         >
-          <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-on-surface">
+          <h2 id="modal-title" className="text-xl font-semibold text-on-surface tracking-tight">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container-high hover:text-on-surface active:scale-95 transition-all"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container-highest hover:text-on-surface active:scale-95 transition-all"
             aria-label="Close modal"
           >
             <X size={18} aria-hidden />
@@ -274,22 +291,26 @@ export function Modal({
         {/* Modal Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto p-5 scroll-smooth"
+          className="flex-1 overflow-y-auto px-6 py-5 scroll-smooth overscroll-contain"
           style={{
             scrollPaddingBottom: "2.5rem",
           }}
           onTouchStart={(e) => {
-            if (contentRef.current && contentRef.current.scrollTop <= 2) {
+            if (!isDialog && contentRef.current && contentRef.current.scrollTop <= 2) {
               handleDragStart(e.touches[0].clientY, true);
             }
           }}
           onTouchMove={(e) => {
-            if (canDragFromContentRef.current) {
+            if (!isDialog && canDragFromContentRef.current) {
               handleDragMove(e.touches[0].clientY);
             }
           }}
-          onTouchEnd={handleDragEnd}
-          onTouchCancel={handleDragEnd}
+          onTouchEnd={() => {
+            if (!isDialog) handleDragEnd();
+          }}
+          onTouchCancel={() => {
+            if (!isDialog) handleDragEnd();
+          }}
         >
           {children}
         </div>

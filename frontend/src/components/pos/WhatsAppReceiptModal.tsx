@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, MessageCircle, X } from "lucide-react";
+import { Copy, Check, MessageCircle } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Modal } from "@/components/ui/Modal";
 import { RippleButton } from "@/components/ui/Ripple";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/format";
@@ -115,43 +116,26 @@ export function WhatsAppReceiptModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center bg-black/40 sm:items-center"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Share Receipt"
+      variant="sheet"
+      maxWidth="max-w-md"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Share receipt on WhatsApp"
-        className="w-full max-w-md rounded-t-[var(--radius-sheet)] sm:rounded-2xl bg-surface p-5 border-t sm:border border-border/80 animate-sheet-in overflow-hidden"
-        style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-semibold text-on-surface">
-            Share receipt
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container active:scale-95 transition-all"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
+      <div className="flex flex-col gap-3.5">
         {/* Customer debt alert banner with toggle */}
         {customerDebtBalance > 0 && (
-          <div className="mb-3 rounded-[var(--radius-control)] border border-warning/40 bg-warning-container/30 p-2.5 text-xs text-on-warning-container">
+          <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning-container/30 p-3 text-xs text-on-warning-container">
             <p className="font-semibold text-warning">
               Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
             </p>
-            <label className="mt-1.5 flex items-center gap-2 cursor-pointer font-medium select-none text-on-surface">
+            <label className="mt-2 flex items-center gap-2 cursor-pointer font-medium select-none text-on-surface">
               <input
                 type="checkbox"
                 checked={includeDebt}
                 onChange={(e) => setIncludeDebt(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-border accent-brand-accent"
+                className="h-4 w-4 rounded border-border accent-brand-accent"
               />
               <span>Include balance reminder in message</span>
             </label>
@@ -159,8 +143,8 @@ export function WhatsAppReceiptModal({
         )}
 
         {/* Phone number input */}
-        <label className="mb-3 block">
-          <span className="mb-1 block text-[length:var(--font-size-label)] text-on-surface-muted font-medium">
+        <label className="flex flex-col gap-1">
+          <span className="text-[length:var(--font-size-label)] text-on-surface-muted font-medium">
             Customer WhatsApp number
           </span>
           <input
@@ -174,14 +158,14 @@ export function WhatsAppReceiptModal({
         </label>
 
         {/* Receipt preview */}
-        <div className="mb-4 max-h-56 overflow-y-auto rounded-2xl bg-surface-container p-3.5 shadow-[var(--shadow-recessed)]">
+        <div className="max-h-52 overflow-y-auto rounded-[var(--radius-card)] bg-surface-container p-3.5 shadow-[var(--shadow-recessed)] border border-border/30">
           <pre className="whitespace-pre-wrap text-xs leading-relaxed text-on-surface font-sans">
             {previewText}
           </pre>
         </div>
 
         {/* Actions: Copy fallback and Send via WhatsApp */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 pt-1">
           <button
             type="button"
             onClick={handleCopy}
@@ -201,6 +185,6 @@ export function WhatsAppReceiptModal({
           </RippleButton>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -21,17 +21,19 @@ export async function addExpense(params: {
   note: string | null;
   createdByUserId: string;
   actor: CurrentUser;
+  createdAtIso?: string;
 }): Promise<Expense> {
   assertCapability(params.actor, "MANAGE_EXPENSES");
   await assertHighRiskWriteAllowed("expense");
   const now = new Date().toISOString();
+  const createdAt = params.createdAtIso || now;
   const expense: Expense = {
     id: crypto.randomUUID(),
     branchId: params.branchId,
     category: params.category,
     amount: params.amount,
     note: params.note,
-    createdAtLocal: now,
+    createdAtLocal: createdAt,
     createdByUserId: params.createdByUserId,
   };
 
