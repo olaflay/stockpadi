@@ -157,7 +157,7 @@ export default function SalesPage() {
   if (!hasCapability(user, "VIEW_OWN_SALES")) {
     return (
       <div>
-        <ScreenHeader title="Sales history" backHref="/more" />
+        <ScreenHeader title="Sales history" />
         <PermissionDenied requiredCapabilities={["VIEW_OWN_SALES"]} />
       </div>
     );
@@ -166,7 +166,7 @@ export default function SalesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
+        <ScreenHeader title="Sales history" action={reportsAction} />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-12 rounded-2xl" />
           <Skeleton className="h-16 rounded-2xl" />
@@ -180,7 +180,7 @@ export default function SalesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
+        <ScreenHeader title="Sales history" action={reportsAction} />
         <ErrorState message="Couldn't load sales." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -188,7 +188,7 @@ export default function SalesPage() {
 
   return (
     <div className="flex flex-col gap-3 pb-12">
-      <ScreenHeader title="Sales history" backHref="/more" action={reportsAction} />
+      <ScreenHeader title="Sales history" action={reportsAction} />
 
       {/* Top Filter Dropdown Bar with Expanding Pill Tray */}
       <FilterDropdownBar filters={filterGroups} ariaLabel="Filter sales by date and payment method" />

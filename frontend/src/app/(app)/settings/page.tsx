@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <ScreenHeader title="Settings" backHref="/more" />
+      <ScreenHeader title="Settings" />
 
       {/* Account Identity Header — Clean profile surface */}
       <RippleLink

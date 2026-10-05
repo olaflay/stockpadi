@@ -178,7 +178,7 @@ export default function ExpensesPage() {
   if (!hasCapability(user, "MANAGE_EXPENSES")) {
     return (
       <div>
-        <ScreenHeader title="Expenses" backHref="/more" />
+        <ScreenHeader title="Expenses" />
         <PermissionDenied requiredCapabilities={["MANAGE_EXPENSES"]} />
       </div>
     );
@@ -187,7 +187,7 @@ export default function ExpensesPage() {
   if (result === undefined) {
     return (
       <div className="flex flex-col gap-4">
-        <ScreenHeader title="Expenses" backHref="/more" />
+        <ScreenHeader title="Expenses" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-12 rounded-2xl" />
           <Skeleton className="h-16 rounded-2xl" />
@@ -201,7 +201,7 @@ export default function ExpensesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Expenses" backHref="/more" />
+        <ScreenHeader title="Expenses" />
         <ErrorState message="Couldn't load your expenses." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -209,7 +209,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="flex flex-col gap-3 pb-12">
-      <ScreenHeader title="Expenses" backHref="/more" />
+      <ScreenHeader title="Expenses" />
 
       {/* Top Filter Dropdown Bar with Expanding Pill Tray */}
       <FilterDropdownBar filters={filterGroups} ariaLabel="Filter expenses by date and category" />

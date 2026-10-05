@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -39,6 +40,13 @@ export default function MorePage() {
   const user = useCurrentUser();
   const branding = getBrandingConfig();
   const isOwnerOrAdmin = hasAccountType(user, ["BUSINESS_OWNER", "ADMIN"]);
+
+  // The More sheet is an overlay modal triggered from the BottomNav.
+  // Direct navigation to /more automatically redirects to /dashboard so
+  // users never land on a redundant detached /more page.
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
 
   const businessProfile = useLiveQuery(
     () => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),

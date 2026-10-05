@@ -17,7 +17,7 @@ function ContactsContent() {
       ? filterParam
       : "all";
 
-  return <ContactsHubView initialKind={initialKind} backHref="/more" />;
+  return <ContactsHubView initialKind={initialKind} />;
 }
 
 export default function ContactsPage() {

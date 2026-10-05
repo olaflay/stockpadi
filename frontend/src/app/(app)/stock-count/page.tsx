@@ -92,7 +92,7 @@ export default function StockCountPage() {
   if (!hasCapability(user, "SUBMIT_STOCK_COUNT")) {
     return (
       <div>
-        <ScreenHeader title="Stock count" backHref="/more" />
+        <ScreenHeader title="Stock count" />
         <PermissionDenied requiredCapabilities={["SUBMIT_STOCK_COUNT"]} />
       </div>
     );
@@ -101,7 +101,7 @@ export default function StockCountPage() {
   if (branches === undefined || products === undefined) {
     return (
       <div>
-        <ScreenHeader title="Stock count" backHref="/more" />
+        <ScreenHeader title="Stock count" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -111,7 +111,7 @@ export default function StockCountPage() {
     if (branches.length === 0) {
       return (
         <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-          <ScreenHeader title="Stock count" backHref="/more" />
+          <ScreenHeader title="Stock count" />
           <EmptyState
             icon={ClipboardList}
             title="No branches yet"
@@ -123,7 +123,7 @@ export default function StockCountPage() {
     }
     return (
       <div>
-        <ScreenHeader title="Stock count" backHref="/more" />
+        <ScreenHeader title="Stock count" />
         <div className="flex flex-col gap-2">
           <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Which branch?</p>
           {branches.map((branch) => (
@@ -193,7 +193,7 @@ export default function StockCountPage() {
   if (products.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Stock count" backHref="/more" />
+        <ScreenHeader title="Stock count" />
         <EmptyState
           icon={ClipboardList}
           title="No products yet"
@@ -206,7 +206,7 @@ export default function StockCountPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-24">
-      <ScreenHeader title="Stock count" backHref="/more" />
+      <ScreenHeader title="Stock count" />
 
       {/* Search Input */}
       <div className="relative w-full">

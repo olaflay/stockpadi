@@ -42,7 +42,7 @@ interface ContactsHubViewProps {
 
 export function ContactsHubView({
   initialKind = "debtors",
-  backHref = "/more",
+  backHref,
 }: ContactsHubViewProps) {
   const [kind, setKind] = useState<ContactKind>(initialKind);
   const [searchQuery, setSearchQuery] = useState("");

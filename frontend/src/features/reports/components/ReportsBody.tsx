@@ -19,7 +19,7 @@ import { RippleLink } from "@/components/ui/Ripple";
 import { PerformancePill } from "@/components/ui/PerformancePill";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { PeriodFilter } from "@/components/ui/PeriodFilter";
+import { FilterDropdownBar } from "@/components/ui/FilterDropdownBar";
 import { formatCurrency } from "@/lib/format";
 import { PERIOD_LABELS, type Period, type DayOfWeekStat } from "@/features/reports/use-reports-data";
 import { computeGrossProfit } from "@/features/reports/compute-profit";
@@ -28,12 +28,6 @@ import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
 
-const DROPDOWN_PERIODS: Array<{ value: Period; label: string }> = [
-  { value: "week", label: "This week" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "all_time", label: "All" },
-  { value: "custom", label: "Custom" },
-];
 
 export function ReportsBody({
   period,
@@ -207,23 +201,75 @@ export function ReportsBody({
     });
   }
 
+  const filterGroups = [
+    {
+      id: "period",
+      label: "Date Range",
+      options: [
+        { value: "week", label: "This week" },
+        { value: "yesterday", label: "Yesterday" },
+        { value: "month", label: "This month" },
+        { value: "all_time", label: "All time" },
+        { value: "custom", label: "Custom" },
+      ],
+      selectedValue: period,
+      onChange: (newVal: string) => {
+        onSelectPeriod(newVal as Period);
+        setSelectedDayTab(null);
+      },
+      renderTriggerLabel: (val: string) => {
+        if (val === "week") return "This week";
+        if (val === "yesterday") return "Yesterday";
+        if (val === "month") return "This month";
+        if (val === "custom") return "Custom Range";
+        return "All Time";
+      },
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
-      {/* 1. Header Toolbar: Flat PeriodFilter & Text-Only SegmentedControl */}
+      {/* 1. Header Toolbar: Dropdown Filter Bar matching Sales page & Text-Only SegmentedControl */}
       <div className="flex flex-col gap-2.5">
-        <PeriodFilter
-          options={DROPDOWN_PERIODS}
-          selected={period}
-          onChange={(newVal) => {
-            onSelectPeriod(newVal as Period);
-            setSelectedDayTab(null);
-          }}
-          enableCustomRange={true}
-          customRange={customRange}
-          onCustomRangeChange={onSelectCustomRange}
-          size="compact"
+        <FilterDropdownBar
+          filters={filterGroups}
           ariaLabel="Filter report period"
         />
+
+        {period === "custom" && onSelectCustomRange && (
+          <div className="flex items-center gap-2 pt-1 animate-step-in">
+            <label className="flex-1 flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+              <span>From</span>
+              <input
+                type="date"
+                aria-label="Start date"
+                value={customRange?.start ? customRange.start.slice(0, 10) : ""}
+                onChange={(e) =>
+                  onSelectCustomRange({
+                    start: e.target.value,
+                    end: customRange?.end ?? new Date().toISOString().slice(0, 10),
+                  })
+                }
+                className="w-full rounded-[var(--radius-control)] border border-border/40 bg-surface px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-accent"
+              />
+            </label>
+            <label className="flex-1 flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+              <span>To</span>
+              <input
+                type="date"
+                aria-label="End date"
+                value={customRange?.end ? customRange.end.slice(0, 10) : ""}
+                onChange={(e) =>
+                  onSelectCustomRange({
+                    start: customRange?.start ?? new Date().toISOString().slice(0, 10),
+                    end: e.target.value,
+                  })
+                }
+                className="w-full rounded-[var(--radius-control)] border border-border/40 bg-surface px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-accent"
+              />
+            </label>
+          </div>
+        )}
 
         <SegmentedControl
           options={[

@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { FilterDropdownBar } from "@/components/ui/FilterDropdownBar";
 import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { getPeriodStartIso } from "@/lib/date";
@@ -123,19 +123,29 @@ export default function PurchasesPage() {
       <ScreenHeader title="Restocks" backHref="/products" />
 
       <div className="mb-3 flex flex-col gap-2.5">
-        <SegmentedControl
-          options={[
-            { value: "week", label: "This week" },
-            { value: "month", label: "This month" },
-            { value: "all", label: "All time" },
+        <FilterDropdownBar
+          filters={[
+            {
+              id: "period",
+              label: "Date Range",
+              options: [
+                { value: "week", label: "This week" },
+                { value: "month", label: "This month" },
+                { value: "all", label: "All time" },
+              ],
+              selectedValue: period,
+              onChange: (key) => {
+                setPeriod(key as RestockPeriod);
+                setVisibleLimit(50);
+              },
+              renderTriggerLabel: (val) => {
+                if (val === "week") return "This week";
+                if (val === "month") return "This month";
+                return "All Time";
+              },
+            },
           ]}
-          selected={period}
-          onChange={(key) => {
-            setPeriod(key as RestockPeriod);
-            setVisibleLimit(50);
-          }}
-          size="compact"
-          ariaLabel="Restock period"
+          ariaLabel="Filter restock period"
         />
 
         {canAdd && (

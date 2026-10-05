@@ -34,7 +34,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Profile" backHref="/more" />
+      <ScreenHeader title="Profile" />
       <div className="flex flex-col items-center gap-3 py-4 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-accent/10">
           <UserCircle size={40} className="text-brand-accent" aria-hidden />
