@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Trash2, ArrowUpRight, Receipt, Package, UserPlus } from "lucide-react";
@@ -62,14 +62,18 @@ export function AddExpenseSheet({
     return "expense";
   }, [initialMode, canManageExpenses, canReceiveStock]);
 
-  const [mode, setMode] = useState<"expense" | "restock">(defaultMode);
+  const [userSelectedMode, setUserSelectedMode] = useState<"expense" | "restock" | null>(null);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-  // Sync mode if initialMode changes
-  useEffect(() => {
+  // Reset user mode selection during render when modal opens (React 19 pattern: avoiding setState in effects)
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
-      setMode(defaultMode);
+      setUserSelectedMode(null);
     }
-  }, [isOpen, defaultMode]);
+  }
+
+  const mode = userSelectedMode ?? defaultMode;
 
   // Live queries for branches, suppliers, and active products
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
@@ -156,6 +160,7 @@ export function AddExpenseSheet({
 
   // Reset helper
   function resetForms() {
+    setUserSelectedMode(null);
     setDateOption("today");
     setCustomDate(todayStr);
     setExpenseAmount("");
@@ -296,7 +301,7 @@ export function AddExpenseSheet({
           <div className="flex rounded-[var(--radius-control)] bg-surface-container p-1 border border-border/60">
             <button
               type="button"
-              onClick={() => setMode("expense")}
+              onClick={() => setUserSelectedMode("expense")}
               className={`flex flex-1 items-center justify-center gap-1.5 py-2 px-3 text-xs sm:text-sm font-medium rounded-[calc(var(--radius-control)-2px)] transition-all ${
                 mode === "expense"
                   ? "bg-surface text-on-surface font-semibold shadow-sm"
@@ -308,7 +313,7 @@ export function AddExpenseSheet({
             </button>
             <button
               type="button"
-              onClick={() => setMode("restock")}
+              onClick={() => setUserSelectedMode("restock")}
               className={`flex flex-1 items-center justify-center gap-1.5 py-2 px-3 text-xs sm:text-sm font-medium rounded-[calc(var(--radius-control)-2px)] transition-all ${
                 mode === "restock"
                   ? "bg-surface text-on-surface font-semibold shadow-sm"
