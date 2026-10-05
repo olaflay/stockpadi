@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Geist_Mono } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
 import { getBrandingConfig } from "@/config/branding";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
@@ -40,10 +40,11 @@ const googleSansFlex = localFont({
   adjustFontFallback: "Arial",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// GeistMono from 'geist/font/mono' is a pre-instantiated NextFontWithVariable —
+// the font files are bundled locally in the package, so no network call is made
+// at build time. This fixes the /_not-found CI build failure caused by the
+// Google Fonts TCP connection being reset in the GitHub Actions runner.
+const geistMono = GeistMono;
 
 const branding = getBrandingConfig();
 
