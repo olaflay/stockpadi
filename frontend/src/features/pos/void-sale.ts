@@ -2,7 +2,7 @@ import { getSupabase } from "@/lib/supabase";
 import { db, type CustomerCreditMovement } from "@/lib/db";
 import type { StockMovement } from "@/types/stock-movement";
 import { tenantArray, tenantGet, withLocalBusinessIds } from "@/lib/local-tenant";
-import { serverPost } from "@/features/operations/server-client";
+import { serverPost } from "@/platform/api/backend-client";
 
 /**
  * Thin client for the Node void-sale API. Online-required by locked

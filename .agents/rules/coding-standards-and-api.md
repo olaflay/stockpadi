@@ -14,7 +14,10 @@ Per `.agents/rules/reusability-and-multi-client.md`, business name, branding, an
 
 ## API conventions
 
-REST over HTTPS, JSON, via Supabase's auto-generated PostgREST layer for standard CRUD and custom Edge Functions for sync merge and reporting aggregation logic. See `.agents/skills/write-edge-function.md` before adding a new Edge Function.
+REST over HTTPS, JSON, through the Node application API. The backend uses
+request-scoped Supabase/PostgREST reads and privileged database RPCs for
+authoritative mutations. Supabase Functions are compatibility adapters only;
+see `.agents/skills/write-edge-function.md` before adding or modifying one.
 
 Pagination is cursor-based, never offset-based. Offset pagination breaks under concurrent inserts from multiple syncing devices, which is the normal operating condition here, not an edge case.
 

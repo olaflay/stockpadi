@@ -107,7 +107,9 @@ updated to return `reversedPayments`.
 ### 1.5 An oversized outbox batch can never drain (FIXED & CLOSED)
 
 **Evidence.** `frontend/src/features/sync/drain-outbox.ts` pushed up to `DRAIN_BATCH_SIZE = 500`.
-`frontend/src/features/operations/server-client.ts` aborted any request at `REQUEST_TIMEOUT_MS = 15_000`.
+The frontend backend transport (`frontend/src/platform/api/backend-client.ts`;
+the former `features/operations/server-client.ts` remains a compatibility
+export) aborts any request at `REQUEST_TIMEOUT_MS = 15_000`.
 `backend/src/modules/sync/sync.service.ts` applied a batch in a sequential `for` loop, one RPC per
 item, so serving time grew linearly with batch size (~45s), causing client timeout aborts and infinite re-send loops.
 

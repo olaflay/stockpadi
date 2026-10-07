@@ -199,6 +199,24 @@ export interface SyncPullState {
   lastFailedDataset?: string | null;
   pullRetryCount?: number;
   nextPullAttemptAt?: string | null;
+  /** Durable diagnostics for the last coordinator session/batch. */
+  lastSyncSessionId?: string | null;
+  lastBatchId?: string | null;
+  lastDeviceId?: string | null;
+  lastQueueAgeMs?: number | null;
+  lastOperationType?: string | null;
+  lastPushDurationMs?: number | null;
+  lastPullDurationMs?: number | null;
+  lastAcknowledgedCount?: number;
+  lastCoordinatorPhase?: string | null;
+}
+
+export interface SyncLease {
+  id: string;
+  businessId: string;
+  ownerId: string;
+  acquiredAt: string;
+  expiresAt: string;
 }
 
 class StockPadiDB extends Dexie {
@@ -221,6 +239,7 @@ class StockPadiDB extends Dexie {
   syncQuarantine!: EntityTable<SyncQuarantineRow, "id">;
   inventoryStock!: EntityTable<LocalInventoryStock, "id">;
   syncPullState!: EntityTable<SyncPullState, "id">;
+  syncLeases!: EntityTable<SyncLease, "id">;
 
   constructor() {
     super("stockpadi");
@@ -395,6 +414,12 @@ class StockPadiDB extends Dexie {
     this.version(15).stores({
       inventoryStock: "id, businessId, productId, branchId, updatedAt",
       syncPullState: "id, businessId, completedAt",
+    });
+
+    // Additive-only durable coordinator lease. It coordinates browsers that
+    // do not implement Web Locks without changing or deleting outbox rows.
+    this.version(16).stores({
+      syncLeases: "id, businessId, expiresAt",
     });
   }
 }

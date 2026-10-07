@@ -1,6 +1,6 @@
 import { getSupabase } from "@/lib/supabase";
 import { db } from "@/lib/db";
-import { serverGet, serverPost } from "@/features/operations/server-client";
+import { serverGet, serverPost } from "@/platform/api/backend-client";
 import type { WorkerCapability } from "@/features/auth/authorization";
 
 /**

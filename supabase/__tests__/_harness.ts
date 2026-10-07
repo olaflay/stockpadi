@@ -11,8 +11,8 @@ import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
  * Supabase's `auth` schema and API roles do not exist in plain Postgres, so a
  * minimal stand-in is created here. It plays no part in the assertions: the
  * sync_apply_* functions are called directly with an explicit actor_id, the
- * same way the sync-push Edge Function calls them after authorizing the caller
- * independently.
+ * same way the Node sync backend calls them after authorizing the caller
+ * independently (or a compatibility adapter forwards to that backend).
  */
 
 const migrationsDir = fileURLToPath(new URL("../migrations/", import.meta.url));

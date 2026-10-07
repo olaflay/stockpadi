@@ -17,11 +17,12 @@ export type AccountContextErrorCode = "ACCOUNT_CONTEXT_FAILED" | "ACCOUNT_NOT_AP
 type ContextResult = { context: AccountContext; error: null } | { context: null; error: { code: AccountContextErrorCode; message: string } };
 
 /**
- * Resolve the trusted account context used by privileged Edge Functions.
+ * Resolve the trusted account context used by privileged compatibility functions.
  *
  * This deliberately uses the membership tables rather than auth metadata or
- * request payload claims. Callers using the service-role client must perform
- * this check themselves because service-role queries bypass RLS.
+ * request payload claims. The canonical Node backend performs this check before
+ * privileged operations; compatibility callers must do the same because
+ * service-role queries bypass RLS.
  */
 export async function resolveAccountContext(db: SupabaseClient, user: User): Promise<ContextResult> {
   const { data: rawData, error } = await db.rpc("resolve_account_context", { p_user_id: user.id, p_allow_pending_owner: false }).maybeSingle();

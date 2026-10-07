@@ -145,21 +145,17 @@ are tracked in `docs/LAUNCH_SCOPE.md`.
 
 ```mermaid
 graph TD
-    A[Next.js PWA - React + TypeScript] --> B[Service Worker via Workbox]
-    B --> C[IndexedDB via Dexie.js]
-    A --> D[Self-hosted Supabase Client]
-    D --> E[Supabase Auth]
-    D --> F[Postgres + RLS - role based, single tenant]
-    D --> G[Supabase Realtime]
-    D --> H[Supabase Storage]
-    A --> I[Background Sync API]
-    I --> J[Sync Queue - Outbox Pattern]
-    J --> F
-    F --> K[Edge Functions - ledger recalculation]
-    L[Coolify on VPS] --> A
-    L --> D
-    A --> M[Sentry]
-    A --> N[PostHog]
+    UI[Next.js PWA - Server Components by default] --> LOCAL[Feature application layer]
+    LOCAL --> DEXIE[Dexie local repositories]
+    DEXIE --> OUTBOX[Durable IndexedDB outbox]
+    LOCAL --> API[Same-origin /api application boundary]
+    API --> NODE[Node backend: auth context, authorization, sync orchestration]
+    NODE --> AUTH[Supabase Auth verification]
+    NODE --> DB[Postgres + RLS/RPCs - tenant and ledger authority]
+    SERWIST[Serwist service worker] --> CACHE[App-shell/navigation cache]
+    SERWIST -. no mutation replay .-> API
+    DB --> PULL[Cursor-based sync pull]
+    PULL --> API
 ```
 
 > **Superseded:** the hosting narrative and diagram below (self-hosted VPS via Coolify) reflect the original research. Actual hosting is now Vercel (app) + Supabase Cloud (backend) — see `.agents/rules/hosting-and-deployment.md`. Kept here as the historical record of why VPS was the original recommendation.
@@ -172,16 +168,22 @@ Considered and rejected: Vercel plus Supabase Cloud (the original default) was s
 
 **Reusability for future deployments.** Business name/branding and the business-type defaults from Section 7.1 stay in configuration. A new client deployment simply signs up through the app, creating a new isolated `business_profile` within the shared multi-tenant infrastructure.
 
+**Current runtime authority.** The deployed topology is separate Vercel
+frontend/backend projects plus Supabase Cloud. Browser business traffic uses
+the frontend `/api` boundary and Node backend; browser Supabase usage is
+Auth-only. The Node backend and Postgres/RLS/RPC layer own sync and
+authorization. Realtime and compatibility Functions are not authoritative.
+
 ## 10. Offline Strategy
 
 ### 10.1 Sync lifecycle
 
 1. **Device provisioning (online required, one-time).** Staff logs in with email/phone and password, device receives a signed token and downloads a full snapshot of the branch's catalog, prices, and open customer balances into IndexedDB.
 2. **Local-first writes.** Every action writes to IndexedDB immediately and updates the UI optimistically, while simultaneously appending to a local sync queue (outbox pattern).
-3. **Background sync.** A Workbox-managed Background Sync registration fires on reconnect, even if the app isn't in the foreground, draining the queue in FIFO order with client-generated idempotency keys so a retried upload never double-counts a sale.
-4. **Server-side merge.** An Edge Function receives each batch, applies the entity-specific conflict rule below, and commits inside a Postgres transaction.
-5. **Downstream propagation.** Supabase Realtime pushes the resulting state to other online devices on the same branch or business. Realtime is the live layer and only reaches devices with an open socket.
-6. **Catch-up pull.** Realtime alone cannot reach a device that was offline during the change, nor populate a freshly provisioned or cleared device's local store; step 1's snapshot is one-time only. On every reconnect the device therefore issues a delta pull (session-authenticated reads of its own business's rows changed since the last synced cursor), merged idempotently by `client_id` into IndexedDB. Realtime handles live updates; the delta pull guarantees every device eventually converges to server truth regardless of how much it missed.
+3. **Service-worker assistance.** Serwist precaches the app shell and provides navigation fallbacks. It does not replay mutation requests; the foreground application sync engine remains the only outbox owner.
+4. **Server-side merge.** The Node backend receives each batch, authenticates the user, applies server authorization, invokes the database batch/RPC merge path, and returns one result per mutation.
+5. **Convergence acceleration.** Supabase Realtime is optional invalidation acceleration only. This application currently has no active business channel subscription; a future event may wake the same coordinator but can never acknowledge an operation or replace the durable pull cursor.
+6. **Catch-up pull.** On startup, reconnect, foreground, auth restoration, or periodic polling, the device issues a cursor-based delta pull (session-authenticated reads of its own business's rows changed since the last completed cursor), merged idempotently into IndexedDB. The pull guarantees every device eventually converges to PostgreSQL truth regardless of missed realtime events.
 7. **Failure handling.** Failed items retry with exponential backoff, capped at 5 minutes, surfacing in a "needs attention" queue after 24 hours of failure rather than retrying silently forever.
 
 ### 10.2 Conflict resolution rules
@@ -278,7 +280,7 @@ multi-tenant structure on every core table to allow for future SaaS billing inte
 
 ## 12. API Design
 
-REST over HTTPS, JSON, via Supabase's PostgREST layer for CRUD and custom Edge Functions for sync merge and reporting logic.
+REST over HTTPS, JSON, through the Node application API. The backend uses request-scoped Supabase clients for ordinary reads and privileged database RPCs for authoritative mutations; RLS remains the final tenant/role enforcement boundary.
 
 **Auth:** `POST /auth/v1/token` returns a JWT and refresh token; RLS enforces role-based access on every query.
 
@@ -288,10 +290,10 @@ REST over HTTPS, JSON, via Supabase's PostgREST layer for CRUD and custom Edge F
 GET /rest/v1/products?order=updated_at.desc&limit=50&cursor={last_updated_at}
 ```
 
-**Sync push:**
+**Sync push (`POST /api/sync/push`):**
 
 ```
-POST /functions/v1/sync-push
+POST /api/sync/push
 {
   "device_id": "uuid",
   "batch": [
@@ -340,7 +342,7 @@ Activation: first sale within 24 hours of setup. Retention: at least one sale lo
 
 ## 16. Scalability
 
-At 1 to 6 branches and an estimated 50-300 combined sales/day per business, this multi-tenant deployment can comfortably scale horizontally by upgrading the managed Postgres instance (Supabase) and optimizing Edge Function connection pools (via Supavisor). It is built to seamlessly handle the 100 to 100,000-business scaling curve of a multi-tenant SaaS product.
+At 1 to 6 branches and an estimated 50-300 combined sales/day per business, this multi-tenant deployment can comfortably scale horizontally by upgrading the managed Postgres instance (Supabase) and scaling the Node API instances in front of it. It is built to seamlessly handle the 100 to 100,000-business scaling curve of a multi-tenant SaaS product.
 
 ## 17. Release Plan
 

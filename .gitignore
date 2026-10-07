@@ -24,11 +24,9 @@
 *.tsbuildinfo
 next-env.d.ts
 
-# Generated PWA Service Worker & Workbox artifacts
+# Generated PWA Service Worker artifacts
 **/public/sw.js
 **/public/sw.js.map
-**/public/workbox-*.js
-**/public/workbox-*.js.map
 **/public/sw.js.LICENSE.txt
 
 # Test artifacts and temporary test scripts

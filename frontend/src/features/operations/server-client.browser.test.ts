@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase", () => ({
   getSupabase: () => ({ auth: { getSession } }),
 }));
 
-import { serverGet } from "./server-client";
+import { serverGet } from "@/platform/api/backend-client";
 
 describe("browser backend routing", () => {
   beforeEach(() => {

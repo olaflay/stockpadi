@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff, Clock } from "lucide-react";
 import { db } from "@/lib/db";
@@ -19,6 +19,7 @@ import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { setLocalBusinessId } from "@/lib/local-tenant";
+import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const formRegionRef = useRef<HTMLDivElement>(null);
+  useAuthFieldVisibility(formRegionRef);
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
@@ -54,6 +57,14 @@ export default function LoginForm() {
 
   async function handleSignIn() {
     setError(null);
+    if (!email.trim()) {
+      setError("Enter your email address.");
+      return;
+    }
+    if (!password) {
+      setError("Enter your password.");
+      return;
+    }
     if (!isOnline) {
       setError("Sign-in needs an internet connection.");
       return;
@@ -164,7 +175,7 @@ export default function LoginForm() {
 
   if (checking) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center gap-6 px-6 max-w-md mx-auto">
+      <div className="auth-viewport flex w-full flex-col items-center justify-center gap-6 px-6 max-w-md mx-auto">
         <Skeleton className="h-20 w-20 rounded-2xl" />
         <div className="flex flex-col gap-3 w-full">
           <Skeleton className="h-5 w-32 mx-auto" />
@@ -180,28 +191,8 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col px-6 max-w-md mx-auto overflow-y-auto">
-      {error && (
-        <div
-          ref={errorRef}
-          role="alert"
-          className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-[length:var(--font-size-body)] text-on-danger-container font-medium mt-4 text-center shadow-[var(--shadow-elevation-1)] mx-auto w-full"
-        >
-          {error}
-        </div>
-      )}
-
-      {!isOnline && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-[var(--radius-card)] bg-warning-container px-4 py-3 text-[length:var(--font-size-body)] text-on-warning-container mt-4 shrink-0"
-        >
-          <WifiOff size={16} aria-hidden />
-          <span>No connection. Sign-in requires internet.</span>
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center py-6">
+    <div className="auth-viewport flex w-full flex-col max-w-md mx-auto">
+      <div className="flex shrink-0 flex-col items-center gap-4 px-6 py-7 text-center">
         <div
           className="flex h-18 w-18 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent"
           aria-hidden
@@ -217,6 +208,28 @@ export default function LoginForm() {
           </p>
         </div>
       </div>
+
+      <div ref={formRegionRef} data-auth-scroll-region className="auth-scroll-region px-6 pb-8">
+      {error && (
+        <div
+          ref={errorRef}
+          id="login-form-error"
+          role="alert"
+          className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-[length:var(--font-size-body)] text-on-danger-container font-medium mt-4 text-center shadow-[var(--shadow-elevation-1)] mx-auto w-full"
+        >
+          {error}
+        </div>
+      )}
+
+      {!isOnline && (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-[var(--radius-card)] bg-warning-container px-4 py-3 text-[length:var(--font-size-body)] text-on-warning-container mt-4 shrink-0"
+        >
+          <WifiOff size={16} aria-hidden />
+          <span>Sign-in needs a connection. Your details will stay here.</span>
+        </div>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -259,6 +272,8 @@ export default function LoginForm() {
               autoComplete="email"
               autoCapitalize="none"
               inputMode="email"
+              enterKeyHint="next"
+              aria-describedby={error ? "login-form-error" : undefined}
             />
           </label>
 
@@ -283,6 +298,8 @@ export default function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="current-password"
+                enterKeyHint="done"
+                aria-describedby={error ? "login-form-error" : undefined}
               />
               <button
                 type="button"
@@ -298,9 +315,8 @@ export default function LoginForm() {
 
         <RippleButton
           id="login-submit"
-          type="button"
-          onClick={handleSignIn}
-          disabled={busy || !email.trim() || !password.trim()}
+          type="submit"
+          disabled={busy}
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
         >
           {busy ? "Signing in…" : "Sign in"}
@@ -315,6 +331,7 @@ export default function LoginForm() {
         </button>
 
       </form>
+      </div>
 
       {isApprovalModalOpen && (
         <div

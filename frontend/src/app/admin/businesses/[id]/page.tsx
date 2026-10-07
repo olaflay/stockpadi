@@ -407,7 +407,7 @@ export default function AdminBusinessDetailPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-on-surface-muted">Offline Sync:</span>
-                <span className="font-semibold text-on-surface">Dexie + Workbox</span>
+                <span className="font-semibold text-on-surface">Dexie + Serwist</span>
               </div>
 
               <div className="flex items-center justify-between">

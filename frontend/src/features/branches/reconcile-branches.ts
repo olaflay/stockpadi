@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getLocalBusinessId, tenantArray } from "@/lib/local-tenant";
-import { serverGet } from "@/features/operations/server-client";
+import { serverGet } from "@/platform/api/backend-client";
 
 /**
  * Compatibility reader for older startup code. It deliberately never deletes

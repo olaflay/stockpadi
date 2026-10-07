@@ -1,8 +1,9 @@
-import { SYNC_ENTITY_TYPES, type SyncEntityType, type SyncPushResponse as ContractSyncPushResponse, type SyncPullResponse as ContractSyncPullResponse } from "@stockpadi/contracts";
+import { SYNC_ENTITY_TYPES, type SyncEntityType, type SyncPushRequest as ContractSyncPushRequest, type SyncPushResponse as ContractSyncPushResponse, type SyncPullResponse as ContractSyncPullResponse } from "@stockpadi/contracts";
 export { SYNC_ENTITY_TYPES };
 export type { SyncEntityType };
 export type SyncPushResponse = ContractSyncPushResponse;
 export type SyncPullResponse = ContractSyncPullResponse;
+export type SyncPushRequest = ContractSyncPushRequest;
 
 /**
  * These are the only user-facing lifecycle states.  A stock event can remain
@@ -41,20 +42,6 @@ export interface SyncQueueItem<TPayload = unknown> {
   /** An item is not eligible until these outbox entity/event keys are gone. */
   dependsOn?: string[];
   dependsOnMutationIds?: string[];
-}
-
-export interface SyncPushRequest {
-  deviceId: string;
-  batch: Array<{
-    clientId: string;
-    mutationId?: string;
-    idempotencyKey?: string;
-    entityId?: string;
-    type: SyncEntityType;
-    operation?: "upsert" | "append";
-    payload: unknown;
-    createdAtLocal: string;
-  }>;
 }
 
 export interface ApiError {

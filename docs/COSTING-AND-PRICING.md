@@ -232,7 +232,7 @@ no overage). Included: 1 TB data transfer, 10M edge requests, 100 GB origin tran
 $0.15/GB transfer, $0.06/GB origin, $2.00/M edge requests.
 
 Supabase **Pro $25/mo**. Included: 100k MAU, 8 GB disk, **250 GB egress**, 100 GB storage,
-**2M Edge Function invocations**, 5M realtime messages, 500 realtime peak connections, 7 days of
+**2M compatibility-function invocations**, 5M realtime messages, 500 realtime peak connections, 7 days of
 daily backups. **PITR is a $100/month add-on.**
 
 | Fixed | Monthly |
@@ -243,7 +243,7 @@ daily backups. **PITR is a $100/month add-on.**
 | **Total fixed** | **$145** |
 
 **Genuine metered marginal cost is under $0.10 per business per month.** A six-branch shop doing
-2,000 sale lines/day moves ~90 MB/month of sync egress and ~600 Edge Function invocations — both
+2,000 sale lines/day moves ~90 MB/month of sync egress and ~600 compatibility-function invocations — both
 comfortably inside every allowance.
 
 Vercel's bill scales with bandwidth and edge requests, not seats. For a cached PWA shell plus small
@@ -264,7 +264,7 @@ Sources: [Vercel Pro plan](https://vercel.com/docs/plans/pro-plan), [Vercel pric
 
 ### Two cost traps to design against now, cheap to fix and expensive to retrofit
 
-- **Edge Functions must be invoked per sync batch, not per row.** Per sale line at 100 shops ×
+- **Compatibility functions must be invoked per sync batch, not per row.** Per sale line at 100 shops ×
   2,000 lines/day = 6M/month, crossing the 2M allowance into $2/million.
 - **Realtime allowances are org-wide, not per-tenant.** 100 shops holding one persistent
   subscription is 100 peak connections immediately, and every broadcast multiplies across all

@@ -6,7 +6,7 @@ const { serverGet, branchesMap, quarantinePut } = vi.hoisted(() => ({
   quarantinePut: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@/features/operations/server-client", () => ({ serverGet }));
+vi.mock("@/platform/api/backend-client", () => ({ serverGet }));
 vi.mock("@/lib/db", () => ({
   db: {
     branches: {

@@ -12,7 +12,7 @@ import type { ParsedImportRow } from "@/features/inventory/product-import";
 const serverPost = vi.hoisted(() => vi.fn());
 const serverGet = vi.hoisted(() => vi.fn());
 
-vi.mock("@/features/operations/server-client", () => ({
+vi.mock("@/platform/api/backend-client", () => ({
   serverPost,
   serverGet,
   BackendRequestError: class BackendRequestError extends Error { code = "SERVER_ERROR"; status = 500; },

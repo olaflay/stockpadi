@@ -108,16 +108,6 @@ export function SyncIndicator({
       showToast("Sync already in progress. Updating in the background…", "neutral");
       return;
     }
-    if (!isOnline) {
-      showToast(
-        pendingCount > 0
-          ? `You're offline. ${pendingCount} change${pendingCount === 1 ? "" : "s"} saved locally on this device. Reconnect to upload.`
-          : "You're currently offline. Local ledger is running.",
-        "neutral"
-      );
-      return;
-    }
-
     // Repeated-tap protection: If all local changes are already pushed and a full
     // sync completed recently within the cooldown window, reassure the user
     // immediately without spamming Supabase database endpoints.
@@ -169,7 +159,7 @@ export function SyncIndicator({
       await retryFailedOutboxItems();
       // Retry marks durable failures pending; the cycle immediately sends
       // them and then pulls cloud state in both directions.
-      if (isOnline) await runSyncCycle("manual");
+      await runSyncCycle("manual");
       const firstFailed = await db.outbox.where("status").equals("failed").first();
       const firstBlocked = await db.outbox.where("status").equals("blocked").first();
       if (["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") || ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")) {
@@ -187,7 +177,7 @@ export function SyncIndicator({
       <button
         type="button"
         onClick={openDiagnostics}
-        disabled={isSyncing || !isOnline}
+        disabled={isSyncing}
         role="status"
         title="Open Sync Diagnostics"
         className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-amber-400 text-black" : "bg-warning-container text-on-warning-container"}`}
@@ -303,7 +293,7 @@ export function SyncIndicator({
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
             <span>Sync issue</span>
           </button>
-          <button type="button" onClick={handleForceSync} disabled={isSyncing || !isOnline} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-warning-container text-on-warning-container"}`}>
+          <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-warning-container text-on-warning-container"}`}>
             <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
             Sync now
           </button>
@@ -316,7 +306,7 @@ export function SyncIndicator({
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
           Sync issue
         </button>
-        <button type="button" onClick={handleForceSync} disabled={isSyncing || !isOnline} className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-warning px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-warning disabled:opacity-60">
+        <button type="button" onClick={handleForceSync} disabled={isSyncing} className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-warning px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-warning disabled:opacity-60">
           <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
           Sync now
         </button>
@@ -331,7 +321,7 @@ export function SyncIndicator({
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
           {runtimePhase === "idle" ? "Sync issue" : phaseLabel}
         </button>
-        {runtimePhase === "idle" && <button type="button" onClick={handleForceSync} disabled={isSyncing || !isOnline} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}><RefreshCw size={11} />Sync now</button>}
+        {runtimePhase === "idle" && <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}><RefreshCw size={11} />Sync now</button>}
       </div>
     );
   }

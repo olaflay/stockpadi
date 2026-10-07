@@ -1,5 +1,5 @@
 /**
- * Shared Nodemailer SMTP & Brevo API transport factory for StockPadi Edge Functions.
+ * Shared Nodemailer SMTP & Brevo API transport factory for compatibility functions.
  *
  * KEEP IN SYNC with backend/src/shared/email/mailer.ts (the Node backend copy).
  * Same provider logic, different runtime globals (Deno.env here vs process.env there).
@@ -47,7 +47,7 @@ export function createTransport() {
   const pass = Deno.env.get("SMTP_PASS");
 
   if (!host || !user || !pass) {
-    throw new Error("SMTP_HOST, SMTP_USER, and SMTP_PASS must be set in Edge Function secrets.");
+    throw new Error("SMTP_HOST, SMTP_USER, and SMTP_PASS must be set in compatibility-function secrets.");
   }
 
   return nodemailer.createTransport({

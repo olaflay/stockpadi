@@ -5,10 +5,11 @@ import { ExpirationPlugin, NetworkFirst, Serwist } from "serwist";
 
 /**
  * Precaches the app shell so cold start on a cached 2G connection stays
- * under 3s (PRD Section 8). The application owns outbox retries so that
- * IndexedDB is the only retry authority. A service-worker replay queue for
- * /api/sync/push would create duplicate ownership and can replay mutations
- * after the UI has already classified them as blocked or conflicted.
+ * under 3s (PRD Section 8). Serwist owns app-shell/navigation caching only.
+ * The application owns outbox retries so IndexedDB is the only mutation retry
+ * authority. A service-worker replay queue for /api/sync/push would create
+ * duplicate ownership and can replay mutations after the UI has already
+ * classified them as blocked or conflicted.
  */
 
 declare global {
@@ -51,3 +52,21 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+/**
+ * Background Sync is a coordinator wake-up only. The browser client owns the
+ * durable Dexie outbox, authentication, idempotency, and retry classification;
+ * this worker never sends or replays a business mutation.
+ */
+if (typeof self.addEventListener === "function") self.addEventListener("sync", (event: Event) => {
+  const syncEvent = event as Event & {
+    tag?: string;
+    waitUntil?: (promise: Promise<unknown>) => void;
+  };
+  if (syncEvent.tag !== "stockpadi-sync" || !syncEvent.waitUntil) return;
+  syncEvent.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) client.postMessage({ type: "stockpadi-sync-request" });
+    }),
+  );
+});

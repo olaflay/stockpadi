@@ -12,7 +12,7 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 |---|---|
 | `README.md` | Setup and day-to-day dev commands |
 | `docs/PRD.md` | The product requirements doc: users, journeys, functional/non-functional requirements, architecture, milestones. Section 8.1 carries the TRUST standard as a product requirement |
-| `docs/REBRANDING-PLAN.md` | Master rebranding specification, zero-hardcoding rules, visual identity, and touchpoint audit |
+| `docs/REBRANDING-PLAN.md` | Rebranding pointer; canonical zero-hardcoding and visual rules live in `.agents/rules/reusability-and-multi-client.md` and `design-system.md` |
 | `docs/SCAFFOLD.md` | Log of the initial scaffold: what was built, why, verification performed, known gaps |
 | `docs/LAUNCH_SCOPE.md` | The frozen Must / V1.1 / Future boundary, with every capability classified against real evidence. Read before starting any feature work |
 | `docs/COSTING-AND-PRICING.md` | The costing decision (how cost is calculated and snapshotted) and the customer pricing decision, with citations |
@@ -23,7 +23,7 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 
 ## Stack
 
-Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, Workbox for service worker and background sync, Supabase Cloud (Postgres, Auth, Realtime, Storage, Edge Functions) as the managed backend, deployed via Vercel (git-push deploys from GitHub). That choice is explained and locked in `.agents/rules/hosting-and-deployment.md`, do not silently reintroduce a different hosting platform because it seems simpler mid-build.
+Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, Serwist for the service worker and app-shell caching, a Node API backend for authenticated application traffic, and Supabase Cloud (Postgres, Auth, Realtime, Storage) as the managed database/auth platform, deployed via Vercel. The canonical flow is documented in `docs/adr/0001-canonical-application-flow.md`; do not silently reintroduce direct browser database writes or an Edge Function sync path.
 
 ## Locked decisions (do not silently override any of these)
 
@@ -52,7 +52,7 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, W
 | `payment-and-pci-scope.md` | The payment-method-as-tag boundary, what to do if asked to add real payment processing |
 | `design-system.md` | Samsung One UI lead system, Meta data-lite borrowing, tokens, the screen-state checklist |
 | `testing-and-qa.md` | What must have an automated test before merge, especially ledger and sync logic |
-| `coding-standards-and-api.md` | TypeScript conventions, file structure, PostgREST and Edge Function API conventions |
+| `coding-standards-and-api.md` | TypeScript conventions, file structure, and Node application API conventions |
 | `reusability-and-multi-client.md` | The config-boundary discipline that keeps a second deployment a fork, not a rewrite |
 | `company-os/` | Multi-department review process for any major feature or architecture decision |
 | `zero-ai-slop-design.md` | The full design and copy standard `design-system.md` is built on top of |
@@ -69,7 +69,7 @@ Procedural playbooks for recurring build tasks. Read the relevant one before sta
 | `add-stock-movement-type.md` | Adding a new source of stock change (new adjustment reason, new sale type) |
 | `add-new-report.md` | Adding a new report to Reports |
 | `write-offline-conflict-test.md` | Writing the required two-device concurrent-write test for any change touching the ledger |
-| `write-edge-function.md` | Adding or modifying an Edge Function |
+| `write-edge-function.md` | Adding or modifying a Supabase compatibility function; canonical business behavior belongs in `backend/` |
 | `add-business-type-template.md` | Adding a new business-type default (beyond Grocery, Pharmacy, Electronics, General Retail) |
 | `fork-for-new-client.md` | Standing up a second client deployment from this codebase |
 | `vercel-deploy-and-backup-check.md` | Deploying to or verifying the health of the Vercel/Supabase Cloud hosting |

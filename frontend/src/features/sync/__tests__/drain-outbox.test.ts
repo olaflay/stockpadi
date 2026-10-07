@@ -123,6 +123,21 @@ describe("drainOutbox", () => {
     expect(remaining[0].lastError).toBe("network down");
   });
 
+  it("keeps the operation retryable when HTTP succeeds without per-operation results", async () => {
+    mockSession = { access_token: "test-token" };
+    await queueSale("sale-malformed-response");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }));
+
+    const { drainOutbox } = await import("@/features/sync/drain-outbox");
+    await drainOutbox();
+
+    await expect(db.outbox.get("sale-malformed-response")).resolves.toMatchObject({
+      status: "pending",
+      lastErrorCode: "MISSING_RESULT",
+      attemptCount: 1,
+    });
+  });
+
   it("retryFailedOutboxItems re-queues failed items and re-attempts the push", async () => {
     mockSession = { access_token: "test-token" };
     await db.outbox.add({

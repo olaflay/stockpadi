@@ -262,7 +262,7 @@ In-progress specs that exist in `docs/specs/` but are **not** launch scope: `qui
 - **No performance benchmark exists anywhere.** Any performance claim in the PRD is unverified.
 - **Pre-existing uncommitted worktree changes** in UI files and deletions under `docs/improvements/`
   were present before this audit and are not attributed to it.
-- **`supabase/functions/` shows editor LSP errors** for `Deno` globals. Expected — Edge Functions run
+- **`supabase/functions/` shows editor LSP errors** for `Deno` globals. Expected — compatibility functions run
   on Deno and the TypeScript server does not model that runtime. Excluded from typecheck.
 
 ---

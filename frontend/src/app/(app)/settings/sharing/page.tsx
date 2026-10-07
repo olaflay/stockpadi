@@ -11,7 +11,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { normalizeNigerianPhone } from "@/lib/whatsapp";
 import { renderOwingMessage } from "@/lib/whatsapp";
-import { serverPatch } from "@/features/operations/server-client";
+import { serverPatch } from "@/platform/api/backend-client";
 
 export default function SharingSettingsPage() {
   const user = useCurrentUser();

@@ -25,7 +25,7 @@ leg. Current verified status: docs/LAUNCH_SCOPE.md
 ## Technology Stack
 - Next.js (App Router PWA) + TypeScript + React
 - Dexie.js (IndexedDB local offline storage)
-- Workbox Service Worker (Background Sync)
+- Serwist Service Worker (app-shell caching)
 - Supabase (PostgreSQL, Auth, Realtime, Row Level Security)
 - Vercel Hosting
 

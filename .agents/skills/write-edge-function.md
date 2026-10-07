@@ -1,13 +1,22 @@
 ---
 name: write-edge-function
-description: Use this when adding or modifying a Supabase Edge Function, particularly anything handling sync batches, ledger merges, or reporting aggregation.
+description: Use this when adding or modifying a Supabase compatibility function, particularly an adapter that forwards legacy traffic to the Node backend or shared Deno email runtime code.
 ---
 
-# Writing an Edge Function
+# Writing a Supabase compatibility function
 
-## When a new Edge Function is the right tool
+## When a Supabase Function is the right tool
 
-Use one for: sync batch processing (applying a device's queued writes), any logic that must run as a single atomic Postgres transaction (a sale that both inserts sale rows and writes stock movements together, all or nothing), and reporting aggregation too heavy to run as a plain PostgREST query. Do not use one for straightforward CRUD that PostgREST's auto-generated API already handles, adding an Edge Function there is unnecessary indirection.
+The Node backend is the canonical application and sync boundary. A Supabase
+Function may be changed when it is a compatibility adapter for a legacy URL or
+when shared Deno-runtime email code must be kept deployable while those
+adapters remain live. Do not add a second sync, auth, authorization, or domain
+implementation here. New browser traffic belongs on the Node `/api` routes.
+
+Database functions/RPCs remain appropriate for operations that must commit as
+one Postgres transaction, such as a sale that inserts sale rows and stock
+movements together, or the server-side merge functions called by the Node
+backend.
 
 ## The transactional requirement
 
@@ -15,12 +24,23 @@ Anything that writes to `stock_movements` alongside another table (a sale writin
 
 ## Idempotency
 
-Every sync-batch Edge Function checks the client-generated idempotency key from `.agents/rules/coding-standards-and-api.md` before processing an item, and skips (rather than reprocesses) anything already applied. A retried batch after a dropped connection must be safe to replay in full.
+The Node sync service checks the client-generated idempotency key from
+`.agents/rules/coding-standards-and-api.md` before processing an item, and the
+database merge functions enforce the durable result. A retried batch after a
+dropped connection must be safe to replay in full. A compatibility adapter
+must forward the request without changing those semantics.
 
 ## RLS still applies
 
-An Edge Function running with elevated privileges to perform the merge still needs to independently verify the calling user's role permits the operation being requested, per the matrix in `.agents/rules/database-and-rls.md`. Do not assume the client already checked this, the client is not a trusted boundary, the server-side check is the actual enforcement.
+The Node backend independently verifies the calling user's role and business
+context before invoking privileged database operations, per the matrix in
+`.agents/rules/database-and-rls.md`. A compatibility adapter must not bypass
+that check or expose a service-role credential to the browser.
 
 ## Testing
 
-Follow `.agents/skills/write-offline-conflict-test.md` for anything touching the ledger. For non-ledger functions, a straightforward integration test against a local Supabase instance covering the success path and at least one failure/rollback path is the bar.
+Follow `.agents/skills/write-offline-conflict-test.md` for anything touching the
+ledger. For a compatibility adapter, test forwarding, authentication/error
+propagation, and that it does not implement a second business path. For SQL
+functions, use the Supabase suite with the success path and at least one
+failure/rollback path.

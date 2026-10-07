@@ -10,7 +10,8 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { db } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { useOnlineStatus } from "@/lib/use-online-status";
-import { serverGet } from "@/features/operations/server-client";
+import { SYNC_ROUTES } from "@stockpadi/contracts";
+import { serverGet } from "@/platform/api/backend-client";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { canResolveConflictInPlace, discardConflictingSnapshot } from "@/features/sync/conflict-resolution";
@@ -18,6 +19,7 @@ import { writeProductEditOffline } from "@/features/inventory/product-offline-wr
 import type { Product } from "@/types/product";
 import type { SyncQueueItem } from "@/types/sync";
 import { getBrandingConfig } from "@/config/branding";
+import { getSyncDebugSnapshot } from "@/features/sync/sync-observability";
 
 function formatTime(value: string | null | undefined): string {
   return value ? new Date(value).toLocaleString() : "Not completed yet";
@@ -76,10 +78,11 @@ export default function SyncHealthPage() {
       branchNames,
     };
   }, [businessId, user.accountType, branchDependency], undefined);
+  const debugSnapshot = useLiveQuery(() => getSyncDebugSnapshot(), [businessId], undefined);
 
   useEffect(() => {
     if (!online) return;
-    void serverGet<{ syncReadConfigured?: boolean }>("/api/sync/health")
+    void serverGet<{ syncReadConfigured?: boolean }>(SYNC_ROUTES.health)
       .then((health) => setCloud(health.syncReadConfigured === false ? "failed" : "connected"))
       .catch(() => setCloud("failed"));
   }, [online]);
@@ -180,7 +183,7 @@ export default function SyncHealthPage() {
         </div>
       </section>
 
-      <RippleButton type="button" onClick={syncNow} disabled={busy || !online} className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast disabled:opacity-50">
+      <RippleButton type="button" onClick={syncNow} disabled={busy} className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-brand-accent-contrast disabled:opacity-50">
         <RefreshCw size={18} className={busy ? "animate-spin" : ""} aria-hidden />
         {busy ? "Syncing…" : "Try syncing again"}
       </RippleButton>
@@ -227,6 +230,11 @@ export default function SyncHealthPage() {
           <dt className="text-on-surface-muted">Branches in this view</dt><dd className="break-words">{branchLabel}</dd>
           <dt className="text-on-surface-muted">Changes waiting</dt><dd>{snapshot.pending + snapshot.blocked + snapshot.issues}</dd>
           <dt className="text-on-surface-muted">Next automatic check</dt><dd>{snapshot.state?.nextPullAttemptAt ? new Date(snapshot.state.nextPullAttemptAt).toLocaleString() : "Not scheduled"}</dd>
+          <dt className="text-on-surface-muted">Coordinator</dt><dd>{debugSnapshot?.coordinator.phase ?? "Not started"}</dd>
+          <dt className="text-on-surface-muted">Sync session</dt><dd className="break-all">{debugSnapshot?.coordinator.sessionId ?? "Not recorded"}</dd>
+          <dt className="text-on-surface-muted">Last batch</dt><dd className="break-all">{snapshot.state?.lastBatchId ?? "Not recorded"}</dd>
+          <dt className="text-on-surface-muted">Oldest operation attempts</dt><dd>{debugSnapshot?.oldestPending?.attemptCount ?? 0}</dd>
+          <dt className="text-on-surface-muted">Last server response</dt><dd>{debugSnapshot?.lastServerResponse ? [debugSnapshot.lastServerResponse.status, debugSnapshot.lastServerResponse.errorCode, debugSnapshot.lastServerResponse.httpStatus ? `HTTP ${debugSnapshot.lastServerResponse.httpStatus}` : null].filter(Boolean).join(" · ") : "Not recorded"}</dd>
         </dl>
       </details>}
 

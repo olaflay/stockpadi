@@ -1,4 +1,4 @@
-import { serverGet } from "@/features/operations/server-client";
+import { serverGet } from "@/platform/api/backend-client";
 import type { Sale } from "@/types/sale";
 
 export async function fetchServerSales(): Promise<Sale[]> {

@@ -1,8 +1,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Points at the Supabase Cloud project (Postgres, Auth, Realtime, Storage,
- * Edge Functions) backing this deployment, hosted on Vercel.
+ * Browser Supabase access is deliberately Auth-only. Business reads/writes,
+ * sync, and authorization flow through the Node application API. Supabase
+ * Cloud still hosts the authoritative Postgres/RLS/Auth/Realtime/Storage
+ * services for this deployment.
  * See .agents/rules/hosting-and-deployment.md.
  *
  * Credentials come from environment variables managed through the Vercel

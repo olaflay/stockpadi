@@ -57,6 +57,13 @@ export const SYNC_ENTITY_TYPES = [
 ] as const;
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];
 
+/** Public HTTP paths owned by the Node sync application boundary. */
+export const SYNC_ROUTES = {
+  push: "/api/sync/push",
+  pull: "/api/sync/pull",
+  health: "/api/sync/health",
+} as const;
+
 export const API_ERROR_CODES = [
   "UNAUTHENTICATED", "FORBIDDEN", "BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED",
   "MISSING_CONTEXT", "BRANCH_NOT_ALLOWED", "VALIDATION_ERROR", "VERSION_CONFLICT",
@@ -105,6 +112,24 @@ export interface SyncMutationResult {
 export interface SyncPushResponse {
   ok: true;
   results: SyncMutationResult[];
+}
+
+/** Wire-format request used by the browser outbox and the Node API. */
+export interface SyncPushBatchItem {
+  client_id: string;
+  mutation_id?: string;
+  idempotency_key?: string;
+  entity_id?: string;
+  type: SyncEntityType;
+  operation?: "upsert" | "append";
+  expected_version?: number;
+  payload: Record<string, unknown>;
+  created_at_local: string;
+}
+
+export interface SyncPushRequest {
+  device_id: string | null;
+  batch: SyncPushBatchItem[];
 }
 
 export interface PullEntityPage {

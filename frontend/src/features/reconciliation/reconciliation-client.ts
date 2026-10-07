@@ -1,4 +1,4 @@
-import { serverGet, serverPost } from "@/features/operations/server-client";
+import { serverGet, serverPost } from "@/platform/api/backend-client";
 
 export interface ReconciliationRecord {
   id: string;

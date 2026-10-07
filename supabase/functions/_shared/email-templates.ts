@@ -1,5 +1,5 @@
 /**
- * OjàPadi HTML & Plain Text Email Templates for Supabase Edge Functions (Deno)
+ * OjàPadi HTML & Plain Text Email Templates for Supabase compatibility functions (Deno)
  *
  * KEEP IN SYNC with backend/src/shared/email/email-templates.ts (Node copy) for the
  * shared functions (renderVerificationEmail, renderWelcomeEmail).

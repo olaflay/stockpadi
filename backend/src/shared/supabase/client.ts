@@ -4,9 +4,9 @@ let cachedClient: SupabaseClient | undefined;
 
 /**
  * The backend uses Supabase Auth/PostgREST/RPC only; it never subscribes to
- * Realtime channels. Supabase JS still constructs its Realtime client, which
- * requires a global WebSocket on Node 20. Provide a non-connecting fallback
- * so the API remains compatible with Node 20; Node 22+ has native WebSocket.
+ * Realtime channels. Supabase JS still constructs its Realtime client. Keep a
+ * non-connecting fallback for serverless runtimes that do not expose a global
+ * WebSocket; the supported repository runtime is Node 24.x.
  */
 function ensureWebSocketForSupabase() {
   if (typeof globalThis.WebSocket !== "undefined") return;

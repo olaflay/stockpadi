@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getStockByProduct } from "@/features/inventory/product-insights";
-import { BackendRequestError } from "@/features/operations/server-client";
+import { BackendRequestError } from "@/platform/api/backend-client";
 
 const serverGet = vi.hoisted(() => vi.fn());
-vi.mock("@/features/operations/server-client", () => ({
+vi.mock("@/platform/api/backend-client", () => ({
   serverGet,
   BackendRequestError: class BackendRequestError extends Error { code = "SERVER_ERROR"; status = 500; },
   NetworkUnavailableError: class NetworkUnavailableError extends Error { code = "NETWORK_UNAVAILABLE"; },
@@ -45,6 +45,24 @@ describe("preloadSessionData diagnostics", () => {
     ]));
     expect(await db.products.get("p-1")).toBeUndefined();
     expect(await db.syncDiagnostics.get("test-business:categories")).toMatchObject({ success: false, errorCode: "FORBIDDEN" });
+  });
+
+  it("attempts the authoritative pull when navigator.onLine is stale and says offline", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    serverGet.mockResolvedValue({
+      ok: true,
+      businessId: "test-business",
+      serverTime: "2026-09-11T10:00:00.000Z",
+      cursor: "reachable-while-offline-hint",
+      nextCursor: null,
+      hasMore: false,
+      entities: [],
+    });
+
+    const result = await preloadSessionData(true, "manual");
+
+    expect(result.fullySynced).toBe(true);
+    expect(serverGet).toHaveBeenCalledOnce();
   });
 
   it("keeps a transport failure visible instead of claiming that the cache is synced", async () => {

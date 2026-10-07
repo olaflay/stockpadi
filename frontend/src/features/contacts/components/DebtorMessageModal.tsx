@@ -7,7 +7,7 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { renderOwingMessage } from "@/lib/whatsapp";
 import { useToast } from "@/components/ui/Toast";
-import { serverPatch } from "@/features/operations/server-client";
+import { serverPatch } from "@/platform/api/backend-client";
 
 interface DebtorMessageModalProps {
   isOpen: boolean;

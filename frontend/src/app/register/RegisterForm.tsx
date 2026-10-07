@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FocusEvent } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -13,15 +13,16 @@ import { RippleButton } from "@/components/ui/Ripple";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { RegisterIllustration } from "@/components/illustrations/RegisterIllustration";
 import { TextInput } from "@/components/ui/TextInput";
-import { callBackend } from "@/features/auth/backend-client";
+import { BackendError, callBackend } from "@/features/auth/backend-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { setLocalBusinessId, withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 import { sanitizeString } from "@/lib/sanitize";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
-import { PasswordGuidance } from "@/components/auth/PasswordGuidance";
+import { PasswordGuidance, PasswordMatchGuidance } from "@/components/auth/PasswordGuidance";
 import { meetsPasswordPolicy } from "@stockpadi/contracts";
+import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -30,23 +31,26 @@ export default function RegisterForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmationFocused, setConfirmationFocused] = useState(false);
+  const [confirmationTouched, setConfirmationTouched] = useState(false);
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const hydrated = typeof window !== "undefined";
+  const formRegionRef = useRef<HTMLDivElement>(null);
+  useAuthFieldVisibility(formRegionRef);
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   const formComplete = Boolean(
-    fullName.trim() && businessName.trim() && email.trim() && meetsPasswordPolicy(password)
+    fullName.trim() && businessName.trim() && email.trim() && meetsPasswordPolicy(password) &&
+    passwordConfirmation && password === passwordConfirmation
   );
-
-  function keepFocusedInputVisible(event: FocusEvent<HTMLInputElement>) {
-    event.currentTarget.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-  }
 
   async function handleGoogleSignUp() {
     setError(null);
@@ -77,11 +81,10 @@ export default function RegisterForm() {
   }
 
   async function handleSubmit() {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) active.blur();
+    setConfirmationTouched(true);
     setError(null);
     if (!formComplete) {
-      setError("Fill in all fields and meet every password requirement.");
+      setError("Complete the required fields before continuing.");
       return;
     }
     if (!isOnline) {
@@ -184,15 +187,27 @@ export default function RegisterForm() {
       );
       router.replace(registration.accountState === "REGISTERED_UNVERIFIED" ? "/verify-email" : "/pending-approval");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      if (e instanceof BackendError) {
+        if (e.code === "EMAIL_ALREADY_REGISTERED") {
+          setError("An account with this email already exists. Sign in instead.");
+        } else if (e.code === "AUTH_VALIDATION_FAILED") {
+          setError("Check your email and password, then try again.");
+        } else if (e.status && e.status >= 500) {
+          setError("We couldn't create the account right now. Check your connection and try again.");
+        } else {
+          setError("We couldn't create the account. Check your details and try again.");
+        }
+      } else {
+        setError("We couldn't create the account. Check your connection and try again.");
+      }
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col max-w-md mx-auto overflow-hidden">
-      <div className="flex flex-col items-center gap-2 px-6 pt-12 sm:pt-14 text-center shrink-0">
+    <div className="auth-viewport flex w-full flex-col max-w-md mx-auto">
+      <div className="flex shrink-0 flex-col items-center gap-2 px-6 py-6 sm:py-8 text-center">
         <div
           className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent mb-1"
           aria-hidden
@@ -207,7 +222,7 @@ export default function RegisterForm() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto scroll-pb-36 px-6 pt-2 pb-6">
+      <div ref={formRegionRef} data-auth-scroll-region className="auth-scroll-region px-6 pt-2 pb-8">
         {!isOnline && (
           <div
             role="status"
@@ -221,6 +236,7 @@ export default function RegisterForm() {
         {error && (
           <div
             ref={errorRef}
+            id="register-form-error"
             role="alert"
             className="rounded-[var(--radius-card)] bg-danger-container px-4 py-3 text-[length:var(--font-size-body)] text-on-danger-container font-medium mt-4"
           >
@@ -235,7 +251,7 @@ export default function RegisterForm() {
             e.preventDefault();
             void handleSubmit();
           }}
-          className="flex flex-col gap-4 mt-6"
+          className="flex flex-col gap-4 mt-6 pb-2"
         >
           {GOOGLE_AUTH_ENABLED && (
             <>
@@ -270,7 +286,8 @@ export default function RegisterForm() {
                 type="text"
                 autoComplete="name"
                 autoCapitalize="words"
-                onFocus={keepFocusedInputVisible}
+                enterKeyHint="next"
+                aria-describedby={error ? "register-form-error" : undefined}
               />
             </label>
 
@@ -285,7 +302,8 @@ export default function RegisterForm() {
                 placeholder="e.g. Kola Provisions"
                 type="text"
                 autoCapitalize="words"
-                onFocus={keepFocusedInputVisible}
+                enterKeyHint="next"
+                aria-describedby={error ? "register-form-error" : undefined}
               />
             </label>
 
@@ -302,7 +320,8 @@ export default function RegisterForm() {
                 autoComplete="email"
                 autoCapitalize="none"
                 inputMode="email"
-                onFocus={keepFocusedInputVisible}
+                enterKeyHint="next"
+                aria-describedby={error ? "register-form-error" : undefined}
               />
             </label>
 
@@ -319,7 +338,10 @@ export default function RegisterForm() {
                   type={showPassword ? "text" : "password"}
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
-                  onFocus={keepFocusedInputVisible}
+                  enterKeyHint="next"
+                  aria-describedby={error ? "register-password-guidance register-form-error" : "register-password-guidance"}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                 />
                 <button
                   type="button"
@@ -330,30 +352,64 @@ export default function RegisterForm() {
                   {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
                 </button>
               </div>
-              <PasswordGuidance password={password} />
+              <div id="register-password-guidance">
+                <PasswordGuidance password={password} active={passwordFocused} />
+              </div>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
+                Confirm password
+              </span>
+              <div className="relative">
+                <TextInput
+                  id="register-password-confirmation"
+                  value={passwordConfirmation}
+                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  className="pr-12"
+                  type={showPasswordConfirmation ? "text" : "password"}
+                  placeholder="Enter it again"
+                  autoComplete="new-password"
+                  enterKeyHint="done"
+                  hasError={confirmationTouched && passwordConfirmation.length >= 3 && password.length >= 3 && password !== passwordConfirmation}
+                  errorId="register-password-match"
+                  onFocus={() => setConfirmationFocused(true)}
+                  onBlur={() => {
+                    setConfirmationFocused(false);
+                    setConfirmationTouched(true);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirmation((v) => !v)}
+                  className="absolute right-3 top-1/2 flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] -translate-y-1/2 items-center justify-center text-on-surface-muted hover:text-on-surface transition-colors duration-[var(--motion-duration-short)]"
+                  aria-label={showPasswordConfirmation ? "Hide password" : "Show password"}
+                >
+                  {showPasswordConfirmation ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+                </button>
+              </div>
+              <div id="register-password-match">
+                <PasswordMatchGuidance password={password} confirmation={passwordConfirmation} active={confirmationFocused || confirmationTouched} />
+              </div>
             </label>
           </div>
+          <RippleButton
+            id="register-submit"
+            type="submit"
+            disabled={busy}
+            className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
+          >
+            {busy ? "Creating account…" : "Create account"}
+          </RippleButton>
+
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="text-center text-[length:var(--font-size-body)] text-brand-accent font-semibold hover:underline min-h-[var(--touch-target-min)] flex items-center justify-center"
+          >
+            Already have an account? Sign in
+          </button>
         </form>
-      </div>
-
-      <div className="flex flex-col gap-3 px-6 py-4 shrink-0">
-        <RippleButton
-          id="register-submit"
-          type="submit"
-          form="register-form"
-          disabled={!hydrated || busy || !formComplete}
-          className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-[var(--state-opacity-disabled-content)] hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)]"
-        >
-          {busy ? "Creating account..." : "Create Account"}
-        </RippleButton>
-
-        <button
-          type="button"
-          onClick={() => router.push("/login")}
-          className="text-center text-[length:var(--font-size-body)] text-brand-accent font-semibold hover:underline min-h-[var(--touch-target-min)] flex items-center justify-center"
-        >
-          Already have an account? Sign in
-        </button>
       </div>
     </div>
   );

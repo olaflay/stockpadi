@@ -1,4 +1,4 @@
-import { serverGet } from "@/features/operations/server-client";
+import { serverGet } from "@/platform/api/backend-client";
 
 export interface ServerCustomer { id: string; name: string; phone: string | null; updated_at: string; balance: number; }
 export const fetchServerCustomers = () => serverGet<{ customers: ServerCustomer[] }>("/api/customers");

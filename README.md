@@ -20,11 +20,26 @@ frontend → backend → Supabase/PostgreSQL
 
 Offline sales are queued in the frontend and later checked by the sync service and database.
 
+## Supported runtime
+
+The repository supports Node.js **24.x** and npm 11. The version is pinned by
+`.nvmrc` / `.node-version`, declared by every package, and used by both CI
+workflows. Confirm it before installing dependencies:
+
+```powershell
+node --version
+npm --version
+```
+
+The frontend, backend, Supabase test suite, and contracts package are separate
+installable packages. Only `packages/*` is a root npm workspace because the
+contracts package is the one package shared by the deployables.
+
 ## Install once
 
 Install:
 
-- Node.js 22 or newer
+- Node.js 24.x
 - Git
 - Supabase CLI
 - Docker Desktop only if you want a completely local Supabase database
@@ -35,7 +50,8 @@ Check Node:
 node --version
 ```
 
-Node 20 can cause Supabase WebSocket warnings and Windows test-process errors. Use Node 22 or newer.
+Use Node 24.x for local development and CI. Other major versions are not part
+of the supported verification matrix.
 
 ## First-time setup
 
@@ -284,7 +300,7 @@ npm test
 npm run build
 ```
 
-If tests fail with a Windows Node `EPERM` error mentioning `C:\Users\...`, upgrade to Node 22, restart PowerShell/VS Code, reinstall dependencies, and retry. Do not delete the Supabase database or IndexedDB to fix this error.
+If tests fail with a Windows Node `EPERM` error mentioning `C:\Users\...`, restart PowerShell/VS Code under Node 24.x, reinstall dependencies, and retry. Do not delete the Supabase database or IndexedDB to fix this error.
 
 ## Deployment
 
@@ -339,6 +355,9 @@ Do not set a Start command. Add the private variables from
 `https://YOUR_BACKEND_DOMAIN/` and `https://YOUR_BACKEND_DOMAIN/health`, then
 set the frontend `NEXT_PUBLIC_BACKEND_URL` to that URL and redeploy the
 frontend.
+
+The root directory is an orchestration workspace, not a third Vercel project;
+deploy the frontend and backend as the two projects above.
 
 For production backend variables, use:
 
@@ -398,6 +417,6 @@ Do not edit a deployed migration. Check `npx supabase migration list` and use a 
 
 ## Architecture reference
 
-PostgreSQL is the source of truth. RLS and backend authorization enforce tenant and branch isolation. Dexie and IndexedDB are frontend offline storage only. The Node backend is the single authoritative sync engine for queued offline operations and pull convergence.
+PostgreSQL is the source of truth. RLS and backend authorization enforce tenant and branch isolation. Dexie and IndexedDB are frontend offline storage only. The Node backend is the single authoritative sync engine for queued offline operations and pull convergence. Supabase compatibility functions, where retained for deployed clients, proxy to the Node backend and do not contain a competing sync implementation.
 
-See `AGENTS.md`, `docs/PRD.md`, and `.agents/rules/` for the detailed engineering rules.
+See `AGENTS.md`, `docs/ARCHITECTURE-AUDIT.md`, `docs/adr/0001-canonical-application-flow.md`, `docs/PRD.md`, and `.agents/rules/` for the detailed engineering rules.

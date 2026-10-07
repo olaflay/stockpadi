@@ -1,9 +1,12 @@
+import { SYNC_ROUTES } from "@stockpadi/contracts";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
-import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/features/operations/server-client";
+import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/platform/api/backend-client";
 import type { SyncQueueItem } from "@/types/sync";
 import { matchesActiveTenant, getLocalBusinessId, setLocalBusinessId } from "@/lib/local-tenant";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
+import { withSyncLease } from "@/features/sync/sync-lease";
+import { beginSyncBatch, getSyncObservability } from "@/features/sync/sync-observability";
 
 /**
  * Pushes every pending outbox item to the Node sync API in deterministic
@@ -75,19 +78,10 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
   const initialCount = await getPendingCount();
   if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
 
-  if (typeof navigator !== "undefined" && navigator.locks) {
-    await navigator.locks.request("stockpadi-outbox-drain", { ifAvailable: true }, async (lock) => {
-      if (!lock) return; // another tab already holds the lock
-      await drainOnce();
-    });
-    const finalCount = await getPendingCount();
-    return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
-  }
-
   if (isDraining) return { drained: 0, pendingRemaining: initialCount };
   isDraining = true;
   try {
-    await drainOnce();
+    await withSyncLease(drainOnce);
   } finally {
     isDraining = false;
   }
@@ -316,11 +310,12 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
   );
 
   let results: SyncPushItemResult[];
+  beginSyncBatch(slice);
   try {
     const response = await serverPost<{ results: SyncPushItemResult[] }>(
-      "/api/sync/push",
+      SYNC_ROUTES.push,
       {
-        device_id: null,
+        device_id: (await db.session.get("current"))?.deviceId ?? null,
         batch: slice.map((item) => ({
           client_id: item.mutationId ?? item.clientId,
           mutation_id: item.mutationId ?? item.clientId,
@@ -335,14 +330,19 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
       },
       { timeoutMs: PUSH_TIMEOUT_MS }
     );
-    ({ results } = response);
+    if (!isRecord(response) || !Array.isArray(response.results)) {
+      await parkRetryable(slice, "MISSING_RESULT", "Sync response did not contain per-operation results.");
+      await recordPushOutcome(slice, false, "MISSING_RESULT", null);
+      return false;
+    }
+    results = response.results;
   } catch (err) {
     // Network failure (including the case Background Sync will retry the
     // underlying fetch itself, see src/app/sw.ts): leave these items
     // retryable rather than marking them failed, a dropped connection is
     // not a rejection.
     if (err instanceof BackendRequestError) {
-      const retryable = err.status >= 500 || err.status === 429 || [
+      const retryable = err.status === 408 || err.status >= 500 || err.status === 429 || [
         "BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED", "DEPENDENCY_NOT_READY", "TEMPORARY_UNAVAILABLE", "RATE_LIMITED", "NETWORK_UNAVAILABLE",
       ].includes(err.code);
       if (retryable) await parkRetryable(slice, err.code, err.message, ["BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED", "DEPENDENCY_NOT_READY"].includes(err.code));
@@ -472,6 +472,7 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
     firstFailure?.error?.code ?? (firstFailureItem ? "MISSING_RESULT" : null),
     null,
     accepted,
+    accepted ? toDelete.length + toConfirm.length : 0,
   );
   return true;
 }
@@ -482,11 +483,14 @@ async function recordPushOutcome(
   errorCode: string | null,
   httpStatus: number | null,
   accepted = false,
+  acknowledgedCount = 0,
 ): Promise<void> {
   const businessId = items.find((item) => item.businessId)?.businessId ?? await getLocalBusinessId();
   if (!businessId) return;
   const id = `${businessId}:session`;
   const attemptedAt = new Date().toISOString();
+  const telemetry = getSyncObservability();
+  const durationMs = telemetry.batchStartedAt ? Math.max(0, Date.now() - telemetry.batchStartedAt) : null;
   const existing = await db.syncPullState.get(id);
   if (existing) {
     await db.syncPullState.update(id, {
@@ -495,6 +499,14 @@ async function recordPushOutcome(
       lastPushErrorCode: errorCode,
       lastPushHttpStatus: httpStatus,
       lastPushAttemptAt: attemptedAt,
+      lastSyncSessionId: telemetry.sessionId,
+      lastBatchId: telemetry.batchId,
+      lastDeviceId: (await db.session.get("current"))?.deviceId ?? null,
+      lastQueueAgeMs: telemetry.queueAgeMs,
+      lastOperationType: telemetry.operationType,
+      lastPushDurationMs: durationMs,
+      lastAcknowledgedCount: accepted ? acknowledgedCount : 0,
+      lastCoordinatorPhase: telemetry.phase,
     });
     return;
   }
@@ -522,6 +534,14 @@ async function recordPushOutcome(
     lastFailedDataset: null,
     pullRetryCount: 0,
     nextPullAttemptAt: null,
+    lastSyncSessionId: telemetry.sessionId,
+    lastBatchId: telemetry.batchId,
+    lastDeviceId: (await db.session.get("current"))?.deviceId ?? null,
+    lastQueueAgeMs: telemetry.queueAgeMs,
+    lastOperationType: telemetry.operationType,
+    lastPushDurationMs: durationMs,
+    lastAcknowledgedCount: accepted ? acknowledgedCount : 0,
+    lastCoordinatorPhase: telemetry.phase,
   });
 }
 
@@ -574,9 +594,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * retried. This sweeper returns those rows to pending so the next drain picks
  * them up. Safe to call on every connect and on boot.
  */
-export async function recoverStuckSyncingItems(): Promise<void> {
+export async function recoverStuckSyncingItems(maxAgeMs = 0): Promise<void> {
+  const threshold = new Date(Date.now() - maxAgeMs).toISOString();
   const stuck = (await db.outbox.where("status").equals("syncing").toArray())
-    .filter((item) => matchesActiveTenant(item) && !item.awaitingConfirmation);
+    .filter((item) => matchesActiveTenant(item) && !item.awaitingConfirmation && (!item.lastAttemptAt || item.lastAttemptAt < threshold));
   if (stuck.length === 0) return;
   await db.outbox.bulkUpdate(
     stuck.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, nextAttemptAt: null } }))
@@ -646,7 +667,9 @@ async function revertToPending(items: SyncQueueItem[], message: string): Promise
 }
 
 function nextAttemptAt(attemptCount: number): string {
-  const delayMs = Math.min(5 * 60 * 1000, 1000 * 2 ** Math.min(attemptCount, 8));
+  const baseDelayMs = Math.min(5 * 60 * 1000, 1000 * 2 ** Math.min(attemptCount, 8));
+  const jitterMs = Math.floor(Math.random() * Math.min(5_000, Math.max(250, baseDelayMs * 0.25)));
+  const delayMs = baseDelayMs + jitterMs;
   return new Date(Date.now() + delayMs).toISOString();
 }
 

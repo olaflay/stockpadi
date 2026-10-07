@@ -1,4 +1,4 @@
-import { BackendConfigurationError, BackendRequestError, serverPost, serverPostPublic } from "@/features/operations/server-client";
+import { BackendConfigurationError, BackendRequestError, serverPost, serverPostPublic } from "@/platform/api/backend-client";
 
 export class BackendError extends Error {
   constructor(message: string, readonly status?: number, readonly code?: string) {

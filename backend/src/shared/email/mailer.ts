@@ -1,5 +1,6 @@
 /**
- * KEEP IN SYNC with supabase/functions/_shared/mailer.ts (the Deno Edge Function copy).
+ * KEEP IN SYNC with supabase/functions/_shared/mailer.ts while the compatibility
+ * function adapters remain deployed (the Deno runtime copy).
  * Same provider logic, different runtime globals (process.env here vs Deno.env there).
  * Change the sender format or add a provider in BOTH copies.
  */

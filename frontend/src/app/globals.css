@@ -152,6 +152,28 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Auth pages keep the viewport shell fixed; only the form region scrolls when
+   the virtual keyboard or a small display reduces the available height. */
+.auth-viewport {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.auth-scroll-region {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 1rem;
+  scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Eliminate browser scrollbar tracks on mobile from cutting in as side borders */
 @media (max-width: 768px) {
   * {

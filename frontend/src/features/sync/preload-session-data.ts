@@ -1,4 +1,5 @@
-import { BackendRequestError, NetworkUnavailableError, serverGet } from "@/features/operations/server-client";
+import { SYNC_ROUTES } from "@stockpadi/contracts";
+import { BackendRequestError, NetworkUnavailableError, serverGet } from "@/platform/api/backend-client";
 import { db, SESSION_SINGLETON_ID, type LocalBranch, type LocalCategory, type LocalCustomer, type LocalUser, type SyncDiagnostic, type LocalInventoryStock } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import type { Product } from "@/types/product";
@@ -107,7 +108,7 @@ export function getLastPreloadResult(): SessionPreloadResult | null {
 export async function preloadSessionData(force = false, trigger: SyncPullTrigger = force ? "manual" : "poll"): Promise<SessionPreloadResult> {
   const startedAt = new Date().toISOString();
   const empty = (fullySynced: boolean): SessionPreloadResult => ({ startedAt, completedAt: new Date().toISOString(), fullySynced, pulls: [] });
-  if (typeof window === "undefined" || (typeof navigator !== "undefined" && !navigator.onLine)) {
+  if (typeof window === "undefined") {
     const result = empty(false);
     lastPreloadResult = result;
     return result;
@@ -152,6 +153,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   const stagedRecords = new Map<PullEntityName, unknown[]>();
   const successfulPullAt = new Map<PullEntityName, string | null>();
   const pullStartedAt = new Date().toISOString();
+  const pullStartedClock = Date.now();
   const isInvalidationTrigger = ["online", "auth", "focus", "push-success"].includes(trigger);
   await db.syncPullState.put({
     ...(priorState ?? {}),
@@ -172,7 +174,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   try {
     let response: SessionPullResponse;
     do {
-      const rawResponse = await serverGet<unknown>(`/api/sync/pull${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
+      const rawResponse = await serverGet<unknown>(`${SYNC_ROUTES.pull}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
       await db.syncPullState.update(pullStateId, { lastServerContactAt: new Date().toISOString() });
       response = validateSessionPullResponse(rawResponse, businessId, localUser);
       pagesFetched += 1;
@@ -181,7 +183,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
         if (!entity.success) {
           const error = entity.error ?? { code: "PULL_FAILED", message: "Could not refresh this data." };
           const result: PullEndpointResult = {
-            endpoint: "/api/sync/pull",
+            endpoint: SYNC_ROUTES.pull,
             entity: entityName,
             success: false,
             lastSuccessfulPullAt: await previousSuccessfulPullAt(businessId, entityName),
@@ -244,6 +246,8 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
       lastFailedDataset: null,
       pullRetryCount: 0,
       nextPullAttemptAt: null,
+      lastPullDurationMs: Math.max(0, Date.now() - pullStartedClock),
+      lastCoordinatorPhase: "downloading",
     });
     await storeDiagnostic(businessId, {
       endpoint: "/api/sync/pull",
@@ -282,13 +286,17 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
       lastFailedDataset: failedDataset,
       pullRetryCount: retryCount,
       nextPullAttemptAt,
+      lastPullDurationMs: Math.max(0, Date.now() - pullStartedClock),
+      lastCoordinatorPhase: "downloading",
     });
   }
 
   const result: SessionPreloadResult = {
     startedAt,
     completedAt: new Date().toISOString(),
-    fullySynced: pulls.length > 0 && pulls.every((pull) => pull.success) && partialErrors.length === 0,
+    // An empty page is a successful convergence result, not an unverified
+    // session. The cursor has still been validated and durably advanced.
+    fullySynced: pulls.every((pull) => pull.success) && partialErrors.length === 0,
     pulls,
   };
   lastPreloadResult = result;
@@ -425,7 +433,9 @@ function requireArray(value: unknown, field: string, dataset: string): unknown[]
 }
 
 function pullRetryDelayMs(retryCount: number): number {
-  return Math.min(MAX_PULL_RETRY_MS, BASE_PULL_RETRY_MS * 2 ** Math.max(0, retryCount - 1));
+  const baseDelayMs = Math.min(MAX_PULL_RETRY_MS, BASE_PULL_RETRY_MS * 2 ** Math.max(0, retryCount - 1));
+  const jitterMs = Math.floor(Math.random() * Math.min(10_000, Math.max(500, baseDelayMs * 0.25)));
+  return baseDelayMs + jitterMs;
 }
 
 async function applyEntity(entity: string, records: unknown[], businessId: string): Promise<number> {

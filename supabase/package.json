@@ -2,7 +2,7 @@
   "name": "ojapadi-database-suites",
   "version": "0.1.0",
   "private": true,
-  "description": "PGlite-backed database suites for the OjaPadi migrations, RLS policies and sync_apply_* merge logic.",
+  "description": "PGlite-backed database suites for OjàPadi migrations, RLS policies, and sync_apply_* database merge logic.",
   "engines": { "node": "24.x" },
   "scripts": {
     "test": "vitest run",

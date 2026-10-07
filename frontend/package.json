@@ -58,5 +58,5 @@
     "typescript": "^5",
     "vitest": "^4.1.10"
   },
-  "description": "StockPadi frontend: Next.js PWA, Dexie offline layer, UI. Split from the original monorepo — see docs/BACKEND-SPLIT.md. Talks to the backend only via Supabase (anon key) + Edge Functions, never a service-role key."
+  "description": "OjàPadi frontend: Next.js PWA, Dexie local data layer, UI, and Serwist service worker. Browser business traffic goes through the Node backend API; the browser Supabase client is used for Auth only."
 }

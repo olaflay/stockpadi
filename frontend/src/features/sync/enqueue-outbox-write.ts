@@ -6,17 +6,31 @@ import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
 let drainTimer: ReturnType<typeof setTimeout> | null = null;
 const MUTABLE_ENTITY_TYPES: SyncEntityType[] = ["product", "customer", "supplier", "branch", "category"];
 
+/** Background Sync wakes a client; it never owns mutation replay. */
+function registerBackgroundSyncHint(): void {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+  void navigator.serviceWorker.ready.then((registration) => {
+    const withSync = registration as ServiceWorkerRegistration & {
+      sync?: { register(tag: string): Promise<void> };
+    };
+    return withSync.sync?.register("stockpadi-sync");
+  }).catch(() => undefined);
+}
+
 /**
- * Debounced drain trigger: when an outbox row is written while online,
- * schedule a drain in 1s so rapid writes batch into one network call.
+ * Debounced coordinator wake-up: when an outbox row is written while online,
+ * schedule a sync attempt in 1s so rapid writes batch into one network call.
  */
 function scheduleDebouncedDrain(): void {
   if (drainTimer) clearTimeout(drainTimer);
   drainTimer = setTimeout(async () => {
     drainTimer = null;
     try {
-      const { drainOutbox } = await import("@/features/sync/drain-outbox");
-      await drainOutbox();
+      // Enqueue is a wake-up hint, not a second scheduler. Route the write
+      // through the canonical coordinator so push and pull keep one ordering
+      // and one single-flight boundary.
+      const { runSyncCycle } = await import("@/features/sync/SyncCoordinator");
+      await runSyncCycle("poll");
     } catch {
       // drain will be retried on next trigger or manual sync
     }
@@ -110,9 +124,8 @@ export async function enqueueOutboxWrite(
   }
 
   // Trigger a debounced drain if the device is online
-  if (typeof navigator !== "undefined" && navigator.onLine) {
-    scheduleDebouncedDrain();
-  }
+  if (typeof navigator !== "undefined" && navigator.onLine) scheduleDebouncedDrain();
+  registerBackgroundSyncHint();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

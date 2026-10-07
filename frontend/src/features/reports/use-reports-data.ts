@@ -8,7 +8,7 @@ import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
-import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/features/operations/server-client";
+import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/platform/api/backend-client";
 import { tenantArray } from "@/lib/local-tenant";
 import { getPeriodStartIso, getPeriodBoundsIso, type ReportPeriod } from "@/lib/date";
 

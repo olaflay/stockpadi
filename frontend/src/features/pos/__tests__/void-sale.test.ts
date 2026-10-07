@@ -47,7 +47,7 @@ describe("voidSale", () => {
     await db.customerCreditMovements.clear();
     await db.outbox.clear();
 
-    // Mock fetch for the Edge Function endpoint call
+    // Mock fetch for the backend API endpoint call
     vi.stubGlobal("fetch", async () => {
       return {
         ok: true,

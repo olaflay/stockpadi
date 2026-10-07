@@ -4,7 +4,7 @@ Offline-first inventory and point-of-sale PWA for a multi-tenant, 1-to-6-branch 
 
 ## Stack
 
-Next.js (App Router) + React + TypeScript (strict), Tailwind CSS v4, Dexie.js over IndexedDB for local-first storage, Serwist (Workbox) for the service worker and background sync, Supabase Cloud (Postgres, Auth, Realtime, Storage, Edge Functions) as the multi-tenant backend, deployed on Vercel.
+Next.js (App Router) + React + TypeScript (strict), Tailwind CSS v4, Dexie.js over IndexedDB for local-first storage, and Serwist for the service worker and app-shell caching. Browser business reads and writes use the Node application API; the browser Supabase client owns Auth only. Postgres and RLS in Supabase Cloud remain authoritative, and the frontend deploys on Vercel.
 
 ## Getting started
 
@@ -37,7 +37,7 @@ src/components/ui/ Shared screen-state primitives (offline banner, sync indicato
 src/config/        Business-type templates and branding — the per-client fork boundary
 src/lib/           Cross-feature infra: Dexie client, Supabase client, shared hooks
 src/types/         Types shared across the client/server boundary
-../supabase/       Postgres migrations, RLS policies and Edge Functions
+../supabase/       Postgres migrations, RLS policies, tests, and compatibility functions
 ```
 
 ## Where the rules and docs live
@@ -49,4 +49,4 @@ The canonical product rules, locked decisions, and docs live in the **repo root*
 - `../.agents/skills/` — procedural playbooks
 - `../docs/` — PRD, scaffold log, research reports
 
-The frontend owns the Next.js UI, PWA, Dexie/IndexedDB cache, offline outbox, and API calls. It uses only public Supabase URL/anon-key configuration. Authoritative authorization and tenant validation happen in Supabase RLS/RPCs and Edge Functions.
+The frontend owns the Next.js UI, PWA, Dexie/IndexedDB cache, offline outbox, and API calls. It uses only public Supabase URL/anon-key configuration for Auth. The Node backend owns the application sync boundary and server authorization orchestration; Postgres RPCs and RLS are the final database enforcement boundary. Supabase compatibility functions are not part of the browser runtime.

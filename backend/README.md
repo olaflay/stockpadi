@@ -89,6 +89,8 @@ npx supabase migration list
 npx supabase db push
 ```
 
-PostgreSQL, RLS, and RPCs remain the database source of truth. Specialized
-offline sync and verification functions remain under `../supabase/functions/`
-where intentionally required; they are not a replacement for this backend.
+PostgreSQL, RLS, and RPCs remain the database source of truth. The Node API is
+the only application sync boundary. Functions under `../supabase/functions/`
+are compatibility adapters for deployments that still address the historical
+function URLs; they contain no independent sync, authorization, or domain
+logic and are not part of the browser runtime.

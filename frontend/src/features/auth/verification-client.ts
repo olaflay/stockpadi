@@ -1,4 +1,4 @@
-import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/features/operations/server-client";
+import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/platform/api/backend-client";
 
 export async function sendVerificationEmail(): Promise<{ ok: boolean; message?: string }> {
   try { await serverPost("/api/auth/email-verification/send", {}); return { ok: true }; }

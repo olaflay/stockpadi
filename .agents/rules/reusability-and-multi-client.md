@@ -42,7 +42,7 @@ export function Header() {
 import { getBusinessName } from "@/config/env";
 const brand = getBusinessName(); // Interpolates brandDisplay
 
-// ✅ REQUIRED in backend/ & Edge Functions:
+// ✅ REQUIRED in backend/ and compatibility functions:
 const brandName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
 const subject = `Your ${brandName} verification code`;
 ```

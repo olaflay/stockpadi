@@ -17,7 +17,7 @@ import { hasCapability } from "@/features/auth/authorization";
 import { BalancedIllustration } from "@/components/illustrations";
 import { computeGrossProfit, computeNetProfit } from "@/features/reports/compute-profit";
 import type { PaymentMethod } from "@/types/sale";
-import { BackendRequestError, serverGet } from "@/features/operations/server-client";
+import { BackendRequestError, serverGet } from "@/platform/api/backend-client";
 import { fetchReconciliationHistory, submitReconciliation, type ReconciliationRecord } from "@/features/reconciliation/reconciliation-client";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { tenantArray } from "@/lib/local-tenant";
