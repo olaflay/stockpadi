@@ -23,6 +23,8 @@ jobs:
             packages/contracts/package-lock.json
 
       - run: npm ci
+      - run: npm ci --prefix frontend
+      - run: npm ci --prefix backend
 
       - run: npm run contracts:build
 
