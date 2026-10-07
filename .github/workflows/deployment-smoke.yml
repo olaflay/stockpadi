@@ -1,0 +1,51 @@
+name: Deployment identity smoke check
+
+on:
+  workflow_dispatch:
+    inputs:
+      frontend_url:
+        description: "Deployed frontend HTTPS URL"
+        required: true
+        type: string
+      backend_url:
+        description: "Deployed backend HTTPS URL"
+        required: true
+        type: string
+      app_env:
+        description: "Expected environment: staging or production"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      supabase_project_ref:
+        description: "Expected non-secret Supabase project reference"
+        required: true
+        type: string
+      build_version:
+        description: "Expected shared build version or commit SHA"
+        required: true
+        type: string
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.app_env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify deployed identity and service worker
+        env:
+          FRONTEND_URL: ${{ inputs.frontend_url }}
+          BACKEND_URL: ${{ inputs.backend_url }}
+          EXPECTED_APP_ENV: ${{ inputs.app_env }}
+          EXPECTED_SUPABASE_PROJECT_REF: ${{ inputs.supabase_project_ref }}
+          EXPECTED_BUILD_VERSION: ${{ inputs.build_version }}
+        run: npm run deployment:verify
+      - name: Verify hosted migration state without modifying the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/require-migration-credentials.mjs && npm --prefix backend run db:verify

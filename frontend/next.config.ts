@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { getEnvironmentIdentity, validateRuntimeEnvironment } from "@stockpadi/contracts/config";
 
 const configuredDevOrigins = (process.env.NEXT_PUBLIC_DEV_ORIGINS ?? "")
   .split(",")
@@ -8,12 +9,11 @@ const configuredDevOrigins = (process.env.NEXT_PUBLIC_DEV_ORIGINS ?? "")
   .filter(Boolean);
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-if (process.env.NODE_ENV === "production" && !backendUrl) {
-  throw new Error("NEXT_PUBLIC_BACKEND_URL is required when building the production frontend.");
+const environmentValidation = validateRuntimeEnvironment(process.env, "frontend");
+if (process.env.NODE_ENV !== "test" && !environmentValidation.ok) {
+  throw new Error(`Frontend environment validation failed: ${environmentValidation.errors.join("; ")}`);
 }
-if (process.env.NODE_ENV === "production" && process.env.VERCEL === "1" && /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:|\/|$)/i.test(backendUrl ?? "")) {
-  throw new Error("NEXT_PUBLIC_BACKEND_URL must point to the deployed backend on Vercel.");
-}
+const frontendIdentity = getEnvironmentIdentity(process.env, "frontend");
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
+  env: {
+    NEXT_PUBLIC_APP_ENV: frontendIdentity.environment,
+    NEXT_PUBLIC_BUILD_VERSION: frontendIdentity.buildVersion,
+    NEXT_PUBLIC_SUPABASE_PROJECT_REF: frontendIdentity.supabaseProjectRef ?? "",
   },
   async rewrites() {
     return [

@@ -36,7 +36,15 @@ describe("Vercel backend adapter", () => {
     const response = await fetch(`${baseUrl}/api?__path=health`);
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok", service: "stockpadi-backend" });
+    expect(await response.json()).toEqual({
+      status: "ok",
+      service: "backend",
+      component: "backend",
+      environment: "local",
+      apiVersion: "v1",
+      buildVersion: "local",
+      supabaseProjectRef: null,
+    });
   });
 
   it("loads the application router for non-health routes", async () => {

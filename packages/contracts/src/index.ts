@@ -21,6 +21,7 @@ export const WORKER_CAPABILITIES = [
   "MANAGE_BRANCHES",
   "MANAGE_BRANCH_WORKERS",
 ] as const;
+
 export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
 
 /**

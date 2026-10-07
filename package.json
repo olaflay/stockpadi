@@ -19,6 +19,9 @@
     "backend:typecheck": "npm --prefix backend run typecheck",
     "supabase:test": "npm --prefix supabase test",
     "supabase:typecheck": "npm --prefix supabase run typecheck",
+    "env:validate": "npm run contracts:build && node scripts/validate-environment.mjs",
+    "deployment:verify": "node scripts/verify-deployment.mjs",
+    "db:verify": "npm --prefix backend run db:verify",
     "provision:admin": "npm --prefix backend run provision:admin",
     "contracts:build": "npm --prefix packages/contracts run build"
   }

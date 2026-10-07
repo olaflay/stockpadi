@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@stockpadi/contracts": ["../packages/contracts/src/index.ts"]
+      "@stockpadi/contracts": ["../packages/contracts/src/index.ts"],
+      "@stockpadi/contracts/config": ["../packages/contracts/src/environment.ts"]
     }
   },
   "include": [

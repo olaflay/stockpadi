@@ -16,16 +16,25 @@ expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
 
 Database migrations remain exclusively in `../supabase/migrations/`.
 
+`npm run db:verify` is read-only. It compares the repository migration set to
+the hosted migration ledgers and checks required application tables and RPCs.
+It requires `SUPABASE_DB_URL` and `SUPABASE_PROJECT_REF`, and must pass before
+a production deploy is considered verified.
+
 ## Environment variables
 
 Set these in `backend/.env`, never in `frontend/.env.local`:
 
 ```env
 PORT=8787
+APP_ENV=local
 FRONTEND_ORIGIN=http://localhost:3000
 NODE_ENV=development
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PROJECT_REF=YOUR_PROJECT_REF
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_SERVICE_ROLE_KEY
+SUPABASE_DB_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
+BUILD_VERSION=local
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false

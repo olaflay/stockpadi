@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import { createApp } from "./app.js";
+import { assertRuntimeEnvironment } from "./shared/environment.js";
 
+assertRuntimeEnvironment(process.env, "backend");
 const port = Number(process.env.PORT ?? 8787);
-const brandName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
-createServer(createApp()).listen(port, "0.0.0.0", () => console.log(`${brandName} backend listening on ${port}`));
+const serviceName = process.env.SERVICE_NAME || "backend";
+createServer(createApp()).listen(port, "0.0.0.0", () => console.log(`${serviceName} listening on ${port}`));
