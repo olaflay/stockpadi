@@ -118,7 +118,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
   return (
     <div
       data-modal-container
-      className="fixed inset-0 z-40 flex flex-col justify-end pointer-events-none"
+      className="fixed inset-0 z-[var(--z-modal)] flex flex-col justify-end pointer-events-none"
       style={{ paddingBottom: "calc(68px + env(safe-area-inset-bottom, 0px))" }}
     >
       {/* Dimmed backdrop with M3 blur */}

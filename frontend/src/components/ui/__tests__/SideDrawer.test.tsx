@@ -93,4 +93,14 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     expect(screen.queryByText("Staff & Permissions")).not.toBeInTheDocument();
     expect(screen.queryByText("Backup & Offline Storage")).not.toBeInTheDocument();
   });
+
+  it("keeps the drawer above bottom navigation and its footer in the mobile safe area", () => {
+    render(<SideDrawer />);
+
+    const drawer = screen.getByRole("complementary", { name: "Navigation drawer" });
+    expect(drawer.className).toContain("z-[var(--z-drawer)]");
+    expect(drawer.className).toContain("h-dvh");
+    expect(drawer.className).toContain("max-h-dvh");
+    expect(screen.getByText("Sign Out").parentElement?.parentElement?.className).toContain("safe-area-inset-bottom");
+  });
 });

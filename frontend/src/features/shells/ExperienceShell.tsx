@@ -83,7 +83,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <nav
           data-bottom-nav
           aria-label={`${shell} navigation`}
-          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border/40 bg-surface-container gpu-layer transition-transform duration-200"
+          className="fixed bottom-0 left-0 right-0 z-[var(--z-bottom-nav)] flex border-t border-border/40 bg-surface-container gpu-layer transition-transform duration-200"
           style={{
             paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
           }}

@@ -187,7 +187,7 @@ export function SideDrawer() {
     <>
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 z-50 bg-[var(--color-scrim)] transition-opacity duration-[280ms] ease-out ${
+        className={`fixed inset-0 z-[var(--z-drawer)] bg-[var(--color-scrim)] transition-opacity duration-[280ms] ease-out ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={closeDrawer}
@@ -197,7 +197,7 @@ export function SideDrawer() {
       {/* Slide-out Drawer Panel (M3 / Material UI specification, 60fps GPU accelerated) */}
       <aside
         ref={drawerRef}
-        className={`fixed inset-y-0 top-0 bottom-0 left-0 z-50 flex h-full w-[310px] max-w-[85vw] flex-col bg-surface shadow-2xl gpu-layer transition-transform duration-[280ms] will-change-transform ${
+        className={`fixed inset-y-0 top-0 bottom-0 left-0 z-[var(--z-drawer)] flex h-dvh max-h-dvh min-h-0 w-[310px] max-w-[85vw] flex-col bg-surface shadow-2xl gpu-layer transition-transform duration-[280ms] will-change-transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{
@@ -208,7 +208,7 @@ export function SideDrawer() {
         inert={!isOpen || undefined}
       >
         {/* Drawer Header: Clean Identity Banner */}
-        <div className="flex items-center justify-between px-4 pt-5 pb-4 bg-brand-accent text-brand-accent-contrast select-none shadow-sm">
+        <div className="flex shrink-0 items-center justify-between px-4 pt-5 pb-4 bg-brand-accent text-brand-accent-contrast select-none shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white shadow-xs">
               <Store size={20} aria-hidden />
@@ -242,7 +242,7 @@ export function SideDrawer() {
         </div>
 
         {/* Grouped Navigation Items (Material UI standard) */}
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-4">
           {sections.map((section, sIdx) => {
             const visibleItems = section.items.filter(
               (item) => (!item.ownerOnly || isOwnerOrAdmin) && (!item.capability || hasCapability(user, item.capability))
@@ -289,7 +289,7 @@ export function SideDrawer() {
         </nav>
 
         {/* Drawer Footer: Support, Appearance & Sign Out */}
-        <div className="px-3.5 py-3 border-t border-border/40 bg-surface-container-low space-y-2">
+        <div className="shrink-0 space-y-2 border-t border-border/40 bg-surface-container-low px-3.5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))]">
           <Link
             href="/settings/help"
             onClick={closeDrawer}

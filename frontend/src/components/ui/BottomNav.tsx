@@ -101,7 +101,7 @@ export function BottomNav() {
       <nav
         data-bottom-nav
         aria-label="Main navigation"
-        className={`fixed bottom-0 left-0 right-0 z-50 flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[var(--z-bottom-nav)] flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out ${
           isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         }`}
         style={{
