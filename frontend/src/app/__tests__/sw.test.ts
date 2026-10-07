@@ -51,7 +51,7 @@ describe("Service Worker configuration (sw.ts)", () => {
 
     expect(runtimeCaching).toBeDefined();
     const navRule = runtimeCaching[0];
-    expect(navRule.handler.options.cacheName).toBe("stockpadi-navigation");
+    expect(navRule.handler.options.cacheName).toBe("stockpadi-navigation-local");
     expect(navRule.handler.options.networkTimeoutSeconds).toBe(3);
 
     // Test matcher behavior: sameOrigin navigation

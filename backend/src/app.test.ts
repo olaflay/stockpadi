@@ -24,11 +24,16 @@ describe("backend service routes", () => {
     const backendUrl = await startBackend();
     const response = await fetch(`${backendUrl}${path}`);
 
-    // The service name comes from the environment, so assert against the same
-    // resolution the app uses rather than a brand string baked into the test.
-    const expectedService = `${process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi"}-backend`;
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok", service: expectedService });
+    expect(await response.json()).toEqual({
+      status: "ok",
+      service: "backend",
+      component: "backend",
+      environment: "local",
+      apiVersion: "v1",
+      buildVersion: "local",
+      supabaseProjectRef: null,
+    });
   });
 
   it("reports the configured service name, not a hardcoded brand", async () => {
@@ -36,7 +41,7 @@ describe("backend service routes", () => {
     const response = await fetch(`${backendUrl}/health`);
     const body = await response.json() as { service: string };
 
-    expect(body.service.endsWith("-backend")).toBe(true);
+    expect(body.service).toBe("backend");
   });
 
   it("returns a JSON 404 for an unknown route", async () => {

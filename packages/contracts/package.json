@@ -12,6 +12,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./config": {
+      "development": "./src/environment.ts",
+      "types": "./dist/environment.d.ts",
+      "import": "./dist/environment.js",
+      "default": "./dist/environment.js"
     }
   },
   "scripts": {

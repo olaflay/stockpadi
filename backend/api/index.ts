@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { assertRuntimeEnvironment, getEnvironmentIdentity } from "../src/shared/environment.js";
 
 export function restorePublicUrl(request: Pick<IncomingMessage, "headers" | "url">) {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -16,9 +17,23 @@ export function restorePublicUrl(request: Pick<IncomingMessage, "headers" | "url
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
   const pathname = restorePublicUrl(request);
 
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      assertRuntimeEnvironment(process.env, "backend");
+    } catch (cause) {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { code: "INVALID_RUNTIME_CONFIGURATION", message: "Backend runtime configuration is invalid" } }));
+      return;
+    }
+  }
+
   if (request.method === "GET" && (pathname === "/" || pathname === "/health")) {
     response.writeHead(200, { "content-type": "application/json" });
-    response.end(JSON.stringify({ status: "ok", service: "stockpadi-backend" }));
+    response.end(JSON.stringify({
+      status: "ok",
+      service: process.env.SERVICE_NAME || "backend",
+      ...getEnvironmentIdentity(process.env, "backend"),
+    }));
     return;
   }
 

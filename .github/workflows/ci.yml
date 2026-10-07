@@ -44,15 +44,31 @@ jobs:
 
       - run: npm run build
 
-      # Automatically run pending migrations against Supabase Cloud on main
-      # to prevent temporal inversion where app code deploys before database columns exist.
-      - name: Apply Pending Database Migrations
+      - run: npm run backend:build
+
+      # Production database verification is required on main. Pull requests
+      # intentionally skip hosted DB access in the explicit step below.
+      - name: Require hosted migration credentials
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ -n "$SUPABASE_DB_URL" ]; then
-            npm --prefix backend run db:migrate
-          else
-            echo "Notice: SUPABASE_DB_URL secret not configured in repository; skipping automated cloud migration."
-          fi
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/require-migration-credentials.mjs
+
+      - name: Apply pending database migrations safely
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: npm --prefix backend run db:migrate
+
+      - name: Verify hosted migration state
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: npm --prefix backend run db:verify
+
+      - name: Explicitly skip hosted database verification for pull requests
+        if: github.event_name == 'pull_request'
+        run: echo "Hosted migration execution is intentionally not run for pull requests; main-branch release verification requires SUPABASE_DB_URL."

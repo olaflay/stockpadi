@@ -1,0 +1,34 @@
+name: Hosted migration verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Protected GitHub Environment containing the target project's migration secrets"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm --prefix backend ci
+      - name: Require target identity and migration credentials
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/require-migration-credentials.mjs
+      - name: Verify migration head and schema without modifying the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: npm --prefix backend run db:verify

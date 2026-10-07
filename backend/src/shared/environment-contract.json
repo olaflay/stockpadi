@@ -1,0 +1,72 @@
+{
+  "contractVersion": 1,
+  "apiVersion": "v1",
+  "nodeMajor": 24,
+  "topology": "Next.js frontend -> same-origin API -> Node backend -> Supabase/PostgreSQL/RLS/RPC",
+  "components": {
+    "frontend": {
+      "publicRequired": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_BACKEND_URL",
+        "NEXT_PUBLIC_SITE_URL"
+      ],
+      "identityVariables": [
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_SUPABASE_PROJECT_REF",
+        "NEXT_PUBLIC_BUILD_VERSION"
+      ],
+      "serverOnlyForbidden": [
+        "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY",
+        "NEXT_PUBLIC_DATABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_DB_URL",
+        "NEXT_PUBLIC_SMTP_PASS",
+        "NEXT_PUBLIC_BREVO_API_KEY"
+      ]
+    },
+    "backend": {
+      "required": [
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "BACKEND_URL"
+      ],
+      "oneOfRequired": ["FRONTEND_ORIGIN", "FRONTEND_ORIGINS"],
+      "identityVariables": [
+        "APP_ENV",
+        "SUPABASE_PROJECT_REF",
+        "BUILD_VERSION"
+      ],
+      "migrationRequired": [
+        "SUPABASE_PROJECT_REF",
+        "SUPABASE_DB_URL"
+      ]
+    }
+  },
+  "environments": {
+    "local": {
+      "frontendRuntime": "Next.js local development or local production preview",
+      "backendRuntime": "Node.js local server",
+      "frontendDestination": "http://localhost:3000",
+      "backendDestination": "http://localhost:8787",
+      "supabase": "An explicitly selected hosted project or local Supabase stack",
+      "nodeEnv": ["development", "production"]
+    },
+    "staging": {
+      "frontendRuntime": "Vercel preview",
+      "backendRuntime": "Vercel Node function",
+      "frontendDestination": "HTTPS Vercel preview URL",
+      "backendDestination": "HTTPS Vercel preview API URL",
+      "supabase": "One explicitly selected non-production project",
+      "nodeEnv": ["production"]
+    },
+    "production": {
+      "frontendRuntime": "Vercel production deployment",
+      "backendRuntime": "Vercel Node function",
+      "frontendDestination": "HTTPS production frontend URL",
+      "backendDestination": "HTTPS production API URL",
+      "supabase": "One explicitly selected production project",
+      "nodeEnv": ["production"]
+    }
+  }
+}

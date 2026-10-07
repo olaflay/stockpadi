@@ -27,7 +27,8 @@
     "reset:password": "node scripts/reset-password.mjs",
     "confirm:users": "node scripts/confirm-users.mjs",
     "check:confirmation": "node scripts/check-confirmation.mjs",
-    "db:migrate": "node --env-file=.env scripts/migrate.mjs"
+    "db:migrate": "node --env-file=.env scripts/migrate.mjs",
+    "db:verify": "node --env-file=.env scripts/verify-migrations.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.4",

@@ -34,10 +34,24 @@ import { handleSyncPush } from "./modules/sync/sync.controller.js";
 import { handleSyncPull } from "./modules/sync/sync-pull.controller.js";
 import { handleSyncHealth } from "./modules/sync/sync-health.controller.js";
 import { syncRoutes } from "./modules/sync/sync.routes.js";
+import { API_VERSION, getEnvironmentIdentity } from "./shared/environment.js";
 
 // Resolved from the environment rather than written into the source, so a
 // forked deployment reports its own service name on the health route.
-const serviceName = process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi";
+const serviceName = process.env.SERVICE_NAME || "backend";
+
+function healthPayload() {
+  const identity = getEnvironmentIdentity(process.env, "backend");
+  return {
+    status: "ok",
+    service: serviceName,
+    component: identity.component,
+    environment: identity.environment,
+    apiVersion: API_VERSION,
+    buildVersion: identity.buildVersion,
+    supabaseProjectRef: identity.supabaseProjectRef,
+  };
+}
 
 // Cap request bodies to bound memory use on a raw http server with no
 // framework-level body size guard. 1 MiB is ample for every endpoint here
@@ -88,7 +102,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
 
   try {
     if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
-    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) return jsonResponse(200, { status: "ok", service: `${serviceName}-backend` }, requestOrigin);
+    if (request.method === "GET" && (pathname === "/" || pathname === "/health" || pathname === "/api/health")) return jsonResponse(200, healthPayload(), requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.categories) return jsonResponse(200, await handleCategoryList(request), requestOrigin);

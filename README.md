@@ -85,8 +85,11 @@ Never commit or share `.env` or `.env.local`.
 Put these public values in `frontend/.env.local`:
 
 ```env
+NEXT_PUBLIC_APP_ENV=local
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PROJECT_REF=YOUR_PROJECT_REF
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
+NEXT_PUBLIC_BUILD_VERSION=local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8787
 ```
@@ -95,12 +98,15 @@ Put these private values in `backend/.env`:
 
 ```env
 PORT=8787
+APP_ENV=local
 FRONTEND_ORIGIN=http://localhost:3000
 # Multiple allowed frontend origins may be comma-separated.
 # FRONTEND_ORIGINS=http://localhost:3000,https://stockpadi-drab.vercel.app
 NODE_ENV=development
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PROJECT_REF=YOUR_PROJECT_REF
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+BUILD_VERSION=local
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -141,6 +147,16 @@ Environment key guide:
 The root `.env.example` only points to the two real environment files. The
 frontend and backend do not load the root file.
 
+Validate both application configurations without printing secret values:
+
+```powershell
+npm run env:validate -- --component pair
+```
+
+For staging and production, set explicit environment identity, matching
+Supabase project references, and a shared `BUILD_VERSION`. Production startup
+rejects development URLs, missing identity, and development-only settings.
+
 ## Update the database
 
 Historical migrations must not be edited. New migrations are added under `supabase/migrations/`.
@@ -156,7 +172,13 @@ See which migrations are already applied:
 
 ```powershell
 npx supabase migration list
+npm run db:verify
 ```
+
+`db:verify` is read-only and requires both `SUPABASE_DB_URL` and the explicit
+`SUPABASE_PROJECT_REF`. It fails when the database target cannot be matched to
+the declared Supabase project identity; it never treats an arbitrary
+"already exists" error as proof that a migration completed.
 
 Apply pending migrations:
 

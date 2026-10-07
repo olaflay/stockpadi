@@ -20,6 +20,8 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+const SERVICE_WORKER_VERSION = process.env.NEXT_PUBLIC_BUILD_VERSION ?? "local";
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
@@ -32,7 +34,7 @@ const serwist = new Serwist({
     {
       matcher: ({ request, sameOrigin }) => sameOrigin && (request.mode === "navigate" || request.headers.get("accept")?.includes("text/html") === true),
       handler: new NetworkFirst({
-        cacheName: "stockpadi-navigation",
+        cacheName: `stockpadi-navigation-${SERVICE_WORKER_VERSION}`,
         networkTimeoutSeconds: 3,
         plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
       }),
