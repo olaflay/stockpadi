@@ -44,6 +44,32 @@ describe("runtime environment contract", () => {
     expect(result.errors).toContain("NEXT_PUBLIC_SUPABASE_PROJECT_REF does not match NEXT_PUBLIC_SUPABASE_URL");
   });
 
+  it("normalizes trailing slashes when comparing the backend origin", () => {
+    expect(validateEnvironmentPair(
+      { ...frontend, NEXT_PUBLIC_BACKEND_URL: "https://api.example.com/", NEXT_PUBLIC_SITE_URL: "https://app.example.com/" },
+      { ...backend, BACKEND_URL: "https://api.example.com/", FRONTEND_ORIGIN: "https://app.example.com/" },
+    )).toEqual({ ok: true, errors: [] });
+  });
+
+  it("rejects a different backend API origin", () => {
+    const result = validateEnvironmentPair(frontend, { ...backend, BACKEND_URL: "https://other-api.example.com" });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("NEXT_PUBLIC_BACKEND_URL does not match BACKEND_URL");
+  });
+
+  it("rejects the wrong protocol outside local development", () => {
+    const result = validateRuntimeEnvironment({ ...backend, BACKEND_URL: "http://api.example.com" }, "backend");
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("BACKEND_URL must use HTTPS outside local development");
+  });
+
+  it("rejects a frontend/backend environment mismatch", () => {
+    const result = validateEnvironmentPair(frontend, { ...backend, APP_ENV: "staging", VERCEL_ENV: "preview" });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("frontend and backend APP_ENV values do not match");
+  });
+
+
   it("rejects production using development configuration", () => {
     const result = validateRuntimeEnvironment({ ...backend, NODE_ENV: "development", FRONTEND_ORIGIN: "http://localhost:3000" }, "backend");
     expect(result.ok).toBe(false);

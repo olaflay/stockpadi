@@ -53,6 +53,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   const [refunding, setRefunding] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState("");
+  const [clientRefundId] = useState(() => crypto.randomUUID());
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const branding = getBrandingConfig();
@@ -139,13 +140,13 @@ export default function SaleDetailPage({ params }: PageProps) {
     setRefunding(true);
     try {
       await refundSale({
+        clientRefundId,
         saleId: sale.id,
         branchId: sale.branchId,
         reason: refundReason.trim(),
         items: sale.items.map((it) => ({
           productId: it.productId,
           quantity: it.quantity,
-          unitPrice: it.unitPrice,
         })),
         payments: sale.payments.map((p) => ({
           method: p.method,

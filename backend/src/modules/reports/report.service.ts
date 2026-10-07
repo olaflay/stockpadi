@@ -18,31 +18,42 @@ export async function reportSummary(db: SupabaseClient, actor: User, input: unkn
   if (context.accountType === "WORKER" && !options.operational) requireCapability(context, "VIEW_REPORTS");
   const range = dateRange(input);
   if (range.branchId) requireAssignedBranch(context, range.branchId);
-  const [sales, expenses, purchases] = await Promise.all([
+  const [sales, expenses, purchases, refunds, creditMovements] = await Promise.all([
     db.from("sales").select("id, branch_id, customer_id, subtotal, discount, total, created_at, created_by_user_id, voided_at").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to).is("voided_at", null),
     db.from("expenses").select("id, branch_id, category, amount, note, created_at, created_by_user_id").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to),
     db.from("purchases").select("id, branch_id, supplier_id, status, created_at, created_by_user_id").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to),
+    db.from("sale_refunds").select("id, client_refund_id, branch_id, sale_id, total_refunded, reason, created_at, created_at_local, actor_user_id").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to),
+    db.from("customer_credit_movements").select("id, client_id, customer_id, amount_delta, source_reference_id, created_at_local, created_at, created_by_user_id").eq("business_id", context.businessId).gte("created_at", range.from).lte("created_at", range.to),
   ]);
-  const failure = [sales, expenses, purchases].find((result) => result.error);
+  const failure = [sales, expenses, purchases, refunds, creditMovements].find((result) => result.error);
   if (failure?.error) throw new HttpError(500, "REPORT_FAILED", failure.error.message);
   const assigned = context.accountType === "WORKER" ? new Set(context.branchIds) : null;
   const filterBranch = (row: { branch_id: string }) => (!range.branchId || row.branch_id === range.branchId) && (!assigned || assigned.has(row.branch_id));
   const salesRows = (sales.data ?? []).filter(filterBranch);
   const expenseRows = (expenses.data ?? []).filter(filterBranch);
   const purchaseRows = (purchases.data ?? []).filter(filterBranch);
+  const refundRows = (refunds.data ?? []).filter(filterBranch);
   const { data: products, error: productsError } = await db.from("products").select("id, name, sku, cost_price, sell_price, low_stock_threshold").eq("business_id", context.businessId);
   if (productsError) throw new HttpError(500, "REPORT_FAILED", productsError.message);
   const productIds = (products ?? []).map((product) => product.id as string);
   const stockResult = productIds.length ? await db.from("inventory_stock").select("product_id, branch_id, quantity").in("product_id", productIds) : { data: [], error: null };
   if (stockResult.error) throw new HttpError(500, "REPORT_FAILED", stockResult.error.message);
   const saleIds = salesRows.map((sale) => sale.id as string);
-  const [paymentResult, itemResult] = saleIds.length ? await Promise.all([
+  const refundIds = refundRows.map((refund) => refund.id as string);
+  const [paymentResult, itemResult, refundItemResult, refundPaymentResult] = saleIds.length || refundIds.length ? await Promise.all([
     db.from("sale_payments").select("sale_id, method, amount").in("sale_id", saleIds),
     db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", saleIds),
-  ]) : [{ data: [], error: null }, { data: [], error: null }];
-  if (paymentResult.error || itemResult.error) throw new HttpError(500, "REPORT_FAILED", paymentResult.error?.message ?? itemResult.error?.message ?? "Could not load report details");
+    db.from("sale_refund_items").select("refund_id, product_id, quantity, unit_price, total, unit_conversion_factor").in("refund_id", refundIds),
+    db.from("sale_refund_payments").select("refund_id, method, amount").in("refund_id", refundIds),
+  ]) : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+  if (paymentResult.error || itemResult.error || refundItemResult.error || refundPaymentResult.error) throw new HttpError(500, "REPORT_FAILED", paymentResult.error?.message ?? itemResult.error?.message ?? refundItemResult.error?.message ?? refundPaymentResult.error?.message ?? "Could not load report details");
   const detailedSales = salesRows.map((sale) => ({ ...sale, payments: (paymentResult.data ?? []).filter((payment) => payment.sale_id === sale.id), items: (itemResult.data ?? []).filter((item) => item.sale_id === sale.id) }));
-  const response = { from: range.from, to: range.to, branchId: range.branchId, salesTotal: salesRows.reduce((sum, row) => sum + Number(row.total), 0), expensesTotal: expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), salesCount: salesRows.length, purchaseCount: purchaseRows.length, sales: detailedSales, expenses: expenseRows, purchases: purchaseRows, products: products ?? [], stock: stockResult.data ?? [] };
+  const detailedRefunds = refundRows.map((refund) => ({
+    ...refund,
+    items: (refundItemResult.data ?? []).filter((item) => item.refund_id === refund.id),
+    payments: (refundPaymentResult.data ?? []).filter((payment) => payment.refund_id === refund.id),
+  }));
+  const response = { from: range.from, to: range.to, branchId: range.branchId, salesTotal: salesRows.reduce((sum, row) => sum + Number(row.total), 0) - refundRows.reduce((sum, row) => sum + Number(row.total_refunded), 0), expensesTotal: expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), salesCount: salesRows.length, refundCount: refundRows.length, refundsTotal: refundRows.reduce((sum, row) => sum + Number(row.total_refunded), 0), purchaseCount: purchaseRows.length, sales: detailedSales, refunds: detailedRefunds, creditMovements: creditMovements.data ?? [], expenses: expenseRows, purchases: purchaseRows, products: products ?? [], stock: stockResult.data ?? [] };
   if (context.accountType === "WORKER") {
     return { ...response, expensesTotal: 0, expenses: [], purchases: [], products: [], stock: [] };
   }

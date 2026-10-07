@@ -14,8 +14,9 @@ There is no root Vercel application. The deployable manifests live at
 orchestrates local checks and builds. This prevents a composite Vercel service
 definition from obscuring which project owns the browser and API runtimes.
 
-The frontend calls the backend over `/api/*` (same-origin in the browser and
-`NEXT_PUBLIC_BACKEND_URL` for server-side callers). The backend owns request
+The frontend calls the backend over `/api/*` (same-origin in the browser). The
+Next.js rewrite and server-side callers use `NEXT_PUBLIC_BACKEND_URL`. The
+backend owns request
 authentication, account context, application authorization, sync orchestration,
 and privileged Supabase calls. Postgres/RLS/RPCs remain authoritative.
 

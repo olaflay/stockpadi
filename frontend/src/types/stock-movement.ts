@@ -10,6 +10,7 @@ export const STOCK_MOVEMENT_SOURCES = [
   "purchase_receipt",
   "adjustment",
   "initial_stock",
+  "sale_refund",
 ] as const;
 
 export type StockMovementSource = (typeof STOCK_MOVEMENT_SOURCES)[number];

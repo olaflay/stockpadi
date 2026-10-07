@@ -8,8 +8,8 @@
       "publicRequired": [
         "NEXT_PUBLIC_SUPABASE_URL",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        "NEXT_PUBLIC_BACKEND_URL",
-        "NEXT_PUBLIC_SITE_URL"
+        "NEXT_PUBLIC_SITE_URL",
+        "NEXT_PUBLIC_BACKEND_URL"
       ],
       "identityVariables": [
         "NEXT_PUBLIC_APP_ENV",
@@ -49,6 +49,7 @@
       "backendRuntime": "Node.js local server",
       "frontendDestination": "http://localhost:3000",
       "backendDestination": "http://localhost:8787",
+      "apiOrigin": "http://localhost:3000/api",
       "supabase": "An explicitly selected hosted project or local Supabase stack",
       "nodeEnv": ["development", "production"]
     },
@@ -57,6 +58,7 @@
       "backendRuntime": "Vercel Node function",
       "frontendDestination": "HTTPS Vercel preview URL",
       "backendDestination": "HTTPS Vercel preview API URL",
+      "apiOrigin": "HTTPS Vercel preview URL/api",
       "supabase": "One explicitly selected non-production project",
       "nodeEnv": ["production"]
     },
@@ -65,6 +67,7 @@
       "backendRuntime": "Vercel Node function",
       "frontendDestination": "HTTPS production frontend URL",
       "backendDestination": "HTTPS production API URL",
+      "apiOrigin": "HTTPS production frontend URL/api",
       "supabase": "One explicitly selected production project",
       "nodeEnv": ["production"]
     }

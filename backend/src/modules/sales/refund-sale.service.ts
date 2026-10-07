@@ -13,13 +13,13 @@ export async function refundSale(db: SupabaseClient, actor: User, request: Refun
   }
 
   const { data, error } = await db.rpc("refund_sale", {
+    p_client_refund_id: request.clientRefundId,
     p_sale_id: request.saleId,
     p_actor_id: actor.id,
     p_business_id: context.businessId,
     p_items: request.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,
-      unit_price: item.unitPrice,
     })),
     p_payments: request.payments.map((p) => ({
       method: p.method,
@@ -38,6 +38,9 @@ export async function refundSale(db: SupabaseClient, actor: User, request: Refun
     if (error.message.includes("exceeds")) {
       throw new HttpError(400, "REFUND_EXCEEDED", error.message);
     }
+    if (error.message.includes("already applied") || error.message.includes("idempotency")) {
+      throw new HttpError(409, "REFUND_IDEMPOTENCY_CONFLICT", error.message);
+    }
     if (error.message.includes("mandatory") || error.message.includes("positive")) {
       throw new HttpError(400, "INVALID_REFUND", error.message);
     }
@@ -49,5 +52,7 @@ export async function refundSale(db: SupabaseClient, actor: User, request: Refun
     refundId: data?.refundId,
     totalRefunded: data?.totalRefunded ?? 0,
     restoredStock: data?.restoredStock ?? 0,
+    items: data?.items ?? [],
+    payments: data?.payments ?? [],
   };
 }

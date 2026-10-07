@@ -32,6 +32,19 @@ function value(env: EnvironmentVariables, name: string): string {
   return env[name]?.trim() ?? "";
 }
 
+function normalizeOrigin(raw: string): string {
+  try {
+    const parsed = new URL(raw.trim());
+    parsed.pathname = "";
+    parsed.search = "";
+    parsed.hash = "";
+    if ((parsed.protocol === "https:" && parsed.port === "443") || (parsed.protocol === "http:" && parsed.port === "80")) parsed.port = "";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return raw.trim().replace(/\/$/, "");
+  }
+}
+
 function isVercel(env: EnvironmentVariables): boolean {
   return value(env, "VERCEL") === "1" || value(env, "VERCEL") === "true";
 }
@@ -85,6 +98,18 @@ function requireUrl(env: EnvironmentVariables, name: string, errors: string[], h
   return raw;
 }
 
+function requireOrigin(env: EnvironmentVariables, name: string, errors: string[], httpsOnly: boolean): string {
+  const raw = requireUrl(env, name, errors, httpsOnly);
+  if (!raw) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.pathname !== "/" || parsed.search || parsed.hash) errors.push(`${name} must be an origin without a path, query, or fragment`);
+  } catch {
+    // requireUrl already recorded the actionable URL error.
+  }
+  return normalizeOrigin(raw);
+}
+
 function requireProjectIdentity(
   env: EnvironmentVariables,
   urlName: string,
@@ -113,12 +138,13 @@ function validateFrontend(env: EnvironmentVariables, environment: RuntimeEnviron
   const supabaseUrl = requireUrl(env, "NEXT_PUBLIC_SUPABASE_URL", errors, environment !== "local");
   const anonKey = requireValue(env, "NEXT_PUBLIC_SUPABASE_ANON_KEY", errors);
   if (/service_role|secret|private/i.test(anonKey)) errors.push("NEXT_PUBLIC_SUPABASE_ANON_KEY appears to be a server secret");
-  const backendUrl = requireUrl(env, "NEXT_PUBLIC_BACKEND_URL", errors, environment !== "local");
-  requireUrl(env, "NEXT_PUBLIC_SITE_URL", errors, environment !== "local");
+  const backendUrl = requireOrigin(env, "NEXT_PUBLIC_BACKEND_URL", errors, environment !== "local");
+  const siteUrl = requireOrigin(env, "NEXT_PUBLIC_SITE_URL", errors, environment !== "local");
   const projectRef = requireProjectIdentity(env, "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PROJECT_REF", environment, errors);
   const buildVersion = value(env, "NEXT_PUBLIC_BUILD_VERSION");
   if (environment !== "local" && !buildVersion) errors.push("NEXT_PUBLIC_BUILD_VERSION is required outside local development");
   if (environment !== "local" && /localhost|127\.0\.0\.1/i.test(backendUrl)) errors.push("NEXT_PUBLIC_BACKEND_URL must not point to localhost outside local development");
+  if (environment !== "local" && /localhost|127\.0\.0\.1/i.test(siteUrl)) errors.push("NEXT_PUBLIC_SITE_URL must not point to localhost outside local development");
   if (environment !== "local" && /localhost|127\.0\.0\.1/i.test(supabaseUrl)) errors.push("NEXT_PUBLIC_SUPABASE_URL must not point to localhost outside local development");
   return projectRef;
 }
@@ -128,7 +154,7 @@ function validateBackend(env: EnvironmentVariables, environment: RuntimeEnvironm
   requireValue(env, "SUPABASE_ANON_KEY", errors);
   requireValue(env, "SUPABASE_SERVICE_ROLE_KEY", errors);
   const frontendOrigins = value(env, "FRONTEND_ORIGINS") || requireValue(env, "FRONTEND_ORIGIN", errors);
-  requireUrl(env, "BACKEND_URL", errors, environment !== "local");
+  requireOrigin(env, "BACKEND_URL", errors, environment !== "local");
   const projectRef = requireProjectIdentity(env, "SUPABASE_URL", "SUPABASE_PROJECT_REF", environment, errors);
   const buildVersion = value(env, "BUILD_VERSION");
   if (environment !== "local" && !buildVersion && !value(env, "VERCEL_GIT_COMMIT_SHA")) errors.push("BUILD_VERSION or VERCEL_GIT_COMMIT_SHA is required outside local development");
@@ -159,9 +185,12 @@ export function validateRuntimeEnvironment(
   env: EnvironmentVariables,
   component: EnvironmentComponent,
 ): EnvironmentValidationResult {
-  const environment = resolveRuntimeEnvironment(env, component);
-  const errors: string[] = [];
   const environmentVariable = component === "frontend" ? "NEXT_PUBLIC_APP_ENV" : "APP_ENV";
+  const declaredEnvironment = value(env, environmentVariable);
+  const validEnvironments = ["local", "staging", "production"];
+  const errors: string[] = [];
+  if (declaredEnvironment && !validEnvironments.includes(declaredEnvironment)) errors.push(`${environmentVariable} must be local, staging, or production`);
+  const environment = resolveRuntimeEnvironment(env, component);
   if (environment !== "local" && !value(env, environmentVariable)) errors.push(`${environmentVariable} is required outside local development`);
   if (value(env, "NODE_ENV") === "production" && !value(env, environmentVariable)) errors.push(`${environmentVariable} is required when NODE_ENV=production`);
   const projectRef = component === "frontend"
@@ -186,11 +215,11 @@ export function validateEnvironmentPair(
   const errors = [...frontend.errors.map((error) => `frontend: ${error}`), ...backend.errors.map((error) => `backend: ${error}`)];
   if (frontend.environment !== backend.environment) errors.push("frontend and backend APP_ENV values do not match");
   if (frontend.projectRef && backend.projectRef && frontend.projectRef !== backend.projectRef) errors.push("frontend and backend Supabase project references do not match");
-  const frontendBackendUrl = value(frontendEnv, "NEXT_PUBLIC_BACKEND_URL").replace(/\/$/, "");
-  const backendUrl = value(backendEnv, "BACKEND_URL").replace(/\/$/, "");
+  const frontendBackendUrl = normalizeOrigin(value(frontendEnv, "NEXT_PUBLIC_BACKEND_URL"));
+  const backendUrl = normalizeOrigin(value(backendEnv, "BACKEND_URL"));
   if (frontendBackendUrl && backendUrl && frontendBackendUrl !== backendUrl) errors.push("NEXT_PUBLIC_BACKEND_URL does not match BACKEND_URL");
-  const frontendSiteUrl = value(frontendEnv, "NEXT_PUBLIC_SITE_URL").replace(/\/$/, "");
-  const backendOrigins = (value(backendEnv, "FRONTEND_ORIGINS") || value(backendEnv, "FRONTEND_ORIGIN")).split(",").map((item) => item.trim().replace(/\/$/, ""));
+  const frontendSiteUrl = normalizeOrigin(value(frontendEnv, "NEXT_PUBLIC_SITE_URL"));
+  const backendOrigins = (value(backendEnv, "FRONTEND_ORIGINS") || value(backendEnv, "FRONTEND_ORIGIN")).split(",").map((item) => normalizeOrigin(item));
   if (frontendSiteUrl && backendOrigins.filter(Boolean).length > 0 && !backendOrigins.includes(frontendSiteUrl)) errors.push("backend CORS origins do not include NEXT_PUBLIC_SITE_URL");
   if (frontend.buildVersion !== "local" && backend.buildVersion !== "local" && frontend.buildVersion !== backend.buildVersion) errors.push("frontend and backend build versions do not match");
   return { ok: errors.length === 0, errors };

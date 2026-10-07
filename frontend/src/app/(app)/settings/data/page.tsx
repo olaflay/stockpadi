@@ -44,7 +44,7 @@ export default function DataSettingsPage() {
 
   async function handleExportBackup() {
     try {
-      const [profile, branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases] = await Promise.all([
+      const [businessProfile, branches, products, categories, customers, customerCreditMovements, stockMovements, sales, expenses, suppliers, purchases, saleRefunds] = await Promise.all([
         db.businessProfile.toArray(),
         tenantArray(db.branches),
         tenantArray(db.products),
@@ -56,6 +56,7 @@ export default function DataSettingsPage() {
         tenantArray(db.expenses),
         tenantArray(db.suppliers),
         tenantArray(db.purchases),
+        tenantArray(db.saleRefunds),
       ]);
 
       const branding = getBrandingConfig();
@@ -64,7 +65,7 @@ export default function DataSettingsPage() {
         legacyAppName: "stockpadi",
         version: 2,
         exportedAt: new Date().toISOString(),
-        data: { profile, branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases },
+        data: { businessProfile, branches, products, categories, customers, customerCreditMovements, stockMovements, sales, expenses, suppliers, purchases, saleRefunds },
       };
 
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
@@ -101,9 +102,9 @@ export default function DataSettingsPage() {
         return;
       }
 
-      const { branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases } = backup.data;
+      const { businessProfile, branches, products, categories, customers, customerCreditMovements, creditMovements, stockMovements, sales, expenses, suppliers, purchases, saleRefunds } = backup.data;
       const activeBusinessId = await getLocalBusinessId();
-      const importedRows = [branches, products, categories, customers, creditMovements, stockMovements, sales, expenses, suppliers, purchases]
+      const importedRows = [businessProfile, branches, products, categories, customers, customerCreditMovements ?? creditMovements, stockMovements, sales, expenses, suppliers, purchases, saleRefunds]
         .flatMap((rows) => Array.isArray(rows) ? rows : []);
       if (!activeBusinessId || importedRows.some((row) => row.businessId && row.businessId !== activeBusinessId)) {
         showToast("This backup was made for a different shop. It can't be restored here.", "danger");

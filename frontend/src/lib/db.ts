@@ -5,6 +5,7 @@ import type { SyncQueueItem } from "@/types/sync";
 import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
 import type { Supplier, Purchase } from "@/types/purchase";
+import type { SaleRefund } from "@/types/sale-refund";
 
 /**
  * Local-first store. Every screen reads from here and renders immediately;
@@ -228,6 +229,7 @@ class StockPadiDB extends Dexie {
   customerCreditMovements!: EntityTable<CustomerCreditMovement, "id">;
   stockMovements!: EntityTable<StockMovement, "id">;
   sales!: EntityTable<Sale, "id">;
+  saleRefunds!: EntityTable<SaleRefund, "id">;
   outbox!: EntityTable<SyncQueueItem, "clientId">;
   localUsers!: EntityTable<LocalUser, "id">;
   session!: EntityTable<LocalSession, "id">;
@@ -420,6 +422,13 @@ class StockPadiDB extends Dexie {
     // do not implement Web Locks without changing or deleting outbox rows.
     this.version(16).stores({
       syncLeases: "id, businessId, expiresAt",
+    });
+
+    // Refunds are online-only, server-authorized append-only records. They are
+    // mirrored locally only after the authoritative RPC acknowledges them, and
+    // the stable refund id makes a lost response safe to retry.
+    this.version(17).stores({
+      saleRefunds: "id, businessId, clientRefundId, saleId, branchId, createdAtLocal",
     });
   }
 }

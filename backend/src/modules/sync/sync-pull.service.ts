@@ -8,7 +8,8 @@ import { tolerantSelect } from "../../shared/database/tolerant-select.js";
 const PAGE_SIZE = 200;
 const CURSOR_DATASETS = new Set([
   "business_profile", "customers", "credit_movements", "branches", "categories",
-  "products", "suppliers", "inventory", "sales", "expenses", "purchases",
+  "products", "suppliers", "inventory", "sales", "expenses", "purchases", "sale_refunds",
+  "sale_refunds",
 ]);
 type TimestampPosition = { time: string; id: string };
 type InventoryPosition = { time: string; productId: string; branchId: string };
@@ -228,6 +229,26 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
     ]) : [[], { data: [], error: null }];
     if (paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", paymentError.message);
     more.push(page.hasMore); return page.records.map((sale) => ({ ...sale, items: (saleItems ?? []).filter((item) => (item as { sale_id?: unknown }).sale_id === (sale as { id: string }).id), payments: (payments ?? []).filter((payment) => payment.sale_id === (sale as { id: string }).id) }));
+  });
+
+  await pullEntity(entities, "sale_refunds", async () => {
+    if (context.accountType === "WORKER" && !hasCapability(context, "VIEW_REPORTS")) return skip("sale_refunds");
+    allow("sale_refunds");
+    let query = db.from("sale_refunds").select("id, client_refund_id, branch_id, sale_id, total_refunded, reason, created_at, created_at_local, actor_user_id").eq("business_id", context.businessId).lte("created_at", cursor.upperWatermark).order("created_at").order("id").limit(PAGE_SIZE + 1);
+    if (context.accountType === "WORKER") query = query.in("branch_id", context.branchIds);
+    const position = cursor.positions.sale_refunds;
+    if (isTimestampPosition(position)) query = query.or(`created_at.gt.${position.time},and(created_at.eq.${position.time},id.gt.${position.id})`); else query = query.gt("created_at", cursor.lowerWatermark);
+    const { data, error } = await query;
+    if (error) throw new HttpError(500, "SALE_REFUNDS_LOAD_FAILED", error.message);
+    const page = takePage(cursor, "sale_refunds", data ?? [], position);
+    const ids = page.records.map((row) => (row as { id: string }).id);
+    const [{ data: items, error: itemError }, { data: payments, error: paymentError }] = ids.length ? await Promise.all([
+      db.from("sale_refund_items").select("refund_id, product_id, quantity, unit_price, total, unit_conversion_factor").in("refund_id", ids),
+      db.from("sale_refund_payments").select("refund_id, method, amount").in("refund_id", ids),
+    ]) : [{ data: [], error: null }, { data: [], error: null }];
+    if (itemError || paymentError) throw new HttpError(500, "SALE_REFUNDS_LOAD_FAILED", itemError?.message ?? paymentError?.message ?? "Could not load refund details");
+    more.push(page.hasMore);
+    return page.records.map((refund) => ({ ...refund, items: (items ?? []).filter((item) => item.refund_id === (refund as { id: string }).id), payments: (payments ?? []).filter((payment) => payment.refund_id === (refund as { id: string }).id) }));
   });
 
   for (const [entity, table, select] of [["expenses", "expenses", "id, branch_id, category, amount, note, created_at, created_by_user_id"], ["purchases", "purchases", "id, client_id, branch_id, supplier_id, status, created_at, created_by_user_id"]] as const) {

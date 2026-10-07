@@ -3,7 +3,6 @@ import { HttpError } from "../../shared/errors/http-error.js";
 export interface RefundItemInput {
   productId: string;
   quantity: number;
-  unitPrice: number;
 }
 
 export interface RefundPaymentInput {
@@ -12,6 +11,8 @@ export interface RefundPaymentInput {
 }
 
 export interface RefundSaleRequest {
+  /** Stable client intent identity. It is the database idempotency key. */
+  clientRefundId: string;
   saleId: string;
   reason: string;
   items: RefundItemInput[];
@@ -26,6 +27,10 @@ export function parseRefundSaleRequest(input: unknown): RefundSaleRequest {
 
   if (typeof body.saleId !== "string" || !body.saleId.trim()) {
     throw new HttpError(400, "INVALID_BODY", "saleId is required");
+  }
+
+  if (typeof body.clientRefundId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.clientRefundId.trim())) {
+    throw new HttpError(400, "INVALID_BODY", "clientRefundId must be a valid UUID");
   }
 
   if (typeof body.reason !== "string" || !body.reason.trim()) {
@@ -44,18 +49,16 @@ export function parseRefundSaleRequest(input: unknown): RefundSaleRequest {
     if (typeof it.productId !== "string" || !it.productId.trim()) {
       throw new HttpError(400, "INVALID_BODY", `productId is required for item at index ${idx}`);
     }
+    if (Object.prototype.hasOwnProperty.call(it, "unitPrice")) {
+      throw new HttpError(400, "INVALID_BODY", "Refund unitPrice is server-authoritative and must not be supplied");
+    }
     const quantity = Number(it.quantity);
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new HttpError(400, "INVALID_BODY", `quantity must be a positive integer for item at index ${idx}`);
     }
-    const unitPrice = Number(it.unitPrice);
-    if (Number.isNaN(unitPrice) || unitPrice < 0) {
-      throw new HttpError(400, "INVALID_BODY", `unitPrice must be a non-negative number for item at index ${idx}`);
-    }
     return {
       productId: it.productId.trim(),
       quantity,
-      unitPrice,
     };
   });
 
@@ -83,6 +86,7 @@ export function parseRefundSaleRequest(input: unknown): RefundSaleRequest {
   });
 
   return {
+    clientRefundId: body.clientRefundId.trim(),
     saleId: body.saleId.trim(),
     reason: body.reason.trim(),
     items,

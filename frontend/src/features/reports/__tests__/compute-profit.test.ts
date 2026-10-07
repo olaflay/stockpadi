@@ -49,6 +49,8 @@ describe("computeGrossProfit and computeCogs", () => {
             unitLabel: "piece",
             conversionFactor: 1,
             movementClientId: "move-1",
+            unitCost: 300,
+            costBasis: "snapshot",
           },
         ],
         payments: [{ method: "cash", amount: 800 }],
@@ -87,7 +89,7 @@ describe("computeGrossProfit and computeCogs", () => {
 
     // Mathematical reconciliation: Revenue - COGS === Gross Profit
     const revenue = sales.reduce((sum, s) => sum + s.total, 0);
-    expect(revenue - cogs).toBe(grossProfit);
+    expect(revenue - cogs!).toBe(grossProfit);
   });
 });
 

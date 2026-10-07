@@ -16,6 +16,6 @@ export function usePendingSyncCount(): number {
 
 /** Count of outbox items the server rejected, drives the retry indicator. */
 export function useFailedSyncCount(): number {
-  const count = useLiveQuery(async () => (await tenantArray(db.outbox.where("status").anyOf("failed", "conflict"))).length, [], 0);
+  const count = useLiveQuery(async () => (await tenantArray(db.outbox.where("status").anyOf("failed", "conflict", "needs_review"))).length, [], 0);
   return count ?? 0;
 }

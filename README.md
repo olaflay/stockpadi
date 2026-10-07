@@ -129,7 +129,7 @@ Environment key guide:
 | `NEXT_PUBLIC_SUPABASE_URL` | `frontend/.env.local` | Public Supabase project URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `frontend/.env.local` | Public anonymous browser key. |
 | `NEXT_PUBLIC_SITE_URL` | `frontend/.env.local` | Browser URL of the frontend. |
-| `NEXT_PUBLIC_BACKEND_URL` | `frontend/.env.local` | HTTPS URL of the deployed backend. |
+| `NEXT_PUBLIC_BACKEND_URL` | `frontend/.env.local` or Vercel build variables | HTTPS backend URL used by the Next.js `/api/*` rewrite and server-side callers. Browser feature code remains same-origin `/api/*`. |
 | `NEXT_PUBLIC_BUSINESS_NAME` | `frontend/.env.local` | Optional displayed brand name. |
 | `NEXT_PUBLIC_BRAND_ACCENT_COLOR` | `frontend/.env.local` | Optional brand color. |
 | `NEXT_PUBLIC_BRAND_LOGO_URL` | `frontend/.env.local` | Optional public logo URL. |
@@ -226,7 +226,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The backend must be running and `NEXT_PUBLIC_BACKEND_URL` must be correct, otherwise registration and account-context requests will fail.
+The backend must be running and `NEXT_PUBLIC_BACKEND_URL` must be correct, otherwise the Next.js `/api/*` rewrite and server-side registration/account-context requests will fail.
 
 ## Test each account
 
@@ -375,8 +375,7 @@ Output directory: leave empty
 Do not set a Start command. Add the private variables from
 `backend/.env.example`. After deployment, verify both
 `https://YOUR_BACKEND_DOMAIN/` and `https://YOUR_BACKEND_DOMAIN/health`, then
-set the frontend `NEXT_PUBLIC_BACKEND_URL` to that URL and redeploy the
-frontend.
+set the frontend `NEXT_PUBLIC_BACKEND_URL` to that URL and redeploy the frontend.
 
 The root directory is an orchestration workspace, not a third Vercel project;
 deploy the frontend and backend as the two projects above.

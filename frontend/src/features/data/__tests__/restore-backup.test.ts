@@ -35,8 +35,8 @@ function saleRow(id: string, total: number): Sale {
     businessId: BUSINESS_ID,
     branchId: "br1",
     customerId: null,
-    items: [],
-    payments: [],
+    items: [{ productId: "p1", quantity: 10, unitPrice: total / 10, discount: 0, unitLabel: "piece", conversionFactor: 1, movementClientId: `movement-${id}`, unitCost: 100, costBasis: "snapshot" }],
+    payments: [{ method: "cash", amount: total }],
     subtotal: total,
     discount: 0,
     total,
@@ -59,7 +59,7 @@ function backupAtT1() {
     categories: [],
     customers: [],
     customerCreditMovements: [],
-    stockMovements: [{ id: "mv1", businessId: BUSINESS_ID, productId: "p1", delta: -10 }],
+    stockMovements: [{ id: "mv1", businessId: BUSINESS_ID, branchId: "br1", productId: "p1", quantityDelta: -10, source: "sale", sourceReferenceId: "sale-t1", reasonCode: null, clientId: "mv-client-1", createdAtLocal: "2026-03-01T10:00:00.000Z", createdAt: "2026-03-01T10:00:00.000Z", createdByUserId: "user-1" }],
     sales: [saleRow("sale-t1", 1500)],
     expenses: [],
     suppliers: [],
@@ -171,5 +171,18 @@ describe("backup restore must not desynchronise the outbox from the ledger", () 
     await restoreBackup(backupAtT1(), { businessId: BUSINESS_ID, discardOutbox: true });
 
     expect((await db.outbox.toArray()).map((r) => r.clientId)).toEqual(["other"]);
+  });
+
+  it("replaces only the selected tenant's records", async () => {
+    await db.products.bulkAdd([
+      productRow("a-stale", "A stale"),
+      { ...productRow("b-keep", "Business B product"), businessId: "business-b" } as Product,
+    ]);
+    await db.sales.add({ ...saleRow("b-sale", 900), businessId: "business-b" } as Sale);
+
+    await restoreBackup(backupAtT1(), { businessId: BUSINESS_ID, discardOutbox: false });
+
+    expect((await db.products.toArray()).map((row) => row.id).sort()).toEqual(["b-keep", "p1"]);
+    expect((await db.sales.toArray()).map((row) => row.id)).toEqual(["b-sale", "sale-t1"]);
   });
 });

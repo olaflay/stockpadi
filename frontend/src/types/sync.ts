@@ -11,7 +11,7 @@ export type SyncPushRequest = ContractSyncPushRequest;
  * authoritative branch projection; `awaitingConfirmation` carries that
  * internal detail without inventing a fifth visible state.
  */
-export type SyncItemStatus = "pending" | "syncing" | "blocked" | "failed" | "conflict";
+export type SyncItemStatus = "pending" | "syncing" | "blocked" | "failed" | "conflict" | "needs_review";
 
 export interface SyncQueueItem<TPayload = unknown> {
   clientId: string;
@@ -33,6 +33,12 @@ export interface SyncQueueItem<TPayload = unknown> {
   lastErrorMessage?: string | null;
   nextAttemptAt?: string | null;
   lastAttemptAt?: string | null;
+  lastHttpStatus?: number | null;
+  lastServerResponse?: { code?: string; message?: string; status?: number } | null;
+  reconciliationStatus?: "open" | "needs_review" | "resolved";
+  reconciliationReason?: string | null;
+  reconciledAt?: string | null;
+  resolutionMetadata?: Record<string, unknown> | null;
   /** Upload succeeded; keep its local ledger delta until a pull confirms it. */
   awaitingConfirmation?: boolean;
   /** Durable ordering key. Older rows without one fall back to createdAtLocal. */

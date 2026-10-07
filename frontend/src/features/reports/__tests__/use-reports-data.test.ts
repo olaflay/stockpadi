@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { db } from "@/lib/db";
+import { setLocalBusinessId } from "@/lib/local-tenant";
 import { useReportsData } from "@/features/reports/use-reports-data";
 import { LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import type { Sale } from "@/types/sale";
@@ -298,6 +299,17 @@ describe("useReportsData", () => {
     });
 
     expect(result.current.result?.sales.length).toBe(1);
+  });
+
+  it("does not infer historical sales from another tenant's local cache", async () => {
+    await setLocalBusinessId("business-a");
+    await db.sales.add({ ...sale({ id: "business-b-sale" }), businessId: "business-b" } as Sale);
+
+    const { result } = renderHook(() => useReportsData());
+    await waitFor(() => expect(result.current.result).toBeDefined());
+
+    expect(result.current.result?.sales).toHaveLength(0);
+    expect(result.current.hasAnyHistoricalSales).toBe(false);
   });
 
   it("returns all historical sales when period is all_time and computes dayOfWeekStats", async () => {

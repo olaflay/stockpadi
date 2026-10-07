@@ -22,11 +22,12 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FilterDropdownBar } from "@/components/ui/FilterDropdownBar";
 import { formatCurrency } from "@/lib/format";
 import { PERIOD_LABELS, type Period, type DayOfWeekStat } from "@/features/reports/use-reports-data";
-import { computeGrossProfit } from "@/features/reports/compute-profit";
+import { computeHistoricalProfitMetrics } from "@/features/reports/compute-profit";
 import type { Sale } from "@/types/sale";
 import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
+import type { SaleRefund } from "@/types/sale-refund";
 
 
 export function ReportsBody({
@@ -40,11 +41,11 @@ export function ReportsBody({
   periodExpensesTotal,
   periodPurchases,
   periodPurchasesTotal,
+  periodRefunds,
   bestSellers,
   lowStockProducts,
-  products = [],
-  periodGrossProfit,
   periodNetProfit,
+  profitMetrics,
   periodNetCashFlow,
   stockCostValue = 0,
   stockRetailValue = 0,
@@ -60,11 +61,11 @@ export function ReportsBody({
   periodExpensesTotal: number;
   periodPurchases: Purchase[];
   periodPurchasesTotal: number;
+  periodRefunds: SaleRefund[];
   bestSellers: { product: Product | undefined; quantity: number }[];
   lowStockProducts: Product[];
-  products?: Product[];
-  periodGrossProfit: number;
-  periodNetProfit: number;
+  periodNetProfit: number | null;
+  profitMetrics: { cogs: number | null; costStatus: "exact" | "reconstructed" | "unavailable"; unavailableCostLines: number };
   periodNetCashFlow: number;
   stockCostValue?: number;
   stockRetailValue?: number;
@@ -77,13 +78,16 @@ export function ReportsBody({
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
   // Macro metrics
-  const totalRevenue = periodSales.reduce((sum, s) => sum + s.total, 0);
+  const totalRevenue = periodSales.reduce((sum, s) => sum + s.total, 0) - periodRefunds.reduce((sum, refund) => sum + refund.totalRefunded, 0);
   const totalExpenses = periodExpensesTotal;
   const totalRestocks = periodPurchasesTotal;
-  const totalCogs = Math.max(0, totalRevenue - periodGrossProfit);
+  const totalCogs = profitMetrics.cogs;
   const averageSaleValue = periodSales.length > 0 ? Math.round(totalRevenue / periodSales.length) : 0;
 
   // Real cash received from sales (excluding unpaid credit)
+  const cashRefunds = periodRefunds.reduce((sum, refund) => sum + refund.payments
+    .filter((payment) => payment.method !== "credit")
+    .reduce((paymentSum, payment) => paymentSum + payment.amount, 0), 0);
   const cashReceivedFromSales = periodSales.reduce((sum, s) => {
     if (s.voidedAt) return sum;
     return (
@@ -92,9 +96,12 @@ export function ReportsBody({
         .filter((p) => p.method !== "credit")
         .reduce((pSum, p) => pSum + p.amount, 0)
     );
-  }, 0);
+  }, 0) - cashRefunds;
 
   // Credit sales ("Money outside")
+  const creditRefunds = periodRefunds.reduce((sum, refund) => sum + refund.payments
+    .filter((payment) => payment.method === "credit")
+    .reduce((paymentSum, payment) => paymentSum + payment.amount, 0), 0);
   const totalCreditSales = periodSales.reduce((sum, s) => {
     if (s.voidedAt) return sum;
     return (
@@ -103,7 +110,7 @@ export function ReportsBody({
         .filter((p) => p.method === "credit")
         .reduce((pSum, p) => pSum + p.amount, 0)
     );
-  }, 0);
+  }, 0) - creditRefunds;
 
   const maxDayRevenue = Math.max(1, ...dayOfWeekStats.map((d) => d.total));
   const peakDay = dayOfWeekStats.find((d) => d.total > 0 && d.total === maxDayRevenue);
@@ -118,6 +125,7 @@ export function ReportsBody({
       sales: Sale[];
       expenses: Expense[];
       purchases: Purchase[];
+      refunds: SaleRefund[];
     }
   >();
 
@@ -132,7 +140,7 @@ export function ReportsBody({
         month: "short",
       });
       const dayShort = d.toLocaleDateString("en-GB", { weekday: "short" });
-      dayMap.set(iso, { dateIso: iso, dayName, dayShort, sales: [], expenses: [], purchases: [] });
+      dayMap.set(iso, { dateIso: iso, dayName, dayShort, sales: [], expenses: [], purchases: [], refunds: [] });
     }
     dayMap.get(iso)!.sales.push(s);
   }
@@ -147,7 +155,7 @@ export function ReportsBody({
         month: "short",
       });
       const dayShort = d.toLocaleDateString("en-GB", { weekday: "short" });
-      dayMap.set(iso, { dateIso: iso, dayName, dayShort, sales: [], expenses: [], purchases: [] });
+      dayMap.set(iso, { dateIso: iso, dayName, dayShort, sales: [], expenses: [], purchases: [], refunds: [] });
     }
     dayMap.get(iso)!.expenses.push(e);
   }
@@ -159,10 +167,21 @@ export function ReportsBody({
     }
   }
 
+  for (const refund of periodRefunds) {
+    const iso = (refund.createdAtLocal || refund.createdAt).slice(0, 10);
+    if (!dayMap.has(iso)) {
+      const d = new Date(iso);
+      const dayName = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+      const dayShort = d.toLocaleDateString("en-GB", { weekday: "short" });
+      dayMap.set(iso, { dateIso: iso, dayName, dayShort, sales: [], expenses: [], purchases: [], refunds: [] });
+    }
+    dayMap.get(iso)!.refunds.push(refund);
+  }
+
   const dailySummaries = Array.from(dayMap.values())
     .sort((a, b) => b.dateIso.localeCompare(a.dateIso))
     .map((entry) => {
-      const totalSales = entry.sales.reduce((sum, s) => sum + s.total, 0);
+      const totalSales = entry.sales.reduce((sum, s) => sum + s.total, 0) - entry.refunds.reduce((sum, refund) => sum + refund.totalRefunded, 0);
       const expensesTotal = entry.expenses.reduce((sum, e) => sum + e.amount, 0);
       const purchasesTotal = entry.purchases.reduce(
         (sum, p) => sum + (p.items?.reduce((iSum, i) => iSum + i.quantity * i.unitCost, 0) || 0),
@@ -173,10 +192,12 @@ export function ReportsBody({
           .filter((p) => p.method !== "credit")
           .reduce((pSum, p) => pSum + p.amount, 0);
         return sum + nonCredit;
-      }, 0);
+      }, 0) - entry.refunds.reduce((sum, refund) => sum + refund.payments
+        .filter((payment) => payment.method !== "credit")
+        .reduce((paymentSum, payment) => paymentSum + payment.amount, 0), 0);
       const netCashFlow = cashReceived - expensesTotal - purchasesTotal;
-      const grossProfit = computeGrossProfit(entry.sales, products);
-      const netProfit = grossProfit - expensesTotal;
+      const grossProfit = computeHistoricalProfitMetrics(entry.sales, entry.refunds).grossProfit;
+      const netProfit = grossProfit === null ? null : grossProfit - expensesTotal;
 
       return {
         ...entry,
@@ -399,19 +420,19 @@ export function ReportsBody({
                 </div>
                 <div className="flex items-center gap-2">
                   <PerformancePill
-                    tone={periodNetProfit >= 0 ? "success" : "danger"}
-                    icon={periodNetProfit >= 0 ? TrendingUp : TrendingDown}
-                    label={periodNetProfit >= 0 ? "Profitable" : "Deficit"}
+                    tone={periodNetProfit !== null && periodNetProfit >= 0 ? "success" : "danger"}
+                    icon={periodNetProfit !== null && periodNetProfit >= 0 ? TrendingUp : TrendingDown}
+                    label={periodNetProfit === null ? "Cost unavailable" : periodNetProfit >= 0 ? "Profitable" : "Deficit"}
                   />
                   {showProfitBreakdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
               </div>
               <p
                 className={`mt-1 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
-                  periodNetProfit >= 0 ? "text-success" : "text-danger"
+                  periodNetProfit !== null && periodNetProfit >= 0 ? "text-success" : "text-danger"
                 }`}
               >
-                {formatCurrency(periodNetProfit)}
+                {periodNetProfit === null ? "Unavailable" : formatCurrency(periodNetProfit)}
               </p>
             </button>
 
@@ -426,7 +447,7 @@ export function ReportsBody({
                 <div className="flex justify-between">
                   <span className="text-on-surface-muted">Product Cost (what you paid)</span>
                   <span className="font-number tabular-nums text-danger font-semibold">
-                    -{formatCurrency(totalCogs)}
+                    {totalCogs === null ? "Unavailable" : `-${formatCurrency(totalCogs)}`}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -439,10 +460,10 @@ export function ReportsBody({
                   <span className="text-on-surface">Clean Profit</span>
                   <span
                     className={`font-number tabular-nums ${
-                      periodNetProfit >= 0 ? "text-success" : "text-danger"
+                      periodNetProfit !== null && periodNetProfit >= 0 ? "text-success" : "text-danger"
                     }`}
                   >
-                    {formatCurrency(periodNetProfit)}
+                    {periodNetProfit === null ? "Unavailable" : formatCurrency(periodNetProfit)}
                   </span>
                 </div>
 
@@ -617,7 +638,7 @@ export function ReportsBody({
           ) : (
             filteredDailySummaries.map((day) => {
               const isExpanded = expandedDays.has(day.dateIso);
-              const isProfitPositive = day.netProfit >= 0;
+              const isProfitPositive = day.netProfit !== null && day.netProfit >= 0;
 
               return (
                 <div
@@ -654,7 +675,7 @@ export function ReportsBody({
                             isProfitPositive ? "text-success" : "text-danger"
                           }`}
                         >
-                          {formatCurrency(day.netProfit)}
+                          {day.netProfit === null ? "Unavailable" : formatCurrency(day.netProfit)}
                         </p>
                         <span className="text-[10px] text-on-surface-muted">
                           Expenses: -{formatCurrency(day.expensesTotal)}

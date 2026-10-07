@@ -20,7 +20,7 @@ const requiredRelations = [
 ];
 const requiredFunctions = [
   "public.sync_apply_batch(jsonb,uuid)", "public.sync_apply_product(jsonb,uuid)",
-  "public.sync_apply_sale(jsonb,uuid)", "public.refund_sale(uuid,uuid,uuid,jsonb,jsonb,text)",
+  "public.sync_apply_sale(jsonb,uuid)", "public.refund_sale(uuid,uuid,uuid,uuid,jsonb,jsonb,text)",
 ];
 
 const client = new pg.Client({ connectionString, ssl: { rejectUnauthorized: false } });

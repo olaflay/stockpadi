@@ -8,6 +8,8 @@ const configuredDevOrigins = (process.env.NEXT_PUBLIC_DEV_ORIGINS ?? "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Browser requests stay same-origin. This value is the Next.js rewrite and
+// server-side upstream target; browser feature code still calls /api/*.
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
 const environmentValidation = validateRuntimeEnvironment(process.env, "frontend");
 if (process.env.NODE_ENV !== "test" && !environmentValidation.ok) {

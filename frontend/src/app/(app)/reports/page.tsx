@@ -29,10 +29,10 @@ export default function ReportsPage() {
     periodExpensesTotal,
     periodPurchases,
     periodPurchasesTotal,
+    periodRefunds,
     bestSellers,
-    products,
-    periodGrossProfit,
     periodNetProfit,
+    profitMetrics,
     periodNetCashFlow,
     stockCostValue,
     stockRetailValue,
@@ -94,11 +94,11 @@ export default function ReportsPage() {
         periodExpensesTotal={periodExpensesTotal}
         periodPurchases={periodPurchases}
         periodPurchasesTotal={periodPurchasesTotal}
+        periodRefunds={periodRefunds}
         bestSellers={bestSellers}
         lowStockProducts={lowStockProducts}
-        products={products}
-        periodGrossProfit={periodGrossProfit}
         periodNetProfit={periodNetProfit}
+        profitMetrics={profitMetrics}
         periodNetCashFlow={periodNetCashFlow}
         stockCostValue={stockCostValue}
         stockRetailValue={stockRetailValue}

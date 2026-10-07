@@ -189,7 +189,7 @@ export default function CloseDayPage() {
     try {
       const cycle = await runSyncCycle("manual");
       const queued = (await db.outbox.toArray()).filter((item) =>
-        item.businessId === user.businessId && ["pending", "syncing", "blocked", "failed", "conflict"].includes(item.status),
+        item.businessId === user.businessId && ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"].includes(item.status),
       );
       if (!cycle || cycle.pushResult.pendingRemaining > 0 || queued.length > 0) {
         throw new Error("There are unsynced or unresolved changes. Sync them before closing the day.");
@@ -260,7 +260,7 @@ export default function CloseDayPage() {
       `\n• Customer Credit (Owed): ${formatCurrency(creditTotal)}\n` +
       `• Expenses: ${formatCurrency(todayExpensesTotal)}\n` +
       `------------------------\n` +
-      `Est. Net Profit: ${formatCurrency(netProfit)}\n` +
+      `Est. Net Profit: ${netProfit === null ? "Unavailable (historical cost snapshot missing)" : formatCurrency(netProfit)}\n` +
       `Status: ${isFullyBalanced ? "Fully Balanced" : Math.abs(totalNetVariance) > 0 ? `Variance ${totalNetVariance > 0 ? "+" : ""}${formatCurrency(totalNetVariance)} (Difference)` : "Pending Count"}`;
 
     window.open(buildWhatsAppUrl(whatsappNumber, shareMessage), "_blank");
@@ -310,8 +310,8 @@ export default function CloseDayPage() {
         <hr className="border-border/60" />
         <div className="flex justify-between items-center">
           <span className="text-[length:var(--font-size-body)] text-on-surface-muted">Estimated net profit</span>
-          <span className={`font-number text-[length:var(--font-size-body-lg)] font-bold tabular-nums ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
-            {formatCurrency(netProfit)}
+          <span className={`font-number text-[length:var(--font-size-body-lg)] font-bold tabular-nums ${netProfit !== null && netProfit >= 0 ? "text-success" : "text-danger"}`}>
+            {netProfit === null ? "Unavailable" : formatCurrency(netProfit)}
           </span>
         </div>
       </div>

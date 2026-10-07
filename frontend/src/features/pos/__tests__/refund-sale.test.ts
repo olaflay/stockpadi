@@ -49,10 +49,12 @@ describe("refundSale client", () => {
     await db.sales.clear();
     await db.stockMovements.clear();
     await db.customerCreditMovements.clear();
+    await db.saleRefunds.clear();
     await db.outbox.clear();
 
     // Mock fetch for the backend endpoint
-    vi.stubGlobal("fetch", async () => {
+    vi.stubGlobal("fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body ?? "{}")) as { items?: Array<{ productId: string; quantity: number }>; payments?: Array<{ method: string; amount: number }> };
       return {
         ok: true,
         json: async () => ({
@@ -60,6 +62,8 @@ describe("refundSale client", () => {
           refundId: "refund-uuid-1",
           totalRefunded: 1000,
           restoredStock: 1,
+          items: (request.items ?? []).map((item) => ({ ...item, unitPrice: 1000, total: item.quantity * 1000 })),
+          payments: request.payments ?? [],
         }),
       };
     });
@@ -83,10 +87,11 @@ describe("refundSale client", () => {
   it("rejects when reason is empty", async () => {
     await expect(
       refundSale({
+        clientRefundId: crypto.randomUUID(),
         saleId: "sale-1",
         branchId: BRANCH_ID,
         reason: "   ",
-        items: [{ productId: PRODUCT_ID, quantity: 1, unitPrice: 1000 }],
+        items: [{ productId: PRODUCT_ID, quantity: 1 }],
         payments: [{ method: "cash", amount: 1000 }],
       })
     ).rejects.toThrow(RefundSaleError);
@@ -107,10 +112,11 @@ describe("refundSale client", () => {
 
     // 2. Refund 1 unit @ 1000 cash
     const result = await refundSale({
+      clientRefundId: crypto.randomUUID(),
       saleId: sale.id,
       branchId: BRANCH_ID,
       reason: "Customer returned 1 damaged unit",
-      items: [{ productId: PRODUCT_ID, quantity: 1, unitPrice: 1000 }],
+      items: [{ productId: PRODUCT_ID, quantity: 1 }],
       payments: [{ method: "cash", amount: 1000 }],
     });
 
@@ -136,10 +142,11 @@ describe("refundSale client", () => {
 
     // 2. Refund 1 unit @ 1000 credit
     await refundSale({
+      clientRefundId: crypto.randomUUID(),
       saleId: sale.id,
       branchId: BRANCH_ID,
       reason: "Item returned, debt reduced",
-      items: [{ productId: PRODUCT_ID, quantity: 1, unitPrice: 1000 }],
+      items: [{ productId: PRODUCT_ID, quantity: 1 }],
       payments: [{ method: "credit", amount: 1000 }],
     });
 

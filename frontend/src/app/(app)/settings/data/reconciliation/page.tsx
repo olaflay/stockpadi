@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { formatCurrency } from "@/lib/format";
 import type { SyncQueueItem } from "@/types/sync";
+import { markOutboxNeedsReview } from "@/features/sync/reconcile-outbox";
 
 export default function ReconciliationPage() {
   const user = useCurrentUser();
@@ -61,7 +62,7 @@ export default function ReconciliationPage() {
   }
 
   const failedOrConflictItems = (outboxItems ?? []).filter(
-    (item) => item.status === "failed" || item.status === "conflict" || item.status === "blocked"
+    (item) => item.status === "failed" || item.status === "conflict" || item.status === "blocked" || item.status === "needs_review"
   );
   const pendingItems = (outboxItems ?? []).filter(
     (item) => item.status === "pending" || item.status === "syncing"
@@ -78,7 +79,9 @@ export default function ReconciliationPage() {
     try {
       await db.outbox.update(item.clientId, {
         status: "pending",
-        attemptCount: 0,
+        reconciliationStatus: "open",
+        reconciliationReason: null,
+        reconciledAt: null,
         nextAttemptAt: null,
       });
       showToast("Item queued for immediate sync retry.", "success");
@@ -96,23 +99,9 @@ export default function ReconciliationPage() {
 
     setBusy(true);
     try {
-      // 1. Record immutable audit log
-      await db.auditLogs.add({
-        id: crypto.randomUUID(),
-        clientId: crypto.randomUUID(),
-        actorUserId: user.id,
-        action: "OUTBOX_MUTATION_RECONCILED",
-        entityType: activeItem.type,
-        entityId: activeItem.clientId,
-        beforeState: activeItem,
-        afterState: { status: "reconciled_by_owner", reason: reconcileReason.trim() },
-        createdAtLocal: new Date().toISOString(),
-      });
+      await markOutboxNeedsReview(activeItem, user.id, reconcileReason);
 
-      // 2. Remove reconciled item from outbox so it exits queue
-      await db.outbox.delete(activeItem.clientId);
-
-      showToast("Transaction reconciled and removed from queue.", "success");
+      showToast("Transaction kept safely in the review queue.", "success");
       setIsReconcileModalOpen(false);
       setActiveItem(null);
       setReconcileReason("");
@@ -298,7 +287,7 @@ export default function ReconciliationPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {displayedItems.map((item) => {
-            const isIssue = item.status === "failed" || item.status === "conflict" || item.status === "blocked";
+            const isIssue = item.status === "failed" || item.status === "conflict" || item.status === "blocked" || item.status === "needs_review";
             const payload = item.payload as Record<string, unknown> | undefined;
             const amount = typeof payload?.total === "number" ? payload.total : typeof payload?.amount === "number" ? payload.amount : null;
 
@@ -385,7 +374,7 @@ export default function ReconciliationPage() {
         >
           <div className="flex flex-col gap-4 text-left">
             <p className="text-xs text-on-surface-muted leading-relaxed">
-              Dismissing removes this un-synced mutation from the queue. To maintain strict financial and NDPR audit trust, enter the justification for this reconciliation:
+              This does not delete the mutation or claim that the server applied it. It preserves the original payload for authoritative retry or support review. Enter the reason this item needs review:
             </p>
 
             <div className="flex flex-col gap-1.5">
@@ -419,7 +408,7 @@ export default function ReconciliationPage() {
                 disabled={busy || !reconcileReason.trim()}
                 className="rounded-xl bg-brand-accent px-4 py-2.5 text-xs font-bold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
               >
-                {busy ? "Reconciling…" : "Confirm Reconciliation"}
+                {busy ? "Saving…" : "Mark Needs Review"}
               </RippleButton>
             </div>
           </div>

@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, BUSINESS_PROFILE_SINGLETON_ID, type CustomerCreditMovement } from "@/lib/db";
 import { getLowStockProductIds } from "@/features/inventory/product-insights";
-import { computeGrossProfit, computeNetProfit, computeNetCashFlow } from "./compute-profit";
+import { computeHistoricalProfitMetrics, computeNetProfit, computeNetCashFlow } from "./compute-profit";
 import type { Sale } from "@/types/sale";
 import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
+import type { SaleRefund } from "@/types/sale-refund";
 import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/platform/api/backend-client";
 import { tenantArray } from "@/lib/local-tenant";
 import { getPeriodStartIso, getPeriodBoundsIso, type ReportPeriod } from "@/lib/date";
@@ -42,7 +43,11 @@ type ReportExpense = { id: string; branch_id: string | null; category: string; a
 type ReportPurchaseItem = { product_id: string; quantity: number; unit_cost: number };
 type ReportPurchase = { id: string; client_id?: string; branch_id: string; supplier_id: string; created_at: string; items?: ReportPurchaseItem[] };
 type ReportStock = { product_id: string; quantity: number };
-type ReportResponse = { sales?: ReportSale[]; products?: ReportProduct[]; expenses?: ReportExpense[]; purchases?: ReportPurchase[]; stock?: ReportStock[] };
+type ReportRefundItem = { product_id: string; quantity: number; unit_price: number; total: number; unit_conversion_factor?: number | null };
+type ReportRefundPayment = { method: "cash" | "transfer" | "pos_terminal" | "credit"; amount: number };
+type ReportRefund = { id: string; client_refund_id: string; branch_id: string; sale_id: string; total_refunded: number; reason: string; created_at: string; created_at_local: string; items?: ReportRefundItem[]; payments?: ReportRefundPayment[] };
+type ReportCreditMovement = { id: string; client_id: string; customer_id: string; amount_delta: number; source_reference_id?: string | null; created_at_local: string; created_at: string; created_by_user_id: string };
+type ReportResponse = { sales?: ReportSale[]; refunds?: ReportRefund[]; creditMovements?: ReportCreditMovement[]; products?: ReportProduct[]; expenses?: ReportExpense[]; purchases?: ReportPurchase[]; stock?: ReportStock[] };
 
 export interface DayOfWeekStat {
   day: string;
@@ -57,6 +62,7 @@ interface LocalReportData {
   profile: ReturnType<typeof db.businessProfile.get> extends Promise<infer T> ? T : never;
   expenses: Expense[];
   purchases: Purchase[];
+  refunds: SaleRefund[];
   creditMovements: CustomerCreditMovement[];
   lowStockIds: Set<string>;
   hasAnyHistoricalSales: boolean;
@@ -98,26 +104,29 @@ export function useReportsData(initialPeriod: Period = "today") {
   const localData = useLiveQuery(async (): Promise<LocalReportData> => {
     try {
       const bounds = getPeriodBoundsIso(period, new Date(), customRange);
-      const [allSalesCount, rawSales, products, profile, rawExpenses, rawPurchases, rawCredit] = await Promise.all([
-        db.sales.count(),
+      const [allSales, rawSales, products, profile, rawExpenses, rawPurchases, rawCredit, rawRefunds] = await Promise.all([
+        tenantArray<Sale>(db.sales),
         tenantArray<Sale>(db.sales.where("createdAtLocal").aboveOrEqual(bounds.start)),
         tenantArray<Product>(db.products),
         db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
         tenantArray<Expense>(db.expenses.where("createdAtLocal").aboveOrEqual(bounds.start)),
         tenantArray<Purchase>(db.purchases.where("createdAtLocal").aboveOrEqual(bounds.start)),
         tenantArray<CustomerCreditMovement>(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(bounds.start)),
+        tenantArray<SaleRefund>(db.saleRefunds.where("createdAtLocal").aboveOrEqual(bounds.start)),
       ]);
 
       let sales = rawSales;
       let expenses = rawExpenses;
       let purchases = rawPurchases;
       let creditMovements = rawCredit;
+      let refunds = rawRefunds;
 
       if (bounds.end) {
         sales = sales.filter((s) => s.createdAtLocal <= bounds.end!);
         expenses = expenses.filter((e) => e.createdAtLocal <= bounds.end!);
         purchases = purchases.filter((p) => p.createdAtLocal <= bounds.end!);
         creditMovements = creditMovements.filter((c) => c.createdAtLocal <= bounds.end!);
+        refunds = refunds.filter((refund) => refund.createdAtLocal <= bounds.end!);
       }
 
       const dayOfWeekStats: DayOfWeekStat[] = [
@@ -157,8 +166,9 @@ export function useReportsData(initialPeriod: Period = "today") {
         expenses,
         purchases,
         creditMovements,
+        refunds,
         lowStockIds,
-        hasAnyHistoricalSales: allSalesCount > 0,
+        hasAnyHistoricalSales: allSales.length > 0,
         dayOfWeekStats,
         error: null,
       };
@@ -172,6 +182,7 @@ export function useReportsData(initialPeriod: Period = "today") {
         expenses: [],
         purchases: [],
         creditMovements: [],
+        refunds: [],
         hasAnyHistoricalSales: false,
         dayOfWeekStats: [],
         error: err instanceof Error ? err.message : "Could not load report data.",
@@ -271,6 +282,25 @@ export function useReportsData(initialPeriod: Period = "today") {
           })),
         }));
 
+        const refunds: SaleRefund[] = (remote.refunds ?? []).map((refund) => ({
+          id: refund.id,
+          clientRefundId: refund.client_refund_id,
+          branchId: refund.branch_id,
+          saleId: refund.sale_id,
+          totalRefunded: Number(refund.total_refunded),
+          reason: refund.reason,
+          createdAt: refund.created_at,
+          createdAtLocal: refund.created_at_local,
+          items: (refund.items ?? []).map((item) => ({
+            productId: item.product_id,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total),
+            conversionFactor: item.unit_conversion_factor == null ? undefined : Number(item.unit_conversion_factor),
+          })),
+          payments: (refund.payments ?? []).map((payment) => ({ method: payment.method, amount: Number(payment.amount) })),
+        }));
+
         const stockByProduct = new Map<string, number>();
         for (const row of remote.stock ?? []) {
           stockByProduct.set(row.product_id, (stockByProduct.get(row.product_id) ?? 0) + Number(row.quantity));
@@ -289,7 +319,8 @@ export function useReportsData(initialPeriod: Period = "today") {
           profile: undefined,
           expenses,
           purchases,
-          creditMovements: [],
+          creditMovements: (remote.creditMovements ?? []).map((movement) => ({ id: movement.id, businessId: undefined, clientId: movement.client_id, customerId: movement.customer_id, amountDelta: Number(movement.amount_delta), sourceReferenceId: movement.source_reference_id ?? null, createdAtLocal: movement.created_at_local, createdByUserId: movement.created_by_user_id })),
+          refunds,
           lowStockIds,
           hasAnyHistoricalSales: sales.length > 0,
           dayOfWeekStats: computeDayOfWeekStats(sales),
@@ -330,6 +361,11 @@ export function useReportsData(initialPeriod: Period = "today") {
     (sum: number, p: Purchase) => sum + p.items.reduce((lineSum, i) => lineSum + i.quantity * i.unitCost, 0),
     0
   );
+  const periodRefunds: SaleRefund[] = result && !result.error ? result.refunds.filter((refund) => {
+    const created = refund.createdAtLocal || refund.createdAt;
+    const bounds = getPeriodBoundsIso(period, new Date(), customRange);
+    return created >= bounds.start && (!bounds.end || created <= bounds.end);
+  }) : [];
 
   const quantityByProduct = new Map<string, number>();
   for (const sale of periodSales) {
@@ -345,14 +381,16 @@ export function useReportsData(initialPeriod: Period = "today") {
       quantity,
     }));
 
-  const periodGrossProfit = computeGrossProfit(periodSales, products);
+  const profitMetrics = computeHistoricalProfitMetrics(periodSales, periodRefunds);
+  const periodGrossProfit = profitMetrics.grossProfit;
   const periodNetProfit = computeNetProfit(periodGrossProfit, periodExpenses);
   // Repayments are the only negative-amountDelta movements (credit sales are
   // always positive) — see recordCreditPayment in src/features/customers/record-payment.ts.
+  const refundIds = new Set(periodRefunds.map((refund) => refund.id));
   const creditCollected = (result?.creditMovements ?? [])
-    .filter((m) => m.amountDelta < 0)
+    .filter((m) => m.amountDelta < 0 && !refundIds.has(m.sourceReferenceId ?? ""))
     .reduce((sum, m) => sum + Math.abs(m.amountDelta), 0);
-  const periodNetCashFlow = computeNetCashFlow(periodSales, periodExpenses, periodPurchases, creditCollected);
+  const periodNetCashFlow = computeNetCashFlow(periodSales, periodExpenses, periodPurchases, creditCollected, periodRefunds);
 
   // Compute total on-shelf stock valuation (Retail worth vs Capital spent)
   const stockByProduct = result?.stockByProduct ?? new Map<string, number>();
@@ -376,12 +414,14 @@ export function useReportsData(initialPeriod: Period = "today") {
     periodSales,
     periodExpenses,
     periodExpensesTotal,
+    periodRefunds,
     periodPurchases,
     periodPurchasesTotal,
     bestSellers,
     products: products ?? [],
     periodGrossProfit,
     periodNetProfit,
+    profitMetrics,
     periodNetCashFlow,
     stockCostValue,
     stockRetailValue,

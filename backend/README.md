@@ -87,7 +87,8 @@ Set `NODE_ENV=production`, set `FRONTEND_ORIGIN` (or `FRONTEND_ORIGINS`) to the
 exact deployed frontend URL, and add the Supabase and SMTP secrets from
 `.env.example` in the Vercel project settings. Then verify both `/` and
 `/health`, set the frontend `NEXT_PUBLIC_BACKEND_URL` to the resulting HTTPS
-API URL, and redeploy the frontend.
+API URL, and redeploy the frontend. Browser feature requests still use
+same-origin `/api/*`.
 
 ## Database boundary
 

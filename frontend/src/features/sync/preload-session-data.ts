@@ -6,6 +6,7 @@ import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
 import type { Purchase } from "@/types/purchase";
 import type { Sale } from "@/types/sale";
+import type { SaleRefund } from "@/types/sale-refund";
 import type { SyncQueueItem } from "@/types/sync";
 
 let lastPreloadAt = 0;
@@ -15,19 +16,19 @@ let lastPreloadResult: SessionPreloadResult | null = null;
 // download: the server cursor only returns rows newer than the last completed
 // watermark.
 const PRELOAD_THROTTLE_MS = 3 * 60 * 1000;
-const PROTECTED_OUTBOX_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict"];
+const PROTECTED_OUTBOX_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"];
 const MAX_PULL_RETRY_COUNT = 6;
 const BASE_PULL_RETRY_MS = 5_000;
 const MAX_PULL_RETRY_MS = 5 * 60_000;
 const PULL_ENTITIES = [
   "business_profile", "customers", "credit_movements", "branches", "categories",
-  "products", "suppliers", "inventory", "expenses", "purchases", "sales",
+  "products", "suppliers", "inventory", "expenses", "purchases", "sales", "sale_refunds",
 ] as const;
 type PullEntityName = (typeof PULL_ENTITIES)[number];
 const PULL_ENTITY_SET = new Set<string>(PULL_ENTITIES);
 const APPLY_ORDER: PullEntityName[] = [
   "business_profile", "branches", "categories", "products", "suppliers",
-  "customers", "credit_movements", "expenses", "purchases", "sales", "inventory",
+  "customers", "credit_movements", "expenses", "purchases", "sales", "sale_refunds", "inventory",
 ];
 
 export type SyncPullTrigger =
@@ -400,6 +401,8 @@ function validateEntityRecords(entity: PullEntityName, records: unknown[], local
         requireString(value.id, "id", entity); requireString(value.branch_id, "branch_id", entity); requireString(value.supplier_id, "supplier_id", entity); requireTimestamp(value.created_at, "created_at", entity); requireArray(value.items, "items", entity); break;
       case "sales":
         requireString(value.id, "id", entity); requireString(value.branch_id, "branch_id", entity); requireFiniteNumber(value.total, "total", entity); requireTimestamp(value.created_at, "created_at", entity); requireArray(value.items, "items", entity); requireArray(value.payments, "payments", entity); break;
+      case "sale_refunds":
+        requireString(value.id, "id", entity); requireString(value.client_refund_id, "client_refund_id", entity); requireString(value.sale_id, "sale_id", entity); requireString(value.branch_id, "branch_id", entity); requireFiniteNumber(value.total_refunded, "total_refunded", entity); requireTimestamp(value.created_at, "created_at", entity); requireArray(value.items, "items", entity); requireArray(value.payments, "payments", entity); break;
     }
   }
 }
@@ -451,6 +454,7 @@ async function applyEntity(entity: string, records: unknown[], businessId: strin
     case "expenses": return applyExpenses(records, businessId);
     case "purchases": return applyPurchases(records, businessId);
     case "sales": return applySales(records, businessId);
+    case "sale_refunds": return applySaleRefunds(records, businessId);
     default: throw new Error(`Unsupported pull entity: ${entity}`);
   }
 }
@@ -655,6 +659,17 @@ async function applySales(records: unknown[], businessId: string): Promise<numbe
     createdAtLocal: (sale.created_at_local as string) || (sale.created_at as string) || new Date().toISOString(), createdAt: (sale.created_at as string) || new Date().toISOString(), createdByUserId: (sale.created_by_user_id as string) || "server-sync", voidedAt: (sale.voided_at as string) || null,
   } as Sale)));
   return sales.length;
+}
+
+async function applySaleRefunds(records: unknown[], businessId: string): Promise<number> {
+  const refunds = (records as Array<Record<string, unknown>>).map((refund) => ({
+    id: String(refund.id), businessId, clientRefundId: String(refund.client_refund_id), branchId: String(refund.branch_id), saleId: String(refund.sale_id),
+    totalRefunded: Number(refund.total_refunded), reason: String(refund.reason ?? ""), createdAt: String(refund.created_at), createdAtLocal: String(refund.created_at_local ?? refund.created_at),
+    items: (refund.items as Array<Record<string, unknown>> ?? []).map((item) => ({ productId: String(item.product_id), quantity: Number(item.quantity), unitPrice: Number(item.unit_price), total: Number(item.total), conversionFactor: item.unit_conversion_factor == null ? undefined : Number(item.unit_conversion_factor) })),
+    payments: (refund.payments as Array<Record<string, unknown>> ?? []).map((payment) => ({ method: payment.method as SaleRefund["payments"][0]["method"], amount: Number(payment.amount) })),
+  } as SaleRefund));
+  await db.saleRefunds.bulkPut(refunds);
+  return refunds.length;
 }
 
 async function storeDiagnostic(businessId: string, result: PullEndpointResult, retryCount: number): Promise<void> {
