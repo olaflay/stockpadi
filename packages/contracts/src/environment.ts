@@ -60,7 +60,7 @@ export function resolveRuntimeEnvironment(
   env: EnvironmentVariables,
   component: EnvironmentComponent,
 ): RuntimeEnvironment {
-  const declared = value(env, component === "frontend" ? "NEXT_PUBLIC_APP_ENV" : "APP_ENV");
+  const declared = value(env, "NEXT_PUBLIC_APP_ENV");
   if (declared === "local" || declared === "staging" || declared === "production") return declared;
   return inferredEnvironment(env);
 }
@@ -177,15 +177,15 @@ function validateBackend(env: EnvironmentVariables, environment: RuntimeEnvironm
 function validateVercelEnvironment(env: EnvironmentVariables, environment: RuntimeEnvironment, errors: string[]): void {
   if (!isVercel(env)) return;
   const vercelEnvironment = value(env, "VERCEL_ENV");
-  if (vercelEnvironment === "production" && environment !== "production") errors.push("VERCEL production requires APP_ENV/NEXT_PUBLIC_APP_ENV=production");
-  if (vercelEnvironment === "preview" && environment !== "staging") errors.push("VERCEL preview requires APP_ENV/NEXT_PUBLIC_APP_ENV=staging");
+  if (vercelEnvironment === "production" && environment !== "production") errors.push("VERCEL production requires NEXT_PUBLIC_APP_ENV=production");
+  if (vercelEnvironment === "preview" && environment !== "staging") errors.push("VERCEL preview requires NEXT_PUBLIC_APP_ENV=staging");
 }
 
 export function validateRuntimeEnvironment(
   env: EnvironmentVariables,
   component: EnvironmentComponent,
 ): EnvironmentValidationResult {
-  const environmentVariable = component === "frontend" ? "NEXT_PUBLIC_APP_ENV" : "APP_ENV";
+  const environmentVariable = "NEXT_PUBLIC_APP_ENV";
   const declaredEnvironment = value(env, environmentVariable);
   const validEnvironments = ["local", "staging", "production"];
   const errors: string[] = [];
@@ -213,7 +213,7 @@ export function validateEnvironmentPair(
   const frontend = validateRuntimeEnvironment(frontendEnv, "frontend");
   const backend = validateRuntimeEnvironment(backendEnv, "backend");
   const errors = [...frontend.errors.map((error) => `frontend: ${error}`), ...backend.errors.map((error) => `backend: ${error}`)];
-  if (frontend.environment !== backend.environment) errors.push("frontend and backend APP_ENV values do not match");
+  if (frontend.environment !== backend.environment) errors.push("frontend and backend NEXT_PUBLIC_APP_ENV values do not match");
   if (frontend.projectRef && backend.projectRef && frontend.projectRef !== backend.projectRef) errors.push("frontend and backend Supabase project references do not match");
   const frontendBackendUrl = normalizeOrigin(value(frontendEnv, "NEXT_PUBLIC_BACKEND_URL"));
   const backendUrl = normalizeOrigin(value(backendEnv, "BACKEND_URL"));

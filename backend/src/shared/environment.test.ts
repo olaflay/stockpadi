@@ -14,7 +14,7 @@ const frontend = {
 };
 
 const backend = {
-  APP_ENV: "production",
+  NEXT_PUBLIC_APP_ENV: "production",
   NODE_ENV: "production",
   SUPABASE_URL: "https://same-project.supabase.co",
   SUPABASE_PROJECT_REF: "same-project",
@@ -34,7 +34,7 @@ describe("runtime environment contract", () => {
     expect(result.errors).toEqual(expect.arrayContaining([
       "SUPABASE_URL is required",
       "SUPABASE_SERVICE_ROLE_KEY is required",
-      "APP_ENV is required outside local development",
+      "NEXT_PUBLIC_APP_ENV is required outside local development",
     ]));
   });
 
@@ -64,9 +64,9 @@ describe("runtime environment contract", () => {
   });
 
   it("rejects a frontend/backend environment mismatch", () => {
-    const result = validateEnvironmentPair(frontend, { ...backend, APP_ENV: "staging", VERCEL_ENV: "preview" });
+    const result = validateEnvironmentPair(frontend, { ...backend, NEXT_PUBLIC_APP_ENV: "staging", VERCEL_ENV: "preview" });
     expect(result.ok).toBe(false);
-    expect(result.errors).toContain("frontend and backend APP_ENV values do not match");
+    expect(result.errors).toContain("frontend and backend NEXT_PUBLIC_APP_ENV values do not match");
   });
 
 

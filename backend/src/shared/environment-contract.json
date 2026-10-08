@@ -33,7 +33,7 @@
       ],
       "oneOfRequired": ["FRONTEND_ORIGIN", "FRONTEND_ORIGINS"],
       "identityVariables": [
-        "APP_ENV",
+        "NEXT_PUBLIC_APP_ENV",
         "SUPABASE_PROJECT_REF",
         "BUILD_VERSION"
       ],

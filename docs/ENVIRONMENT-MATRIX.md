@@ -32,7 +32,7 @@ contract. Each non-local deployment must set explicit identity:
 | Component | Identity | Required destination |
 |---|---|---|
 | frontend | `NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_BUILD_VERSION` | HTTPS Vercel frontend |
-| backend | `APP_ENV`, `SUPABASE_PROJECT_REF`, `BUILD_VERSION` | HTTPS Vercel Node function |
+| backend | `NEXT_PUBLIC_APP_ENV`, `SUPABASE_PROJECT_REF`, `BUILD_VERSION` | HTTPS Vercel Node function |
 | Supabase | one matching project reference in both components | PostgreSQL/Auth/RLS/RPC for that environment |
 | migration verifier | `SUPABASE_PROJECT_REF`, `SUPABASE_DB_URL` | read-only connection to that environment's database |
 | service worker | build version embedded in cache name | same frontend build |

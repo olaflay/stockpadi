@@ -98,7 +98,7 @@ Put these private values in `backend/.env`:
 
 ```env
 PORT=8787
-APP_ENV=local
+NEXT_PUBLIC_APP_ENV=local
 FRONTEND_ORIGIN=http://localhost:3000
 # Multiple allowed frontend origins may be comma-separated.
 # FRONTEND_ORIGINS=http://localhost:3000,https://stockpadi-drab.vercel.app

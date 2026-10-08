@@ -40,7 +40,7 @@ jobs:
         env:
           FRONTEND_URL: ${{ inputs.frontend_url }}
           BACKEND_URL: ${{ inputs.backend_url }}
-          EXPECTED_APP_ENV: ${{ inputs.app_env }}
+          EXPECTED_NEXT_PUBLIC_APP_ENV: ${{ inputs.app_env }}
           EXPECTED_SUPABASE_PROJECT_REF: ${{ inputs.supabase_project_ref }}
           EXPECTED_BUILD_VERSION: ${{ inputs.build_version }}
         run: npm run deployment:verify

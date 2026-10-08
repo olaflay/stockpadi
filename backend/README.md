@@ -27,7 +27,7 @@ Set these in `backend/.env`, never in `frontend/.env.local`:
 
 ```env
 PORT=8787
-APP_ENV=local
+NEXT_PUBLIC_APP_ENV=local
 FRONTEND_ORIGIN=http://localhost:3000
 NODE_ENV=development
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co

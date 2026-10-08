@@ -15,7 +15,7 @@ async function getJson(url) {
 
 const frontendUrl = baseUrl(process.env.FRONTEND_URL, "FRONTEND_URL");
 const backendUrl = baseUrl(process.env.BACKEND_URL, "BACKEND_URL");
-const expectedEnvironment = process.env.EXPECTED_APP_ENV;
+const expectedEnvironment = process.env.EXPECTED_NEXT_PUBLIC_APP_ENV;
 const expectedProjectRef = process.env.EXPECTED_SUPABASE_PROJECT_REF;
 const expectedBuildVersion = process.env.EXPECTED_BUILD_VERSION;
 
@@ -35,7 +35,7 @@ if (frontend.body?.environment !== backend.body?.environment) errors.push("front
 if (frontend.body?.apiVersion !== backend.body?.apiVersion) errors.push("frontend/backend API version mismatch");
 if (frontend.body?.buildVersion !== backend.body?.buildVersion) errors.push("frontend/backend build version mismatch");
 if (frontend.body?.supabaseProjectRef !== backend.body?.supabaseProjectRef) errors.push("frontend/backend Supabase project identity mismatch");
-if (expectedEnvironment && frontend.body?.environment !== expectedEnvironment) errors.push("deployed environment does not match EXPECTED_APP_ENV");
+if (expectedEnvironment && frontend.body?.environment !== expectedEnvironment) errors.push("deployed environment does not match EXPECTED_NEXT_PUBLIC_APP_ENV");
 if (expectedProjectRef && frontend.body?.supabaseProjectRef !== expectedProjectRef) errors.push("deployed project does not match EXPECTED_SUPABASE_PROJECT_REF");
 if (expectedBuildVersion && frontend.body?.buildVersion !== expectedBuildVersion) errors.push("deployed build does not match EXPECTED_BUILD_VERSION");
 if (frontend.body?.buildVersion && !serviceWorkerText.includes(`stockpadi-navigation-${frontend.body.buildVersion}`)) errors.push("service worker version does not match frontend build version");
