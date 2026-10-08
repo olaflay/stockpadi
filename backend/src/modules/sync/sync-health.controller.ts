@@ -2,6 +2,7 @@ import { authenticateRequest } from "../../middleware/authenticate.js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { getEnvironmentIdentity } from "../../shared/environment.js";
 
 export async function handleSyncHealth(request: globalThis.Request) {
   const auth = await authenticateRequest(request);
@@ -12,10 +13,15 @@ export async function handleSyncHealth(request: globalThis.Request) {
   const { count: activeBranchCount, error: activeError } = await db.from("branches").select("id", { count: "exact", head: true }).eq("business_id", context.businessId).eq("is_active", true);
   if (totalError || activeError) throw new HttpError(500, "SYNC_HEALTH_FAILED", "Could not read business synchronization context");
   const syncReadConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
+  const identity = getEnvironmentIdentity(process.env, "backend");
   return {
     ok: true,
     serverReachable: true,
     authenticated: true,
+    environment: identity.environment,
+    apiVersion: identity.apiVersion,
+    buildVersion: identity.buildVersion,
+    supabaseProjectRef: identity.supabaseProjectRef,
     businessId: context.businessId,
     businessStatus: context.businessStatus,
     serverTime: new Date().toISOString(),

@@ -11,7 +11,7 @@ import { db } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { SYNC_ROUTES } from "@stockpadi/contracts";
-import { serverGet } from "@/platform/api/backend-client";
+import { BackendRequestError, serverGet } from "@/platform/api/backend-client";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { canResolveConflictInPlace, discardConflictingSnapshot } from "@/features/sync/conflict-resolution";
@@ -31,6 +31,24 @@ function formatResult(status: "success" | "failed" | null | undefined, code: str
   return [code ?? "PULL_FAILED", httpStatus ? `HTTP ${httpStatus}` : null].filter(Boolean).join(" · ");
 }
 
+function pullFailureDescription(code: string | null | undefined): string {
+  switch (code) {
+    case "NETWORK_UNAVAILABLE":
+      return "The backend could not be reached. Your saved work is safe; reconnect and try again.";
+    case "UNAUTHENTICATED":
+      return "The backend could not authenticate this session. Sign in again after the frontend and backend use the same cloud project.";
+    case "BUSINESS_UNAVAILABLE":
+    case "ACCOUNT_NOT_APPROVED":
+      return "Your account is not approved for cloud sync yet. Changes remain safely saved on this device.";
+    case "FORBIDDEN":
+      return "Your account is not allowed to download this business data. Ask the business owner to check your access.";
+    case "PULL_BRANCH_SCOPE_MISMATCH":
+      return "Your branch access changed while syncing. Sign in again after the branch assignment is confirmed.";
+    default:
+      return "The cloud could not refresh this device. Your saved work is safe; try syncing again when the connection is stable.";
+  }
+}
+
 /**
  * Samsung One UI lead: status stays in the viewing area while the retry
  * action remains a full-width, thumb-reachable control below it. Advanced
@@ -43,6 +61,7 @@ export default function SyncHealthPage() {
   const [busy, setBusy] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [cloud, setCloud] = useState<"unknown" | "connected" | "failed">("unknown");
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const businessId = user.businessId;
   const branchDependency = user.branchIds?.join("|");
   const snapshot = useLiveQuery(async () => {
@@ -82,9 +101,26 @@ export default function SyncHealthPage() {
 
   useEffect(() => {
     if (!online) return;
-    void serverGet<{ syncReadConfigured?: boolean }>(SYNC_ROUTES.health)
-      .then((health) => setCloud(health.syncReadConfigured === false ? "failed" : "connected"))
-      .catch(() => setCloud("failed"));
+    void serverGet<{
+      syncReadConfigured?: boolean;
+      environment?: string;
+      supabaseProjectRef?: string | null;
+    }>(SYNC_ROUTES.health)
+      .then((health) => {
+        const frontendProjectRef = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF?.trim();
+        const projectMismatch = Boolean(frontendProjectRef && health.supabaseProjectRef && frontendProjectRef !== health.supabaseProjectRef);
+        if (projectMismatch) {
+          setCloud("failed");
+          setCloudError("PROJECT_MISMATCH");
+          return;
+        }
+        setCloud(health.syncReadConfigured === false ? "failed" : "connected");
+        setCloudError(health.syncReadConfigured === false ? "SYNC_READ_NOT_CONFIGURED" : null);
+      })
+      .catch((error: unknown) => {
+        setCloud("failed");
+        setCloudError(error instanceof BackendRequestError ? error.code : "NETWORK_UNAVAILABLE");
+      });
   }, [online]);
 
   // Workers need read-only diagnostics and a manual retry too: a branch pull
@@ -93,17 +129,24 @@ export default function SyncHealthPage() {
   if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "WORKER") return <><ScreenHeader title="Sync and system health" backHref="/settings" /><PermissionDenied requiredAccountType="BUSINESS_OWNER" /></>;
   if (!snapshot) return <><ScreenHeader title="Sync and system health" backHref="/settings" /><Skeleton className="h-48" /></>;
 
-  const pullFailed = snapshot.state?.lastPullStatus === "failed" || Boolean(snapshot.state?.partialErrors.length) || snapshot.diagnostics.some((item) => !item.success);
-  const complete = online && cloud === "connected" && Boolean(snapshot.state?.lastCompletePullAt) && snapshot.pending === 0 && snapshot.blocked === 0 && snapshot.issues === 0 && !pullFailed && !safety.required;
-  const status = !online ? "Offline" : cloud === "failed" ? "Service unavailable" : safety.required ? "Sync required" : snapshot.issues > 0 || pullFailed ? "Sync issue" : complete ? "Healthy" : "Pending";
+  const awaitingApproval = user.accountType === "BUSINESS_OWNER" && Boolean(user.businessStatus && !["verified", "active"].includes(user.businessStatus));
+  const pullFailed = !awaitingApproval && (snapshot.state?.lastPullStatus === "failed" || Boolean(snapshot.state?.partialErrors.length) || snapshot.diagnostics.some((item) => !item.success));
+  const complete = online && cloud === "connected" && Boolean(snapshot.state?.lastCompletePullAt) && snapshot.pending === 0 && snapshot.blocked === 0 && snapshot.issues === 0 && !pullFailed && !safety.required && !awaitingApproval;
+  const status = !online ? "Offline" : awaitingApproval ? "Awaiting approval" : cloud === "failed" ? "Service unavailable" : safety.required ? "Sync required" : snapshot.issues > 0 || pullFailed ? "Sync issue" : complete ? "Healthy" : "Pending";
   const description = !online
     ? "You are offline. Changes you make are safely saved on this device."
+    : awaitingApproval
+      ? "Cloud sync starts after your email is verified and the business is approved. Changes remain safely saved on this device."
     : cloud === "failed"
-      ? "We cannot reach the cloud right now. Keep working and we will try again when the connection returns."
+      ? cloudError === "PROJECT_MISMATCH"
+        ? "This app and its backend are connected to different cloud projects. The deployment configuration must be aligned before sync can complete."
+        : cloudError === "UNAUTHENTICATED"
+          ? "This session cannot be authenticated by the backend. Sign in again after the frontend and backend use the same cloud project."
+          : "We cannot reach the cloud right now. Keep working and we will try again when the connection returns."
       : safety.required
         ? "Some changes have waited too long. Connect to the internet and leave the app open until they finish."
         : pullFailed
-          ? "We are still checking this device against the cloud. Your saved work is safe."
+          ? pullFailureDescription(snapshot.state?.lastPullErrorCode ?? snapshot.latestFailure?.errorCode)
           : complete
             ? "This device is up to date."
             : "Saving recent changes and checking for updates.";
