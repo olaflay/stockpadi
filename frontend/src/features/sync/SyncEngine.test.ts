@@ -18,7 +18,7 @@ vi.mock("@/features/sync/drain-outbox", () => ({
 vi.mock("@/features/sync/preload-session-data", () => ({ preloadSessionData }));
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => null }));
 
-import { runSyncCycle } from "./SyncEngine";
+import { ACTIVE_RECONCILIATION_MS, runSyncCycle, triggerSync } from "./SyncCoordinator";
 
 describe("runSyncCycle", () => {
   beforeEach(() => {
@@ -83,5 +83,24 @@ describe("runSyncCycle", () => {
     expect(drainOutbox).toHaveBeenCalledTimes(2);
     expect(preloadSessionData).toHaveBeenNthCalledWith(1, false, "poll");
     expect(preloadSessionData).toHaveBeenNthCalledWith(2, true, "manual");
+  });
+
+  it("coalesces a trigger that arrives during a live cycle into one follow-up", async () => {
+    let releasePush!: (value: { drained: number; pendingRemaining: number }) => void;
+    drainOutbox.mockImplementationOnce(() => new Promise((resolve) => { releasePush = resolve; }));
+
+    const first = triggerSync("startup");
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledOnce());
+    triggerSync("realtime");
+
+    releasePush({ drained: 0, pendingRemaining: 0 });
+    await first;
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledTimes(2));
+
+    expect(preloadSessionData).toHaveBeenCalledWith(true, "realtime");
+  });
+
+  it("keeps reconciliation low-frequency", () => {
+    expect(ACTIVE_RECONCILIATION_MS).toBe(10 * 60 * 1000);
   });
 });

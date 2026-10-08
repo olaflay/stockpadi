@@ -3,10 +3,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let cachedClient: SupabaseClient | undefined;
 
 /**
- * The backend uses Supabase Auth/PostgREST/RPC only; it never subscribes to
- * Realtime channels. Supabase JS still constructs its Realtime client. Keep a
- * non-connecting fallback for serverless runtimes that do not expose a global
- * WebSocket; the supported repository runtime is Node 24.x.
+ * The backend uses Supabase Auth/PostgREST/RPC for authoritative work and
+ * Realtime's HTTP Broadcast endpoint only for post-commit wake-up hints; it
+ * never opens a WebSocket subscription. Supabase JS still constructs its
+ * Realtime client. Keep a non-connecting fallback for serverless runtimes
+ * that do not expose a global WebSocket; the supported repository runtime is
+ * Node 24.x.
  */
 function ensureWebSocketForSupabase() {
   if (typeof globalThis.WebSocket !== "undefined") return;

@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import type { RefundSaleRequest } from "./refund-sale.schema.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 
 export async function refundSale(db: SupabaseClient, actor: User, request: RefundSaleRequest) {
   const context = await resolveAccountContext(db, actor);
@@ -46,6 +47,8 @@ export async function refundSale(db: SupabaseClient, actor: User, request: Refun
     }
     throw new HttpError(500, "REFUND_FAILED", error.message);
   }
+
+  queueSyncHints(context.businessId, [null]);
 
   return {
     status: "ok",

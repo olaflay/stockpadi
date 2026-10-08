@@ -3,6 +3,7 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 
 function objectPayload(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== "object") throw new HttpError(400, "INVALID_BODY", "Payload is required");
@@ -17,6 +18,7 @@ export async function upsertProduct(db: SupabaseClient, actor: User, input: unkn
   if (typeof payload.id !== "string" || typeof payload.name !== "string" || !payload.name.trim()) throw new HttpError(400, "INVALID_BODY", "Product id and name are required");
   const { data, error } = await db.rpc("sync_apply_product", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "PRODUCT_FAILED", error.message);
+  queueSyncHints(context.businessId, [null]);
   return data;
 }
 
@@ -62,6 +64,7 @@ export async function adjustStock(db: SupabaseClient, actor: User, input: unknow
   requireAssignedBranch(context, payload.branchId);
   const { data, error } = await db.rpc("sync_apply_stock_adjustment", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "STOCK_ADJUSTMENT_FAILED", error.message);
+  queueSyncHints(context.businessId, [payload.branchId as string]);
   return data;
 }
 
@@ -75,5 +78,6 @@ export async function submitStockCount(db: SupabaseClient, actor: User, input: u
   requireAssignedBranch(context, payload.branchId);
   const { data, error } = await db.rpc("sync_apply_stock_count", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "STOCK_COUNT_FAILED", error.message);
+  queueSyncHints(context.businessId, [payload.branchId as string]);
   return data;
 }

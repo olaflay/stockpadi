@@ -8,14 +8,14 @@ import type { Purchase } from "@/types/purchase";
 import type { Sale } from "@/types/sale";
 import type { SaleRefund } from "@/types/sale-refund";
 import type { SyncQueueItem } from "@/types/sync";
+import { recordRetry } from "@/features/sync/sync-observability";
 
 let lastPreloadAt = 0;
 let lastPreloadResult: SessionPreloadResult | null = null;
-// The active-app fallback is intentionally bounded to the SyncEngine's
-// three-minute scheduler. It is a check-for-changes request, not a full database
-// download: the server cursor only returns rows newer than the last completed
-// watermark.
-const PRELOAD_THROTTLE_MS = 3 * 60 * 1000;
+// Non-forced callers are throttled as a final guard against accidental duplicate
+// callers. The coordinator's active reconciliation is ten minutes and all
+// event-driven triggers use a forced cursor pull.
+const PRELOAD_THROTTLE_MS = 10 * 60 * 1000;
 const PROTECTED_OUTBOX_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"];
 const MAX_PULL_RETRY_COUNT = 6;
 const BASE_PULL_RETRY_MS = 5_000;
@@ -32,11 +32,19 @@ const APPLY_ORDER: PullEntityName[] = [
 ];
 
 export type SyncPullTrigger =
+  | "startup"
   | "boot"
   | "poll"
+  | "local-write"
   | "online"
   | "auth"
   | "focus"
+  | "resume"
+  | "realtime"
+  | "realtime-reconnect"
+  | "service-worker"
+  | "retry"
+  | "reconciliation"
   | "push-success"
   | "manual";
 
@@ -106,7 +114,7 @@ export function getLastPreloadResult(): SessionPreloadResult | null {
 }
 
 /** Pull cloud state through the single Node session-pull contract. */
-export async function preloadSessionData(force = false, trigger: SyncPullTrigger = force ? "manual" : "poll"): Promise<SessionPreloadResult> {
+export async function preloadSessionData(force = false, trigger: SyncPullTrigger = force ? "manual" : "startup"): Promise<SessionPreloadResult> {
   const startedAt = new Date().toISOString();
   const empty = (fullySynced: boolean): SessionPreloadResult => ({ startedAt, completedAt: new Date().toISOString(), fullySynced, pulls: [] });
   if (typeof window === "undefined") {
@@ -143,7 +151,8 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   const pullStateId = `${businessId}:session`;
   const priorState = await db.syncPullState.get(pullStateId);
   const initialCursor = priorState?.cursor ?? null;
-  const bypassBackoff = trigger === "manual" || trigger === "push-success" || (trigger === "online" && priorState?.lastPullErrorCode === "NETWORK_UNAVAILABLE");
+  const bypassBackoff = ["manual", "push-success", "online", "local-write", "realtime-reconnect", "resume", "service-worker"].includes(trigger)
+    || (trigger === "online" && priorState?.lastPullErrorCode === "NETWORK_UNAVAILABLE");
   if (!bypassBackoff && priorState?.nextPullAttemptAt && priorState.nextPullAttemptAt > startedAt) {
     return lastPreloadResult ?? empty(false);
   }
@@ -155,7 +164,10 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   const successfulPullAt = new Map<PullEntityName, string | null>();
   const pullStartedAt = new Date().toISOString();
   const pullStartedClock = Date.now();
-  const isInvalidationTrigger = ["online", "auth", "focus", "push-success"].includes(trigger);
+  const isInvalidationTrigger = [
+    "startup", "boot", "online", "auth", "focus", "resume", "local-write", "realtime",
+    "realtime-reconnect", "service-worker", "retry", "reconciliation", "push-success",
+  ].includes(trigger);
   await db.syncPullState.put({
     ...(priorState ?? {}),
     id: pullStateId,
@@ -262,8 +274,11 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   } catch (cause) {
     const error = safePullError(cause);
     const failedDataset = cause instanceof PullProcessError ? cause.dataset : null;
-    const retryCount = Math.min(MAX_PULL_RETRY_COUNT, (priorState?.pullRetryCount ?? 0) + 1);
-    const nextPullAttemptAt = new Date(Date.now() + pullRetryDelayMs(retryCount)).toISOString();
+    const retryable = isRetryablePullFailure(error);
+    const retryCount = retryable ? Math.min(MAX_PULL_RETRY_COUNT, (priorState?.pullRetryCount ?? 0) + 1) : 0;
+    const backoffDurationMs = retryable ? pullRetryDelayMs(retryCount) : 0;
+    const nextPullAttemptAt = retryable ? new Date(Date.now() + backoffDurationMs).toISOString() : null;
+    if (retryable) recordRetry(backoffDurationMs);
     const result: PullEndpointResult = {
       endpoint: "/api/sync/pull",
       entity: "session",
@@ -696,4 +711,13 @@ function safePullError(error: unknown): { code: string; message: string; httpSta
   if (error instanceof NetworkUnavailableError) return { code: error.code, message: error.message, httpStatus: null };
   if (error instanceof Error) return { code: "PULL_APPLY_FAILED", message: error.message || "Could not apply this data.", httpStatus: null };
   return { code: "PULL_APPLY_FAILED", message: "Could not apply this data.", httpStatus: null };
+}
+
+function isRetryablePullFailure(error: { code: string; httpStatus: number | null }): boolean {
+  if (["NETWORK_UNAVAILABLE", "PULL_FAILED", "PULL_APPLY_FAILED", "TEMPORARY_UNAVAILABLE", "RATE_LIMITED"].includes(error.code)) return true;
+  if (error.httpStatus === 408 || error.httpStatus === 429 || (error.httpStatus !== null && error.httpStatus >= 500)) return true;
+  // A 401 has already had the one controlled refresh/retry in the transport.
+  // 403 and validation/auth-context failures are durable attention states, not
+  // reasons to retry forever from a hidden tab.
+  return false;
 }

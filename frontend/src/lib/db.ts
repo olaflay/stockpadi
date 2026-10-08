@@ -185,6 +185,10 @@ export interface SyncPullState {
   lastPullTrigger?: string | null;
   /** Set when connectivity/foreground/auth caused an immediate pull attempt. */
   lastInvalidationReceivedAt?: string | null;
+  /** Last validated Realtime hint received for this tenant. */
+  lastRealtimeHintAt?: string | null;
+  /** Latest local hint cursor used only to suppress stale wake-ups. */
+  lastRealtimeHintCursor?: string | null;
   /** Last time the backend returned a pull response. */
   lastServerContactAt?: string | null;
   /** Last time at least one push mutation was durably accepted. */

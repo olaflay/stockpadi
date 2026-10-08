@@ -4,6 +4,7 @@ import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireCapability, requireAssignedBranch, type Capability } from "../authorization/capabilities.js";
 import { isSyncEntityType, type SyncEntityType } from "../../shared/contracts.generated.js";
+import { publishSyncHints } from "./sync-hints.js";
 
 const MAX_BATCH_SIZE = 100;
 
@@ -287,6 +288,22 @@ export async function pushSyncBatch(db: SupabaseClient, actor: User, input: unkn
 
   const orderMap = new Map(request.batch.map((item, idx) => [item.client_id, idx]));
   results.sort((a, b) => (orderMap.get(a.clientId) ?? 0) - (orderMap.get(b.clientId) ?? 0));
+
+  const appliedItems = request.batch.filter((item) => {
+    const result = results.find((candidate) => candidate.clientId === item.client_id);
+    return result?.status === "applied" || result?.status === "skipped";
+  });
+  if (appliedItems.length > 0) {
+    // The RPC has returned only after its transaction committed. Publishing is
+    // intentionally fire-and-forget: a missing hint is recovered by the
+    // cursor reconciliation safety net and must never turn a successful write
+    // into an HTTP failure.
+    void publishSyncHints(
+      db,
+      context.businessId,
+      appliedItems.map((item) => payloadValue(item.payload, "branchId") as string | undefined),
+    );
+  }
 
   return { ok: true, results };
 }

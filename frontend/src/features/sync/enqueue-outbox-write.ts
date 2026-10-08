@@ -3,7 +3,6 @@ import type { SyncEntityType } from "@/types/sync";
 import { getCachedLocalBusinessId, getLocalBusinessId } from "@/lib/local-tenant";
 import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
 
-let drainTimer: ReturnType<typeof setTimeout> | null = null;
 const MUTABLE_ENTITY_TYPES: SyncEntityType[] = ["product", "customer", "supplier", "branch", "category"];
 
 /** Background Sync wakes a client; it never owns mutation replay. */
@@ -18,23 +17,19 @@ function registerBackgroundSyncHint(): void {
 }
 
 /**
- * Debounced coordinator wake-up: when an outbox row is written while online,
- * schedule a sync attempt in 1s so rapid writes batch into one network call.
+ * Wake the canonical coordinator in the next microtask. This preserves a
+ * single Dexie transaction for the local write while avoiding an artificial
+ * polling/debounce delay before the durable outbox is pushed.
  */
-function scheduleDebouncedDrain(): void {
-  if (drainTimer) clearTimeout(drainTimer);
-  drainTimer = setTimeout(async () => {
-    drainTimer = null;
-    try {
-      // Enqueue is a wake-up hint, not a second scheduler. Route the write
-      // through the canonical coordinator so push and pull keep one ordering
-      // and one single-flight boundary.
-      const { runSyncCycle } = await import("@/features/sync/SyncCoordinator");
-      await runSyncCycle("poll");
-    } catch {
-      // drain will be retried on next trigger or manual sync
-    }
-  }, 1000);
+function scheduleImmediateDrain(): void {
+  queueMicrotask(() => {
+    void import("@/features/sync/SyncCoordinator").then(({ triggerSync }) => {
+      return triggerSync("local-write");
+    }).catch(() => {
+      // The durable outbox remains available for the next lifecycle, network,
+      // Realtime, retry, or reconciliation trigger.
+    });
+  });
 }
 
 /**
@@ -44,9 +39,9 @@ function scheduleDebouncedDrain(): void {
  * Extracted since this exact shape was duplicated near-verbatim across
  * seven write-path files.
  *
- * If the device is online, a debounced drain is triggered immediately
- * so pending items don't sit idle until the next app open or background
- * sync event.
+ * If the device is online, an immediate coordinator drain is triggered so
+ * pending items don't sit idle until the next app open or background sync
+ * event.
  */
 export async function enqueueOutboxWrite(
   clientId: string,
@@ -123,8 +118,9 @@ export async function enqueueOutboxWrite(
     });
   }
 
-  // Trigger a debounced drain if the device is online
-  if (typeof navigator !== "undefined" && navigator.onLine) scheduleDebouncedDrain();
+  // Trigger one immediate canonical drain if the device reports reachability.
+  // navigator.onLine is only a hint; the request classifies actual failures.
+  if (typeof navigator !== "undefined" && navigator.onLine) scheduleImmediateDrain();
   registerBackgroundSyncHint();
 }
 

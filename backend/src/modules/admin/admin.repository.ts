@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 
 export async function listBusinesses(db: SupabaseClient, actorId?: string) {
   const businesses = await db.from("business_profile").select("id, name, business_type, currency, is_active, status, created_at").order("created_at", { ascending: false });
@@ -79,6 +80,7 @@ export async function setBusinessStatus(db: SupabaseClient, actorId: string, bus
     }
     throw new HttpError(500, "UPDATE_FAILED", rpcResult.error.message);
   }
+  queueSyncHints(businessId, [null]);
 }
 
 export async function writePlatformAudit(

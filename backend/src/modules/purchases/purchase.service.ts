@@ -3,6 +3,7 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 
 export async function receivePurchase(db: SupabaseClient, actor: User, input: unknown) {
   const context = await resolveAccountContext(supabaseAdmin(), actor);
@@ -14,6 +15,7 @@ export async function receivePurchase(db: SupabaseClient, actor: User, input: un
   requireAssignedBranch(context, payload.branchId);
   const { data, error } = await db.rpc("sync_apply_purchase_receipt", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "PURCHASE_FAILED", error.message);
+  queueSyncHints(context.businessId, [payload.branchId as string]);
   return data;
 }
 

@@ -3,6 +3,16 @@ import { getLocalBusinessId } from "@/lib/local-tenant";
 
 export type CoordinatorState = "idle" | "syncing" | "uploading" | "downloading";
 
+export interface SyncCounters {
+  triggerCount: number;
+  realtimeHintCount: number;
+  realtimeReconnectCount: number;
+  coalescedTriggerCount: number;
+  skippedPullCount: number;
+  retryCount: number;
+  lastBackoffDurationMs: number | null;
+}
+
 interface RuntimeTelemetry {
   sessionId: string | null;
   trigger: string | null;
@@ -25,6 +35,16 @@ const runtime: RuntimeTelemetry = {
   queueAgeMs: null,
 };
 
+const counters: SyncCounters = {
+  triggerCount: 0,
+  realtimeHintCount: 0,
+  realtimeReconnectCount: 0,
+  coalescedTriggerCount: 0,
+  skippedPullCount: 0,
+  retryCount: 0,
+  lastBackoffDurationMs: null,
+};
+
 function id(prefix: string): string {
   const uuid = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -33,6 +53,7 @@ function id(prefix: string): string {
 }
 
 export function beginSyncSession(trigger: string): string {
+  counters.triggerCount += 1;
   runtime.sessionId = id("sync");
   runtime.trigger = trigger;
   runtime.phase = "syncing";
@@ -42,6 +63,31 @@ export function beginSyncSession(trigger: string): string {
   runtime.operationType = null;
   runtime.queueAgeMs = null;
   return runtime.sessionId;
+}
+
+export function recordRealtimeHint(): void {
+  counters.realtimeHintCount += 1;
+}
+
+export function recordRealtimeReconnect(): void {
+  counters.realtimeReconnectCount += 1;
+}
+
+export function recordCoalescedTrigger(): void {
+  counters.coalescedTriggerCount += 1;
+}
+
+export function recordSkippedPull(): void {
+  counters.skippedPullCount += 1;
+}
+
+export function recordRetry(backoffDurationMs: number): void {
+  counters.retryCount += 1;
+  counters.lastBackoffDurationMs = backoffDurationMs;
+}
+
+export function getSyncCounters(): SyncCounters {
+  return { ...counters };
 }
 
 export function setCoordinatorPhase(phase: CoordinatorState): void {
@@ -97,5 +143,6 @@ export async function getSyncDebugSnapshot() {
       : null,
     cursor: state?.cursor ?? null,
     lastSuccessfulSyncAt: state?.lastCompletePullAt ?? null,
+    counters: getSyncCounters(),
   };
 }

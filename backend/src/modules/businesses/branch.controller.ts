@@ -3,6 +3,7 @@ import { supabaseAdmin, supabaseForAccessToken } from "../../shared/supabase/cli
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireCapability } from "../authorization/capabilities.js";
 import { HttpError } from "../../shared/errors/http-error.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 
 export async function handleBranchList(request: globalThis.Request) {
   const auth = await authenticateRequest(request);
@@ -29,6 +30,7 @@ export async function handleBranchCreate(request: globalThis.Request, body: unkn
   const id = body && typeof body === "object" && typeof (body as Record<string, unknown>).id === "string" ? (body as Record<string, unknown>).id as string : crypto.randomUUID();
   const { data, error } = await db.rpc("sync_apply_branch", { payload: { id, name, isActive: true, isPrimary: body && typeof body === "object" && (body as Record<string, unknown>).isPrimary === true }, actor_id: auth.user.id });
   if (error) throw new HttpError(500, "BRANCH_CREATE_FAILED", error.message);
+  queueSyncHints(context.businessId, [id]);
   return data;
 }
 
@@ -49,5 +51,6 @@ export async function handleBranchMutation(request: globalThis.Request, branchId
   const payload = { id: branchId, name: typeof input.name === "string" ? input.name.trim() : existing.data.name, isActive: request.method !== "DELETE" && input.isActive !== false, isPrimary: input.isPrimary === undefined ? existing.data.is_primary === true : input.isPrimary === true };
   const { data, error } = await db.rpc("sync_apply_branch", { payload, actor_id: auth.user.id });
   if (error) throw new HttpError(409, "BRANCH_UPDATE_FAILED", error.message);
+  queueSyncHints(context.businessId, [branchId]);
   return data;
 }
