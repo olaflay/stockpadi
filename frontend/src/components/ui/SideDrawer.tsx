@@ -124,7 +124,7 @@ export function SideDrawer() {
           capability: "MANAGE_EXPENSES",
         },
         {
-          label: "Purchases & Restock",
+          label: "Stock",
           href: "/purchases",
           icon: Truck,
           capability: "RECEIVE_STOCK",

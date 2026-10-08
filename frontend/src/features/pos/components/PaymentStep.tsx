@@ -462,7 +462,7 @@ export function PaymentStep(props: {
         {hasCreditLine && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-low p-3">
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              Who&apos;s buying {formatCurrency(creditAmount)} on credit? *
+              Customer owing {formatCurrency(creditAmount)} · add them here
             </span>
 
             {creditCustomerId ? (
@@ -570,6 +570,7 @@ export function PaymentStep(props: {
                     )}
                     <input
                       aria-label="Customer name"
+                      autoFocus
                       value={newCustomerName}
                       onChange={(event) => setNewCustomerName(event.target.value)}
                       placeholder="Customer name *"
@@ -593,18 +594,18 @@ export function PaymentStep(props: {
                       disabled={!newCustomerName.trim() || !newCustomerPhone.trim()}
                       className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50"
                     >
-                      Add credit customer
+                      Add customer &amp; continue
                     </RippleButton>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowNewCustomerForm(true)}
-                    aria-label="Add new customer for credit"
+                    aria-label="Add new debtor for credit"
                     className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] font-medium text-brand-accent hover:bg-surface-container-high transition-colors"
                   >
                     <UserPlus size={18} aria-hidden />
-                    New customer
+                    Add new debtor
                   </button>
                 )}
               </>

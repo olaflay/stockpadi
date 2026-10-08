@@ -36,7 +36,7 @@ export function UpdateStockList({
 }) {
   return (
     <div className="flex flex-col gap-4 pb-24">
-      <ScreenHeader title="Update stock" backHref={backHref} onBack={onBack} />
+      <ScreenHeader title="Adjust stock" backHref={backHref} onBack={onBack} />
 
       <div className="relative w-full">
         <Search

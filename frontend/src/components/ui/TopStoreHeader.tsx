@@ -24,8 +24,9 @@ export function getPageTitle(pathname: string): string {
   if (pathname.includes("/contacts") || pathname.includes("/customers")) return "Contacts & Debtors";
   if (pathname.includes("/sales")) return "Sales and receipts";
   if (pathname.includes("/stock-count")) return "Stock count";
-  if (pathname.includes("/purchases/new") || pathname.includes("/purchases/update-stock")) return "Restock";
-  if (pathname.includes("/purchases")) return "Purchases and restock";
+  if (pathname.includes("/purchases/new")) return "Receive delivery";
+  if (pathname.includes("/purchases/update-stock")) return "Adjust stock";
+  if (pathname.includes("/purchases")) return "Stock";
   if (pathname.includes("/expenses/new")) return "Record expense";
   if (pathname.includes("/expenses")) return "Expenses";
   if (pathname.includes("/alerts")) return "Alerts";

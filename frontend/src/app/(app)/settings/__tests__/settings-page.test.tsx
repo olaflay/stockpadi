@@ -79,20 +79,20 @@ describe("SettingsPage component", () => {
     expect(screen.getByText("Owner")).toBeDefined();
 
     // Owner management sections are visible
-    expect(screen.getByText("Team & Operations")).toBeDefined();
-    expect(screen.getByText("Staff and access")).toBeDefined();
-    expect(screen.getByText("Business details")).toBeDefined();
-    expect(screen.getByText("Branches and outlets")).toBeDefined();
+    expect(screen.getByText("People & Permissions")).toBeDefined();
+    expect(screen.getByText("Staff & access")).toBeDefined();
+    expect(screen.getByText("Business profile")).toBeDefined();
+    expect(screen.getByText("Branches & outlets")).toBeDefined();
 
     // Data & Support sections
-    expect(screen.getByText("Data & System")).toBeDefined();
-    expect(screen.getByText("Data and backup")).toBeDefined();
-    expect(screen.getByText("Sync and system health")).toBeDefined();
-    expect(screen.getByText("Support & Info")).toBeDefined();
+    expect(screen.getByText("Data & Sharing")).toBeDefined();
+    expect(screen.getByText("Backup & offline data")).toBeDefined();
+    expect(screen.getByText("Sync health")).toBeDefined();
+    expect(screen.getByText("Help & Support")).toBeDefined();
     expect(screen.getByText("App Walkthrough")).toBeDefined();
   });
 
-  it("hides Team & Operations and Data & System management sections for staff workers", () => {
+  it("hides owner-only people, store, and data sections for staff workers", () => {
     currentUser = {
       id: "user-worker",
       fullName: "Kemi Ade",
@@ -106,14 +106,14 @@ describe("SettingsPage component", () => {
     expect(screen.getByText("Staff")).toBeDefined();
 
     // Team and Business management must not be rendered for worker
-    expect(screen.queryByText("Team & Operations")).toBeNull();
-    expect(screen.queryByText("Staff and access")).toBeNull();
-    expect(screen.queryByText("Business details")).toBeNull();
-    expect(screen.queryByText("Data & System")).toBeNull();
+    expect(screen.queryByText("People & Permissions")).toBeNull();
+    expect(screen.queryByText("Staff & access")).toBeNull();
+    expect(screen.queryByText("Business profile")).toBeNull();
+    expect(screen.queryByText("Data & Sharing")).toBeNull();
 
     // Display and Support sections remain accessible
     expect(screen.getByText("Display")).toBeDefined();
-    expect(screen.getByText("Support & Info")).toBeDefined();
+    expect(screen.getByText("Help & Support")).toBeDefined();
     expect(screen.getByText("App Walkthrough")).toBeDefined();
   });
 

@@ -137,7 +137,7 @@ export default function DashboardPage() {
     },
     hasCapability(user, "RECEIVE_STOCK") && {
       key: "restock",
-      label: "Restock",
+      label: "Receive delivery",
       href: "/purchases/new",
       icon: PackagePlus,
     },
@@ -357,7 +357,7 @@ export default function DashboardPage() {
           label="Low Stock"
           value={String(metrics.lowStockCount)}
           sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} items low` : "All healthy"}
-          actionLabel={metrics.lowStockCount > 0 ? "Restock →" : undefined}
+          actionLabel={metrics.lowStockCount > 0 ? "View low stock →" : undefined}
           valueClassName={metrics.lowStockCount > 0 ? "text-warning" : "text-on-surface"}
           href="/products?filter=low-stock"
         />

@@ -76,7 +76,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
     },
     hasCapability(user, "RECEIVE_STOCK") && {
       href: "/purchases",
-      label: "Purchases",
+      label: "Stock",
       icon: ShoppingCart,
     },
     hasCapability(user, "VIEW_CUSTOMERS") && {

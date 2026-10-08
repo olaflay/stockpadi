@@ -42,7 +42,7 @@ describe("More Page — Operations & Settings Hub", () => {
     expect(screen.getByText("Contacts & Debtors")).toBeInTheDocument();
     expect(screen.getByText("Sales & Receipts")).toBeInTheDocument();
     expect(screen.getByText("Expenses")).toBeInTheDocument();
-    expect(screen.getByText("Purchases & Restock")).toBeInTheDocument();
+    expect(screen.getByText("Stock")).toBeInTheDocument();
     expect(screen.getByText("Stock Count")).toBeInTheDocument();
     expect(screen.getByText("Close Day")).toBeInTheDocument();
     expect(screen.getByText("Store & Staff Settings")).toBeInTheDocument();

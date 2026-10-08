@@ -10,6 +10,10 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+// Versioned so users who dismissed the old shell-only banner get the improved
+// first-run prompt again; dismissal still remains sticky for this version.
+const INSTALL_DISMISSED_KEY = "stockpadi-install-dismissed-v2";
+
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
@@ -17,7 +21,7 @@ export function InstallBanner() {
 
   useEffect(() => {
     // If user has dismissed it recently, don't show
-    if (localStorage.getItem("stockpadi-install-dismissed") === "true") return;
+    if (localStorage.getItem(INSTALL_DISMISSED_KEY) === "true") return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -49,14 +53,18 @@ export function InstallBanner() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem("stockpadi-install-dismissed", "true");
+    localStorage.setItem(INSTALL_DISMISSED_KEY, "true");
     setVisible(false);
   };
 
   if (!visible || !deferredPrompt) return null;
 
   return (
-    <div className="relative flex items-center justify-between gap-3 bg-brand-accent px-5 py-3 text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] animate-step-in">
+    <div
+      role="status"
+      aria-live="polite"
+      className="relative flex items-center justify-between gap-3 bg-brand-accent px-5 py-3 text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] animate-step-in"
+    >
       <div className="flex items-center gap-2 min-w-0">
         <Download size={18} className="shrink-0" />
         <span className="text-[length:var(--font-size-caption)] font-medium truncate">

@@ -68,7 +68,7 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     expect(screen.getByText("Expenses")).toBeInTheDocument();
     expect(screen.getByText("Close Day Register")).toBeInTheDocument();
     expect(screen.getByText("Contacts & Debtors")).toBeInTheDocument();
-    expect(screen.getByText("Purchases & Restock")).toBeInTheDocument();
+    expect(screen.getByText("Stock")).toBeInTheDocument();
 
     // Check management
     expect(screen.getByText("Business Profile")).toBeInTheDocument();

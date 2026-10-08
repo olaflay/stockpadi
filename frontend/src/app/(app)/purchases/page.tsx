@@ -65,7 +65,7 @@ export default function PurchasesPage() {
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
-        <ScreenHeader title="Restocks" backHref="/products" />
+        <ScreenHeader title="Stock" backHref="/products" />
         <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
@@ -74,7 +74,7 @@ export default function PurchasesPage() {
   if (result === undefined) {
     return (
       <div>
-        <ScreenHeader title="Restocks" backHref="/products" />
+        <ScreenHeader title="Stock" backHref="/products" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-14" />
           <Skeleton className="h-14" />
@@ -87,7 +87,7 @@ export default function PurchasesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Restocks" backHref="/products" />
+        <ScreenHeader title="Stock" backHref="/products" />
         <ErrorState message="Couldn't load your restock history." onRetry={() => window.location.reload()} />
       </div>
     );
@@ -103,14 +103,14 @@ export default function PurchasesPage() {
   if (result.purchases.length === 0) {
     return (
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Restocks" backHref="/products" />
+        <ScreenHeader title="Stock" backHref="/products" />
         <EmptyState
           icon={Truck}
-          title="No restocks recorded"
-          description="Record stock coming in from a supplier so what's on the shelf matches the app."
+          title="No deliveries recorded"
+          description="Receive stock from a supplier so what's on the shelf matches the app."
           action={
             canAdd
-              ? { label: "Record a restock", href: "/purchases/new" }
+              ? { label: "Receive delivery", href: "/purchases/new" }
               : undefined
           }
         />
@@ -120,7 +120,7 @@ export default function PurchasesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Restocks" backHref="/products" />
+      <ScreenHeader title="Stock" backHref="/products" />
 
       <div className="mb-3 flex flex-col gap-2.5">
         <FilterDropdownBar
@@ -149,19 +149,27 @@ export default function PurchasesPage() {
         />
 
         {canAdd && (
-          <Link
-            href="/purchases/update-stock"
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center rounded-[var(--radius-control)] border border-border text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-          >
-            Update stock in bulk
-          </Link>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/purchases/new"
+              className="flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] bg-brand-accent px-3 text-center text-[length:var(--font-size-caption)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity"
+            >
+              Receive delivery
+            </Link>
+            <Link
+              href="/stock-count"
+              className="flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] border border-border px-3 text-center text-[length:var(--font-size-caption)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+            >
+              Count stock
+            </Link>
+          </div>
         )}
       </div>
 
       <div>
         {filteredPurchases.length === 0 ? (
           <p className="py-8 text-center text-[length:var(--font-size-body)] text-on-surface-muted">
-            No restocks recorded for this period.
+            No deliveries recorded for this period.
           </p>
         ) : (
           <ul className="flex flex-col gap-2 pb-20">
@@ -201,7 +209,7 @@ export default function PurchasesPage() {
       </div>
 
       {canAdd && (
-        <FAB href="/purchases/new" label="Record a restock">
+        <FAB href="/purchases/new" label="Receive delivery">
           <Plus size={26} aria-hidden />
         </FAB>
       )}

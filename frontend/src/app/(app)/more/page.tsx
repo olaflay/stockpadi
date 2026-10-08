@@ -150,7 +150,7 @@ export default function MorePage() {
             <SettingsRow
               icon={Truck}
               tone="neutral"
-              label="Purchases & Restock"
+              label="Stock"
               description="Record new inventory received from suppliers"
               href="/purchases"
             />

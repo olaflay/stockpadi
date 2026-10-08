@@ -31,8 +31,8 @@ export default function NewPurchasePage() {
   const suppliers = useLiveQuery(() => tenantArray(db.suppliers), [], []);
   const products = useLiveQuery(() => tenantArray(db.products.orderBy("name")), [], []);
 
-  const [branchId, setBranchId, clearBranchDraft] = useDraft<string>("stockpadi-draft-restock-branch", "");
-  const [supplierId, setSupplierId, clearSupplierDraft] = useDraft<string | null>("stockpadi-draft-restock-supplier", null);
+  const [branchId, setBranchId] = useDraft<string>("stockpadi-draft-restock-branch", "");
+  const [supplierId, setSupplierId] = useDraft<string | null>("stockpadi-draft-restock-supplier", null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showNewSupplierForm, setShowNewSupplierForm] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
@@ -44,7 +44,7 @@ export default function NewPurchasePage() {
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
-        <ScreenHeader title="Record restock" backHref="/purchases" />
+        <ScreenHeader title="Receive delivery" backHref="/purchases" />
         <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
@@ -138,9 +138,10 @@ export default function NewPurchasePage() {
         createdByUserId: user.id,
         actor: user,
       });
-      showToast(`Restock recorded: ${formatCurrency(total)}`, "success");
-      clearBranchDraft();
-      clearSupplierDraft();
+      showToast(`Delivery recorded: ${formatCurrency(total)}`, "success");
+      // Keep the last branch selected for the next delivery. Supplier selection
+      // is already persisted by useDraft; only line items are one-off data.
+      setBranchId(effectiveBranchId);
       clearLinesDraft();
       router.replace("/purchases");
     } catch {
@@ -152,12 +153,12 @@ export default function NewPurchasePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Record restock" backHref="/purchases" />
+      <ScreenHeader title="Receive delivery" backHref="/purchases" />
 
       {branches && branches.length > 1 && (
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Branch *</span>
-          <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+          <SelectInput value={effectiveBranchId} onChange={(e) => setBranchId(e.target.value)}>
             <option value="">-- Select branch --</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -259,6 +260,7 @@ export default function NewPurchasePage() {
 
             {showNewSupplierForm ? (
               <div className="flex flex-col gap-2 rounded-[var(--radius-control)] bg-surface-container p-2">
+                <p className="text-[length:var(--font-size-caption)] font-medium text-on-surface">Add supplier</p>
                 <input
                   value={newSupplierName}
                   onChange={(e) => setNewSupplierName(e.target.value)}
@@ -271,14 +273,27 @@ export default function NewPurchasePage() {
                   placeholder="Phone (optional)"
                   className={inputClass}
                 />
-                <RippleButton
-                  type="button"
-                  onClick={handleAddSupplier}
-                  disabled={!newSupplierName.trim()}
-                  className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50"
-                >
-                  Add supplier
-                </RippleButton>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewSupplierForm(false);
+                      setNewSupplierName("");
+                      setNewSupplierPhone("");
+                    }}
+                    className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface"
+                  >
+                    Cancel
+                  </button>
+                  <RippleButton
+                    type="button"
+                    onClick={handleAddSupplier}
+                    disabled={!newSupplierName.trim()}
+                    className="min-h-[var(--touch-target-min)] flex-1 rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50"
+                  >
+                    Add supplier
+                  </RippleButton>
+                </div>
               </div>
             ) : (
               <button
@@ -436,7 +451,7 @@ export default function NewPurchasePage() {
           disabled={isSubmitting}
           className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
         >
-          {isSubmitting ? "Saving…" : "Receive restock"}
+          {isSubmitting ? "Saving…" : "Save delivery"}
         </RippleButton>
       </div>
     </div>

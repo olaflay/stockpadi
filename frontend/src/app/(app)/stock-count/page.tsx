@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useDraft } from "@/hooks/use-draft";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -19,7 +20,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useNavigation } from "@/components/ui/NavigationContext";
-import { useCurrentUser } from "@/features/auth/use-current-user";
+import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { Product } from "@/types/product";
 import { tenantArray } from "@/lib/local-tenant";
@@ -207,6 +208,15 @@ export default function StockCountPage() {
   return (
     <div className="flex flex-col gap-4 pb-24">
       <ScreenHeader title="Stock count" />
+
+      {hasAccountType(user, ["BUSINESS_OWNER", "ADMIN"]) && (
+        <Link
+          href="/purchases/update-stock"
+          className="flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] border border-border px-3 text-center text-[length:var(--font-size-caption)] font-medium text-on-surface hover:bg-surface-container transition-colors"
+        >
+          Adjust multiple products
+        </Link>
+      )}
 
       {/* Search Input */}
       <div className="relative w-full">

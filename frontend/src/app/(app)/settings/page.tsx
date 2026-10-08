@@ -14,14 +14,8 @@ import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 import { Modal } from "@/components/ui/Modal";
 
 /**
- * Grouped settings document arranged by hierarchy of need per One UI / M3:
- * 1. User Profile & Account Identity (Clean top profile surface)
- * 2. Display / Appearance (Immediate viewing comfort)
- * 3. Team & Staff Management (Core operational priority)
- * 4. Business & Outlets (Store profile and multi-location management)
- * 5. Data & System (Sync health, outbox, local backup & report sharing)
- * 6. Support & Info (Guides, FAQs & system architecture)
- * 7. Session & Exit (Protected danger action)
+ * Settings is grouped by the decisions a store owner makes:
+ * account, store setup, people, data/sharing, then help.
  */
 const CAN_MANAGE_BUSINESS_SETTINGS = ["BUSINESS_OWNER", "ADMIN"] as const;
 
@@ -48,6 +42,9 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <ScreenHeader title="Settings" />
+      <p className="-mt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
+        Set up your store once, then keep access, data, and support in one place.
+      </p>
 
       {/* Account Identity Header — Clean profile surface */}
       <RippleLink
@@ -93,15 +90,15 @@ export default function SettingsPage() {
         })()}
       </section>
 
-      {/* Team & Operations Section */}
+      {/* People & Permissions Section */}
       {canManageBusiness && (
         <section className="flex flex-col">
           <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            Team & Operations
+            People & Permissions
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Staff and access"
+              label="Staff & access"
               description="Add cashiers, workers and manage permissions"
               href="/staff"
             />
@@ -109,20 +106,20 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {/* Business & Outlets Section */}
+      {/* Store Setup Section */}
       {canManageBusiness && (
         <section className="flex flex-col">
           <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            Business & Outlets
+            Store Setup
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Business details"
+              label="Business profile"
               description="Store name, receipt headers and contact info"
               href="/settings/business"
             />
             <SettingsRow
-              label="Branches and outlets"
+              label="Branches & outlets"
               description="Store locations and staff assignments"
               href="/settings/branches"
             />
@@ -130,20 +127,20 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {/* Data & Backup Section */}
+      {/* Data & Sharing Section */}
       {canManageBusiness && (
         <section className="flex flex-col">
           <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            Data & System
+            Data & Sharing
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Data and backup"
+              label="Backup & offline data"
               description="Sync health, outbox queue and local backup"
               href="/settings/data"
             />
             <SettingsRow
-              label="Sync and system health"
+              label="Sync health"
               description="Cloud connection, pull completeness and pending changes"
               href="/settings/sync-health"
             />
@@ -156,10 +153,10 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {/* Support & About Section */}
+      {/* Help & About Section */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Support & Info
+          Help
         </h2>
         <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
           <SettingsRow
