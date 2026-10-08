@@ -112,14 +112,14 @@ export default function RegisterCallbackPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <Skeleton className="h-10 w-10 rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full max-w-md mx-auto flex-col overflow-hidden">
+    <div className="flex min-h-dvh w-full max-w-md mx-auto flex-col overflow-hidden">
       <div className="flex flex-col items-center gap-3 px-6 pt-10 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent">
           <RegisterIllustration className="h-10 w-10" />

@@ -84,7 +84,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center gap-4 px-6 max-w-md mx-auto">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center gap-4 px-6 max-w-md mx-auto">
       <Skeleton className="h-16 w-16 rounded-2xl" />
       <Skeleton className="h-4 w-48" />
     </div>

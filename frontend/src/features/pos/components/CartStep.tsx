@@ -82,14 +82,14 @@ export function CartStep(props: {
   }
 
   return (
-    <div key="cart" className="flex h-full flex-col gap-4 animate-step-in">
+    <div key="cart" className="flex h-full min-w-0 flex-col gap-4 animate-step-in">
       {!hideHeader && <ScreenHeader title="Cart" onBack={onBack} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
         <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
           {itemCount} item{itemCount === 1 ? "" : "s"}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
           {parkedSales.length > 0 && (
             <button
               type="button"

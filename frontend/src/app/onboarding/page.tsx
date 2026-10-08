@@ -332,7 +332,7 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <div className="flex h-screen w-full flex-col px-6 max-w-md mx-auto justify-center gap-4">
+      <div className="flex min-h-dvh w-full flex-col px-6 max-w-md mx-auto justify-center gap-4">
         <Skeleton className="h-10 w-48 mx-auto" />
         <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
@@ -340,7 +340,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex h-screen w-full max-w-md mx-auto flex-col px-6 relative bg-surface">
+    <div className="flex min-h-dvh w-full max-w-md mx-auto flex-col px-6 relative bg-surface">
       {/* Top Header Chrome (One UI / Minimalist M3) */}
       <div className="flex items-center justify-between pt-6 pb-2 min-h-[48px]">
         {currentStepIndex > 0 ? (

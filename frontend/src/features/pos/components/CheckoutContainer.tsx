@@ -154,7 +154,7 @@ export function CheckoutContainer(props: {
 
   return (
     <div
-      className="flex h-full flex-col gap-3 animate-step-in"
+      className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-3 animate-step-in"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -177,14 +177,14 @@ export function CheckoutContainer(props: {
       </div>
 
       {/* Horizontally-Segmented Carousel Panes */}
-      <div className="relative flex-1 w-full overflow-hidden">
+      <div className="relative min-h-0 min-w-0 flex-1 w-full max-w-full overflow-hidden">
         <div
-          className={`flex w-[200%] h-full transition-transform duration-300 ease-out will-change-transform ${
+          className={`flex h-full w-[200%] max-w-none min-w-0 transition-transform duration-300 ease-out will-change-transform ${
             activeTab === "cart" ? "translate-x-0" : "-translate-x-1/2"
           }`}
         >
           {/* Left Pane: Cart */}
-          <div className="w-1/2 h-full pr-1 overflow-y-auto">
+          <div className="h-full w-1/2 min-w-0 shrink-0 pr-1 overflow-y-auto">
             <CartStep
               cartLines={props.cartLines}
               products={props.products}
@@ -210,7 +210,7 @@ export function CheckoutContainer(props: {
           </div>
 
           {/* Right Pane: Payment */}
-          <div className="w-1/2 h-full pl-1 overflow-y-auto">
+          <div className="h-full w-1/2 min-w-0 shrink-0 pl-1 overflow-y-auto">
             <PaymentStep
               itemCount={props.itemCount}
               subtotal={props.subtotal}

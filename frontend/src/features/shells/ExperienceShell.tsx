@@ -64,7 +64,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <SyncEngine />
         <BannerStrip />
         <SideDrawer />
-        <main className="flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
+        <main className="min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
           {children}
         </main>
         {/* Global safe-area bottom blanket: guarantees every subpage, form, and detail screen blankets the curved chin */}
@@ -104,20 +104,20 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
                 key={item.href}
                 href={item.href}
                 prefetch={true}
-                className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+                className={`min-w-0 flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
                   active ? "text-brand-accent-active font-semibold" : "text-on-surface-muted"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
                 <span
-                  className={`relative flex items-center justify-center rounded-full px-4 py-0.5 transition-colors duration-[var(--motion-duration-short)] ${
+                  className={`relative flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 transition-colors duration-[var(--motion-duration-short)] sm:px-4 ${
                     active ? "bg-brand-accent/10" : ""
                   }`}
                 >
                   <Icon size={22} strokeWidth={active ? 2.4 : 1.8} aria-hidden />
                   {(item.href === "/business" || item.href === "/work") && <AlertBadge />}
                 </span>
-                {item.label}
+                <span className="max-w-full min-w-0 truncate">{item.label}</span>
               </Link>
             );
           })}

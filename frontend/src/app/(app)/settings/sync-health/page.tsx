@@ -214,14 +214,14 @@ export default function SyncHealthPage() {
       </section>
 
       <section className="rounded-[var(--radius-card)] bg-surface-container p-4">
-        <div className="grid grid-cols-2 gap-3 text-[length:var(--font-size-caption)]">
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">{online ? <Wifi className="mr-1 inline" size={14} /> : <WifiOff className="mr-1 inline" size={14} />} Internet: {online ? "Connected" : "Offline"}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Cloud connection: {cloud === "connected" ? "Working" : cloud === "failed" ? "Unavailable" : "Checking"}</p>
-          <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Changes waiting: {snapshot.pending}</p>
+        <div className="grid grid-cols-1 gap-3 text-[length:var(--font-size-caption)] sm:grid-cols-2">
+          <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">{online ? <Wifi className="mr-1 inline" size={14} /> : <WifiOff className="mr-1 inline" size={14} />} Internet: {online ? "Connected" : "Offline"}</p>
+          <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">Cloud connection: {cloud === "connected" ? "Working" : cloud === "failed" ? "Unavailable" : "Checking"}</p>
+          <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">Changes waiting: {snapshot.pending}</p>
           {user.accountType === "BUSINESS_OWNER" && <>
-            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Checking stock: {snapshot.confirmationPending}</p>
-            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Needs attention: {snapshot.blocked + snapshot.issues}</p>
-            <p className="rounded-[var(--radius-control)] bg-surface-container-high p-3">Automatic retries: {snapshot.state?.pullRetryCount ?? snapshot.retries}</p>
+            <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">Checking stock: {snapshot.confirmationPending}</p>
+            <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">Needs attention: {snapshot.blocked + snapshot.issues}</p>
+            <p className="min-w-0 break-words rounded-[var(--radius-control)] bg-surface-container-high p-3">Automatic retries: {snapshot.state?.pullRetryCount ?? snapshot.retries}</p>
           </>}
         </div>
       </section>

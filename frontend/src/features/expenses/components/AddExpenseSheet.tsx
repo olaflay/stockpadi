@@ -534,7 +534,7 @@ export function AddExpenseSheet({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 pl-6">
+                      <div className="grid grid-cols-1 gap-2 pl-6 sm:grid-cols-2">
                         <label className="flex flex-col gap-0.5">
                           <span className="text-[11px] text-on-surface-muted">Qty</span>
                           <TextInput

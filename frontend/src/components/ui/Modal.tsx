@@ -230,7 +230,7 @@ export function Modal({
     >
       <div
         ref={modalRef}
-        className={`w-full ${maxWidth} flex flex-col bg-surface ${
+        className={`min-w-0 w-full ${maxWidth} flex flex-col bg-surface ${
           isDialog
             ? "rounded-[28px] border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-step-in"
             : "rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up"
@@ -256,7 +256,7 @@ export function Modal({
 
         {/* Modal Header */}
         <div
-          className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-surface-container-low/70 select-none"
+          className="flex min-w-0 items-center justify-between gap-3 px-6 py-4 border-b border-border/40 bg-surface-container-low/70 select-none"
           onTouchStart={(e) => {
             if (!isDialog) {
               const target = e.target as HTMLElement | null;
@@ -275,7 +275,7 @@ export function Modal({
             if (!isDialog) handleDragEnd();
           }}
         >
-          <h2 id="modal-title" className="text-xl font-semibold text-on-surface tracking-tight">
+          <h2 id="modal-title" className="min-w-0 flex-1 truncate text-xl font-semibold text-on-surface tracking-tight">
             {title}
           </h2>
           <button
@@ -291,7 +291,7 @@ export function Modal({
         {/* Modal Content */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto px-6 py-5 scroll-smooth overscroll-contain"
+          className="min-w-0 flex-1 overflow-y-auto px-6 py-5 scroll-smooth overscroll-contain"
           style={{
             scrollPaddingBottom: "2.5rem",
           }}

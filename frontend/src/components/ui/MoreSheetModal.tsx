@@ -134,7 +134,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
         role="dialog"
         aria-modal="true"
         aria-label="More navigation menu"
-        className="relative z-10 flex max-h-[78vh] w-full max-w-lg mx-auto flex-col rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 bg-surface shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up overflow-hidden pointer-events-auto px-2"
+        className="relative z-10 flex min-h-0 max-h-[78vh] w-full max-w-lg mx-auto flex-col rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 bg-surface shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up overflow-hidden pointer-events-auto px-2"
         style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
       >
         {/* M3 Drag Handle */}
@@ -156,8 +156,8 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
         </div>
 
         {/* Compact 3-Column Grid */}
-        <div className="px-4 pb-6 pt-1">
-          <div className="grid grid-cols-3 gap-2.5">
+        <div className="min-h-0 overflow-y-auto px-4 pb-6 pt-1">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
             {menuItems.map((item) => {
               const isActive = activePath === item.href;
               const Icon = item.icon;
@@ -166,14 +166,14 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
                   key={item.href}
                   type="button"
                   onClick={() => navigateTo(item.href)}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 sm:py-3.5 rounded-[20px] transition-all text-center ${
+                  className={`min-w-0 flex flex-col items-center justify-center gap-2 rounded-[20px] p-3 sm:py-3.5 transition-all text-center ${
                     isActive
                       ? "bg-brand-accent/15 border border-brand-accent/40 text-brand-accent font-semibold"
                       : "bg-surface-container-low hover:bg-surface-container border border-border/30 text-on-surface active:scale-95"
                   }`}
                 >
                   <Icon size={22} className={isActive ? "text-brand-accent" : "text-on-surface-muted"} />
-                  <span className="text-xs font-medium truncate w-full text-center">
+                  <span className="w-full min-w-0 truncate text-xs font-medium text-center">
                     {item.label}
                   </span>
                 </button>

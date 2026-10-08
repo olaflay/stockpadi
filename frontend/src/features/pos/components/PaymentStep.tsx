@@ -228,10 +228,10 @@ export function PaymentStep(props: {
   }
 
   return (
-    <div key="payment" className="flex h-full flex-col gap-4 animate-step-in">
+    <div key="payment" className="flex h-full min-w-0 flex-col gap-4 animate-step-in">
       {!hideHeader && <ScreenHeader title="Payment" onBack={onBack} />}
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto pb-2">
         <div className="flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
@@ -253,8 +253,8 @@ export function PaymentStep(props: {
           <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Payment method</span>
           {effectivePayments.map((payment, index) => (
             <div key={index} className="flex flex-col gap-2 rounded-[var(--radius-control)] bg-surface-container-low p-2.5 sm:p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={`Payment method ${index + 1}`}>
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5" role="group" aria-label={`Payment method ${index + 1}`}>
                   {PAYMENT_METHODS.map((method) => {
                     const isSelected = payment.method === method;
                     return (
