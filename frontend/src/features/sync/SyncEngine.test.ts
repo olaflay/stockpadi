@@ -101,6 +101,6 @@ describe("runSyncCycle", () => {
   });
 
   it("keeps reconciliation low-frequency", () => {
-    expect(ACTIVE_RECONCILIATION_MS).toBe(10 * 60 * 1000);
+    expect(ACTIVE_RECONCILIATION_MS).toBe(2 * 60 * 1000);
   });
 });

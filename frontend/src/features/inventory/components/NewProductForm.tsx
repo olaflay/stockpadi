@@ -128,9 +128,9 @@ export function NewProductForm({
         onSkuChange={onSkuChange}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="flex min-w-0 items-start gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
             Quantity in stock
             <InfoTooltip text="How many units you currently have in the shop right now." />
           </span>

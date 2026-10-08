@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAlerts, getAlertCounts, type Alert } from "./get-alerts";
 import { usePendingSyncCount } from "@/lib/use-pending-sync-count";
+import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 
 const ACKNOWLEDGED_STORAGE_KEY = "stockpadi-alerts-acknowledged";
 
@@ -36,12 +37,28 @@ function useAcknowledgedIds() {
 export function useAlertBadgeCount(): number {
   const unsyncedCount = usePendingSyncCount();
   const acknowledgedIds = useAcknowledgedIds();
-  return useLiveQuery(() => getAlertCounts(unsyncedCount, acknowledgedIds), [unsyncedCount, acknowledgedIds]) ?? 0;
+  const user = useCurrentUserOptional();
+  const branchScope = useMemo(
+    () => (user?.accountType === "WORKER" ? user.branchIds ?? [] : null),
+    [user]
+  );
+  const lowStockOnly = user?.accountType === "WORKER";
+
+  return useLiveQuery(
+    () => getAlertCounts(unsyncedCount, acknowledgedIds, { branchScope, lowStockOnly }),
+    [unsyncedCount, acknowledgedIds, branchScope, lowStockOnly]
+  ) ?? 0;
 }
 
 export function useAlertCenter() {
   const unsyncedCount = usePendingSyncCount();
+  const user = useCurrentUserOptional();
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
+  const branchScope = useMemo(
+    () => (user?.accountType === "WORKER" ? user.branchIds ?? [] : null),
+    [user]
+  );
+  const lowStockOnly = user?.accountType === "WORKER";
 
   useEffect(() => {
     try {
@@ -57,12 +74,12 @@ export function useAlertCenter() {
 
   const result = useLiveQuery(async () => {
     try {
-      const alerts = await getAlerts(unsyncedCount);
+      const alerts = await getAlerts(unsyncedCount, { branchScope, lowStockOnly });
       return { alerts, error: null as string | null };
     } catch (err) {
       return { alerts: [] as Alert[], error: err instanceof Error ? err.message : "Couldn't load alerts." };
     }
-  }, [unsyncedCount]);
+  }, [unsyncedCount, branchScope, lowStockOnly]);
 
   // undefined distinctly means "still loading" — do not collapse it into an
   // empty array, or the page can never distinguish loading from caught up.

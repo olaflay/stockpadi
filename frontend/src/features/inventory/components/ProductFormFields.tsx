@@ -175,9 +175,9 @@ export function ProductCoreFields({
         />
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="flex min-w-0 items-start gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
             Cost price *
             <InfoTooltip text="What you paid to purchase or manufacture one unit." />
           </span>
@@ -194,8 +194,8 @@ export function ProductCoreFields({
           <FieldError id="field-error-cost-price" error={errors.costPrice?.message} />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="flex min-w-0 items-start gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
             Sell price *
             <InfoTooltip text="The retail price your customers pay." />
           </span>
@@ -244,8 +244,8 @@ export function ProductStockAlertField({
   placeholder: string;
 }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
+    <label className="flex min-w-0 flex-col gap-1">
+      <span className="flex min-w-0 items-start gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
         Low-stock alert
         <InfoTooltip text={`Notify me when stock drops to or below ${placeholder || "5"} units.`} />
       </span>

@@ -7,6 +7,7 @@ describe("Owner and Worker capability boundaries", () => {
 
   it("does not grant Worker administrative capabilities", () => {
     expect(hasCapability(worker, "POS_SELL")).toBe(true);
+    expect(hasCapability(worker, "VIEW_ALERTS")).toBe(true);
     expect(hasCapability(worker, "RECEIVE_STOCK")).toBe(false);
     expect(hasCapability(worker, "RECORD_REPAYMENT")).toBe(false);
   });

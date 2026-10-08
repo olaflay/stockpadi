@@ -10,6 +10,9 @@ export const WORKER_EXPERIENCE_ACCOUNT_TYPES: readonly AccountType[] = ACCOUNT_T
 
 const IMPLIED_CAPABILITIES: Partial<Record<WorkerCapability, readonly WorkerCapability[]>> = {
   POS_SELL: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
+  // Anyone who can see branch stock needs the corresponding low-stock
+  // warning; this keeps alerts useful without requiring a second permission.
+  VIEW_BRANCH_STOCK: ["VIEW_ALERTS"],
   MANAGE_PRODUCTS: ["VIEW_PRODUCTS", "VIEW_STOCK_MOVEMENTS"],
   ADJUST_STOCK: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS"],
   SUBMIT_STOCK_COUNT: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
@@ -19,12 +22,23 @@ const IMPLIED_CAPABILITIES: Partial<Record<WorkerCapability, readonly WorkerCapa
   RECORD_REPAYMENT: ["VIEW_CUSTOMERS"],
 };
 
+function hasImpliedCapability(
+  granted: WorkerCapability,
+  requested: WorkerCapability,
+  visited = new Set<WorkerCapability>(),
+): boolean {
+  if (granted === requested) return true;
+  if (visited.has(granted)) return false;
+  visited.add(granted);
+  return IMPLIED_CAPABILITIES[granted]?.some((capability) => hasImpliedCapability(capability, requested, visited)) ?? false;
+}
+
 export function hasCapability(
   user: { accountType?: AccountType; permissions?: readonly WorkerCapability[] },
   capability: WorkerCapability,
 ): boolean {
   return user.accountType === "ADMIN" || user.accountType === "BUSINESS_OWNER" || Boolean(
-    user.permissions?.includes(capability) || user.permissions?.some((granted) => IMPLIED_CAPABILITIES[granted]?.includes(capability))
+    user.permissions?.some((granted) => hasImpliedCapability(granted, capability))
   );
 }
 

@@ -118,9 +118,10 @@ export async function enqueueOutboxWrite(
     });
   }
 
-  // Trigger one immediate canonical drain if the device reports reachability.
-  // navigator.onLine is only a hint; the request classifies actual failures.
-  if (typeof navigator !== "undefined" && navigator.onLine) scheduleImmediateDrain();
+  // Trigger one immediate canonical drain after every local write. The online
+  // flag is only a hint and can remain stale on weak mobile networks; the
+  // request layer classifies a failed attempt and parks it with backoff.
+  scheduleImmediateDrain();
   registerBackgroundSyncHint();
 }
 

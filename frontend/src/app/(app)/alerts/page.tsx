@@ -43,7 +43,11 @@ export default function AlertsPage() {
           <EmptyState
             icon={Bell}
             title="All clear"
-            description="No low stock or expiry warnings right now."
+            description={
+              user.accountType === "WORKER"
+                ? "No low-stock warnings for your assigned branches right now."
+                : "No low stock or expiry warnings right now."
+            }
             action={{ label: "Go to Dashboard", href: "/dashboard" }}
           />
         ) : (

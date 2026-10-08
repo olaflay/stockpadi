@@ -6,6 +6,7 @@ import {
   getStockByProduct,
   LOW_STOCK_THRESHOLD,
   EXPIRY_ALERT_WINDOW_DAYS,
+  type StockBranchScope,
 } from "@/features/inventory/product-insights";
 
 export type AlertType = "low_stock" | "expiring" | "unsynced";
@@ -18,16 +19,28 @@ export interface Alert {
   href: string;
 }
 
+export interface AlertQueryOptions {
+  /** Limit stock calculations to the branches assigned to a worker. */
+  branchScope?: StockBranchScope;
+  /** Workers need operational low-stock warnings, not owner-level system alerts. */
+  lowStockOnly?: boolean;
+}
+
 /**
  * Full detailed alert list — only for the /alerts page itself. Everywhere
  * else (the globally-mounted nav badge, the dashboard summary) only needs a
  * count; see getAlertCounts() below, which skips the per-product fetch and
  * description strings entirely.
  */
-export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
+export async function getAlerts(unsyncedCount: number, options: AlertQueryOptions = {}): Promise<Alert[]> {
   const alerts: Alert[] = [];
+  const branchScope = options.branchScope ?? null;
+  const lowStockOnly = options.lowStockOnly ?? false;
 
-  if (unsyncedCount > 0) {
+  // A worker without an assigned branch must not see another branch's stock.
+  if (Array.isArray(branchScope) && branchScope.length === 0) return alerts;
+
+  if (!lowStockOnly && unsyncedCount > 0) {
     alerts.push({
       id: "unsynced-outbox",
       type: "unsynced",
@@ -39,13 +52,21 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
 
   const [products, stockByProduct] = await Promise.all([
     tenantArray(db.products),
-    getStockByProduct(),
+    getStockByProduct(branchScope),
   ]);
 
-  const [lowStockIds, expiringIds] = await Promise.all([
-    getLowStockProductIds(LOW_STOCK_THRESHOLD, null, products, stockByProduct),
-    getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, null, products, stockByProduct),
+  const [detectedLowStockIds, expiringIds] = await Promise.all([
+    getLowStockProductIds(LOW_STOCK_THRESHOLD, branchScope, products, stockByProduct),
+    lowStockOnly
+      ? Promise.resolve(new Set<string>())
+      : getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, branchScope, products, stockByProduct),
   ]);
+  // A catalogue is shared across branches. For worker alerts, only surface
+  // products that have a stock record in one of the worker's branches; an
+  // absent branch row is not proof that the product is low there.
+  const lowStockIds = lowStockOnly
+    ? new Set([...detectedLowStockIds].filter((id) => stockByProduct.has(id)))
+    : detectedLowStockIds;
 
   const flaggedIds = new Set([...lowStockIds, ...expiringIds]);
   const flaggedProducts = products.filter((product) => flaggedIds.has(product.id));
@@ -84,19 +105,33 @@ export async function getAlerts(unsyncedCount: number): Promise<Alert[]> {
  * those consumers only ever render a number. Still respects acknowledged
  * alerts (built from bare product ids, never needs to fetch a product row).
  */
-export async function getAlertCounts(unsyncedCount: number, acknowledgedIds?: Set<string>): Promise<number> {
+export async function getAlertCounts(
+  unsyncedCount: number,
+  acknowledgedIds?: Set<string>,
+  options: AlertQueryOptions = {},
+): Promise<number> {
+  const branchScope = options.branchScope ?? null;
+  const lowStockOnly = options.lowStockOnly ?? false;
+
+  if (Array.isArray(branchScope) && branchScope.length === 0) return 0;
+
   const [products, stockByProduct] = await Promise.all([
     tenantArray(db.products),
-    getStockByProduct(),
+    getStockByProduct(branchScope),
   ]);
 
-  const [lowStockIds, expiringIds] = await Promise.all([
-    getLowStockProductIds(LOW_STOCK_THRESHOLD, null, products, stockByProduct),
-    getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, null, products, stockByProduct),
+  const [detectedLowStockIds, expiringIds] = await Promise.all([
+    getLowStockProductIds(LOW_STOCK_THRESHOLD, branchScope, products, stockByProduct),
+    lowStockOnly
+      ? Promise.resolve(new Set<string>())
+      : getExpiringProductIds(EXPIRY_ALERT_WINDOW_DAYS, branchScope, products, stockByProduct),
   ]);
+  const lowStockIds = lowStockOnly
+    ? new Set([...detectedLowStockIds].filter((id) => stockByProduct.has(id)))
+    : detectedLowStockIds;
 
   let count = 0;
-  if (unsyncedCount > 0 && !acknowledgedIds?.has("unsynced-outbox")) count++;
+  if (!lowStockOnly && unsyncedCount > 0 && !acknowledgedIds?.has("unsynced-outbox")) count++;
   for (const id of lowStockIds) if (!acknowledgedIds?.has(`low-stock-${id}`)) count++;
   for (const id of expiringIds) if (!acknowledgedIds?.has(`expiring-${id}`)) count++;
   return count;

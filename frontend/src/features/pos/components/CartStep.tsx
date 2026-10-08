@@ -244,8 +244,8 @@ export function CartStep(props: {
               <span>Subtotal</span>
               <span className="font-number tabular-nums">{formatCurrency(subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between text-brand-accent font-medium">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-brand-accent font-medium">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <span>Discount</span>
                 <button
                   type="button"
@@ -265,7 +265,7 @@ export function CartStep(props: {
                   Remove
                 </button>
               </div>
-              <span className="font-number tabular-nums">−{formatCurrency(discount)}</span>
+              <span className="shrink-0 whitespace-nowrap font-number tabular-nums">−{formatCurrency(discount)}</span>
             </div>
           </div>
         ) : (
@@ -307,7 +307,7 @@ export function CartStep(props: {
           title="Apply Discount"
         >
           <div className="flex flex-col gap-4">
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+            <p className="break-words text-[length:var(--font-size-caption)] text-on-surface-muted">
               Enter discount amount. Max allowable is subtotal ({formatCurrency(subtotal)}).
             </p>
             <div className="flex flex-col gap-1.5">

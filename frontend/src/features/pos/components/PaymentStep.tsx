@@ -242,9 +242,9 @@ export function PaymentStep(props: {
             </span>
           </div>
           {discount !== undefined && discount > 0 && (
-            <div className="flex items-center justify-between text-xs border-t border-border/40 pt-1.5 text-on-surface-muted">
-              <span>Subtotal {formatCurrency(subtotal ?? total)}</span>
-              <span className="text-brand-accent font-medium">−{formatCurrency(discount)} discount</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs border-t border-border/40 pt-1.5 text-on-surface-muted">
+              <span className="min-w-0">Subtotal {formatCurrency(subtotal ?? total)}</span>
+              <span className="shrink-0 whitespace-nowrap text-brand-accent font-medium">−{formatCurrency(discount)} discount</span>
             </div>
           )}
         </div>

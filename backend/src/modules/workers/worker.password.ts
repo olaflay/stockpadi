@@ -1,5 +1,11 @@
-export function generatePassword(business: string) {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  const prefix = business.replace(/[^a-z0-9]/gi, "").slice(0, 8) || "Store";
-  return `SP-${prefix}-${Array.from(bytes, (byte) => (byte % 36).toString(36)).join("").toUpperCase()}!`;
+const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+/**
+ * Short enough to share verbally, while the fixed prefix keeps every output
+ * compliant with the shared uppercase/lowercase/number/symbol policy.
+ */
+export function generatePassword(_business: string) {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const randomPart = Array.from(bytes, (byte) => PASSWORD_ALPHABET[byte % PASSWORD_ALPHABET.length]).join("");
+  return `Aa7!${randomPart}`;
 }

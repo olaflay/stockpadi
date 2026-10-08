@@ -42,6 +42,9 @@ function branchTopic(businessId: string, branchId: string): string {
   return `${businessTopic(businessId)}:branch:${branchId}`;
 }
 
+const REALTIME_RECONNECT_BASE_MS = 1_000;
+const REALTIME_RECONNECT_MAX_MS = 30_000;
+
 /**
  * Owns the one browser Realtime lifecycle for synchronization. Broadcast is
  * deliberately reduced to a validated wake-up signal; all data still comes
@@ -57,12 +60,40 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
   let subscribedTopics: string[] = [];
   let hadConnection = false;
   let configuring = false;
+  let channelGeneration = 0;
+  let reconnectTimer: number | null = null;
+  let reconnectAttempt = 0;
+  let queuedConfigure = false;
+  let queuedConfigureForce = false;
+  let queuedConfigureTrigger: SyncPullTrigger | null = null;
+  let lastConnectedGeneration: number | null = null;
+  let subscribedChannelCount = 0;
 
   const removeChannels = async (): Promise<void> => {
+    channelGeneration += 1;
     const previous = channels;
     channels = [];
     subscribedTopics = [];
     await Promise.all(previous.map((channel) => supabase.removeChannel(channel)));
+  };
+
+  const clearReconnectTimer = (): void => {
+    if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  };
+
+  const scheduleReconnect = (): void => {
+    if (stopped || reconnectTimer !== null) return;
+    const baseDelay = Math.min(
+      REALTIME_RECONNECT_MAX_MS,
+      REALTIME_RECONNECT_BASE_MS * 2 ** Math.min(reconnectAttempt, 5),
+    );
+    reconnectAttempt += 1;
+    const jitter = Math.floor(Math.random() * Math.min(2_000, Math.max(250, baseDelay * 0.25)));
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null;
+      requestConfigure("realtime-reconnect", true);
+    }, baseDelay + jitter);
   };
 
   const handleHint = async (topic: string, message: unknown): Promise<void> => {
@@ -73,7 +104,9 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
     if (!businessId) return;
     const state = await db.syncPullState.get(`${businessId}:session`);
     const hintCursor = candidate.cursor;
-    if (hintCursor && state?.lastCompletePullAt && hintCursor <= state.lastCompletePullAt) {
+    const hintTime = hintCursor ? Date.parse(hintCursor) : Number.NaN;
+    const lastPullTime = state?.lastCompletePullAt ? Date.parse(state.lastCompletePullAt) : Number.NaN;
+    if (hintCursor && Number.isFinite(hintTime) && Number.isFinite(lastPullTime) && hintTime <= lastPullTime) {
       recordSkippedPull();
       return;
     }
@@ -115,6 +148,8 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
       }
       await removeChannels();
       subscribedTopics = topics;
+      const generation = channelGeneration;
+      subscribedChannelCount = 0;
       channels = topics.map((topic) => {
         const channel = supabase
           .channel(topic, { config: { private: true } })
@@ -122,12 +157,35 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
             void handleHint(topic, message);
           });
         channel.subscribe((status) => {
+          if (stopped || generation !== channelGeneration) return;
           if (status === "SUBSCRIBED") {
-            if (hadConnection) {
+            if (lastConnectedGeneration !== generation) {
+              if (hadConnection) {
+                recordRealtimeReconnect();
+                // A branch-scoped worker can have several channels. One
+                // reconnect should produce one pull, not one pull per branch.
+                onTrigger("realtime-reconnect");
+              }
+              lastConnectedGeneration = generation;
+              subscribedChannelCount = 1;
+            } else if (subscribedChannelCount < topics.length) {
+              // The remaining channels are completing this generation's
+              // initial subscription; they do not need separate pulls.
+              subscribedChannelCount += 1;
+            } else if (hadConnection) {
+              // Supabase can report SUBSCRIBED again on an existing channel
+              // after a transport hiccup without changing the channel object.
               recordRealtimeReconnect();
               onTrigger("realtime-reconnect");
             }
             hadConnection = true;
+            if (subscribedChannelCount >= topics.length) {
+              reconnectAttempt = 0;
+              clearReconnectTimer();
+            }
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            lastConnectedGeneration = null;
+            scheduleReconnect();
           }
         });
         return channel;
@@ -135,30 +193,51 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
       if (trigger) onTrigger(trigger);
     } finally {
       configuring = false;
+      if (queuedConfigure && !stopped) {
+        const nextTrigger = queuedConfigureTrigger;
+        const nextForce = queuedConfigureForce;
+        queuedConfigure = false;
+        queuedConfigureForce = false;
+        queuedConfigureTrigger = null;
+        void configure(nextTrigger, nextForce).catch(() => scheduleReconnect());
+      }
     }
   };
+
+  function requestConfigure(trigger: SyncPullTrigger | null, force = false): void {
+    if (stopped) return;
+    if (configuring) {
+      queuedConfigure = true;
+      queuedConfigureForce = queuedConfigureForce || force;
+      queuedConfigureTrigger = trigger ?? queuedConfigureTrigger;
+      return;
+    }
+    void configure(trigger, force).catch(() => scheduleReconnect());
+  }
 
   const authSubscription = supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_OUT") {
       hadConnection = false;
+      clearReconnectTimer();
       void removeChannels();
       return;
     }
     if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED", "INITIAL_SESSION"].includes(event)) {
-      void configure("auth", true);
+      requestConfigure("auth", true);
     }
   }).data.subscription;
 
-  void configure(null, true);
+  requestConfigure(null, true);
 
   const stop = (() => {
     if (stopped) return;
     stopped = true;
+    clearReconnectTimer();
     authSubscription?.unsubscribe();
     void removeChannels();
   }) as SyncRealtimeController;
   stop.refresh = () => {
-    void configure(null);
+    requestConfigure(null);
   };
   return stop;
 }

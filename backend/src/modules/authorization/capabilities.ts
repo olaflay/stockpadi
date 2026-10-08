@@ -16,6 +16,7 @@ const OWNER_CAPABILITIES = new Set<Capability>([
 
 const IMPLIED_CAPABILITIES: Partial<Record<Capability, readonly Capability[]>> = {
   POS_SELL: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
+  VIEW_BRANCH_STOCK: ["VIEW_ALERTS"],
   MANAGE_PRODUCTS: ["VIEW_PRODUCTS", "VIEW_STOCK_MOVEMENTS"],
   ADJUST_STOCK: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS"],
   SUBMIT_STOCK_COUNT: ["VIEW_PRODUCTS", "VIEW_BRANCH_STOCK"],
@@ -25,12 +26,22 @@ const IMPLIED_CAPABILITIES: Partial<Record<Capability, readonly Capability[]>> =
   RECORD_REPAYMENT: ["VIEW_CUSTOMERS"],
 };
 
+function hasImpliedCapability(
+  granted: Capability,
+  requested: Capability,
+  visited = new Set<Capability>(),
+): boolean {
+  if (granted === requested) return true;
+  if (visited.has(granted)) return false;
+  visited.add(granted);
+  return IMPLIED_CAPABILITIES[granted]?.some((capability) => hasImpliedCapability(capability, requested, visited)) ?? false;
+}
+
 export function hasCapability(context: { accountType: AccountContext["accountType"]; permissions: readonly WorkerCapability[] }, capability: Capability): boolean {
   if (context.accountType === "ADMIN") return true;
   if (context.accountType === "BUSINESS_OWNER") return OWNER_CAPABILITIES.has(capability);
   if (context.accountType === "WORKER") {
-    return context.permissions.includes(capability as WorkerCapability)
-      || context.permissions.some((granted) => IMPLIED_CAPABILITIES[granted]?.includes(capability));
+    return context.permissions.some((granted) => hasImpliedCapability(granted, capability));
   }
   return false;
 }

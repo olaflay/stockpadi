@@ -13,7 +13,9 @@ import { getLocalBusinessId } from "@/lib/local-tenant";
 
 // This is a missed-event safety net, not the synchronization transport. It is
 // armed only while the app is visible and is cleared as soon as it is hidden.
-export const ACTIVE_RECONCILIATION_MS = 10 * 60 * 1000;
+// The cursor makes this a small request when nothing changed, while two
+// minutes limits staleness when Realtime is unavailable on weak networks.
+export const ACTIVE_RECONCILIATION_MS = 2 * 60 * 1000;
 
 export interface SyncCycleResult {
   pushResult: Awaited<ReturnType<typeof drainOutbox>>;

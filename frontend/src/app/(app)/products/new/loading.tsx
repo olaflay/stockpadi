@@ -28,7 +28,7 @@ export default function NewProductLoading() {
           <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
         </div>
         {/* Cost / Sell Price */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
