@@ -15,36 +15,36 @@ export function ServiceWorkerRegister() {
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1")
     ) {
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
+      let disposed = false;
+      let registration: ServiceWorkerRegistration | null = null;
+
+      // Do not reload the document when a new worker takes control. A shop
+      // may have an in-progress sale or offline write; replacing the page at
+      // this point feels like a random refresh. The new worker serves the
+      // next navigation while the current React tree keeps running safely.
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "visible") registration?.update().catch(() => {});
+      };
+
+      const onUpdateFound = () => {
+        const installingWorker = registration?.installing;
+        if (!installingWorker) return;
+        const onStateChange = () => {
+          if (disposed) return;
+          if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+            console.info("[PWA] New update installed; it will be used on the next navigation.");
+          }
+        };
+        installingWorker.addEventListener("statechange", onStateChange, { once: true });
+      };
 
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
-        .then((registration) => {
-          // Check for service worker updates periodically or on visibility change
-          document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-              registration.update().catch(() => {});
-            }
-          });
-
-          // Listen for new service worker installation
-          registration.addEventListener("updatefound", () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.addEventListener("statechange", () => {
-                if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-                  // New version available
-                  console.info("[PWA] New update installed and activating.");
-                }
-              });
-            }
-          });
+        .then((nextRegistration) => {
+          if (disposed) return;
+          registration = nextRegistration;
+          document.addEventListener("visibilitychange", onVisibilityChange);
+          registration.addEventListener("updatefound", onUpdateFound);
         })
         .catch((err) => {
           // In development mode, sw.js might be disabled; log as debug
@@ -54,6 +54,12 @@ export function ServiceWorkerRegister() {
             console.warn("[PWA] Service worker registration failed:", err);
           }
         });
+
+      return () => {
+        disposed = true;
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        registration?.removeEventListener("updatefound", onUpdateFound);
+      };
     }
   }, []);
 
