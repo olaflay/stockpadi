@@ -177,8 +177,12 @@ function validateBackend(env: EnvironmentVariables, environment: RuntimeEnvironm
 function validateVercelEnvironment(env: EnvironmentVariables, environment: RuntimeEnvironment, errors: string[]): void {
   if (!isVercel(env)) return;
   const vercelEnvironment = value(env, "VERCEL_ENV");
-  if (vercelEnvironment === "production" && environment !== "production") errors.push("VERCEL production requires NEXT_PUBLIC_APP_ENV=production");
-  if (vercelEnvironment === "preview" && environment !== "staging") errors.push("VERCEL preview requires NEXT_PUBLIC_APP_ENV=staging");
+  // This deployment intentionally uses one hosted environment. Vercel Preview
+  // deployments may reuse the same production Supabase/API configuration;
+  // they must not require a second staging project or a second env contract.
+  if ((vercelEnvironment === "production" || vercelEnvironment === "preview") && environment !== "production") {
+    errors.push("Vercel hosted deployments require NEXT_PUBLIC_APP_ENV=production");
+  }
 }
 
 export function validateRuntimeEnvironment(

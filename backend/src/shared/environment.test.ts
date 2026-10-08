@@ -69,6 +69,11 @@ describe("runtime environment contract", () => {
     expect(result.errors).toContain("frontend and backend NEXT_PUBLIC_APP_ENV values do not match");
   });
 
+  it("allows Preview deployments to reuse the single hosted production configuration", () => {
+    const result = validateRuntimeEnvironment({ ...backend, VERCEL_ENV: "preview" }, "backend");
+    expect(result).toMatchObject({ ok: true, environment: "production", projectRef: "same-project" });
+  });
+
 
   it("rejects production using development configuration", () => {
     const result = validateRuntimeEnvironment({ ...backend, NODE_ENV: "development", FRONTEND_ORIGIN: "http://localhost:3000" }, "backend");

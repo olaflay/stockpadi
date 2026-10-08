@@ -10,6 +10,7 @@ import { getSupabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
+import { getAppUrl } from "@/config/branding";
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function ForgotPasswordForm() {
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("Supabase is not configured.");
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${getAppUrl()}/reset-password` });
       if (resetError) throw resetError;
 
       setSuccess(true);
