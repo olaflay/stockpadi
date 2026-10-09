@@ -21,6 +21,30 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null | undefined;
 
+const SUPABASE_REQUEST_TIMEOUT_MS = 15_000;
+
+/**
+ * Supabase Auth is the one browser network client outside backend-client.ts.
+ * Give its REST calls the same finite lifetime so a stalled auth request does
+ * not leave login, refresh, or account-context recovery waiting forever.
+ */
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const upstreamSignal = init?.signal;
+  const abortFromCaller = () => controller.abort(upstreamSignal?.reason);
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) abortFromCaller();
+    else upstreamSignal.addEventListener("abort", abortFromCaller, { once: true });
+  }
+  const timer = setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS);
+  try {
+    return await globalThis.fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+    upstreamSignal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
@@ -37,6 +61,7 @@ export function getSupabase(): SupabaseClient | null {
   }
 
   client = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { fetch: fetchWithTimeout },
     realtime: {
       params: { eventsPerSecond: 5 },
     },

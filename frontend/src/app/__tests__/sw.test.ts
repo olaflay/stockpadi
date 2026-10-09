@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 const mockAddEventListeners = vi.fn();
 let capturedConfig: Record<string, unknown> | null = null;
+const workerListeners = new Map<string, (event: Event) => void>();
 
 vi.mock("serwist", () => {
   return {
@@ -28,6 +29,7 @@ describe("Service Worker configuration (sw.ts)", () => {
   beforeAll(async () => {
     vi.stubGlobal("self", {
       __SW_MANIFEST: ["/offline", "/favicon.ico"],
+      addEventListener: vi.fn((type: string, listener: (event: Event) => void) => workerListeners.set(type, listener)),
     });
 
     // Import sw once to capture initialization
@@ -84,5 +86,28 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(entry.url).toBe("/offline.html");
     expect(entry.matcher({ request: { destination: "document" } })).toBe(true);
     expect(entry.matcher({ request: { destination: "image" } })).toBe(false);
+  });
+
+  it("removes old versioned navigation caches during activation", async () => {
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      keys: vi.fn().mockResolvedValue([
+        "stockpadi-navigation-local",
+        "stockpadi-navigation-old-build",
+        "other-cache",
+      ]),
+      delete: vi.fn().mockImplementation(async (key: string) => {
+        deleted.push(key);
+        return true;
+      }),
+    });
+    const waitUntil = vi.fn((promise: Promise<unknown>) => promise);
+    const activate = workerListeners.get("activate");
+    expect(activate).toBeDefined();
+
+    activate?.({ waitUntil } as unknown as Event);
+    await waitUntil.mock.results[0]?.value;
+
+    expect(deleted).toEqual(["stockpadi-navigation-old-build"]);
   });
 });

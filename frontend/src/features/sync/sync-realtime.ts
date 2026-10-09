@@ -1,12 +1,13 @@
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import { getSupabase } from "@/lib/supabase";
+import type { SyncSaleRealtimeEvent } from "@stockpadi/contracts";
 import {
   recordRealtimeHint,
   recordRealtimeReconnect,
   recordSkippedPull,
 } from "@/features/sync/sync-observability";
-import { SYNC_HINT_EVENT, SYNC_TOPIC_PREFIX } from "./sync-realtime-contract";
+import { SYNC_HINT_EVENT, SYNC_SALE_EVENT, SYNC_TOPIC_PREFIX } from "./sync-realtime-contract";
 import type { SyncPullTrigger } from "./preload-session-data";
 
 interface RealtimeHint {
@@ -15,7 +16,115 @@ interface RealtimeHint {
   cursor?: string | null;
 }
 
-export type SyncRealtimeController = (() => void) & { refresh: () => void };
+function isCommittedSaleEvent(value: unknown, topic: string, businessId: string): value is SyncSaleRealtimeEvent {
+  if (!isRecord(value) || value.type !== SYNC_SALE_EVENT || value.scope !== topic || value.businessId !== businessId || value.status !== "completed") return false;
+  const sale = value.sale;
+  if (!isRecord(sale) || sale.businessId !== businessId || typeof sale.id !== "string" || typeof sale.clientId !== "string" || typeof sale.branchId !== "string" || typeof sale.createdByUserId !== "string" || sale.voidedAt !== null) return false;
+  return Array.isArray(sale.items) && sale.items.length > 0 && Array.isArray(sale.payments) && sale.payments.length > 0 && Array.isArray(sale.stockMovements) && sale.stockMovements.length > 0;
+}
+
+function saleFromRealtime(event: SyncSaleRealtimeEvent): import("@/types/sale").Sale {
+  const sale = event.sale;
+  return {
+    id: sale.id,
+    clientId: sale.clientId,
+    businessId: sale.businessId,
+    branchId: sale.branchId,
+    customerId: sale.customerId,
+    subtotal: sale.subtotal,
+    discount: sale.discount,
+    total: sale.total,
+    createdAtLocal: sale.createdAtLocal,
+    createdAt: sale.createdAt,
+    createdByUserId: sale.createdByUserId,
+    voidedAt: null,
+    items: sale.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      unitLabel: item.unitLabel,
+      conversionFactor: item.conversionFactor,
+      movementClientId: item.movementClientId,
+      unitCost: item.unitCost,
+      costBasis: item.costBasis as import("@/types/sale").CostBasis | null,
+      productVersion: item.productVersion,
+      costFlags: item.costFlags as import("@/types/sale").CostFlag[] | null,
+    })),
+    payments: sale.payments.map((payment) => ({
+      method: payment.method as import("@/types/sale").PaymentMethod,
+      amount: payment.amount,
+      ...(payment.tenderedAmount !== undefined ? { tenderedAmount: payment.tenderedAmount } : {}),
+      ...(payment.note !== undefined ? { note: payment.note } : {}),
+    })),
+  };
+}
+
+/**
+ * Applies a server-confirmed sale event idempotently. The sale primary key,
+ * movement client ids, and credit client ids are all reconciled inside one
+ * Dexie transaction, so duplicate broadcasts cannot duplicate ledger rows.
+ */
+export async function applyCommittedSaleEvent(event: SyncSaleRealtimeEvent): Promise<boolean> {
+  const businessId = await getLocalBusinessId();
+  if (!businessId || businessId !== event.businessId) return false;
+  const session = await db.session.get(SESSION_SINGLETON_ID);
+  const localUser = session ? await db.localUsers.get(session.userId) : undefined;
+  if (localUser?.accountType === "WORKER") return false;
+
+  await db.transaction("rw", [db.sales, db.stockMovements, db.customerCreditMovements, db.outbox], async () => {
+    await db.sales.put(saleFromRealtime(event));
+
+    for (const movement of event.sale.stockMovements) {
+      const local = await db.stockMovements.where("clientId").equals(movement.clientId).filter((candidate) => candidate.businessId === businessId).first();
+      const record = {
+        id: movement.id,
+        clientId: movement.clientId,
+        businessId,
+        branchId: movement.branchId,
+        productId: movement.productId,
+        quantityDelta: movement.quantityDelta,
+        source: movement.source,
+        sourceReferenceId: movement.sourceReferenceId,
+        reasonCode: movement.reasonCode,
+        createdAtLocal: movement.createdAtLocal,
+        createdAt: movement.createdAt,
+        createdByUserId: movement.createdByUserId,
+      } as const;
+      if (local) await db.stockMovements.update(local.id, record);
+      else await db.stockMovements.put(record);
+    }
+
+    for (const movement of event.sale.creditMovements) {
+      const local = await db.customerCreditMovements.where("clientId").equals(movement.clientId).filter((candidate) => candidate.businessId === businessId).first();
+      const record = {
+        id: movement.id,
+        clientId: movement.clientId,
+        businessId,
+        customerId: movement.customerId,
+        amountDelta: movement.amountDelta,
+        sourceReferenceId: movement.sourceReferenceId,
+        note: movement.note ?? null,
+        createdAtLocal: movement.createdAtLocal,
+        createdByUserId: movement.createdByUserId,
+      } as const;
+      if (local) await db.customerCreditMovements.update(local.id, record);
+      else await db.customerCreditMovements.put(record);
+    }
+
+    const queued = (await db.outbox.toArray()).filter((item) =>
+      item.businessId === businessId && item.type === "sale" && (
+        item.clientId === event.sale.clientId ||
+        item.entityId === event.sale.id ||
+        (isRecord(item.payload) && (item.payload.id === event.sale.id || item.payload.clientId === event.sale.clientId))
+      )
+    );
+    if (queued.length > 0) await db.outbox.bulkDelete(queued.map((item) => item.clientId));
+  });
+  return true;
+}
+
+export type SyncRealtimeController = (() => void) & { refresh: (force?: boolean) => void };
 
 function noRealtimeController(): SyncRealtimeController {
   const stop = (() => undefined) as SyncRealtimeController;
@@ -44,11 +153,13 @@ function branchTopic(businessId: string, branchId: string): string {
 
 const REALTIME_RECONNECT_BASE_MS = 1_000;
 const REALTIME_RECONNECT_MAX_MS = 30_000;
+const REALTIME_MAX_RECONNECT_ATTEMPTS = 5;
+const FALLBACK_SYNC_MIN_INTERVAL_MS = 30_000;
 
 /**
- * Owns the one browser Realtime lifecycle for synchronization. Broadcast is
- * deliberately reduced to a validated wake-up signal; all data still comes
- * from the normal authenticated cursor pull.
+ * Owns the one browser Realtime lifecycle for synchronization. Hints remain
+ * wake-up signals, while completed sale events can apply an authoritative
+ * sale immediately before the normal cursor pull reconciles it.
  */
 export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void): SyncRealtimeController {
   if (typeof window === "undefined") return noRealtimeController();
@@ -68,6 +179,8 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
   let queuedConfigureTrigger: SyncPullTrigger | null = null;
   let lastConnectedGeneration: number | null = null;
   let subscribedChannelCount = 0;
+  let realtimeSuspended = false;
+  let lastFallbackSyncAt = 0;
 
   const removeChannels = async (): Promise<void> => {
     channelGeneration += 1;
@@ -83,7 +196,14 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
   };
 
   const scheduleReconnect = (): void => {
-    if (stopped || reconnectTimer !== null) return;
+    if (stopped || realtimeSuspended || reconnectTimer !== null) return;
+    if (reconnectAttempt >= REALTIME_MAX_RECONNECT_ATTEMPTS) {
+      // Realtime is an acceleration path, never the source of truth. Stop
+      // churning sockets after repeated failures and let cursor reconciliation
+      // keep the app current without draining a low-end phone's battery.
+      realtimeSuspended = true;
+      return;
+    }
     const baseDelay = Math.min(
       REALTIME_RECONNECT_MAX_MS,
       REALTIME_RECONNECT_BASE_MS * 2 ** Math.min(reconnectAttempt, 5),
@@ -94,6 +214,13 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
       reconnectTimer = null;
       requestConfigure("realtime-reconnect", true);
     }, baseDelay + jitter);
+  };
+
+  const triggerFallbackSync = (): void => {
+    const now = Date.now();
+    if (now - lastFallbackSyncAt < FALLBACK_SYNC_MIN_INTERVAL_MS) return;
+    lastFallbackSyncAt = now;
+    onTrigger("realtime-reconnect");
   };
 
   const handleHint = async (topic: string, message: unknown): Promise<void> => {
@@ -119,6 +246,14 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
     onTrigger("realtime");
   };
 
+  const handleSaleEvent = async (topic: string, message: unknown): Promise<void> => {
+    const candidate = isRecord(message) && "payload" in message ? message.payload : message;
+    const businessId = await getLocalBusinessId();
+    if (!businessId || !isCommittedSaleEvent(candidate, topic, businessId)) return;
+    const applied = await applyCommittedSaleEvent(candidate);
+    if (applied) onTrigger("realtime");
+  };
+
   const topicsForSession = async (businessId: string): Promise<string[]> => {
     const session = await db.session.get(SESSION_SINGLETON_ID);
     const localUser = session ? await db.localUsers.get(session.userId) : undefined;
@@ -132,7 +267,7 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
   };
 
   const configure = async (trigger: SyncPullTrigger | null, force = false): Promise<void> => {
-    if (stopped || configuring) return;
+    if (stopped || configuring || (realtimeSuspended && !force)) return;
     configuring = true;
     try {
       const session = await supabase.auth.getSession();
@@ -155,6 +290,9 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
           .channel(topic, { config: { private: true } })
           .on("broadcast", { event: SYNC_HINT_EVENT }, (message) => {
             void handleHint(topic, message);
+          })
+          .on("broadcast", { event: SYNC_SALE_EVENT }, (message) => {
+            void handleSaleEvent(topic, message);
           });
         channel.subscribe((status) => {
           if (stopped || generation !== channelGeneration) return;
@@ -185,6 +323,7 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
             }
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
             lastConnectedGeneration = null;
+            triggerFallbackSync();
             scheduleReconnect();
           }
         });
@@ -236,8 +375,13 @@ export function startSyncRealtime(onTrigger: (trigger: SyncPullTrigger) => void)
     authSubscription?.unsubscribe();
     void removeChannels();
   }) as SyncRealtimeController;
-  stop.refresh = () => {
-    requestConfigure(null);
+  stop.refresh = (force = false) => {
+    if (force) {
+      realtimeSuspended = false;
+      reconnectAttempt = 0;
+      clearReconnectTimer();
+    }
+    requestConfigure(null, force);
   };
   return stop;
 }

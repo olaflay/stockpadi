@@ -111,7 +111,7 @@ export function getSyncObservability(): RuntimeTelemetry {
 export async function getSyncDebugSnapshot() {
   const businessId = await getLocalBusinessId();
   const rows = businessId
-    ? (await db.outbox.toArray()).filter((row) => row.businessId === businessId && ["pending", "syncing", "blocked", "failed", "conflict"].includes(row.status))
+    ? (await db.outbox.toArray()).filter((row) => row.businessId === businessId && ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"].includes(row.status))
     : [];
   rows.sort((a, b) => a.createdAtLocal.localeCompare(b.createdAtLocal) || a.clientId.localeCompare(b.clientId));
   const state = businessId ? await db.syncPullState.get(`${businessId}:session`) : undefined;

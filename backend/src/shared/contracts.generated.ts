@@ -65,6 +65,86 @@ export const SYNC_ROUTES = {
   health: "/api/sync/health",
 } as const;
 
+export const SYNC_HINT_EVENT = "sync_hint" as const;
+export const SYNC_SALE_EVENT = "sale_committed" as const;
+
+export interface SyncSaleRealtimeItem {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  unitLabel: string;
+  conversionFactor: number;
+  movementClientId: string;
+  unitCost: number | null;
+  costBasis: string | null;
+  productVersion: number | null;
+  costFlags: string[] | null;
+}
+
+export interface SyncSaleRealtimePayment {
+  method: string;
+  amount: number;
+  tenderedAmount?: number;
+  note?: string;
+}
+
+export interface SyncSaleRealtimeStockMovement {
+  id: string;
+  clientId: string;
+  businessId: string;
+  branchId: string;
+  productId: string;
+  quantityDelta: number;
+  source: "sale";
+  sourceReferenceId: string;
+  reasonCode: string | null;
+  createdAtLocal: string;
+  createdAt: string;
+  createdByUserId: string;
+}
+
+export interface SyncSaleRealtimeCreditMovement {
+  id: string;
+  clientId: string;
+  businessId: string;
+  customerId: string;
+  amountDelta: number;
+  sourceReferenceId: string;
+  createdAtLocal: string;
+  createdAt: string;
+  createdByUserId: string;
+  note?: string | null;
+}
+
+export interface SyncSaleRealtimeSale {
+  id: string;
+  clientId: string;
+  businessId: string;
+  branchId: string;
+  customerId: string | null;
+  subtotal: number;
+  discount: number;
+  total: number;
+  createdAtLocal: string;
+  createdAt: string;
+  createdByUserId: string;
+  workerId: string;
+  voidedAt: null;
+  items: SyncSaleRealtimeItem[];
+  payments: SyncSaleRealtimePayment[];
+  stockMovements: SyncSaleRealtimeStockMovement[];
+  creditMovements: SyncSaleRealtimeCreditMovement[];
+}
+
+export interface SyncSaleRealtimeEvent {
+  type: typeof SYNC_SALE_EVENT;
+  scope: string;
+  businessId: string;
+  status: "completed";
+  sale: SyncSaleRealtimeSale;
+}
+
 export const API_ERROR_CODES = [
   "UNAUTHENTICATED", "FORBIDDEN", "BUSINESS_UNAVAILABLE", "ACCOUNT_NOT_APPROVED",
   "MISSING_CONTEXT", "BRANCH_NOT_ALLOWED", "VALIDATION_ERROR", "VERSION_CONFLICT",

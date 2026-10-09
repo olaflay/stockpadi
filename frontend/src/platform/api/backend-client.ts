@@ -24,6 +24,26 @@ interface BackendErrorBody {
 }
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const AUTH_TIMEOUT_MS = 8_000;
+const DEFAULT_READ_RETRIES = 2;
+const RETRY_DELAYS_MS = [250, 750] as const;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new NetworkUnavailableError(message)), timeoutMs);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+function canRetry(error: unknown, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", attempt: number): boolean {
+  if (method !== "GET" || attempt >= DEFAULT_READ_RETRIES) return false;
+  if (error instanceof NetworkUnavailableError) return true;
+  return error instanceof BackendRequestError && (error.status === 408 || error.status === 429 || error.status >= 500);
+}
 
 /**
  * The browser always calls the same-origin Next.js proxy. This keeps a phone
@@ -57,46 +77,64 @@ async function request<T>(
   retried = false,
   allowUnauthenticated = false,
   timeoutMs = REQUEST_TIMEOUT_MS,
+  attempt = 0,
 ): Promise<T> {
-  const token = await currentAccessToken(true, allowUnauthenticated);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let token: string | null;
   try {
-    const response = await fetch(requestUrl(path), {
-      method,
-      signal: controller.signal,
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    let result: T | BackendErrorBody | null = null;
-    try { result = await response.json() as T | BackendErrorBody; } catch { result = null; }
-    if (response.status === 401 && !retried) {
-      const supabase = getSupabase();
-      if (supabase && typeof supabase.auth.refreshSession === "function") {
-        const refreshed = await supabase.auth.refreshSession();
-        if (refreshed.data.session) return request<T>(method, path, body, true, allowUnauthenticated, timeoutMs);
+    token = await withTimeout(currentAccessToken(true, allowUnauthenticated), AUTH_TIMEOUT_MS, "Authentication service timed out.");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(requestUrl(path), {
+        method,
+        signal: controller.signal,
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      let result: T | BackendErrorBody | null = null;
+      try { result = await response.json() as T | BackendErrorBody; } catch { result = null; }
+      if (response.status === 401 && !retried) {
+        const supabase = getSupabase();
+        if (supabase && typeof supabase.auth.refreshSession === "function") {
+          const refreshed = await withTimeout(supabase.auth.refreshSession(), AUTH_TIMEOUT_MS, "Authentication service timed out.");
+          if (refreshed.data.session) return request<T>(method, path, body, true, allowUnauthenticated, timeoutMs, attempt);
+        }
       }
+      if (!response.ok) {
+        const errorBody = result as BackendErrorBody | null;
+        const error = new BackendRequestError(
+          response.status,
+          errorBody?.error?.code ?? `HTTP_${response.status}`,
+          errorBody?.error?.message ?? "The server rejected the request.",
+        );
+        if (canRetry(error, method, attempt)) {
+          await wait(RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS.at(-1)!);
+          return request<T>(method, path, body, retried, allowUnauthenticated, timeoutMs, attempt + 1);
+        }
+        throw error;
+      }
+      return (result ?? {}) as T;
+    } finally {
+      clearTimeout(timeout);
     }
-    if (!response.ok) {
-      const errorBody = result as BackendErrorBody | null;
-      throw new BackendRequestError(
-        response.status,
-        errorBody?.error?.code ?? `HTTP_${response.status}`,
-        errorBody?.error?.message ?? "The server rejected the request.",
-      );
-    }
-    return (result ?? {}) as T;
   } catch (error) {
-    if (error instanceof BackendRequestError || error instanceof BackendConfigurationError || error instanceof NetworkUnavailableError) throw error;
-    if (error instanceof DOMException && error.name === "AbortError") throw new NetworkUnavailableError("The backend request timed out.");
-    if (error instanceof TypeError) throw new NetworkUnavailableError(error.message || "The backend could not be reached.");
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+    const normalizedError = error instanceof DOMException && error.name === "AbortError"
+      ? new NetworkUnavailableError("The backend request timed out.")
+      : error instanceof TypeError
+        ? new NetworkUnavailableError(error.message || "The backend could not be reached.")
+        : error;
+    if (canRetry(normalizedError, method, attempt)) {
+      await wait(RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS.at(-1)!);
+      return request<T>(method, path, body, retried, allowUnauthenticated, timeoutMs, attempt + 1);
+    }
+    if (normalizedError instanceof BackendRequestError || normalizedError instanceof BackendConfigurationError || normalizedError instanceof NetworkUnavailableError) throw normalizedError;
+    throw normalizedError;
   }
 }
 
-export function serverGet<T>(path: string): Promise<T> { return request<T>("GET", path); }
+export function serverGet<T>(path: string, options?: { timeoutMs?: number }): Promise<T> {
+  return request<T>("GET", path, undefined, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}
 export function serverPost<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
   return request<T>("POST", path, body, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
 }

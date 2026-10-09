@@ -30,6 +30,7 @@ describe("pwnedPasswordCount", () => {
       `https://api.pwnedpasswords.com/range/${prefix}`,
       expect.objectContaining({
         headers: expect.objectContaining({ "Add-Padding": "true" }),
+        signal: expect.any(AbortSignal),
       })
     );
     expect(count).toBe(9876543);

@@ -58,6 +58,21 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
+// Navigation caches are versioned so a newly deployed shell can never be
+// pinned behind an older deployment. Remove only old navigation caches; the
+// precache lifecycle remains owned by Serwist.
+if (typeof self.addEventListener === "function") self.addEventListener("activate", (event: Event) => {
+  const activateEvent = event as Event & { waitUntil?: (promise: Promise<unknown>) => void };
+  if (!activateEvent.waitUntil || typeof caches === "undefined") return;
+  activateEvent.waitUntil(
+    caches.keys().then((keys) => Promise.all(
+      keys
+        .filter((key) => key.startsWith("stockpadi-navigation-") && key !== `stockpadi-navigation-${SERVICE_WORKER_VERSION}`)
+        .map((key) => caches.delete(key)),
+    )),
+  );
+});
+
 /**
  * Background Sync is a coordinator wake-up only. The browser client owns the
  * durable Dexie outbox, authentication, idempotency, and retry classification;

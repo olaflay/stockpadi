@@ -34,6 +34,7 @@ const APPLY_ORDER: PullEntityName[] = [
 export type SyncPullTrigger =
   | "startup"
   | "boot"
+  | "sale"
   | "poll"
   | "local-write"
   | "online"

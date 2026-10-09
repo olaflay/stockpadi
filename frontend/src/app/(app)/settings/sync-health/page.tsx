@@ -73,7 +73,7 @@ export default function SyncHealthPage() {
       db.branches.where("businessId").equals(businessId).toArray(),
     ]);
     const active = outbox.filter((row) => row.businessId === businessId);
-    const unsynced = active.filter((row) => ["pending", "syncing", "blocked", "failed", "conflict"].includes(row.status));
+    const unsynced = active.filter((row) => ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"].includes(row.status));
     const oldestPendingAt = unsynced.map((row) => row.createdAtLocal).filter(Boolean).sort()[0] ?? null;
     const scopedDiagnostics = diagnostics.filter((row) => row.businessId === businessId);
     const latestFailure = [...scopedDiagnostics]
@@ -87,7 +87,7 @@ export default function SyncHealthPage() {
       pending: active.filter((row) => row.status === "pending" || (row.status === "syncing" && !row.awaitingConfirmation)).length,
       confirmationPending: active.filter((row) => row.status === "syncing" && row.awaitingConfirmation).length,
       blocked: active.filter((row) => row.status === "blocked").length,
-      issues: active.filter((row) => ["failed", "conflict"].includes(row.status)).length,
+      issues: active.filter((row) => ["failed", "conflict", "needs_review"].includes(row.status)).length,
       conflicts: active.filter((row) => row.status === "conflict"),
       retries: active.reduce((total, row) => total + (row.attemptCount ?? 0), 0),
       oldestPendingAt,

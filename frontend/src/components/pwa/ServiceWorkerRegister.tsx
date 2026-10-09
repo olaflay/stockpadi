@@ -26,6 +26,9 @@ export function ServiceWorkerRegister() {
         if (document.visibilityState === "visible") registration?.update().catch(() => {});
       };
 
+      const onPageShow = () => registration?.update().catch(() => {});
+      const onOnline = () => registration?.update().catch(() => {});
+
       const onUpdateFound = () => {
         const installingWorker = registration?.installing;
         if (!installingWorker) return;
@@ -44,6 +47,8 @@ export function ServiceWorkerRegister() {
           if (disposed) return;
           registration = nextRegistration;
           document.addEventListener("visibilitychange", onVisibilityChange);
+          window.addEventListener("pageshow", onPageShow);
+          window.addEventListener("online", onOnline);
           registration.addEventListener("updatefound", onUpdateFound);
         })
         .catch((err) => {
@@ -58,6 +63,8 @@ export function ServiceWorkerRegister() {
       return () => {
         disposed = true;
         document.removeEventListener("visibilitychange", onVisibilityChange);
+        window.removeEventListener("pageshow", onPageShow);
+        window.removeEventListener("online", onOnline);
         registration?.removeEventListener("updatefound", onUpdateFound);
       };
     }

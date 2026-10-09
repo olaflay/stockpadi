@@ -35,7 +35,7 @@ describe("runSyncCycle", () => {
     // Stranded stock counts must be made retryable before the push, otherwise
     // the drain cannot retire them until the following cycle.
     expect(healStrandedStockCountSubmissions).toHaveBeenCalledBefore(drainOutbox);
-    expect(refreshActiveAccountContext).toHaveBeenCalledOnce();
+    expect(refreshActiveAccountContext).not.toHaveBeenCalled();
     expect(drainOutbox).toHaveBeenCalledOnce();
     expect(preloadSessionData).toHaveBeenCalledWith(true, "push-success");
   });
@@ -54,12 +54,64 @@ describe("runSyncCycle", () => {
     expect(preloadSessionData).toHaveBeenCalledWith(true, "focus");
   });
 
+  it("refreshes account context only for lifecycle events", async () => {
+    await runSyncCycle("startup");
+    await runSyncCycle("online");
+    await runSyncCycle("resume");
+
+    expect(refreshActiveAccountContext).toHaveBeenCalledTimes(3);
+  });
+
+  it("coalesces concurrent lifecycle triggers into one follow-up account refresh", async () => {
+    let releasePush!: (value: { drained: number; pendingRemaining: number }) => void;
+    drainOutbox.mockImplementationOnce(() => new Promise((resolve) => { releasePush = resolve; }));
+
+    const startup = triggerSync("startup");
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledOnce());
+    triggerSync("online");
+    triggerSync("focus");
+
+    releasePush({ drained: 0, pendingRemaining: 0 });
+    await startup;
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledTimes(2));
+
+    expect(refreshActiveAccountContext).toHaveBeenCalledTimes(2);
+  });
+
+  it("pushes a completed sale through the fast lane without maintenance or account refresh", async () => {
+    drainOutbox.mockResolvedValueOnce({ drained: 1, pendingRemaining: 0 });
+
+    const result = await runSyncCycle("sale");
+
+    expect(refreshActiveAccountContext).not.toHaveBeenCalled();
+    expect(recoverStaleSyncingItems).not.toHaveBeenCalled();
+    expect(healStrandedStockCountSubmissions).not.toHaveBeenCalled();
+    expect(drainOutbox).toHaveBeenCalledWith({ types: ["sale"], runMaintenance: false });
+    expect(preloadSessionData).not.toHaveBeenCalled();
+    expect(result?.pullResult.fullySynced).toBe(false);
+  });
+
+  it("does not wait for an unrelated routine pull before sending a sale", async () => {
+    let releasePull!: (value: { fullySynced: boolean }) => void;
+    preloadSessionData.mockImplementationOnce(() => new Promise((resolve) => { releasePull = resolve; }));
+
+    const routine = triggerSync("startup");
+    await vi.waitFor(() => expect(preloadSessionData).toHaveBeenCalledOnce());
+
+    const sale = triggerSync("sale");
+    await vi.waitFor(() => expect(drainOutbox).toHaveBeenCalledTimes(2));
+    expect(drainOutbox).toHaveBeenNthCalledWith(2, { types: ["sale"], runMaintenance: false });
+
+    releasePull({ fullySynced: true });
+    await Promise.all([routine, sale]);
+  });
+
   it("uses the complete worker-safe cycle for a manual sync", async () => {
     drainOutbox.mockResolvedValue({ drained: 2, pendingRemaining: 0 });
 
     const result = await runSyncCycle("manual");
 
-    expect(refreshActiveAccountContext).toHaveBeenCalledOnce();
+    expect(refreshActiveAccountContext).not.toHaveBeenCalled();
     expect(drainOutbox).toHaveBeenCalledOnce();
     expect(preloadSessionData).toHaveBeenCalledWith(true, "push-success");
     expect(result).toEqual({

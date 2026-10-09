@@ -29,9 +29,17 @@ export async function pwnedPasswordCount(password: string): Promise<number> {
   const prefix = hash.slice(0, 5);
   const suffix = hash.slice(5);
 
-  const res = await fetch(`${HIBP_API}/${prefix}`, {
-    headers: { "Add-Padding": "true" },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  let res: Response;
+  try {
+    res = await fetch(`${HIBP_API}/${prefix}`, {
+      headers: { "Add-Padding": "true" },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     throw new Error(`HIBP API returned ${res.status}`);

@@ -17,6 +17,26 @@ const channelOn = vi.hoisted(() => vi.fn());
 const channelSubscribe = vi.hoisted(() => vi.fn());
 const removeChannel = vi.hoisted(() => vi.fn().mockResolvedValue("ok"));
 const getSession = vi.hoisted(() => vi.fn().mockResolvedValue({ data: { session: { access_token: "token" } } }));
+const salesPut = vi.hoisted(() => vi.fn().mockResolvedValue("sale-a"));
+const stockFirst = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const stockPut = vi.hoisted(() => vi.fn().mockResolvedValue("movement-a"));
+const creditFirst = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const creditPut = vi.hoisted(() => vi.fn().mockResolvedValue("credit-a"));
+const outboxToArray = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const outboxBulkDelete = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const transaction = vi.hoisted(() => vi.fn(async (_mode: unknown, _tables: unknown, callback: () => Promise<void>) => callback()));
+const stockMovements = vi.hoisted(() => ({
+  where: vi.fn(() => ({ equals: vi.fn(() => ({ filter: vi.fn(() => ({ first: stockFirst })) })) })),
+  put: stockPut,
+  update: vi.fn(),
+}));
+const customerCreditMovements = vi.hoisted(() => ({
+  where: vi.fn(() => ({ equals: vi.fn(() => ({ filter: vi.fn(() => ({ first: creditFirst })) })) })),
+  put: creditPut,
+  update: vi.fn(),
+}));
+const saleTable = vi.hoisted(() => ({ put: salesPut }));
+const outbox = vi.hoisted(() => ({ toArray: outboxToArray, bulkDelete: outboxBulkDelete }));
 const channel = vi.hoisted(() => ({ on: channelOn, subscribe: channelSubscribe }));
 const supabase = vi.hoisted(() => ({
   auth: {
@@ -31,24 +51,31 @@ vi.mock("@/lib/local-tenant", () => ({ getLocalBusinessId }));
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => supabase }));
 vi.mock("@/lib/db", () => ({
   SESSION_SINGLETON_ID: "current",
-  db: { session, localUsers, syncPullState },
+  db: { session, localUsers, syncPullState, sales: saleTable, stockMovements, customerCreditMovements, outbox, transaction },
 }));
 vi.mock("@/features/sync/sync-observability", () => ({ recordRealtimeHint, recordRealtimeReconnect, recordSkippedPull }));
 
 import { startSyncRealtime } from "./sync-realtime";
 
 describe("sync realtime wake-up", () => {
-  let broadcastHandler: ((message: unknown) => void) | undefined;
+  let hintHandler: ((message: unknown) => void) | undefined;
+  let saleHandler: ((message: unknown) => void) | undefined;
   let statusHandler: ((status: string) => void) | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
     localUsers.get.mockResolvedValue({ accountType: "BUSINESS_OWNER" });
-    broadcastHandler = undefined;
+    salesPut.mockClear();
+    stockFirst.mockResolvedValue(undefined);
+    creditFirst.mockResolvedValue(undefined);
+    outboxToArray.mockResolvedValue([]);
+    hintHandler = undefined;
+    saleHandler = undefined;
     statusHandler = undefined;
     syncPullState.get.mockResolvedValue({ id: "business-a:session", lastCompletePullAt: "2026-10-08T10:00:00.000Z" });
-    channelOn.mockImplementation((_type: string, _filter: unknown, callback: (message: unknown) => void) => {
-      broadcastHandler = callback;
+    channelOn.mockImplementation((_type: string, filter: { event?: string }, callback: (message: unknown) => void) => {
+      if (filter.event === "sync_hint") hintHandler = callback;
+      if (filter.event === "sale_committed") saleHandler = callback;
       return channel;
     });
     channelSubscribe.mockImplementation((callback: (status: string) => void) => {
@@ -61,9 +88,9 @@ describe("sync realtime wake-up", () => {
   it("treats a valid Broadcast as a cursor-pull trigger, not local data", async () => {
     const onTrigger = vi.fn();
     const stop = startSyncRealtime(onTrigger);
-    await vi.waitFor(() => expect(broadcastHandler).toBeDefined());
+    await vi.waitFor(() => expect(hintHandler).toBeDefined());
 
-    broadcastHandler?.({ payload: {
+    hintHandler?.({ payload: {
       type: "sync_hint",
       scope: "sync:business:business-a",
       cursor: "2026-10-08T10:01:00.000Z",
@@ -77,9 +104,9 @@ describe("sync realtime wake-up", () => {
   it("suppresses a stale hint without bypassing the durable cursor", async () => {
     const onTrigger = vi.fn();
     const stop = startSyncRealtime(onTrigger);
-    await vi.waitFor(() => expect(broadcastHandler).toBeDefined());
+    await vi.waitFor(() => expect(hintHandler).toBeDefined());
 
-    broadcastHandler?.({ payload: {
+    hintHandler?.({ payload: {
       type: "sync_hint",
       scope: "sync:business:business-a",
       cursor: "2026-10-08T09:59:00.000Z",
@@ -87,6 +114,42 @@ describe("sync realtime wake-up", () => {
     await vi.waitFor(() => expect(recordSkippedPull).toHaveBeenCalledOnce());
 
     expect(onTrigger).not.toHaveBeenCalledWith("realtime");
+    stop();
+  });
+
+  it("applies a valid completed sale event before requesting reconciliation", async () => {
+    const onTrigger = vi.fn();
+    const stop = startSyncRealtime(onTrigger);
+    await vi.waitFor(() => expect(saleHandler).toBeDefined());
+
+    saleHandler?.({ payload: {
+      type: "sale_committed",
+      scope: "sync:business:business-a",
+      businessId: "business-a",
+      status: "completed",
+      sale: {
+        id: "sale-a",
+        clientId: "sale-client-a",
+        businessId: "business-a",
+        branchId: "branch-a",
+        customerId: null,
+        subtotal: 100,
+        discount: 0,
+        total: 100,
+        createdAtLocal: "2026-10-09T10:00:00.000Z",
+        createdAt: "2026-10-09T10:00:01.000Z",
+        createdByUserId: "worker-a",
+        workerId: "worker-a",
+        voidedAt: null,
+        items: [{ productId: "product-a", quantity: 2, unitPrice: 50, discount: 0, unitLabel: "unit", conversionFactor: 1, movementClientId: "movement-client-a", unitCost: 20, costBasis: "snapshot", productVersion: 1, costFlags: [] }],
+        payments: [{ method: "cash", amount: 100 }],
+        stockMovements: [{ id: "movement-a", clientId: "movement-client-a", businessId: "business-a", branchId: "branch-a", productId: "product-a", quantityDelta: -2, source: "sale", sourceReferenceId: "sale-a", reasonCode: null, createdAtLocal: "2026-10-09T10:00:00.000Z", createdAt: "2026-10-09T10:00:01.000Z", createdByUserId: "worker-a" }],
+        creditMovements: [],
+      },
+    } });
+
+    await vi.waitFor(() => expect(salesPut).toHaveBeenCalledWith(expect.objectContaining({ id: "sale-a" })));
+    expect(onTrigger).toHaveBeenCalledWith("realtime");
     stop();
   });
 

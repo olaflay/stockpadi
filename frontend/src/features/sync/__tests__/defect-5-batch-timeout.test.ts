@@ -5,11 +5,9 @@ import { setLocalBusinessId } from "@/lib/local-tenant";
 /**
  * DEFECT 5 — an oversized outbox batch cannot drain inside the client timeout.
  *
- * The client pushes up to DRAIN_BATCH_SIZE (500) items in one request and
- * aborts that request at REQUEST_TIMEOUT_MS (15s). The backend applies a batch
- * sequentially, one RPC round trip per item, so serving time grows with the
- * number of items in it. A batch needing more than 15 seconds of server work
- * never returns its per-item acknowledgements.
+ * The client must keep each request small enough for slow connections and
+ * finite client timeouts. The backend applies a batch sequentially, one RPC
+ * round trip per item, so serving time grows with the number of items in it.
  *
  * When the abort fires the server may already have applied part of the batch,
  * but the client never learns which part, so it must lose nothing and confirm
@@ -20,10 +18,8 @@ import { setLocalBusinessId } from "@/lib/local-tenant";
  *
  * Resending is safe for integrity because every item carries a stable
  * idempotency_key, so already-applied items come back as "skipped" rather than
- * applying twice. The remaining consequence is liveness, not corruption: a queue
- * too large to serve inside the timeout re-sends the same oversized slice on
- * every attempt and never drains. That is an open question, because the remedy
- * is a sizing policy decision rather than a local correctness fix.
+ * applying twice. Small slices improve liveness without changing that
+ * idempotency guarantee.
  */
 
 let mockSession: { access_token: string } | null = null;
@@ -125,7 +121,7 @@ describe("DEFECT 5: batch push that outlives the client timeout", () => {
     );
   });
 
-  it("repeats the same oversized slice, which is why the queue never drains", async () => {
+  it("splits a large queue into small retryable slices instead of repeating an oversized slice", async () => {
     await queueItems(500);
     const { fetchMock, batches } = abortingFetch();
     vi.stubGlobal("fetch", fetchMock);
@@ -136,10 +132,11 @@ describe("DEFECT 5: batch push that outlives the client timeout", () => {
       await clearBackoff();
     }
 
-    // Every attempt re-sends the slice up to DRAIN_BATCH_SIZE (100): nothing is lost and nothing is
-    // confirmed, so the operator sees a permanently growing pending count.
-    expect(batches).toHaveLength(3);
-    for (const batch of batches) expect(batch).toHaveLength(100);
+    // Each attempt sends twenty 25-item slices. Nothing is lost or confirmed
+    // when the connection aborts, and no request is allowed to grow back to a
+    // timeout-prone oversized batch.
+    expect(batches).toHaveLength(60);
+    for (const batch of batches) expect(batch).toHaveLength(25);
     expect(await db.outbox.count()).toBe(500);
   });
 

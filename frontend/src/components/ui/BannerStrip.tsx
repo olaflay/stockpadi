@@ -4,8 +4,9 @@ import { useState } from "react";
 import { X, Bell } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useOnlineStatus } from "@/lib/use-online-status";
-import { usePendingSyncCount } from "@/lib/use-pending-sync-count";
+import { usePendingSalesCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { useCurrentUserOptional } from "@/features/auth/use-current-user";
+import { useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
 const UNSYNCED_HEADS_UP = 250;
 const NOTIFICATIONS_DISMISSED_KEY = "stockpadi-notifications-dismissed";
@@ -35,6 +36,8 @@ function rememberNotificationDismissal(): void {
 export function BannerStrip() {
   const isOnline = useOnlineStatus();
   const pendingCount = usePendingSyncCount();
+  const pendingSalesCount = usePendingSalesCount();
+  const syncPhase = useSyncRuntimePhase();
   const [showNotification, setShowNotification] = useState(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return false;
     return Notification.permission === "default" && !areNotificationsDismissed();
@@ -60,10 +63,16 @@ export function BannerStrip() {
   );
   const showOffline = !isOnline;
 
-  if (!showOffline && !showNotification && !showUnverified) return null;
+  const syncStatus = !isOnline
+    ? pendingSalesCount > 0 ? `Offline · ${pendingSalesCount} sales waiting` : "Offline · Changes stay on this device"
+    : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
+      ? pendingSalesCount > 0 ? `Syncing · ${pendingSalesCount} sales waiting` : "Syncing · Checking for updates"
+      : pendingSalesCount > 0
+        ? `Online · ${pendingSalesCount} sales waiting`
+        : "Online · All sales synced";
 
   return (
-    <div className="flex w-full flex-col" role="status">
+    <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
         <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-amber-950 dark:text-amber-200">
           Store pending admin approval · Changes are saved locally and will sync once verified
@@ -77,6 +86,10 @@ export function BannerStrip() {
             : "Offline: changes are saved locally and sync when online"}
         </div>
       )}
+
+      <div className="border-b border-border bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
+        {syncStatus}
+      </div>
 
       {showNotification && (
         <div className="flex items-center justify-between gap-2 bg-surface-container border-b border-border px-4 py-2 shadow-[var(--shadow-elevation-1)] animate-step-in">

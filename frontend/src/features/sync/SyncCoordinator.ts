@@ -24,6 +24,7 @@ export interface SyncCycleResult {
 
 let activeCycle: Promise<SyncCycleResult | null> | null = null;
 let activeTrigger: SyncPullTrigger | null = null;
+let activeSaleCycle: Promise<SyncCycleResult | null> | null = null;
 let queuedTrigger: SyncPullTrigger | null = null;
 let activeCoordinatorStop: (() => void) | null = null;
 let activeCoordinatorConsumers = 0;
@@ -31,6 +32,7 @@ let activeCoordinatorConsumers = 0;
 /** Canonical single-flight sync execution path. */
 export function runSyncCycle(trigger: SyncPullTrigger = "startup"): Promise<SyncCycleResult | null> {
   if (activeCycle) {
+    if (trigger === "sale" && activeTrigger !== "sale") return runUrgentSaleCycle(true);
     // Preserve the existing manual invocation contract: a manual request made
     // during a live cycle runs once after that cycle rather than racing it.
     if (trigger === "manual" && activeTrigger !== "manual") return activeCycle.then(() => runSyncCycle("manual"));
@@ -49,8 +51,19 @@ export function runSyncCycle(trigger: SyncPullTrigger = "startup"): Promise<Sync
   return trackedCycle;
 }
 
+function runUrgentSaleCycle(waitForLease: boolean): Promise<SyncCycleResult | null> {
+  if (activeSaleCycle) return activeSaleCycle;
+  const cycle = executeSyncCycle("sale", waitForLease);
+  const trackedCycle = cycle.finally(() => {
+    if (activeSaleCycle === trackedCycle) activeSaleCycle = null;
+  });
+  activeSaleCycle = trackedCycle;
+  return trackedCycle;
+}
+
 function triggerPriority(trigger: SyncPullTrigger): number {
   if (trigger === "manual") return 5;
+  if (trigger === "sale") return 5;
   if (["local-write", "realtime", "realtime-reconnect", "online", "resume", "focus", "service-worker", "retry"].includes(trigger)) return 4;
   if (trigger === "auth" || trigger === "startup" || trigger === "boot") return 3;
   return 1;
@@ -68,6 +81,10 @@ function coalesceTrigger(current: SyncPullTrigger | null, next: SyncPullTrigger)
  */
 export function triggerSync(trigger: SyncPullTrigger): Promise<SyncCycleResult | null> {
   if (activeCycle) {
+    if (trigger === "sale" && activeTrigger !== "sale") {
+      recordCoalescedTrigger();
+      return runUrgentSaleCycle(true);
+    }
     queuedTrigger = coalesceTrigger(queuedTrigger, trigger);
     recordCoalescedTrigger();
     return activeCycle;
@@ -82,33 +99,58 @@ export function triggerSync(trigger: SyncPullTrigger): Promise<SyncCycleResult |
   return cycle;
 }
 
-async function executeSyncCycle(trigger: SyncPullTrigger): Promise<SyncCycleResult | null> {
-  return withSyncLease(async () => {
-    beginSyncSession(trigger);
-    setSyncRuntimePhase("syncing");
-    setCoordinatorPhase("syncing");
-    try {
-      // Only old rows are recovered. A recent syncing row can belong to a
-      // live request in another tab and must not be reset mid-flight.
-      await recoverStaleSyncingItems();
-      await recoverStuckSyncingItems(30000);
-      await healStrandedStockCountSubmissions();
-      await refreshActiveAccountContext();
+async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false): Promise<SyncCycleResult | null> {
+  beginSyncSession(trigger);
+  setSyncRuntimePhase("syncing");
+  setCoordinatorPhase("syncing");
+  try {
+    const saleFastLane = trigger === "sale";
+    // Keep the lease around the recovery/account-refresh/upload critical
+    // section only. A sale arriving while a routine cycle is downloading can
+    // acquire the lease and upload immediately instead of waiting for the
+    // unrelated pull to finish.
+    const pushResult = await withSyncLease(async () => {
+      if (!saleFastLane) {
+        // Only old rows are recovered. A recent syncing row can belong to a
+        // live request in another tab and must not be reset mid-flight.
+        await recoverStaleSyncingItems();
+        await recoverStuckSyncingItems(30000);
+        await healStrandedStockCountSubmissions();
+      }
+      // Account context is lifecycle state, not a prerequisite for every
+      // mutation. The authenticated sync endpoint still authorizes every
+      // request server-side; this refresh only updates the local capability
+      // and branch mirror when it can legitimately have changed.
+      if (["startup", "boot", "auth", "online", "resume", "focus"].includes(trigger)) {
+        await refreshActiveAccountContext();
+      }
       setSyncRuntimePhase("uploading");
       setCoordinatorPhase("uploading");
-      const pushResult = await drainOutbox();
-      setSyncRuntimePhase("downloading");
-      setCoordinatorPhase("downloading");
-      const pullResult = await preloadSessionData(
-        pushResult.drained > 0 || trigger !== "poll",
-        pushResult.drained > 0 ? "push-success" : trigger,
-      );
-      return { pushResult, pullResult };
-    } finally {
-      setSyncRuntimePhase("idle");
-      setCoordinatorPhase("idle");
+      return drainOutbox(saleFastLane ? { types: ["sale"], runMaintenance: false } : undefined);
+    }, { waitForLease: saleFastLane && waitForLease });
+    if (!pushResult) return null;
+    if (saleFastLane) {
+      // The sale fast lane is complete once the authoritative push has
+      // returned. Reconciliation remains a follow-up, so it cannot delay
+      // the cashier's next sale or make a routine pull part of the sale's
+      // critical path.
+      const now = new Date().toISOString();
+      return {
+        pushResult,
+        pullResult: { startedAt: now, completedAt: now, fullySynced: false, pulls: [] },
+      };
     }
-  });
+    setSyncRuntimePhase("downloading");
+    setCoordinatorPhase("downloading");
+    const pullResult = await preloadSessionData(
+      pushResult.drained > 0 || trigger !== "poll",
+      pushResult.drained > 0 ? "push-success" : trigger,
+    );
+    return { pushResult, pullResult };
+  } finally {
+    setSyncRuntimePhase("idle");
+    setCoordinatorPhase("idle");
+  }
 }
 
 function clearTimer(timer: number | null): void {
@@ -163,8 +205,12 @@ export function startSyncCoordinator(): () => void {
 
   const requestSync = (trigger: SyncPullTrigger): void => {
     if (stopped) return;
+    // A suspended Realtime connection is re-enabled only by a lifecycle
+    // recovery signal, never by every routine reconciliation cycle.
+    if (["online", "resume", "focus"].includes(trigger)) realtimeController?.refresh(true);
     const cycle = triggerSync(trigger);
     void cycle.catch(() => undefined).finally(() => {
+      if (trigger === "sale") void triggerSync("reconciliation").catch(() => undefined);
       realtimeController?.refresh();
       void scheduleWake();
     });

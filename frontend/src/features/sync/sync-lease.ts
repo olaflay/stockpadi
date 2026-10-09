@@ -4,6 +4,11 @@ import { getLocalBusinessId } from "@/lib/local-tenant";
 const LEASE_ID = "global-sync";
 const LEASE_TTL_MS = 45_000;
 
+export interface SyncLeaseOptions {
+  /** Wait for an existing owner instead of returning immediately. */
+  waitForLease?: boolean;
+}
+
 let ownerId: string | null = null;
 let leaseDepth = 0;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
@@ -63,17 +68,23 @@ async function runOwned<T>(work: () => Promise<T>): Promise<T> {
  * without Web Locks. Nested calls are allowed so the coordinator and the
  * compatibility drain entry point share the same ownership boundary.
  */
-export async function withSyncLease<T>(work: () => Promise<T>): Promise<T | null> {
+export async function withSyncLease<T>(work: () => Promise<T>, options: SyncLeaseOptions = {}): Promise<T | null> {
   if (leaseDepth > 0) return runOwned(work);
 
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request("stockpadi-sync-coordinator", { ifAvailable: true }, async (lock) => {
+    return navigator.locks.request("stockpadi-sync-coordinator", { ifAvailable: !options.waitForLease }, async (lock) => {
       if (!lock) return null;
       return runOwned(work);
     });
   }
 
-  if (!(await acquireDurableLease())) return null;
+  if (options.waitForLease) {
+    while (!(await acquireDurableLease())) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  } else if (!(await acquireDurableLease())) {
+    return null;
+  }
   heartbeat = setInterval(() => {
     void renewDurableLease();
   }, Math.floor(LEASE_TTL_MS / 3));

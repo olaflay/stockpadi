@@ -21,10 +21,10 @@ function registerBackgroundSyncHint(): void {
  * single Dexie transaction for the local write while avoiding an artificial
  * polling/debounce delay before the durable outbox is pushed.
  */
-function scheduleImmediateDrain(): void {
+function scheduleImmediateDrain(trigger: "local-write" | "sale"): void {
   queueMicrotask(() => {
     void import("@/features/sync/SyncCoordinator").then(({ triggerSync }) => {
-      return triggerSync("local-write");
+      return triggerSync(trigger);
     }).catch(() => {
       // The durable outbox remains available for the next lifecycle, network,
       // Realtime, retry, or reconciliation trigger.
@@ -121,7 +121,7 @@ export async function enqueueOutboxWrite(
   // Trigger one immediate canonical drain after every local write. The online
   // flag is only a hint and can remain stale on weak mobile networks; the
   // request layer classifies a failed attempt and parks it with backoff.
-  scheduleImmediateDrain();
+  scheduleImmediateDrain(type === "sale" ? "sale" : "local-write");
   registerBackgroundSyncHint();
 }
 

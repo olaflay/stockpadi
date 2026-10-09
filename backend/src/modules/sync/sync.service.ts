@@ -4,7 +4,7 @@ import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireCapability, requireAssignedBranch, type Capability } from "../authorization/capabilities.js";
 import { isSyncEntityType, type SyncEntityType } from "../../shared/contracts.generated.js";
-import { publishSyncHints } from "./sync-hints.js";
+import { publishCommittedSaleEvents, publishSyncHints } from "./sync-hints.js";
 
 const MAX_BATCH_SIZE = 100;
 
@@ -295,14 +295,25 @@ export async function pushSyncBatch(db: SupabaseClient, actor: User, input: unkn
   });
   if (appliedItems.length > 0) {
     // The RPC has returned only after its transaction committed. Await the
-    // wake-up attempt so a serverless runtime cannot terminate it when this
-    // request returns. publishSyncHints deliberately swallows publication
-    // failures, so a successful authoritative write remains successful.
-    await publishSyncHints(
-      db,
-      context.businessId,
-      appliedItems.map((item) => payloadValue(item.payload, "branchId") as string | undefined),
-    );
+    // wake-up and completed-sale publication attempts so a serverless runtime
+    // cannot terminate them when this request returns. Both publishers
+    // deliberately swallow publication failures, so an authoritative write
+    // remains successful even when Realtime is unavailable.
+    const saleIds = appliedItems
+      .filter((item) => item.type === "sale")
+      .map((item) => {
+        const result = results.find((candidate) => candidate.clientId === item.client_id);
+        return result?.authoritativeEntityId ?? result?.entityId ?? item.entity_id ?? entityId(item.payload, item.client_id);
+      })
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    await Promise.all([
+      publishSyncHints(
+        db,
+        context.businessId,
+        appliedItems.map((item) => payloadValue(item.payload, "branchId") as string | undefined),
+      ),
+      publishCommittedSaleEvents(db, context.businessId, saleIds),
+    ]);
   }
 
   return { ok: true, results };

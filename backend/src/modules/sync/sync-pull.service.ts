@@ -5,7 +5,9 @@ import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability } from "../authorization/capabilities.js";
 import { tolerantSelect } from "../../shared/database/tolerant-select.js";
 
-const PAGE_SIZE = 200;
+// Keep server responses small enough for slow 3G and low-memory Android.
+// The opaque cursor lets the client continue without skipping records.
+const PAGE_SIZE = 50;
 const CURSOR_DATASETS = new Set([
   "business_profile", "customers", "credit_movements", "branches", "categories",
   "products", "suppliers", "inventory", "sales", "expenses", "purchases", "sale_refunds",

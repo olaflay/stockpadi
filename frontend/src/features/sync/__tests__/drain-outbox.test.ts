@@ -76,6 +76,33 @@ describe("drainOutbox", () => {
     expect(remaining[0].status).toBe("pending");
   });
 
+  it("sale fast lane sends only sales and leaves unrelated work queued", async () => {
+    mockSession = { access_token: "test-token" };
+    await queueSale("sale-fast");
+    await db.outbox.add({
+      clientId: "product-unrelated",
+      type: "product",
+      payload: { id: "product-unrelated", version: 1 },
+      createdAtLocal: new Date().toISOString(),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+    });
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ results: [{ clientId: "sale-fast", status: "applied" }] }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const { drainOutbox } = await import("@/features/sync/drain-outbox");
+    await drainOutbox({ types: ["sale"], runMaintenance: false });
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string) as { batch: Array<{ client_id: string }> };
+    expect(body.batch.map((item) => item.client_id)).toEqual(["sale-fast"]);
+    expect(await db.outbox.get("product-unrelated")).toMatchObject({ status: "pending" });
+    expect(await db.outbox.get("sale-fast")).toMatchObject({ status: "syncing", awaitingConfirmation: true });
+  });
+
   it("removes items the server applied or skipped, keeps failed items with the error recorded", async () => {
     mockSession = { access_token: "test-token" };
     await queueSale("sale-ok");
@@ -202,10 +229,48 @@ describe("drainOutbox", () => {
     const { drainOutbox } = await import("@/features/sync/drain-outbox");
     await drainOutbox();
 
-    expect(batchSizes).toEqual([100, 100, 100, 100, 100, 100]);
-    for (const size of batchSizes) expect(size).toBeLessThanOrEqual(100);
+    expect(batchSizes).toEqual(Array.from({ length: 24 }, () => 25));
+    for (const size of batchSizes) expect(size).toBeLessThanOrEqual(25);
     expect((await db.outbox.where("status").equals("syncing").toArray()).filter((item) => item.awaitingConfirmation)).toHaveLength(600);
   }, 60000);
+
+  it("continues with an independent later batch when an earlier batch loses the network", async () => {
+    mockSession = { access_token: "test-token" };
+    const ids = Array.from({ length: 26 }, (_, i) => `sale-independent-${i}`);
+    await db.outbox.bulkAdd(
+      ids.map((clientId) => ({
+        clientId,
+        type: "sale" as const,
+        payload: { id: clientId },
+        createdAtLocal: new Date().toISOString(),
+        status: "pending" as const,
+        attemptCount: 0,
+        lastError: null,
+      }))
+    );
+
+    let calls = 0;
+    const batchIds: string[][] = [];
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((_url: string, init: { body: string }) => {
+      calls += 1;
+      const body = JSON.parse(init.body) as { batch: Array<{ client_id: string }> };
+      batchIds.push(body.batch.map((item) => item.client_id));
+      if (calls === 1) return Promise.reject(new Error("connection dropped"));
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ results: body.batch.map((item) => ({ clientId: item.client_id, status: "applied" })) }),
+      });
+    }));
+
+    const { drainOutbox } = await import("@/features/sync/drain-outbox");
+    await drainOutbox();
+
+    expect(calls).toBe(2);
+    expect(batchIds[0]).toHaveLength(25);
+    expect(batchIds[1]).toHaveLength(1);
+    for (const clientId of batchIds[0]) expect(await db.outbox.get(clientId)).toMatchObject({ status: "pending", attemptCount: 1 });
+    expect(await db.outbox.get(batchIds[1][0])).toMatchObject({ status: "syncing", awaitingConfirmation: true });
+  });
 
   it("keeps an item retryable (pending) when the server response has no per-item result, rather than deleting it as if applied", async () => {
     mockSession = { access_token: "test-token" };
@@ -371,16 +436,13 @@ describe("drainOutbox", () => {
     const { drainOutbox } = await import("@/features/sync/drain-outbox");
     await drainOutbox();
     expect((await db.outbox.get("account-blocked"))?.status).toBe("blocked");
-    // A pending owner is probed through account-context so approval on
-    // another device can wake the queue automatically; the mutation itself
-    // must still remain blocked.
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // Ordinary outbox draining does not probe account-context. The local
+    // mirror still blocks an unapproved owner mutation safely.
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     await db.localUsers.update("owner-1", { businessStatus: "verified" });
     await drainOutbox();
-    // First drain refreshes account context and leaves the mutation blocked;
-    // second drain refreshes it again, then pushes the now-unblocked mutation.
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(await db.outbox.get("account-blocked")).toMatchObject({ status: "syncing", awaitingConfirmation: true });
   });
 

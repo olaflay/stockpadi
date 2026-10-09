@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const supabaseAdmin = vi.hoisted(() => vi.fn());
 vi.mock("../../shared/supabase/client.js", () => ({ supabaseAdmin }));
 
-import { publishSyncHints, queueSyncHints } from "./sync-hints.js";
+import { buildCommittedSaleEvent, publishCommittedSaleEvents, publishSyncHints, queueSyncHints } from "./sync-hints.js";
 
 function fakeDatabase(branches: string[]) {
   const sent: Array<{ topic: string; event: string; payload: Record<string, unknown> }> = [];
@@ -77,5 +77,128 @@ describe("publishSyncHints", () => {
     await publication;
     expect(finished).toBe(true);
     expect(db.removeChannel).toHaveBeenCalledOnce();
+  });
+});
+
+describe("buildCommittedSaleEvent", () => {
+  const sale = {
+    id: "sale-a",
+    client_id: "sale-client-a",
+    business_id: "business-a",
+    branch_id: "branch-a",
+    customer_id: null,
+    subtotal: 100,
+    discount: 0,
+    total: 100,
+    created_at_local: "2026-10-09T10:00:00.000Z",
+    created_at: "2026-10-09T10:00:01.000Z",
+    created_by_user_id: "worker-a",
+    voided_at: null,
+  };
+  const items = [{
+    sale_id: "sale-a",
+    product_id: "product-a",
+    quantity: 2,
+    unit_price: 50,
+    discount: 0,
+    unit_label: "unit",
+    unit_conversion_factor: 1,
+    unit_cost: 20,
+    cost_basis: "moving_weighted_average",
+    product_version: 3,
+    cost_flags: [],
+  }];
+  const payments = [{ sale_id: "sale-a", method: "cash", amount: 100, tendered_amount: 100 }];
+  const stock = [{
+    id: "movement-a",
+    client_id: "movement-client-a",
+    business_id: "business-a",
+    branch_id: "branch-a",
+    product_id: "product-a",
+    quantity_delta: -2,
+    source: "sale",
+    source_reference_id: "sale-a",
+    reason_code: null,
+    created_at_local: "2026-10-09T10:00:00.000Z",
+    created_at: "2026-10-09T10:00:01.000Z",
+    created_by_user_id: "worker-a",
+  }];
+
+  it("builds a completed event from authoritative committed rows", () => {
+    const event = buildCommittedSaleEvent("business-a", "sync:business:business-a", sale, items, payments, stock, []);
+
+    expect(event).toMatchObject({
+      type: "sale_committed",
+      status: "completed",
+      sale: {
+        id: "sale-a",
+        total: 100,
+        items: [{ productId: "product-a", quantity: 2, unitCost: 20 }],
+        payments: [{ method: "cash", amount: 100 }],
+        stockMovements: [{ id: "movement-a", quantityDelta: -2 }],
+      },
+    });
+  });
+
+  it("refuses incomplete or voided records", () => {
+    expect(buildCommittedSaleEvent("business-a", "scope", sale, [], payments, stock, [])).toBeNull();
+    expect(buildCommittedSaleEvent("business-a", "scope", { ...sale, voided_at: "2026-10-09T11:00:00.000Z" }, items, payments, stock, [])).toBeNull();
+    expect(buildCommittedSaleEvent("business-a", "scope", sale, items, payments, [], [])).toBeNull();
+  });
+});
+
+describe("publishCommittedSaleEvents", () => {
+  it("publishes only a complete authoritative sale event", async () => {
+    const sent: Array<{ event: string; payload: Record<string, unknown> }> = [];
+    const rows: Record<string, unknown[]> = {
+      sales: [{
+        id: "sale-a", client_id: "sale-client-a", branch_id: "branch-a", customer_id: null,
+        subtotal: 100, discount: 0, total: 100, created_at_local: "2026-10-09T10:00:00.000Z",
+        created_at: "2026-10-09T10:00:01.000Z", created_by_user_id: "worker-a", voided_at: null,
+      }],
+      sale_items: [{
+        sale_id: "sale-a", product_id: "product-a", quantity: 2, unit_price: 50, discount: 0,
+        unit_label: "unit", unit_conversion_factor: 1, unit_cost: 20, cost_basis: "snapshot",
+        product_version: 1, cost_flags: [],
+      }],
+      sale_payments: [{ sale_id: "sale-a", method: "cash", amount: 100 }],
+      stock_movements: [{
+        id: "movement-a", client_id: "movement-client-a", business_id: "business-a", branch_id: "branch-a",
+        product_id: "product-a", quantity_delta: -2, source: "sale", source_reference_id: "sale-a",
+        reason_code: null, created_at_local: "2026-10-09T10:00:00.000Z",
+        created_at: "2026-10-09T10:00:01.000Z", created_by_user_id: "worker-a",
+      }],
+      customer_credit_movements: [],
+    };
+    const db = {
+      from: vi.fn((table: string) => {
+        const result = { data: rows[table] ?? [], error: null };
+        const query: Record<string, unknown> & { then: (resolve: (value: unknown) => unknown) => unknown } = {
+          select: vi.fn(() => query),
+          eq: vi.fn(() => query),
+          in: vi.fn(() => query),
+          then: (resolve) => resolve(result),
+        };
+        return query;
+      }),
+      channel: vi.fn(() => ({
+        httpSend: vi.fn(async (event: string, payload: Record<string, unknown>) => {
+          sent.push({ event, payload });
+          return { success: true as const };
+        }),
+      })),
+      removeChannel: vi.fn(async () => "ok"),
+    } as unknown as SupabaseClient;
+
+    await publishCommittedSaleEvents(db, "business-a", ["sale-a"]);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.event).toBe("sale_committed");
+    expect(sent[0]?.payload).toMatchObject({
+      type: "sale_committed",
+      status: "completed",
+      businessId: "business-a",
+      sale: { id: "sale-a", total: 100, stockMovements: [{ id: "movement-a" }] },
+    });
   });
 });

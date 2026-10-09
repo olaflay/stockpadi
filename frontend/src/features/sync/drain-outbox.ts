@@ -2,7 +2,7 @@ import { SYNC_ROUTES } from "@stockpadi/contracts";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { BackendRequestError, NetworkUnavailableError, serverPost } from "@/platform/api/backend-client";
-import type { SyncQueueItem } from "@/types/sync";
+import type { SyncEntityType, SyncQueueItem } from "@/types/sync";
 import { matchesActiveTenant, getLocalBusinessId, setLocalBusinessId } from "@/lib/local-tenant";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withSyncLease } from "@/features/sync/sync-lease";
@@ -35,10 +35,12 @@ interface SyncPushItemResult {
   error?: { code: string; message: string };
 }
 
-// Keep a single sync-push call under the server's MAX_BATCH_SIZE (100).
-// Sized so even slow 3G network conditions complete well inside PUSH_TIMEOUT_MS.
-const DRAIN_BATCH_SIZE = 100;
-const PUSH_TIMEOUT_MS = 60_000;
+// Keep each sync-push call small enough for slow 3G/low-memory Android. The
+// backend accepts up to 100, but the client deliberately sends 25 so one slow
+// or failed group does not hold the rest of the queue hostage.
+const DRAIN_BATCH_SIZE = 25;
+const PUSH_TIMEOUT_MS = 30_000;
+const MAX_AUTOMATIC_RETRIES = 8;
 
 // Types whose acknowledgement is NOT sufficient to retire the row, because the
 // server mutates a stock projection this device must still download before its
@@ -59,6 +61,17 @@ const STOCK_AFFECTING_TYPES = new Set(["sale", "stock_adjustment", "purchase_rec
 
 let isDraining = false;
 
+interface DrainOptions {
+  /** Restrict a fast lane to one mutation class without touching other work. */
+  types?: SyncEntityType[];
+  /** Skip non-essential local recovery when an urgent mutation is being sent. */
+  runMaintenance?: boolean;
+}
+
+function includesDrainType(item: SyncQueueItem, types: Set<SyncEntityType> | null): boolean {
+  return types === null || types.has(item.type);
+}
+
 /**
  * Web Locks API coordinates this across browser tabs on the same origin —
  * the plain in-memory isDraining flag below only prevented two concurrent
@@ -69,11 +82,13 @@ let isDraining = false;
  * retry, but confusing). Falls back to the in-memory-only guard on browsers
  * without navigator.locks (Safari < 15.4).
  */
-export async function drainOutbox(): Promise<{ drained: number; pendingRemaining: number }> {
+export async function drainOutbox(options: DrainOptions = {}): Promise<{ drained: number; pendingRemaining: number }> {
   await getLocalBusinessId();
+  const types = options.types ? new Set(options.types) : null;
 
   const getPendingCount = async () =>
-    (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant).length;
+    (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+      .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types)).length;
 
   const initialCount = await getPendingCount();
   if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
@@ -81,7 +96,7 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
   if (isDraining) return { drained: 0, pendingRemaining: initialCount };
   isDraining = true;
   try {
-    await withSyncLease(drainOnce);
+    await withSyncLease(() => drainOnce(options));
   } finally {
     isDraining = false;
   }
@@ -90,14 +105,15 @@ export async function drainOutbox(): Promise<{ drained: number; pendingRemaining
   return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
 }
 
-async function drainOnce(): Promise<void> {
+async function drainOnce(options: DrainOptions = {}): Promise<void> {
   await getLocalBusinessId();
-  await refreshActiveAccountContext();
-  await resumeAccountBlockedWrites();
+  if (options.runMaintenance !== false) await resumeAccountBlockedWrites();
+  const types = options.types ? new Set(options.types) : null;
   const restoredCategoryIds = new Set<string>();
 
   for (;;) {
-    let queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant);
+    let queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+      .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types));
     if (queued.length === 0) return;
 
     // Older product mutations can outlive their category mutation (for
@@ -108,7 +124,8 @@ async function drainOnce(): Promise<void> {
     // row from another business.
     await restoreMissingProductCategoryDependencies(queued, restoredCategoryIds);
     await linkQueuedProductCategoryDependencies(queued);
-    queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray()).filter(matchesActiveTenant);
+    queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+      .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types));
     const allActive = (await db.outbox.toArray()).filter(matchesActiveTenant);
 
     const ready: SyncQueueItem[] = [];
@@ -149,7 +166,13 @@ async function drainOnce(): Promise<void> {
       const priority = (item: SyncQueueItem) => item.type === "product" ? 0 : 1;
       return priority(a) - priority(b) || (a.sequence ?? Number.MAX_SAFE_INTEGER) - (b.sequence ?? Number.MAX_SAFE_INTEGER) || a.createdAtLocal.localeCompare(b.createdAtLocal) || a.clientId.localeCompare(b.clientId);
     });
-    const progressed = await drainSlice(ready.slice(0, DRAIN_BATCH_SIZE));
+    let progressed = false;
+    for (let offset = 0; offset < ready.length; offset += DRAIN_BATCH_SIZE) {
+      // A failed batch is parked with its own retry metadata. Continue with
+      // independent batches so one bad record or a transient response does
+      // not block unrelated sales and inventory work.
+      progressed = (await drainSlice(ready.slice(offset, offset + DRAIN_BATCH_SIZE))) || progressed;
+    }
     if (!progressed) return;
   }
 }
@@ -433,12 +456,7 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
       toRequeue.push({
         key: item.clientId,
         changes: {
-          status: "pending" as const,
-          attemptCount: item.attemptCount + 1,
-          lastError: "No per-item result returned by sync-push; will retry to confirm",
-          lastErrorCode: "MISSING_RESULT",
-          lastErrorMessage: "No per-item result returned by sync-push; will retry to confirm",
-          nextAttemptAt: nextAttemptAt(item.attemptCount),
+          ...automaticRetryChanges(item, "MISSING_RESULT", "No per-item result returned by sync-push; will retry to confirm"),
         },
       });
       continue;
@@ -446,9 +464,9 @@ async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
     const code = result.error?.code ?? (result.status === "retryable_error" ? "TEMPORARY_UNAVAILABLE" : "SYNC_REJECTED");
     const message = result.error?.message ?? "Sync rejected by server";
     if (code === "BUSINESS_UNAVAILABLE" || code === "ACCOUNT_NOT_APPROVED" || code === "ACCOUNT_PENDING" || code === "DEPENDENCY_NOT_READY" || code === "TEMPORARY_UNAVAILABLE" || code === "RATE_LIMITED") {
-      toRequeue.push({ key: item.clientId, changes: { status: "blocked", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message, nextAttemptAt: nextAttemptAt(item.attemptCount) } });
+      toRequeue.push({ key: item.clientId, changes: automaticRetryChanges(item, code, message, true) });
     } else if (code.startsWith("HTTP_5") || code === "NETWORK_UNAVAILABLE") {
-      toRequeue.push({ key: item.clientId, changes: { status: "pending", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message, nextAttemptAt: nextAttemptAt(item.attemptCount) } });
+      toRequeue.push({ key: item.clientId, changes: automaticRetryChanges(item, code, message) });
     } else {
       toMarkFailed.push({ key: item.clientId, changes: { status: "failed", errorCode: code, lastErrorCode: code, lastErrorMessage: message, attemptCount: item.attemptCount + 1, lastError: message } });
     }
@@ -673,18 +691,25 @@ function nextAttemptAt(attemptCount: number): string {
   return new Date(Date.now() + delayMs).toISOString();
 }
 
+function automaticRetryChanges(item: SyncQueueItem, code: string, message: string, blocked = false): Partial<SyncQueueItem> {
+  const attemptCount = item.attemptCount + 1;
+  const needsReview = !blocked && attemptCount >= MAX_AUTOMATIC_RETRIES;
+  return {
+    status: blocked ? "blocked" : needsReview ? "needs_review" : "pending",
+    errorCode: code,
+    lastErrorCode: code,
+    lastErrorMessage: message,
+    attemptCount,
+    lastError: message,
+    nextAttemptAt: blocked || needsReview ? null : nextAttemptAt(item.attemptCount),
+    ...(needsReview ? { reconciliationStatus: "needs_review", reconciliationReason: "Automatic retries exhausted; retry when the connection is stable." } : {}),
+  };
+}
+
 async function parkRetryable(items: SyncQueueItem[], code: string, message: string, blocked = false): Promise<void> {
   await db.outbox.bulkUpdate(items.map((item) => ({
     key: item.clientId,
-    changes: {
-      status: blocked ? "blocked" : "pending",
-      errorCode: code,
-      lastErrorCode: code,
-      lastErrorMessage: message,
-      attemptCount: item.attemptCount + 1,
-      lastError: message,
-      nextAttemptAt: nextAttemptAt(item.attemptCount),
-    },
+    changes: automaticRetryChanges(item, code, message, blocked),
   })));
 }
 
@@ -697,7 +722,7 @@ export async function retryFailedOutboxItems(): Promise<void> {
   const failed = (await db.outbox.where("status").equals("failed").toArray()).filter(matchesActiveTenant);
   if (failed.length === 0) return;
   await db.outbox.bulkUpdate(
-    failed.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, errorCode: null, lastErrorCode: null, lastErrorMessage: null, nextAttemptAt: null, lastError: null } }))
+    failed.map((item) => ({ key: item.clientId, changes: { status: "pending" as const, errorCode: null, lastErrorCode: null, lastErrorMessage: null, nextAttemptAt: null, lastError: null, reconciliationStatus: "open" as const, reconciliationReason: null } }))
   );
   await drainOutbox();
 }
