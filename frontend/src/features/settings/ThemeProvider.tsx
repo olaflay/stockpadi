@@ -33,8 +33,15 @@ function applyTheme(theme: ThemePreference) {
  */
 function readStoredTheme(): ThemePreference {
   if (typeof window === "undefined") return DEFAULT_THEME;
-  const stored = window.localStorage.getItem(STORAGE_KEY) as ThemePreference | null;
-  return stored === "light" || stored === "dark" ? stored : DEFAULT_THEME;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY) as ThemePreference | null;
+    return stored === "light" || stored === "dark" ? stored : DEFAULT_THEME;
+  } catch {
+    // Installed browsers can temporarily deny storage while restoring a WebAPK
+    // or after storage has been cleared. Theme is an enhancement, not a reason
+    // to stop the entire application from rendering.
+    return DEFAULT_THEME;
+  }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -42,7 +49,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((next: ThemePreference) => {
     setThemeState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Keep the in-memory preference for this session when persistence is
+      // unavailable.
+    }
     applyTheme(next);
   }, []);
 

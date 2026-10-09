@@ -8,6 +8,24 @@ import { usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 
 const UNSYNCED_HEADS_UP = 250;
+const NOTIFICATIONS_DISMISSED_KEY = "stockpadi-notifications-dismissed";
+
+function areNotificationsDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(NOTIFICATIONS_DISMISSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function rememberNotificationDismissal(): void {
+  try {
+    window.localStorage.setItem(NOTIFICATIONS_DISMISSED_KEY, "true");
+  } catch {
+    // Notification preferences must not prevent the authenticated shell from
+    // rendering when installed-browser storage is unavailable.
+  }
+}
 
 /**
  * Consolidated banner strip for connection, verification, and notification
@@ -19,7 +37,7 @@ export function BannerStrip() {
   const pendingCount = usePendingSyncCount();
   const [showNotification, setShowNotification] = useState(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return false;
-    return Notification.permission === "default" && localStorage.getItem("stockpadi-notifications-dismissed") !== "true";
+    return Notification.permission === "default" && !areNotificationsDismissed();
   });
 
   const handleEnableNotifications = async () => {
@@ -29,7 +47,7 @@ export function BannerStrip() {
   };
 
   const handleDismissNotifications = () => {
-    localStorage.setItem("stockpadi-notifications-dismissed", "true");
+    rememberNotificationDismissal();
     setShowNotification(false);
   };
 

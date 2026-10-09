@@ -70,7 +70,7 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(navRule.matcher({ request: sameOriginImgReq, sameOrigin: true })).toBe(false);
   });
 
-  it("configures offline document fallback to /offline", () => {
+  it("configures offline document fallback to the precached static document", () => {
     const fallbacks = capturedConfig?.fallbacks as {
       entries: Array<{
         url: string;
@@ -81,7 +81,7 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(fallbacks).toBeDefined();
     expect(fallbacks.entries).toHaveLength(1);
     const entry = fallbacks.entries[0];
-    expect(entry.url).toBe("/offline");
+    expect(entry.url).toBe("/offline.html");
     expect(entry.matcher({ request: { destination: "document" } })).toBe(true);
     expect(entry.matcher({ request: { destination: "image" } })).toBe(false);
   });

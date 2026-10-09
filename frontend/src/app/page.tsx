@@ -41,5 +41,9 @@ export default function Home() {
     });
   }, [router]);
 
-  return null;
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-6 text-center text-on-surface-muted">
+      Loading your local workspace…
+    </main>
+  );
 }

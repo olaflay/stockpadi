@@ -14,6 +14,22 @@ interface BeforeInstallPromptEvent extends Event {
 // first-run prompt again; dismissal still remains sticky for this version.
 const INSTALL_DISMISSED_KEY = "stockpadi-install-dismissed-v2";
 
+function isInstallPromptDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(INSTALL_DISMISSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function rememberInstallPromptDismissal(): void {
+  try {
+    window.localStorage.setItem(INSTALL_DISMISSED_KEY, "true");
+  } catch {
+    // Dismissal is optional; never let storage failure break the app shell.
+  }
+}
+
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
@@ -21,7 +37,7 @@ export function InstallBanner() {
 
   useEffect(() => {
     // If user has dismissed it recently, don't show
-    if (localStorage.getItem(INSTALL_DISMISSED_KEY) === "true") return;
+    if (isInstallPromptDismissed()) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -53,7 +69,7 @@ export function InstallBanner() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(INSTALL_DISMISSED_KEY, "true");
+    rememberInstallPromptDismissal();
     setVisible(false);
   };
 

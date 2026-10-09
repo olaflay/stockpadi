@@ -44,7 +44,10 @@ const serwist = new Serwist({
   fallbacks: {
     entries: [
       {
-        url: "/offline",
+        // The static document is included in the precache. The Next route is
+        // a client page and is not guaranteed to be available when the very
+        // first standalone launch happens without connectivity.
+        url: "/offline.html",
         matcher({ request }) {
           return request.destination === "document";
         },

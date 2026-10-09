@@ -2,7 +2,9 @@
   "name": "OjàPadi POS & Inventory",
   "short_name": "OjàPadi",
   "description": "Free offline-first point of sale, inventory tracking, and credit ledger for retail stores.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "display_override": [
     "standalone",
