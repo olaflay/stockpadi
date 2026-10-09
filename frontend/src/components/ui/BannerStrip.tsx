@@ -4,11 +4,10 @@ import { useState } from "react";
 import { X, Bell } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useOnlineStatus } from "@/lib/use-online-status";
-import { usePendingSalesCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
+import { useFailedSyncCount, usePendingSalesCount } from "@/lib/use-pending-sync-count";
 import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 import { useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
-const UNSYNCED_HEADS_UP = 250;
 const NOTIFICATIONS_DISMISSED_KEY = "stockpadi-notifications-dismissed";
 
 function areNotificationsDismissed(): boolean {
@@ -35,8 +34,8 @@ function rememberNotificationDismissal(): void {
  */
 export function BannerStrip() {
   const isOnline = useOnlineStatus();
-  const pendingCount = usePendingSyncCount();
   const pendingSalesCount = usePendingSalesCount();
+  const failedCount = useFailedSyncCount();
   const syncPhase = useSyncRuntimePhase();
   const [showNotification, setShowNotification] = useState(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return false;
@@ -61,29 +60,22 @@ export function BannerStrip() {
     user.businessStatus !== "verified" &&
     user.businessStatus !== "active"
   );
-  const showOffline = !isOnline;
-
+  const salesWaiting = `${pendingSalesCount} ${pendingSalesCount === 1 ? "sale" : "sales"} waiting`;
   const syncStatus = !isOnline
-    ? pendingSalesCount > 0 ? `Offline · ${pendingSalesCount} sales waiting` : "Offline · Changes stay on this device"
-    : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
-      ? pendingSalesCount > 0 ? `Syncing · ${pendingSalesCount} sales waiting` : "Syncing · Checking for updates"
-      : pendingSalesCount > 0
-        ? `Online · ${pendingSalesCount} sales waiting`
-        : "Online · All sales synced";
+    ? "Offline"
+    : failedCount > 0
+      ? "Sync issue"
+      : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
+        ? pendingSalesCount > 0 ? `Syncing · ${salesWaiting}` : "Syncing…"
+        : pendingSalesCount > 0
+          ? salesWaiting
+          : "Online";
 
   return (
     <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
         <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-amber-950 dark:text-amber-200">
           Store pending admin approval · Changes are saved locally and will sync once verified
-        </div>
-      )}
-
-      {showOffline && (
-        <div className="bg-warning-container px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-warning-container">
-          {pendingCount >= UNSYNCED_HEADS_UP
-            ? `Offline: ${pendingCount} changes saved. Syncs when online`
-            : "Offline: changes are saved locally and sync when online"}
         </div>
       )}
 
