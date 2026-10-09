@@ -80,7 +80,7 @@ export async function setBusinessStatus(db: SupabaseClient, actorId: string, bus
     }
     throw new HttpError(500, "UPDATE_FAILED", rpcResult.error.message);
   }
-  queueSyncHints(businessId, [null]);
+  await queueSyncHints(businessId, [null]);
 }
 
 export async function writePlatformAudit(

@@ -13,7 +13,7 @@ export async function createCustomer(db: SupabaseClient, actor: User, input: unk
   const customer = parseCustomer(input);
   const { data, error } = await db.rpc("sync_apply_customer", { payload: customer, actor_id: actor.id });
   if (error) throw new HttpError(500, "CUSTOMER_CREATE_FAILED", error.message);
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
   return data;
 }
 
@@ -38,7 +38,7 @@ export async function recordCreditPayment(db: SupabaseClient, actor: User, input
   const payment = parseCreditPayment(input);
   const { data, error } = await db.rpc("sync_apply_credit_payment", { payload: payment, actor_id: actor.id });
   if (error) throw new HttpError(500, "CREDIT_PAYMENT_FAILED", error.message);
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
   return data;
 }
 

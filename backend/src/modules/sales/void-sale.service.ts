@@ -30,7 +30,7 @@ export async function voidSale(db: SupabaseClient, actor: User, request: VoidSal
     if (error.message.includes("already voided")) throw new HttpError(409, "ALREADY_VOIDED", "This sale was already voided");
     throw new HttpError(500, "VOID_FAILED", error.message);
   }
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
   return {
     status: "ok",
     reversedMovements: data?.reversedMovements ?? 0,

@@ -4,6 +4,7 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability, requireAssignedBranch, requireCapability } from "../authorization/capabilities.js";
 import { supabaseAdmin } from "../../shared/supabase/client.js";
+import { queueSyncHints } from "../sync/sync-hints.js";
 export async function closeDaySummary(db: SupabaseClient, actor: User, input: unknown) {
   const context = await resolveAccountContext(db, actor);
   if (context.accountType === "WORKER") requireCapability(context, "SUBMIT_RECONCILIATION");
@@ -30,6 +31,7 @@ export async function submitReconciliation(db: SupabaseClient, actor: User, inpu
     }
     throw new HttpError(500, "RECONCILIATION_FAILED", "Could not save the close-day record.");
   }
+  await queueSyncHints(context.businessId, [body.branchId]);
   return data;
 }
 

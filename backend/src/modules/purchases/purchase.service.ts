@@ -15,7 +15,7 @@ export async function receivePurchase(db: SupabaseClient, actor: User, input: un
   requireAssignedBranch(context, payload.branchId);
   const { data, error } = await db.rpc("sync_apply_purchase_receipt", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "PURCHASE_FAILED", error.message);
-  queueSyncHints(context.businessId, [payload.branchId as string]);
+  await queueSyncHints(context.businessId, [payload.branchId as string]);
   return data;
 }
 

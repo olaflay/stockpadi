@@ -294,11 +294,11 @@ export async function pushSyncBatch(db: SupabaseClient, actor: User, input: unkn
     return result?.status === "applied" || result?.status === "skipped";
   });
   if (appliedItems.length > 0) {
-    // The RPC has returned only after its transaction committed. Publishing is
-    // intentionally fire-and-forget: a missing hint is recovered by the
-    // cursor reconciliation safety net and must never turn a successful write
-    // into an HTTP failure.
-    void publishSyncHints(
+    // The RPC has returned only after its transaction committed. Await the
+    // wake-up attempt so a serverless runtime cannot terminate it when this
+    // request returns. publishSyncHints deliberately swallows publication
+    // failures, so a successful authoritative write remains successful.
+    await publishSyncHints(
       db,
       context.businessId,
       appliedItems.map((item) => payloadValue(item.payload, "branchId") as string | undefined),

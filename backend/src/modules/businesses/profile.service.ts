@@ -29,6 +29,6 @@ export async function updateBusinessProfile(db: SupabaseClient, actor: User, inp
   }
   const { data, error } = await db.from("business_profile").update(update).eq("id", context.businessId).select("id, name, business_type, currency, branding, status, owing_message_template, updated_at").single();
   if (error) throw new HttpError(500, "PROFILE_UPDATE_FAILED", "Could not update the business profile.");
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
   return data;
 }

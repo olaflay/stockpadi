@@ -43,6 +43,7 @@ describe("sync realtime wake-up", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localUsers.get.mockResolvedValue({ accountType: "BUSINESS_OWNER" });
     broadcastHandler = undefined;
     statusHandler = undefined;
     syncPullState.get.mockResolvedValue({ id: "business-a:session", lastCompletePullAt: "2026-10-08T10:00:00.000Z" });
@@ -86,6 +87,19 @@ describe("sync realtime wake-up", () => {
     await vi.waitFor(() => expect(recordSkippedPull).toHaveBeenCalledOnce());
 
     expect(onTrigger).not.toHaveBeenCalledWith("realtime");
+    stop();
+  });
+
+  it("subscribes a worker to every assigned branch wake-up topic", async () => {
+    localUsers.get.mockResolvedValue({ accountType: "WORKER", branchIds: ["branch-a", "branch-b"] });
+    const stop = startSyncRealtime(vi.fn());
+
+    await vi.waitFor(() => expect(supabase.channel).toHaveBeenCalledTimes(2));
+    const topics = (supabase.channel.mock.calls as unknown as Array<[string]>).map(([topic]) => topic).sort();
+    expect(topics).toEqual([
+      "sync:business:business-a:branch:branch-a",
+      "sync:business:business-a:branch:branch-b",
+    ]);
     stop();
   });
 

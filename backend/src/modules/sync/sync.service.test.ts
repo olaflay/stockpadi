@@ -118,4 +118,27 @@ describe("Node sync push contract", () => {
     expect(response.results[0]).toMatchObject({ status: "permanent_failure", error: { code: "FORBIDDEN" } });
     expect((db.rpc as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
   });
+
+  it("waits for the Realtime wake-up before returning an accepted outbox mutation", async () => {
+    resolveAccountContext.mockResolvedValue({ accountType: "BUSINESS_OWNER", businessId: "business-1", branchIds: [], permissions: [] });
+    const db = dbWithRpc({ data: { status: "applied" } }) as SupabaseClient;
+    const releases: Array<(value: { success: true }) => void> = [];
+    const send = vi.fn(() => new Promise<{ success: true }>((resolve) => {
+      releases.push(resolve);
+    }));
+    (db as unknown as { channel: ReturnType<typeof vi.fn> }).channel = vi.fn(() => ({ httpSend: send }));
+    (db as unknown as { removeChannel: ReturnType<typeof vi.fn> }).removeChannel = vi.fn(async () => "ok");
+
+    let finished = false;
+    const request = pushSyncBatch(db, actor, { batch: [batchItem()] }).then(() => {
+      finished = true;
+    });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(finished).toBe(false);
+
+    for (const release of releases) release({ success: true });
+    await request;
+    expect(finished).toBe(true);
+  });
 });

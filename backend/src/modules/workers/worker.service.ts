@@ -46,7 +46,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
       await createWorkerRecords(db, { userId: data.user.id, businessId: context.businessId, fullName: request.fullName!, email: request.email!, branchId: request.branchId, capabilities: request.capabilities ?? [] });
       await writeAudit(db, context.userId, context.businessId, "staff_created", data.user.id, { accountType: "WORKER", email: request.email });
       await sendInvite(request.email!, request.fullName!);
-      queueSyncHints(context.businessId, [null]);
+      await queueSyncHints(context.businessId, [null]);
       return { status: "ok", userId: data.user.id, email: request.email, password };
     } catch (cause) {
       try { await removeWorkerRecords(db, data.user.id, context.businessId); } catch (cleanup) { console.error("Worker database compensation failed", cleanup); }
@@ -87,7 +87,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
     });
     if (grants.error) throw new HttpError(500, "UPDATE_FAILED", grants.error.message);
     await writeAudit(db, context.userId, context.businessId, "staff_permissions_updated", target.id, { capabilities: request.capabilities });
-    queueSyncHints(context.businessId, [null]);
+    await queueSyncHints(context.businessId, [null]);
     return { status: "ok" };
   }
   if (request.action === "assign_branches") {
@@ -100,7 +100,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
       if (assigned.error) throw new HttpError(500, "UPDATE_FAILED", assigned.error.message);
     }
     await writeAudit(db, context.userId, context.businessId, "staff_branches_updated", target.id, { branchIds });
-    queueSyncHints(context.businessId, [null]);
+    await queueSyncHints(context.businessId, [null]);
     return { status: "ok" };
   }
   if (request.action === "designate_manager") {
@@ -110,7 +110,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
     const assignment = await db.from("user_branches").upsert({ user_id: target.id, branch_id: request.branchId, business_id: context.businessId, is_manager: request.isManager === true }, { onConflict: "user_id,branch_id" });
     if (assignment.error) throw new HttpError(500, "UPDATE_FAILED", assignment.error.message);
     await writeAudit(db, context.userId, context.businessId, request.isManager ? "staff_manager_designated" : "staff_manager_removed", target.id, { branchId: request.branchId, isManager: request.isManager === true });
-    queueSyncHints(context.businessId, [null]);
+    await queueSyncHints(context.businessId, [null]);
     return { status: "ok" };
   }
   const nextActive = request.action === "reactivate";
@@ -120,7 +120,7 @@ export async function executeWorkerOperation(context: AccountContext, request: W
   const membership = await db.from("business_memberships").update({ status: nextActive ? "active" : "disabled" }).eq("user_id", target.id).eq("business_id", context.businessId);
   if (membership.error) throw new HttpError(500, "UPDATE_FAILED", membership.error.message);
   await writeAudit(db, context.userId, context.businessId, nextActive ? "staff_reactivated" : "staff_deactivated", target.id, { status: nextActive ? "active" : "disabled" });
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
   return { status: "ok" };
 }
 

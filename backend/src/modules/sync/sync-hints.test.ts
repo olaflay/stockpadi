@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { publishSyncHints } from "./sync-hints.js";
+
+const supabaseAdmin = vi.hoisted(() => vi.fn());
+vi.mock("../../shared/supabase/client.js", () => ({ supabaseAdmin }));
+
+import { publishSyncHints, queueSyncHints } from "./sync-hints.js";
 
 function fakeDatabase(branches: string[]) {
   const sent: Array<{ topic: string; event: string; payload: Record<string, unknown> }> = [];
@@ -48,5 +52,30 @@ describe("publishSyncHints", () => {
       "sync:business:business-a:branch:branch-a",
       "sync:business:business-a:branch:branch-b",
     ]);
+  });
+
+  it("does not finish the queued publication before Realtime accepts the hint", async () => {
+    let release!: (value: { success: true }) => void;
+    const send = vi.fn(() => new Promise<{ success: true }>((resolve) => {
+      release = resolve;
+    }));
+    const db = {
+      channel: vi.fn(() => ({ httpSend: send })),
+      removeChannel: vi.fn(async () => "ok"),
+    } as unknown as SupabaseClient;
+    supabaseAdmin.mockReturnValue(db);
+
+    let finished = false;
+    const publication = queueSyncHints("business-a", []).then(() => {
+      finished = true;
+    });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledOnce());
+    expect(finished).toBe(false);
+
+    release({ success: true });
+    await publication;
+    expect(finished).toBe(true);
+    expect(db.removeChannel).toHaveBeenCalledOnce();
   });
 });

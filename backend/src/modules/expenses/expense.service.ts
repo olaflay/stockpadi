@@ -15,7 +15,7 @@ export async function createExpense(db: SupabaseClient, actor: User, input: unkn
   if (typeof payload.branchId === "string") requireAssignedBranch(context, payload.branchId);
   const { data, error } = await db.rpc("sync_apply_expense", { payload, actor_id: actor.id });
   if (error) throw new HttpError(500, "EXPENSE_FAILED", error.message);
-  queueSyncHints(context.businessId, [typeof payload.branchId === "string" ? payload.branchId : null]);
+  await queueSyncHints(context.businessId, [typeof payload.branchId === "string" ? payload.branchId : null]);
   return data;
 }
 

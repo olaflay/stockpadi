@@ -4,6 +4,7 @@ import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export const SYNC_HINT_EVENT = "sync_hint";
 export const SYNC_TOPIC_PREFIX = "sync:business:";
+const SYNC_HINT_TIMEOUT_MS = 3_000;
 
 export function businessSyncTopic(businessId: string): string {
   return `${SYNC_TOPIC_PREFIX}${businessId}`;
@@ -13,10 +14,17 @@ export function branchSyncTopic(businessId: string, branchId: string): string {
   return `${businessSyncTopic(businessId)}:branch:${branchId}`;
 }
 
-/** Queue a post-commit hint without making missing deployment config a caller error. */
-export function queueSyncHints(businessId: string, branchIds: Array<string | null | undefined>): void {
+/**
+ * Publish a post-commit hint before the request is allowed to finish.
+ *
+ * The durable database write remains authoritative and publication failures
+ * are swallowed by publishSyncHints. Awaiting here is still important: a
+ * serverless runtime may stop executing fire-and-forget promises as soon as
+ * the HTTP handler returns, which made realtime wake-ups disappear.
+ */
+export async function queueSyncHints(businessId: string, branchIds: Array<string | null | undefined>): Promise<void> {
   try {
-    void publishSyncHints(supabaseAdmin(), businessId, branchIds);
+    await publishSyncHints(supabaseAdmin(), businessId, branchIds);
   } catch (cause) {
     logger.error("sync hint client unavailable", { businessId, realtimePublishFailure: true }, cause);
   }
@@ -77,11 +85,15 @@ async function publishSyncHintsUnsafe(
   await Promise.all([...topics].map(async (topic) => {
     const channel = db.channel(topic, { config: { private: true } });
     try {
-      const result = await channel.httpSend(SYNC_HINT_EVENT, {
-        type: SYNC_HINT_EVENT,
-        scope: topic,
-        cursor,
-      });
+      const result = await channel.httpSend(
+        SYNC_HINT_EVENT,
+        {
+          type: SYNC_HINT_EVENT,
+          scope: topic,
+          cursor,
+        },
+        { timeout: SYNC_HINT_TIMEOUT_MS },
+      );
       if (!isRecord(result) || result.success !== true) {
         throw new Error(isRecord(result) && typeof result.error === "string" ? result.error : "Realtime rejected the hint");
       }

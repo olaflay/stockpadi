@@ -48,7 +48,7 @@ export async function refundSale(db: SupabaseClient, actor: User, request: Refun
     throw new HttpError(500, "REFUND_FAILED", error.message);
   }
 
-  queueSyncHints(context.businessId, [null]);
+  await queueSyncHints(context.businessId, [null]);
 
   return {
     status: "ok",
