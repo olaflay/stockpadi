@@ -31,7 +31,14 @@ export default function Home() {
       // No active local session: use the single normal login route.
       router.replace("/login?force=true");
     }
-    determineRoute();
+    void determineRoute().catch((error) => {
+      // A failed IndexedDB open/upgrade must not leave an installed PWA on a
+      // blank screen. Keep the error visible in diagnostics and send the user
+      // to the offline recovery screen instead of creating an unhandled
+      // promise rejection during the root navigation.
+      console.error("[StartupRoute] Could not read local app state:", error);
+      router.replace("/offline");
+    });
   }, [router]);
 
   return null;
