@@ -31,13 +31,13 @@ describe("BannerStrip connection status", () => {
     expect(screen.getByText("Offline")).toBeInTheDocument();
   });
 
-  it("shows syncing instead of an unbounded spinner while uploads are active", () => {
+  it("keeps the waiting count concise while uploads are active", () => {
     state.phase = "uploading";
     state.pendingSales = 1;
 
     render(<BannerStrip />);
 
-    expect(screen.getByText("Syncing · 1 sale waiting")).toBeInTheDocument();
+    expect(screen.getByText("1 sale waiting")).toBeInTheDocument();
   });
 
   it("shows a settled online state when no sales are waiting", () => {

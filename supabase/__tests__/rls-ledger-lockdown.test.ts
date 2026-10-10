@@ -287,3 +287,62 @@ describe("users_write: account_type must agree with the authoritative membership
     ).rejects.toThrow(/violates row-level security policy/i);
   });
 });
+
+describe("sync Realtime topic authorization", () => {
+  it("keeps owners business-scoped and workers branch-scoped", async () => {
+    const foreignBusinessId = crypto.randomUUID();
+    const foreignBranchId = crypto.randomUUID();
+
+    await actAs("authenticated", ownerId);
+    const ownerBusiness = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${bizId}`],
+    );
+    const ownerForeign = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${foreignBusinessId}`],
+    );
+    expect(ownerBusiness.rows[0].allowed).toBe(true);
+    expect(ownerForeign.rows[0].allowed).toBe(false);
+
+    await actAs("authenticated", cashierId);
+    const workerBranch = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${bizId}:branch:${branchId}`],
+    );
+    const workerBusiness = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${bizId}`],
+    );
+    const workerForeignBranch = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${foreignBusinessId}:branch:${foreignBranchId}`],
+    );
+    expect(workerBranch.rows[0].allowed).toBe(true);
+    expect(workerBusiness.rows[0].allowed).toBe(false);
+    expect(workerForeignBranch.rows[0].allowed).toBe(false);
+  });
+
+  it("stops a disabled user and revoked membership immediately", async () => {
+    await db.exec(`update users set is_active = false where id = '${cashierId}';`);
+    await actAs("authenticated", cashierId);
+    const disabled = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${bizId}:branch:${branchId}`],
+    );
+    expect(disabled.rows[0].allowed).toBe(false);
+
+    await resetToSuperuser();
+    await db.exec(`update users set is_active = true where id = '${cashierId}';`);
+    await db.exec(`update business_memberships set status = 'revoked' where user_id = '${cashierId}' and business_id = '${bizId}';`);
+    await actAs("authenticated", cashierId);
+    const revoked = await db.query<{ allowed: boolean }>(
+      `select public.auth_can_receive_sync_topic($1) as allowed;`,
+      [`sync:business:${bizId}:branch:${branchId}`],
+    );
+    expect(revoked.rows[0].allowed).toBe(false);
+
+    await resetToSuperuser();
+    await db.exec(`update business_memberships set status = 'active' where user_id = '${cashierId}' and business_id = '${bizId}';`);
+  });
+});

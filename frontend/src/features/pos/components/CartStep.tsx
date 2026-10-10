@@ -6,7 +6,6 @@ import { Modal } from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/format";
 import { cartLineKey } from "@/features/pos/use-cart";
 import type { CartLine } from "@/features/pos/complete-sale";
-import type { ParkedSale } from "@/features/pos/parked-sales";
 import type { Product } from "@/types/product";
 
 export function CartStep(props: {
@@ -23,10 +22,7 @@ export function CartStep(props: {
   onSetQuantity?: (key: string, qty: number) => void;
   onRemoveLine?: (key: string) => void;
   onSetDiscount?: (amount: number) => void;
-  parkedSales?: ParkedSale[];
   onParkSale?: () => void;
-  onResumeParkedSale?: (id: string) => void;
-  onDeleteParkedSale?: (id: string) => void;
   onContinueToPayment: () => void;
   stockByProduct?: Record<string, number>;
   hideHeader?: boolean;
@@ -45,10 +41,7 @@ export function CartStep(props: {
     onSetQuantity,
     onRemoveLine,
     onSetDiscount,
-    parkedSales = [],
     onParkSale,
-    onResumeParkedSale,
-    onDeleteParkedSale,
     onContinueToPayment,
     stockByProduct,
     hideHeader = false,
@@ -56,7 +49,6 @@ export function CartStep(props: {
 
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountInput, setDiscountInput] = useState(discount > 0 ? String(discount) : "");
-  const [showParkedModal, setShowParkedModal] = useState(false);
 
   // `undefined` means the stock query has not resolved yet. It must NOT be
   // read as "no problem": unresolved blocks checkout and increment.
@@ -90,15 +82,6 @@ export function CartStep(props: {
           {itemCount} item{itemCount === 1 ? "" : "s"}
         </span>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
-          {parkedSales.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowParkedModal(true)}
-              className="min-h-[var(--touch-target-min)] flex items-center px-2 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-brand-accent font-semibold hover:bg-brand-accent/5 transition-colors"
-            >
-              Parked ({parkedSales.length})
-            </button>
-          )}
           {cartLines.length > 0 && onParkSale && (
             <button
               type="button"
@@ -359,72 +342,6 @@ export function CartStep(props: {
         </Modal>
       )}
 
-      {/* Parked Sales Modal */}
-      {showParkedModal && (
-        <Modal
-          isOpen={showParkedModal}
-          onClose={() => setShowParkedModal(false)}
-          title="Parked Sales"
-        >
-          <div className="flex flex-col gap-3">
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              Select a held cart to resume or discard.
-            </p>
-            {parkedSales.length === 0 ? (
-              <p className="py-4 text-center text-xs text-on-surface-muted">No parked sales.</p>
-            ) : (
-              <ul className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
-                {parkedSales.map((sale) => {
-                  const saleQty = sale.lines.reduce((s, l) => s + l.quantity, 0);
-                  const saleSubtotal = sale.lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-                  const saleTotal = Math.max(0, saleSubtotal - sale.discount);
-
-                  return (
-                    <li
-                      key={sale.id}
-                      className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container p-3 text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-on-surface">{sale.label}</span>
-                        <span className="font-number font-bold text-on-surface tabular-nums">
-                          {formatCurrency(saleTotal)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-on-surface-muted">
-                        <span>{saleQty} item{saleQty === 1 ? "" : "s"}{sale.discount > 0 ? ` (incl. -${formatCurrency(sale.discount)} discount)` : ""}</span>
-                        <span className="text-[10px]">{new Date(sale.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                      </div>
-                      <div className="flex gap-2 pt-1 border-t border-border/40">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onResumeParkedSale?.(sale.id);
-                            setShowParkedModal(false);
-                          }}
-                          className="flex-1 py-1.5 rounded-[var(--radius-control)] bg-brand-accent text-brand-accent-contrast font-semibold hover:opacity-90 transition-opacity"
-                        >
-                          Resume
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm("Discard this parked cart?")) {
-                              onDeleteParkedSale?.(sale.id);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-[var(--radius-control)] bg-danger/10 text-danger font-medium hover:bg-danger/20 transition-colors"
-                        >
-                          Discard
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

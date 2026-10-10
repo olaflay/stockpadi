@@ -24,6 +24,7 @@ import { parsePosQuery } from "@/lib/parse-pos-query";
 import { useSplitPayment, AMOUNT_EPSILON } from "@/features/pos/use-split-payment";
 import { BrowseStep } from "@/features/pos/components/BrowseStep";
 import { CheckoutContainer } from "@/features/pos/components/CheckoutContainer";
+import { ParkedSalesModal } from "@/features/pos/components/ParkedSalesModal";
 import {
   getParkedSales,
   parkSale,
@@ -64,19 +65,29 @@ function PosPageContent() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showParkedSales, setShowParkedSales] = useState(false);
 
   const cart = useCart();
   const payment = useSplitPayment(cart.total);
-  const [parkedSales, setParkedSales] = useState<ParkedSale[]>(() => getParkedSales());
+  const [parkedSales, setParkedSales] = useState<ParkedSale[]>(() => getParkedSales(user.businessId));
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      setParkedSales(getParkedSales(user.businessId));
+      setShowParkedSales(false);
+    }, 0);
+    return () => window.clearTimeout(refreshTimer);
+  }, [user.businessId]);
 
   function handleParkSale() {
     try {
       parkSale({
+        businessId: user.businessId,
         lines: cart.cartLines,
         discount: cart.discount,
         customerId: payment.hasCreditLine ? payment.creditCustomerId : null,
       });
-      setParkedSales(getParkedSales());
+      setParkedSales(getParkedSales(user.businessId));
       cart.clearCart();
       setStep("browse");
       showToast("Cart held. Ready for next customer.", "success");
@@ -86,22 +97,32 @@ function PosPageContent() {
   }
 
   function handleResumeParkedSale(id: string) {
-    const resumed = resumeParkedSale(id);
+    const resumed = resumeParkedSale(id, user.businessId);
     if (resumed) {
       cart.loadCart(resumed.lines, resumed.discount);
       if (resumed.customerId) {
         payment.setCreditCustomerId(resumed.customerId);
       }
-      setParkedSales(getParkedSales());
+      setParkedSales(getParkedSales(user.businessId));
       showToast("Held cart restored to till.", "success");
     }
   }
 
   function handleDeleteParkedSale(id: string) {
-    deleteParkedSale(id);
-    setParkedSales(getParkedSales());
+    deleteParkedSale(id, user.businessId);
+    setParkedSales(getParkedSales(user.businessId));
     showToast("Held cart discarded.", "neutral");
   }
+
+  const parkedSalesModal = (
+    <ParkedSalesModal
+      isOpen={showParkedSales}
+      onClose={() => setShowParkedSales(false)}
+      parkedSales={parkedSales}
+      onResume={handleResumeParkedSale}
+      onDelete={handleDeleteParkedSale}
+    />
+  );
 
   const branches = useLiveQuery(() => tenantArray<LocalBranch>(db.branches), [], []);
   const categories = useLiveQuery(() => tenantArray<LocalCategory>(db.categories), [], []);
@@ -317,7 +338,8 @@ function PosPageContent() {
 
   if (step === "cart" || step === "payment") {
     return (
-      <CheckoutContainer
+      <>
+        <CheckoutContainer
         cartLines={cart.cartLines}
         products={result.products}
         itemCount={cart.itemCount}
@@ -325,10 +347,7 @@ function PosPageContent() {
         discount={cart.discount}
         total={cart.total}
         onSetDiscount={cart.setDiscount}
-        parkedSales={parkedSales}
         onParkSale={handleParkSale}
-        onResumeParkedSale={handleResumeParkedSale}
-        onDeleteParkedSale={handleDeleteParkedSale}
         onBackToBrowse={() => setStep("browse")}
         onClearCart={() => {
           cart.clearCart();
@@ -356,7 +375,9 @@ function PosPageContent() {
         isOnline={isOnline}
         onCompleteSale={handleCompleteSale}
         initialTab={step}
-      />
+        />
+        {parkedSalesModal}
+      </>
     );
   }
 
@@ -397,9 +418,12 @@ function PosPageContent() {
         itemCount={cart.itemCount}
         total={cart.total}
         onReviewCart={() => setStep("cart")}
+        parkedSalesCount={parkedSales.length}
+        onOpenParkedSales={() => setShowParkedSales(true)}
         onGoToSettings={() => router.push("/settings/branches")}
         stockByProduct={stockByProduct}
       />
+      {parkedSalesModal}
     </div>
   );
 }

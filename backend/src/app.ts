@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { handleAccountContext } from "./modules/accounts/account.controller.js";
 import { handleAdminRequest } from "./modules/admin/admin.controller.js";
 import { handleSalesList, handleVoidSale, handleRefundSale } from "./modules/sales/sales.controller.js";
@@ -58,6 +59,60 @@ function healthPayload() {
 // (the largest payloads are sync batches / close-day submissions, which the
 // sync API additionally caps per-batch).
 const MAX_BODY_BYTES = 1024 * 1024;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const GENERAL_REQUEST_LIMIT = 120;
+const SYNC_REQUEST_LIMIT = 30;
+const MAX_RATE_LIMIT_KEYS = 10_000;
+
+interface RateLimitBucket {
+  startedAt: number;
+  count: number;
+}
+
+const rateLimitBuckets = new Map<string, RateLimitBucket>();
+
+function rateLimitClientKey(request: Request): string {
+  // These headers are used only as a best-effort edge rate-limit key. Auth
+  // remains the security boundary; credentials are reduced to a short
+  // non-reversible fingerprint and never stored or logged.
+  const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (bearer) return `token:${createHash("sha256").update(bearer).digest("hex").slice(0, 24)}`;
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",", 1)[0]?.trim();
+  return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown-client";
+}
+
+function rateLimitResponse(request: Request, pathname: string): Response | null {
+  if (request.method === "OPTIONS" || pathname === "/" || pathname === "/health" || pathname === "/api/health") return null;
+  const now = Date.now();
+  const scope = pathname === "/api/sync/push" ? "sync" : "api";
+  const limit = scope === "sync" ? SYNC_REQUEST_LIMIT : GENERAL_REQUEST_LIMIT;
+  const key = `${scope}:${rateLimitClientKey(request)}`;
+  const current = rateLimitBuckets.get(key);
+  const bucket = !current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS
+    ? { startedAt: now, count: 0 }
+    : current;
+  bucket.count += 1;
+  rateLimitBuckets.set(key, bucket);
+
+  if (rateLimitBuckets.size > MAX_RATE_LIMIT_KEYS) {
+    for (const [candidateKey, candidate] of rateLimitBuckets) {
+      if (now - candidate.startedAt >= RATE_LIMIT_WINDOW_MS) rateLimitBuckets.delete(candidateKey);
+      if (rateLimitBuckets.size <= MAX_RATE_LIMIT_KEYS) break;
+    }
+  }
+
+  if (bucket.count <= limit) return null;
+  const retryAfter = Math.max(1, Math.ceil((RATE_LIMIT_WINDOW_MS - (now - bucket.startedAt)) / 1000));
+  const response = jsonResponse(429, { error: { code: "RATE_LIMITED", message: "Too many requests. Please retry shortly." } }, request.headers.get("origin") ?? undefined);
+  response.headers.set("retry-after", String(retryAfter));
+  response.headers.set("x-ratelimit-limit", String(limit));
+  return response;
+}
+
+/** Test-only reset; production code never calls this. */
+export function resetRequestRateLimitForTests(): void {
+  rateLimitBuckets.clear();
+}
 
 async function readBody(request: Request): Promise<unknown> {
   const text = await request.text();
@@ -101,6 +156,12 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
   logger.info("request started", { method: request.method, path: pathname });
 
   try {
+    const limited = rateLimitResponse(request, pathname);
+    if (limited) return limited;
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+      return jsonResponse(413, { error: { code: "PAYLOAD_TOO_LARGE", message: `Request body must not exceed ${MAX_BODY_BYTES} bytes` } }, requestOrigin);
+    }
     if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
     if (request.method === "GET" && (pathname === "/" || pathname === "/health" || pathname === "/api/health")) return jsonResponse(200, healthPayload(), requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);

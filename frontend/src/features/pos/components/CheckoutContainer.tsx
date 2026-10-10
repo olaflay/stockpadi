@@ -7,7 +7,6 @@ import { CartStep } from "@/features/pos/components/CartStep";
 import { PaymentStep } from "@/features/pos/components/PaymentStep";
 import { formatCurrency } from "@/lib/format";
 import type { CartLine } from "@/features/pos/complete-sale";
-import type { ParkedSale } from "@/features/pos/parked-sales";
 import type { Product } from "@/types/product";
 import type { LocalCustomer } from "@/lib/db";
 import type { PaymentMethod, SalePayment } from "@/types/sale";
@@ -26,10 +25,7 @@ export interface CheckoutContainerProps {
   onSetQuantity?: (key: string, qty: number) => void;
   onRemoveLine?: (key: string) => void;
   onSetDiscount?: (amount: number) => void;
-  parkedSales?: ParkedSale[];
   onParkSale?: () => void;
-  onResumeParkedSale?: (id: string) => void;
-  onDeleteParkedSale?: (id: string) => void;
   stockByProduct?: Record<string, number>;
 
   // Payment props
@@ -77,10 +73,7 @@ export function CheckoutContainer(props: {
   onSetQuantity?: (key: string, qty: number) => void;
   onRemoveLine?: (key: string) => void;
   onSetDiscount?: (amount: number) => void;
-  parkedSales?: ParkedSale[];
   onParkSale?: () => void;
-  onResumeParkedSale?: (id: string) => void;
-  onDeleteParkedSale?: (id: string) => void;
   stockByProduct?: Record<string, number>;
   effectivePayments: SalePayment[];
   remaining: number;
@@ -199,10 +192,7 @@ export function CheckoutContainer(props: {
               onSetQuantity={props.onSetQuantity}
               onRemoveLine={props.onRemoveLine}
               onSetDiscount={props.onSetDiscount}
-              parkedSales={props.parkedSales}
               onParkSale={props.onParkSale}
-              onResumeParkedSale={props.onResumeParkedSale}
-              onDeleteParkedSale={props.onDeleteParkedSale}
               onContinueToPayment={() => setActiveTab("payment")}
               stockByProduct={props.stockByProduct}
               hideHeader={true}

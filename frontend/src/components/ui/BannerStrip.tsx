@@ -66,10 +66,16 @@ export function BannerStrip() {
     : failedCount > 0
       ? "Sync issue"
       : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
-        ? pendingSalesCount > 0 ? `Syncing · ${salesWaiting}` : "Syncing…"
+        ? pendingSalesCount > 0 ? salesWaiting : "Online"
         : pendingSalesCount > 0
           ? salesWaiting
           : "Online";
+
+  const syncStatusTone = !isOnline || failedCount > 0
+    ? "bg-danger"
+    : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
+      ? "bg-warning"
+      : "bg-success";
 
   return (
     <div className="flex w-full flex-col" role="status" aria-live="polite">
@@ -79,8 +85,9 @@ export function BannerStrip() {
         </div>
       )}
 
-      <div className="border-b border-border bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
-        {syncStatus}
+      <div className="flex items-center justify-center gap-1.5 border-b border-border bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
+        <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncStatusTone}`} />
+        <span>{syncStatus}</span>
       </div>
 
       {showNotification && (

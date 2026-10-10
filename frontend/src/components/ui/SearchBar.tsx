@@ -76,11 +76,13 @@ export function SearchBar({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="h-full min-h-[48px] w-full bg-transparent pl-11 pr-10 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
+        className="h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
       />
 
-      {/* Trailing Controls: Clear Button & Optional Trailing Action */}
-      <div className="absolute right-2 flex items-center gap-1">
+      {/* Trailing Controls: Clear Button & Optional Trailing Action.
+          Keeping this in the flex layout prevents the controls from covering
+          the input when a held-sales action is present on a narrow phone. */}
+      <div className="relative mr-2 flex shrink-0 items-center gap-1">
         {value.length > 0 && (
           <button
             type="button"

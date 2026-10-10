@@ -62,4 +62,14 @@ describe("parked-sales", () => {
     deleteParkedSale(s1.id);
     expect(getParkedSales()).toHaveLength(0);
   });
+
+  it("keeps held sales isolated by business", () => {
+    parkSale({ businessId: "business-a", lines: [{ productId: "a", quantity: 1, unitPrice: 100, unitLabel: "piece", conversionFactor: 1 }] });
+    parkSale({ businessId: "business-b", lines: [{ productId: "b", quantity: 1, unitPrice: 200, unitLabel: "piece", conversionFactor: 1 }] });
+
+    expect(getParkedSales("business-a").map((sale) => sale.lines[0]?.productId)).toEqual(["a"]);
+    expect(getParkedSales("business-b").map((sale) => sale.lines[0]?.productId)).toEqual(["b"]);
+    expect(resumeParkedSale(getParkedSales("business-a")[0]!.id, "business-a")?.businessId).toBe("business-a");
+    expect(getParkedSales("business-b")).toHaveLength(1);
+  });
 });

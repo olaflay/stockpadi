@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Camera } from "lucide-react";
+import { Camera, PauseCircle } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
@@ -42,6 +42,8 @@ export function BrowseStep(props: {
   onReviewCart: () => void;
   onGoToSettings: () => void;
   stockByProduct?: Record<string, number>;
+  parkedSalesCount?: number;
+  onOpenParkedSales?: () => void;
 }) {
   const {
     query,
@@ -60,6 +62,8 @@ export function BrowseStep(props: {
     total,
     onReviewCart,
     stockByProduct,
+    parkedSalesCount = 0,
+    onOpenParkedSales,
   } = props;
 
   const router = useRouter();
@@ -212,6 +216,19 @@ export function BrowseStep(props: {
               >
                 <Camera size={18} aria-hidden />
               </button>
+              {parkedSalesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenParkedSales}
+                  aria-label={`Open ${parkedSalesCount} held sale${parkedSalesCount === 1 ? "" : "s"}`}
+                  title="Open held sales"
+                  className="flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-full bg-brand-container px-2 text-xs font-semibold tabular-nums text-on-brand-container transition-colors hover:opacity-90 active:scale-95 sm:min-w-0 sm:px-2.5"
+                >
+                  <PauseCircle size={15} strokeWidth={2.2} aria-hidden />
+                  <span className="hidden sm:inline">Held</span>
+                  <span>{parkedSalesCount}</span>
+                </button>
+              )}
             </div>
           }
         />
