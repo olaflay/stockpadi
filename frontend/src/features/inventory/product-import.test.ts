@@ -321,14 +321,36 @@ describe("buildSampleExcel", () => {
     expect(buf[3]).toBe(0x04);
   });
 
-  it("generates a workbook that the parser accepts without column drift", async () => {
+  it("generates a blank workbook that the parser accepts without column drift", async () => {
     const { buildSampleExcel } = await import("./product-import");
     const blob = await buildSampleExcel();
     const result = await parseProductFile(new File([await blob.arrayBuffer()], "template.xlsx"));
     expect(result.errors).toHaveLength(0);
-    expect(result.totalRows).toBe(2);
-    expect(result.validRows).toHaveLength(2);
-    expect(result.totalOpeningStockUnits).toBe(65);
+    expect(result.totalRows).toBe(0);
+    expect(result.validRows).toHaveLength(0);
+    expect(result.totalOpeningStockUnits).toBe(0);
+  });
+
+  it("adds entry guidance and validation to the workbook", async () => {
+    const { buildSampleExcel } = await import("./product-import");
+    const { Workbook } = await import("exceljs");
+    const blob = await buildSampleExcel();
+    const workbook = new Workbook();
+    await workbook.xlsx.load(await blob.arrayBuffer());
+
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(["Products", "Guide"]);
+    const products = workbook.getWorksheet("Products");
+    const headerValues = Array.from({ length: 10 }, (_, index) => products?.getRow(1).getCell(index + 1).value);
+    expect(headerValues).toEqual([
+      "Product name", "SKU", "Barcode", "Cost price", "Sell price", "Unit",
+      "Low-stock alert", "Expiry tracking", "Expiry date", "Opening stock",
+    ]);
+    expect(products?.getCell("H2").dataValidation).toMatchObject({ type: "list" });
+    expect(products?.getCell("A2").dataValidation).toMatchObject({ type: "custom" });
+    expect(products?.getCell("D2").dataValidation).toMatchObject({ type: "decimal", operator: "greaterThanOrEqual" });
+    expect(products?.getCell("G2").dataValidation).toMatchObject({ type: "whole", operator: "greaterThanOrEqual" });
+    expect(products?.getCell("I2").dataValidation).toMatchObject({ type: "custom" });
+    expect(products?.getCell("I3").dataValidation?.formulae?.[0]).toContain("I3");
   });
 });
 

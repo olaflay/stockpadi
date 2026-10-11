@@ -28,6 +28,11 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
   const router = typeof navigation.useRouter === "function" ? navigation.useRouter() : null;
   const user = useCurrentUser();
   const isOwnerOrAdmin = hasAccountType(user, ["BUSINESS_OWNER", "ADMIN"]);
+  const bottomNavHrefs = new Set(
+    isOwnerOrAdmin
+      ? ["/dashboard", "/pos", "/products", "/reports", "/more"]
+      : ["/dashboard", "/pos", "/products", "/stock-count", "/more"],
+  );
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
@@ -69,7 +74,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
       label: "Expenses",
       icon: TrendingDown,
     },
-    hasCapability(user, "VIEW_OWN_SALES") && {
+    (hasCapability(user, "VIEW_OWN_SALES") || hasCapability(user, "VIEW_BRANCH_SALES")) && {
       href: "/sales",
       label: "Sales",
       icon: ReceiptText,
@@ -109,7 +114,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
       label: "Settings",
       icon: Settings,
     },
-  ].filter(Boolean) as Array<{
+  ].filter(Boolean).filter((item) => !bottomNavHrefs.has((item as { href: string }).href)) as Array<{
     href: string;
     label: string;
     icon: typeof Settings;
@@ -144,7 +149,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
 
         {/* Top Header Bar */}
         <div className="flex items-center justify-between px-5 pt-2 pb-2">
-          <span className="text-xs font-bold tracking-widest text-on-surface-muted uppercase">MORE</span>
+          <span className="text-xs font-bold tracking-widest text-on-surface-muted uppercase">More</span>
           <button
             type="button"
             onClick={onClose}

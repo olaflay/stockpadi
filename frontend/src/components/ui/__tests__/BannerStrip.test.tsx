@@ -31,13 +31,13 @@ describe("BannerStrip connection status", () => {
     expect(screen.getByText("Offline")).toBeInTheDocument();
   });
 
-  it("keeps the waiting count concise while uploads are active", () => {
+  it("uses plain saving language while a sale is being sent", () => {
     state.phase = "uploading";
     state.pendingSales = 1;
 
     render(<BannerStrip />);
 
-    expect(screen.getByText("1 sale waiting")).toBeInTheDocument();
+    expect(screen.getByText("Saving")).toBeInTheDocument();
   });
 
   it("shows a settled online state when no sales are waiting", () => {
@@ -51,6 +51,6 @@ describe("BannerStrip connection status", () => {
 
     render(<BannerStrip />);
 
-    expect(screen.getByText("Sync issue")).toBeInTheDocument();
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
   });
 });

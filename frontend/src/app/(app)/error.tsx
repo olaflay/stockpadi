@@ -1,8 +1,6 @@
-"use deliberate client";
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { getBrandingConfig } from "@/config/branding";
 
 interface ErrorProps {
@@ -42,30 +40,28 @@ export default function AppError({ error, reset }: ErrorProps) {
         Something unexpected happened
       </h1>
       <p className="text-[var(--font-size-body)] text-[var(--color-on-surface-muted)] max-w-sm mb-6">
-        Your {branding.businessName} data is safe and offline records are preserved in local storage.
+        Your {branding.businessName} data is safe. Your saved work stays on this device.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
         <button
           type="button"
-          onClick={() => reset()}
+          onClick={() => {
+            if (window.history.length > 1) window.history.back();
+            else reset();
+          }}
           className="w-full min-h-[48px] px-6 rounded-[var(--radius-control)] bg-[var(--color-brand-accent)] text-[var(--color-brand-accent-contrast)] font-medium transition-transform active:scale-[0.98] shadow-sm flex items-center justify-center"
         >
-          Try again
+          Go back
         </button>
-        <Link
-          href="/dashboard"
+        <button
+          type="button"
+          onClick={() => reset()}
           className="w-full min-h-[48px] px-6 rounded-[var(--radius-control)] bg-[var(--color-surface-container)] text-[var(--color-on-surface)] font-medium transition-colors hover:bg-[var(--color-surface-container-high)] flex items-center justify-center"
         >
-          Go to Dashboard
-        </Link>
+          Reload
+        </button>
       </div>
-
-      {error.digest && (
-        <p className="mt-8 text-[var(--font-size-caption)] text-[var(--color-on-surface-muted)] font-mono">
-          Ref: {error.digest}
-        </p>
-      )}
     </div>
   );
 }

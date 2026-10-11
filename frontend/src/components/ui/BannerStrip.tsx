@@ -60,13 +60,15 @@ export function BannerStrip() {
     user.businessStatus !== "verified" &&
     user.businessStatus !== "active"
   );
-  const salesWaiting = `${pendingSalesCount} ${pendingSalesCount === 1 ? "sale" : "sales"} waiting`;
+  const salesWaiting = `${pendingSalesCount} ${pendingSalesCount === 1 ? "sale" : "sales"} saved here`;
   const syncStatus = !isOnline
     ? "Offline"
     : failedCount > 0
-      ? "Sync issue"
-      : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
-        ? pendingSalesCount > 0 ? salesWaiting : "Online"
+      ? "Needs attention"
+      : syncPhase === "uploading" || syncPhase === "syncing"
+        ? "Saving"
+        : syncPhase === "downloading"
+          ? "Connecting"
         : pendingSalesCount > 0
           ? salesWaiting
           : "Online";
@@ -81,11 +83,11 @@ export function BannerStrip() {
     <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
         <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-amber-950 dark:text-amber-200">
-          Store pending admin approval · Changes are saved locally and will sync once verified
+          Store pending admin approval · Changes are saved locally and will upload once verified
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-1.5 border-b border-border bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
+      <div className="flex items-center justify-center gap-1.5 bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
         <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncStatusTone}`} />
         <span>{syncStatus}</span>
       </div>
@@ -95,7 +97,7 @@ export function BannerStrip() {
           <div className="flex items-center gap-2 min-w-0">
             <Bell size={14} className="shrink-0 text-brand-accent" />
             <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface truncate">
-              Enable sync &amp; stock alerts
+              Enable saved-work and stock alerts
             </span>
           </div>
           <div className="flex items-center gap-1">

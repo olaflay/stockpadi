@@ -51,7 +51,7 @@ export async function resolveAccountContext(db: SupabaseClient, user: User): Pro
     permissions = new Set([
       "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS",
       "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_CUSTOMERS",
-      "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS",
+      "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_BRANCH_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS",
     ]);
   }
   return {

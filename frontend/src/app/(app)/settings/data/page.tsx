@@ -199,17 +199,17 @@ export default function DataSettingsPage() {
       <ScreenHeader title="Backup" backHref="/settings" />
 
       <section className="rounded-2xl bg-surface-container p-4">
-        <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Sync status</h2>
+        <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Save status</h2>
         <p className="text-[length:var(--font-size-body)] text-on-surface">
           {!online
-            ? "Offline — changes stay safely on this device"
+            ? "Offline. Changes stay on this device."
             : pendingCount > 0
-            ? `${pendingCount} change${pendingCount === 1 ? "" : "s"} waiting to sync`
+            ? `${pendingCount} change${pendingCount === 1 ? "" : "s"} waiting to upload`
             : failedCount > 0
-              ? "Sync needs attention"
+              ? "Some changes need attention"
               : fullySynced
-                ? "Everything is synced"
-                : "Cloud pull has not completed yet"}
+                ? "Everything is saved"
+                : "Still checking for updates"}
         </p>
         {failedCount > 0 ? (
           <div className="mt-3 flex flex-col gap-2 rounded-xl bg-danger-container/40 p-3">
@@ -230,7 +230,7 @@ export default function DataSettingsPage() {
               href="/settings/data/reconciliation"
               className="flex items-center justify-between text-xs font-bold text-brand-accent hover:underline pt-1"
             >
-              <span>Open Owner Reconciliation Queue</span>
+              <span>Review changes that need attention</span>
               <span>→</span>
             </RippleLink>
           </div>
@@ -240,7 +240,7 @@ export default function DataSettingsPage() {
               href="/settings/data/reconciliation"
               className="flex items-center justify-between text-xs font-semibold text-on-surface-muted hover:text-on-surface"
             >
-              <span>Owner Reconciliation Queue & Disaster Transfer</span>
+              <span>Review saved changes or move them to another device</span>
               <span>→</span>
             </RippleLink>
           </div>

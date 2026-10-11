@@ -29,7 +29,7 @@ export async function recordCreditPayment(params: {
   if (params.amount <= 0) throw new Error("Payment amount must be greater than zero.");
   const currentBalance = await getCustomerCreditBalance(params.customerId);
   if (currentBalance > 0 && params.amount > currentBalance * 2) {
-    throw new Error(`That's more than double the ₦${currentBalance.toLocaleString()} owed — double-check the amount before saving.`);
+    throw new Error(`That's more than double the ₦${currentBalance.toLocaleString()} owed. Check the amount before saving.`);
   }
 
   const now = new Date().toISOString();

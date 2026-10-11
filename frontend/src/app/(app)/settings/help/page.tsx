@@ -184,7 +184,7 @@ export default function HelpPage() {
       </section>
 
       {/* Review Modal */}
-      <Modal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Share Your Review">
+      <Modal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Share your review">
         <div className="flex flex-col gap-4 py-2">
           <p className="text-[length:var(--font-size-body)] text-on-surface-muted text-center">
             How is your experience with {branding.businessName} so far?

@@ -472,7 +472,7 @@ export default function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-on-surface truncate">Close Today&apos;s Register</p>
-                <p className="text-xs text-on-surface-muted truncate">End-of-day cash reconciliation</p>
+                <p className="text-xs text-on-surface-muted truncate">Check the day&apos;s cash against sales</p>
               </div>
             </div>
             <span className="shrink-0 text-xs font-semibold text-brand-accent hover:underline flex items-center gap-1">

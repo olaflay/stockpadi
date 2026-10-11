@@ -37,6 +37,7 @@ function saleFromRealtime(event: SyncSaleRealtimeEvent): import("@/types/sale").
     createdAtLocal: sale.createdAtLocal,
     createdAt: sale.createdAt,
     createdByUserId: sale.createdByUserId,
+    createdByName: sale.createdByName ?? null,
     voidedAt: null,
     items: sale.items.map((item) => ({
       productId: item.productId,

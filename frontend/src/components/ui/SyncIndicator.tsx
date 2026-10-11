@@ -101,11 +101,11 @@ export function SyncIndicator({
     now !== null && now - new Date(pullState.lastServerContactAt).getTime() <= CLOUD_HEALTH_MAX_AGE_MS
   );
   const openDiagnostics = () => router.push("/settings/sync-health");
-  const phaseLabel = runtimePhase === "uploading" ? "↑ Uploading" : runtimePhase === "downloading" ? "↓ Downloading" : "↕ Syncing";
+  const phaseLabel = runtimePhase === "downloading" ? "Connecting" : "Saving";
 
   const handleForceSync = async () => {
     if (isSyncing) {
-      showToast("Sync already in progress. Updating in the background…", "neutral");
+      showToast("Saving is already in progress. It will finish in the background.", "neutral");
       return;
     }
     // Repeated-tap protection: If all local changes are already pushed and a full
@@ -120,7 +120,7 @@ export function SyncIndicator({
     setIsSyncing(true);
     setSyncRuntimePhase("syncing");
     if (compact && pendingCount > 0) {
-      showToast(`Backing up ${pendingCount} change${pendingCount === 1 ? "" : "s"} to cloud…`, "neutral");
+      showToast(`Saving ${pendingCount} change${pendingCount === 1 ? "" : "s"}…`, "neutral");
     }
     try {
       // Use the same authoritative cycle as automatic sync. In particular it
@@ -134,18 +134,18 @@ export function SyncIndicator({
         : 0;
       if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && pullResult.fullySynced) {
         lastManualSyncSuccessAt = Date.now();
-        showToast("Sync complete! All changes backed up.", "success");
+        showToast("Saved. All changes are up to date.", "success");
       } else if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && !pullResult.fullySynced) {
         showToast(pullFailureMessage(pullResult), "warning");
       } else if (unresolvedPushes > 0) {
-        showToast(`${unresolvedPushes} change${unresolvedPushes === 1 ? "" : "s"} needs attention before cloud sync can finish.`, "warning");
+        showToast(`${unresolvedPushes} change${unresolvedPushes === 1 ? "" : "s"} needs attention before saving can finish.`, "warning");
       } else if (pushResult.drained > 0) {
-        showToast(`${pushResult.drained} backed up, ${pushResult.pendingRemaining} still uploading...`, "neutral");
+        showToast(`${pushResult.drained} saved, ${pushResult.pendingRemaining} still uploading...`, "neutral");
       } else {
         showToast(`${pushResult.pendingRemaining} changes waiting to upload.`, "neutral");
       }
     } catch {
-      showToast("Could not complete cloud sync. Check connection and retry.", "warning");
+      showToast("Could not finish saving. Check your connection and try again.", "warning");
     } finally {
       setSyncRuntimePhase("idle");
       setIsSyncing(false);
@@ -163,7 +163,7 @@ export function SyncIndicator({
       const firstFailed = await db.outbox.where("status").equals("failed").first();
       const firstBlocked = await db.outbox.where("status").equals("blocked").first();
       if (["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") || ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")) {
-        showToast("Account pending verification: products and sales are saved locally and will sync once approved.", "warning");
+        showToast("Account pending verification. Products and sales are saved locally and will upload once approved.", "warning");
       } else if (compact) {
         showToast(`Retried sync for ${failedCount} change${failedCount === 1 ? "" : "s"}.`, "neutral");
       }
@@ -181,8 +181,8 @@ export function SyncIndicator({
             onClick={openDiagnostics}
             disabled={isSyncing}
             role="status"
-            title="Sync required. Open Sync Diagnostics."
-            aria-label="Sync required. Open Sync Diagnostics."
+            title="Some changes need attention. Open save details."
+            aria-label="Some changes need attention. Open save details."
             className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors active:scale-95 disabled:opacity-60 ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
           >
             <span aria-hidden className="h-2 w-2 rounded-full bg-warning" />
@@ -212,7 +212,7 @@ export function SyncIndicator({
         className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-amber-400 text-black" : "bg-warning-container text-on-warning-container"}`}
       >
         <AlertTriangle size={13} aria-hidden />
-        {compact ? `${syncSafety.queueCount} sync required` : "Sync required"}
+        {compact ? `${syncSafety.queueCount} changes need attention` : "Needs attention"}
       </button>
     );
   }
@@ -257,7 +257,7 @@ export function SyncIndicator({
           className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-inline)] bg-danger-container px-3 text-[length:var(--font-size-caption)] text-on-danger-container"
         >
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: "var(--color-danger)" }} />
-          <span>{failedCount} {failedCount === 1 ? "change" : "changes"} didn&apos;t sync</span>
+          <span>{failedCount} {failedCount === 1 ? "change" : "changes"} need attention</span>
         </span>
         <button
           type="button"
@@ -332,7 +332,7 @@ export function SyncIndicator({
       <div className="inline-flex items-center gap-2">
         <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-          Sync issue
+          Needs attention
         </button>
         <button type="button" onClick={handleForceSync} disabled={isSyncing} className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-warning px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-warning disabled:opacity-60">
           <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
@@ -371,7 +371,7 @@ export function SyncIndicator({
       <div className="inline-flex items-center gap-1">
         <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" title="Open Sync Diagnostics" className={`inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] transition-colors ${isContrast ? "text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}>
           <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${runtimePhase === "idle" ? "bg-warning" : "bg-success animate-pulse"}`} />
-          {runtimePhase === "idle" ? "Sync issue" : phaseLabel}
+          {runtimePhase === "idle" ? "Needs attention" : phaseLabel}
         </button>
         {runtimePhase === "idle" && <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}><RefreshCw size={11} />Sync now</button>}
       </div>
@@ -415,7 +415,7 @@ export function SyncIndicator({
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
-        {pullComplete ? "Synced just now" : "Sync not checked"}
+          {pullComplete ? "Saved just now" : "Connection not checked"}
         <RefreshCw size={10} aria-hidden />
       </button>
     );
@@ -428,8 +428,8 @@ export function SyncIndicator({
         type="button"
         onClick={openDiagnostics}
         role="status"
-        title={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
-        aria-label={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
+        title={`${pendingCount} changes waiting to upload. Open save details.`}
+        aria-label={`${pendingCount} changes waiting to upload. Open save details.`}
         className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors ${
           isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
         }`}
@@ -468,7 +468,7 @@ export function SyncIndicator({
         onClick={openDiagnostics}
         role="status"
         title="Open Sync Diagnostics"
-        aria-label={`${pendingCount} changes waiting to sync. Open Sync Diagnostics.`}
+        aria-label={`${pendingCount} changes waiting to upload. Open save details.`}
         className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted"
       >
         <span
@@ -476,7 +476,7 @@ export function SyncIndicator({
           className="h-2 w-2 animate-pulse rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>{runtimePhase === "idle" ? "Syncing…" : phaseLabel} · {pendingCount} pending</span>
+        <span>{runtimePhase === "idle" ? "Saving…" : phaseLabel} · {pendingCount} waiting</span>
       </button>
       <button
         type="button"
@@ -485,7 +485,7 @@ export function SyncIndicator({
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] bg-brand-accent px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-white hover:bg-brand-accent/90 transition-colors active:scale-95 disabled:opacity-70"
       >
         <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
-        <span>{isSyncing ? "Syncing…" : "Sync now"}</span>
+        <span>{isSyncing ? "Saving…" : "Sync now"}</span>
       </button>
     </div>
   );

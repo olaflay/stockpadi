@@ -10,7 +10,7 @@ describe("Error boundaries and 404 recovery", () => {
     cleanup();
   });
 
-  it("renders AppError with error details and reset retry action", () => {
+  it("renders AppError with two clear recovery actions", () => {
     const mockReset = vi.fn();
     const testError = new Error("Database offline replica timeout");
 
@@ -18,12 +18,10 @@ describe("Error boundaries and 404 recovery", () => {
 
     expect(screen.getByText("Something unexpected happened")).toBeDefined();
 
-    const retryButton = screen.getByRole("button", { name: /try again/i });
+    expect(screen.getByRole("button", { name: /go back/i })).toBeDefined();
+    const retryButton = screen.getByRole("button", { name: /reload/i });
     fireEvent.click(retryButton);
     expect(mockReset).toHaveBeenCalledOnce();
-
-    const returnLink = screen.getByRole("link", { name: /go to dashboard/i });
-    expect(returnLink.getAttribute("href")).toBe("/dashboard");
   });
 
   it("renders branded NotFound page with recovery link to POS", () => {

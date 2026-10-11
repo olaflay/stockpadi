@@ -33,7 +33,7 @@ export function NotificationBanner() {
       <div className="flex items-center gap-2 min-w-0">
         <Bell size={18} className="shrink-0 text-brand-accent" />
         <span className="text-[length:var(--font-size-caption)] font-medium truncate">
-          Enable alerts for sync status and stock levels
+          Enable alerts for saved work and stock levels
         </span>
       </div>
       <div className="flex items-center gap-2">

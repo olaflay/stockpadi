@@ -92,7 +92,7 @@ export function ProductCoreFields({
   return (
     <>
       <label className="flex flex-col gap-1">
-        <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Name *</span>
+        <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Product name *</span>
         <TextInput
           id="field-product-name"
           {...nameRegister}
@@ -142,7 +142,7 @@ export function ProductCoreFields({
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1.5 text-[length:var(--font-size-label)] text-on-surface-muted">
             Barcode
-            <InfoTooltip text="Optional barcode. No barcode? That's fine — you can leave this blank." />
+            <InfoTooltip text="Optional barcode. No barcode? That's fine. Leave this blank." />
           </span>
           <div className="flex gap-2">
             <TextInput

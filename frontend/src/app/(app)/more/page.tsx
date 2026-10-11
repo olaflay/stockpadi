@@ -108,7 +108,7 @@ export default function MorePage() {
             />
           )}
 
-          {hasCapability(user, "VIEW_OWN_SALES") && (
+          {(hasCapability(user, "VIEW_OWN_SALES") || hasCapability(user, "VIEW_BRANCH_SALES")) && (
             <SettingsRow
               icon={ReceiptText}
               tone="brand"
@@ -161,7 +161,7 @@ export default function MorePage() {
               icon={ClipboardCheck}
               tone="neutral"
               label="Stock Count"
-              description="Physical shelf count and inventory reconciliation"
+              description="Count the stock on your shelves and compare it with your records"
               href="/stock-count"
             />
           )}

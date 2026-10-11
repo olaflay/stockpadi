@@ -9,6 +9,7 @@ export const WORKER_CAPABILITIES = [
   "VIEW_CUSTOMERS",
   "USE_CUSTOMER_CREDIT",
   "VIEW_OWN_SALES",
+  "VIEW_BRANCH_SALES",
   "VIEW_RECEIPTS",
   "VIEW_ALERTS",
   "RECEIVE_STOCK",
@@ -129,6 +130,7 @@ export interface SyncSaleRealtimeSale {
   createdAtLocal: string;
   createdAt: string;
   createdByUserId: string;
+  createdByName?: string | null;
   workerId: string;
   voidedAt: null;
   items: SyncSaleRealtimeItem[];

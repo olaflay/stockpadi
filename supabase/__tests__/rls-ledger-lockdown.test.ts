@@ -113,7 +113,7 @@ beforeAll(async () => {
   cashierId = cashier.rows[0].id;
   await db.query(`insert into users (id, business_id, full_name, role, account_type) values ($1, $2, 'Test Cashier', 'cashier', 'WORKER');`, [cashierId, bizId]);
   await db.query(`insert into business_memberships (user_id, business_id, role, type, account_type) values ($1, $2, 'owner', 'owner', 'BUSINESS_OWNER'), ($3, $2, 'cashier', 'worker', 'WORKER');`, [ownerId, bizId, cashierId]);
-  await db.query(`insert into worker_permissions (user_id, business_id, permission, enabled) values ($1, $2, 'VIEW_OWN_SALES', true), ($1, $2, 'VIEW_RECEIPTS', true);`, [cashierId, bizId]);
+  await db.query(`insert into worker_permissions (user_id, business_id, permission, enabled) values ($1, $2, 'VIEW_OWN_SALES', true), ($1, $2, 'VIEW_BRANCH_SALES', true), ($1, $2, 'VIEW_RECEIPTS', true);`, [cashierId, bizId]);
 
   const branch = await db.query<{ id: string }>(`insert into branches (business_id, name) values ($1, 'Main') returning id;`, [bizId]);
   branchId = branch.rows[0].id;
@@ -207,6 +207,29 @@ describe("ledger tables: reads and the sync RPC path are unaffected", () => {
     await actAs("authenticated", cashierId);
     const result = await db.query(`select id from sales where id = $1;`, [existingSaleId]);
     expect(result.rows).toHaveLength(1);
+  });
+
+  it("a worker can read assigned-branch sales but not another branch", async () => {
+    const otherBranch = crypto.randomUUID();
+    const sameBranchSale = crypto.randomUUID();
+    const otherBranchSale = crypto.randomUUID();
+
+    await actAs("service_role");
+    await db.query(`insert into branches (id, business_id, name) values ($1, $2, 'Other')`, [otherBranch, bizId]);
+    await db.query(
+      `insert into sales (id, client_id, business_id, branch_id, subtotal, total, created_at_local, created_by_user_id)
+       values ($1, gen_random_uuid(), $3, $4, 10, 10, now(), $5),
+              ($2, gen_random_uuid(), $3, $6, 20, 20, now(), $5);`,
+      [sameBranchSale, otherBranchSale, bizId, branchId, ownerId, otherBranch]
+    );
+
+    await actAs("authenticated", cashierId);
+    const result = await db.query<{ id: string }>(
+      `select id from sales where id in ($1, $2) order by id;`,
+      [sameBranchSale, otherBranchSale]
+    );
+
+    expect(result.rows.map((row) => row.id)).toEqual([sameBranchSale]);
   });
 
   it("service_role's sync_apply_sale RPC still writes to stock_movements despite the table-level revoke", async () => {

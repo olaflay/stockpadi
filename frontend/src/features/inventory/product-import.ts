@@ -46,6 +46,22 @@ export const IMPORT_HEADERS = [
 
 export type ImportHeader = (typeof IMPORT_HEADERS)[number];
 
+const TEMPLATE_START_ROW = 2;
+const TEMPLATE_END_ROW = PRODUCT_IMPORT_MAX_ROWS + 1;
+const TEMPLATE_STARTER_ROWS = 12;
+const TEMPLATE_HEADERS = [
+  "Product name",
+  "SKU",
+  "Barcode",
+  "Cost price",
+  "Sell price",
+  "Unit",
+  "Low-stock alert",
+  "Expiry tracking",
+  "Expiry date",
+  "Opening stock",
+] as const;
+
 const REQUIRED_IMPORT_HEADERS: readonly ImportHeader[] = ["name", "costPrice", "sellPrice"];
 
 /** Conservative aliases preserve common older templates without accepting typos. */
@@ -56,10 +72,10 @@ const HEADER_ALIASES: Record<ImportHeader, readonly string[]> = {
   costPrice: ["costPrice", "cost_price", "cost price"],
   sellPrice: ["sellPrice", "sell_price", "sell price"],
   unitLabel: ["unitLabel", "unit_label", "unit"],
-  lowStockThreshold: ["lowStockThreshold", "low_stock_threshold", "low stock threshold"],
+  lowStockThreshold: ["lowStockThreshold", "low_stock_threshold", "low stock threshold", "low stock alert", "low-stock alert"],
   expiryTracking: ["expiryTracking", "expiry_tracking", "expiry tracking"],
   expiryDate: ["expiryDate", "expiry_date", "expiry date"],
-  initialStock: ["initialStock", "initial_stock", "initial stock", "starting stock"],
+  initialStock: ["initialStock", "initial_stock", "initial stock", "starting stock", "opening stock", "opening quantity"],
 };
 
 type RawCell = unknown;
@@ -408,24 +424,169 @@ export function buildErrorReportCsv(errors: ImportResult["errors"]): string {
   return Papa.unparse([["row", "field", "message"], ...errors.map((error) => [String(error.rowNum), error.field ?? "", error.message])]);
 }
 
-/** Builds the exact .xlsx header contract used by the parser. */
+function applyTemplateDataValidation(
+  sheet: { getCell: (address: string) => { dataValidation?: unknown } },
+  column: string,
+  validation: Record<string, unknown> | ((rowNumber: number) => Record<string, unknown>),
+): void {
+  for (let rowNumber = TEMPLATE_START_ROW; rowNumber <= TEMPLATE_END_ROW; rowNumber += 1) {
+    sheet.getCell(`${column}${rowNumber}`).dataValidation = typeof validation === "function" ? validation(rowNumber) : validation;
+  }
+}
+
+function styleTemplateHeader(row: { height?: number; eachCell: (callback: (cell: { font: unknown; fill: unknown; alignment: unknown; border: unknown; note?: unknown }) => void) => void }): void {
+  row.height = 34;
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0A6E4D" } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.border = {
+      bottom: { style: "medium", color: { argb: "FF064E3B" } },
+    };
+  });
+}
+
+function addTemplateGuide(workbook: { addWorksheet: (name: string) => { addRow: (values: unknown[]) => { height?: number; eachCell: (callback: (cell: { font: unknown; fill: unknown; alignment: unknown }) => void) => void }; columns: unknown; views: unknown; getColumn: (index: number) => { numFmt?: string } } }): void {
+  const guide = workbook.addWorksheet("Guide");
+  const guideHeader = guide.addRow(["Column", "What to enter", "Required", "Allowed format", "Example"]);
+  guideHeader.height = 30;
+  guideHeader.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+    cell.alignment = { vertical: "middle", wrapText: true };
+  });
+  [
+    ["Product name", "Product name", "Yes", "Text", "Tomato paste"],
+    ["SKU", "Your unique product code. Leave blank to generate one.", "No", "Text", "TOMATO-001"],
+    ["Barcode", "Barcode digits. Keep this as text so leading zeroes are preserved.", "No", "Text", "6900001234567"],
+    ["Cost price", "What one base unit costs you.", "Yes", "Number, 0 or more", "120"],
+    ["Sell price", "What one base unit sells for.", "Yes", "Number, 0 or more", "180"],
+    ["Unit", "The base unit you count and sell.", "No", "Text", "tin"],
+    ["Low-stock alert", "Alert when stock reaches this number.", "No", "Whole number, 0 or more", "12"],
+    ["Expiry tracking", "Choose whether an expiry date is used.", "No", "off, optional, or mandatory", "off"],
+    ["Expiry date", "Expiry date when tracking is optional or mandatory.", "Conditional", "Excel date or YYYY-MM-DD", "2027-04-05"],
+    ["Opening stock", "Opening quantity at the selected branch.", "No", "Whole number, 0 or more", "40"],
+  ].forEach((row) => guide.addRow(row));
+  guide.columns = [
+    { width: 23 }, { width: 54 }, { width: 14 }, { width: 30 }, { width: 22 },
+  ];
+  guide.views = [{ state: "frozen", ySplit: 1 }];
+  guide.getColumn(3).numFmt = "@";
+}
+
+/** Builds the exact .xlsx header contract used by the parser, with workbook-level guidance and validation. */
 export async function buildSampleExcel(): Promise<Blob> {
   const excelModule = await import("exceljs");
   const ExcelJS = (excelModule.default && typeof excelModule.default === "object" ? excelModule.default : excelModule) as typeof excelModule;
   const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Product import template";
+  workbook.created = new Date();
   const sheet = workbook.addWorksheet("Products");
-  const headerRow = sheet.addRow([...IMPORT_HEADERS]);
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0A6E4D" } };
-  });
-  sheet.addRow(["Tomato paste", "TOMATO-001", "6900001234567", 120, 180, "tin", 12, "off", "", 40]);
-  sheet.addRow(["5kg Rice", "RICE-5", "", 3800, 4500, "bag", 10, "off", "", 25]);
+  const headerRow = sheet.addRow([...TEMPLATE_HEADERS]);
+  styleTemplateHeader(headerRow);
   sheet.columns = [
-    { width: 22 }, { width: 14 }, { width: 18 }, { width: 12 }, { width: 12 },
-    { width: 12 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 12 },
+    { width: 25 }, { width: 18 }, { width: 20 }, { width: 16 }, { width: 16 },
+    { width: 15 }, { width: 21 }, { width: 18 }, { width: 17 }, { width: 18 },
   ];
   sheet.views = [{ state: "frozen", ySplit: 1 }];
+  sheet.autoFilter = { from: `A1`, to: `J${TEMPLATE_END_ROW}` };
+  sheet.properties.defaultRowHeight = 22;
+  sheet.getRow(1).eachCell((cell) => {
+    cell.note = "Use the Guide sheet for the required field, format, and allowed values.";
+  });
+
+  // Show a usable writing area while keeping the template safe to upload as-is.
+  for (let rowNumber = TEMPLATE_START_ROW; rowNumber < TEMPLATE_START_ROW + TEMPLATE_STARTER_ROWS; rowNumber += 1) {
+    const row = sheet.addRow(Array.from({ length: IMPORT_HEADERS.length }, () => ""));
+    row.height = 22;
+    row.eachCell((cell, columnNumber) => {
+      cell.alignment = { vertical: "middle" };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: rowNumber % 2 === 0 ? "FFF8FAFC" : "FFFFFFFF" },
+      };
+      cell.border = { bottom: { style: "hair", color: { argb: "FFE2E8F0" } } };
+      if (columnNumber === 1 || columnNumber === 2 || columnNumber === 3 || columnNumber === 6) cell.numFmt = "@";
+      if (columnNumber === 4 || columnNumber === 5) cell.numFmt = "#,##0.00";
+      if (columnNumber === 7 || columnNumber === 10) cell.numFmt = "0";
+      if (columnNumber === 9) cell.numFmt = "yyyy-mm-dd";
+    });
+  }
+
+  applyTemplateDataValidation(sheet, "A", (rowNumber) => ({
+    type: "custom",
+    formulae: [`=LEN(TRIM(A${rowNumber}))>0`],
+    allowBlank: false,
+    showErrorMessage: true,
+    errorTitle: "Enter a product name",
+    error: "Product name is required.",
+    showInputMessage: true,
+    promptTitle: "Product name",
+    prompt: "Enter the name customers will see.",
+  }));
+  applyTemplateDataValidation(sheet, "D", {
+    type: "decimal",
+    operator: "greaterThanOrEqual",
+    formulae: [0],
+    allowBlank: false,
+    showErrorMessage: true,
+    errorTitle: "Enter a valid cost price",
+    error: "Use a number equal to or greater than 0.",
+    showInputMessage: true,
+    promptTitle: "Cost price",
+    prompt: "Numbers only. Do not include a currency symbol.",
+  });
+  applyTemplateDataValidation(sheet, "E", {
+    type: "decimal",
+    operator: "greaterThanOrEqual",
+    formulae: [0],
+    allowBlank: false,
+    showErrorMessage: true,
+    errorTitle: "Enter a valid selling price",
+    error: "Use a number equal to or greater than 0.",
+    showInputMessage: true,
+    promptTitle: "Selling price",
+    prompt: "Numbers only. Do not include a currency symbol.",
+  });
+  for (const column of ["G", "J"]) {
+    applyTemplateDataValidation(sheet, column, {
+      type: "whole",
+      operator: "greaterThanOrEqual",
+      formulae: [0],
+      allowBlank: true,
+      showErrorMessage: true,
+      errorTitle: "Enter a whole number",
+      error: "Use a whole number equal to or greater than 0.",
+      showInputMessage: true,
+      promptTitle: column === "G" ? "Low-stock alert" : "Opening quantity",
+      prompt: "Use whole numbers only.",
+    });
+  }
+  applyTemplateDataValidation(sheet, "H", {
+    type: "list",
+    formulae: ['"off,optional,mandatory"'],
+    allowBlank: true,
+    showErrorMessage: true,
+    errorTitle: "Choose an expiry option",
+    error: "Choose off, optional, or mandatory from the dropdown.",
+    showInputMessage: true,
+    promptTitle: "Expiry tracking",
+    prompt: "Choose an option from the dropdown.",
+  });
+  applyTemplateDataValidation(sheet, "I", (rowNumber) => ({
+    type: "custom",
+    formulae: [`=OR(I${rowNumber}=\"\",AND(ISNUMBER(I${rowNumber}),I${rowNumber}>=DATE(1900,1,1),I${rowNumber}<=DATE(9999,12,31)))`],
+    allowBlank: true,
+    showErrorMessage: true,
+    errorTitle: "Enter a valid expiry date",
+    error: "Use an Excel date or YYYY-MM-DD.",
+    showInputMessage: true,
+    promptTitle: "Expiry date",
+    prompt: "Leave blank when expiry tracking is off.",
+  }));
+
+  addTemplateGuide(workbook);
   const buffer = await workbook.xlsx.writeBuffer();
   return new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }

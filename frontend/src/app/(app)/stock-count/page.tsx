@@ -48,9 +48,8 @@ export default function StockCountPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (query.trim().length > 0) {
-      setSearchActive(true);
-    }
+    setSearchActive(query.trim().length > 0);
+    return () => setSearchActive(false);
   }, [query, setSearchActive]);
 
   const branches = useLiveQuery(async () => {

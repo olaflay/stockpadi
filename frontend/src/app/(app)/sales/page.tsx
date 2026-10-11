@@ -49,11 +49,23 @@ export default function SalesPage() {
     }
   }, [period]);
 
-  // Cashiers only ever see their own sales per PRD §14
+  const canViewBranchSales = hasCapability(user, "VIEW_BRANCH_SALES");
+
   const visibleSales = useMemo(() => {
     return (
       result?.sales.filter((sale) => {
-        if (user.accountType === "WORKER" && sale.createdByUserId !== user.id) {
+        if (
+          user.accountType === "WORKER" &&
+          !(user.branchIds ?? []).includes(sale.branchId)
+        ) {
+          return false;
+        }
+
+        if (
+          user.accountType === "WORKER" &&
+          !canViewBranchSales &&
+          sale.createdByUserId !== user.id
+        ) {
           return false;
         }
 
@@ -66,7 +78,7 @@ export default function SalesPage() {
         return true;
       }) ?? []
     );
-  }, [result?.sales, user.accountType, user.id, paymentFilter]);
+  }, [result?.sales, user.accountType, user.id, user.branchIds, paymentFilter, canViewBranchSales]);
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -154,11 +166,11 @@ export default function SalesPage() {
     },
   ];
 
-  if (!hasCapability(user, "VIEW_OWN_SALES")) {
+  if (!hasCapability(user, "VIEW_OWN_SALES") && !canViewBranchSales) {
     return (
       <div>
         <ScreenHeader title="Sales history" />
-        <PermissionDenied requiredCapabilities={["VIEW_OWN_SALES"]} />
+        <PermissionDenied requiredCapabilities={["VIEW_OWN_SALES", "VIEW_BRANCH_SALES"]} />
       </div>
     );
   }

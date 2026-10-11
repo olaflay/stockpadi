@@ -22,7 +22,7 @@ export const WORKER_CAPABILITY_PRESETS: readonly WorkerCapabilityPreset[] = [
     description: "Sell, find products, serve customers, handle credit, and view their receipts.",
     capabilities: [
       "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_CUSTOMERS",
-      "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_RECEIPTS", "CREATE_CUSTOMERS",
+      "USE_CUSTOMER_CREDIT", "VIEW_OWN_SALES", "VIEW_BRANCH_SALES", "VIEW_RECEIPTS", "CREATE_CUSTOMERS",
     ],
   },
   {
@@ -41,7 +41,7 @@ export const WORKER_CAPABILITY_PRESETS: readonly WorkerCapabilityPreset[] = [
     capabilities: [
       "POS_SELL", "VIEW_PRODUCTS", "VIEW_BRANCH_STOCK", "VIEW_STOCK_MOVEMENTS",
       "SUBMIT_STOCK_COUNT", "SUBMIT_RECONCILIATION", "VIEW_CUSTOMERS", "USE_CUSTOMER_CREDIT",
-      "VIEW_OWN_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS", "RECEIVE_STOCK", "RECORD_REPAYMENT",
+      "VIEW_OWN_SALES", "VIEW_BRANCH_SALES", "VIEW_RECEIPTS", "VIEW_ALERTS", "RECEIVE_STOCK", "RECORD_REPAYMENT",
       "VIEW_BRANCH_RECONCILIATION", "CREATE_CUSTOMERS", "MANAGE_PRODUCTS", "ADJUST_STOCK",
       "MANAGE_EXPENSES", "VIEW_REPORTS", "MANAGE_BRANCH_WORKERS",
     ],
@@ -58,6 +58,7 @@ const CAPABILITY_LABELS: Record<WorkerCapability, string> = {
   VIEW_CUSTOMERS: "View customers",
   USE_CUSTOMER_CREDIT: "Use customer credit",
   VIEW_OWN_SALES: "View own sales",
+  VIEW_BRANCH_SALES: "View branch sales",
   VIEW_RECEIPTS: "View receipts",
   VIEW_ALERTS: "View alerts",
   RECEIVE_STOCK: "Receive stock",

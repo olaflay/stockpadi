@@ -672,7 +672,7 @@ async function applySales(records: unknown[], businessId: string): Promise<numbe
       productVersion: item.product_version !== null && item.product_version !== undefined ? Number(item.product_version) : null,
       costFlags: (item.cost_flags as Sale["items"][0]["costFlags"]) ?? null,
     })),
-    createdAtLocal: (sale.created_at_local as string) || (sale.created_at as string) || new Date().toISOString(), createdAt: (sale.created_at as string) || new Date().toISOString(), createdByUserId: (sale.created_by_user_id as string) || "server-sync", voidedAt: (sale.voided_at as string) || null,
+    createdAtLocal: (sale.created_at_local as string) || (sale.created_at as string) || new Date().toISOString(), createdAt: (sale.created_at as string) || new Date().toISOString(), createdByUserId: (sale.created_by_user_id as string) || "server-sync", createdByName: (sale.created_by_user_name as string) || null, voidedAt: (sale.voided_at as string) || null,
   } as Sale)));
   return sales.length;
 }

@@ -47,7 +47,7 @@ export class LocalAgentMessenger implements IAgentMessenger {
     const expenseNaira = (payload.expensesKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
     return [
-      `📊 *${storeName} — Daily Store Summary*`,
+      `📊 *${storeName}: Daily store summary*`,
       `📅 Date: ${payload.dateIso}`,
       ``,
       `💰 *Total Sales*: ₦${salesNaira} (${payload.salesCount} transactions)`,

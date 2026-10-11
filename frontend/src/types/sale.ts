@@ -79,5 +79,6 @@ export interface Sale {
   createdAtLocal: string;
   createdAt: string;
   createdByUserId: string;
+  createdByName?: string | null;
   voidedAt: string | null;
 }

@@ -15,7 +15,7 @@ describe("AI Agent Messaging Adapter", () => {
       lowStockItemsCount: 2,
     });
 
-    expect(text).toContain("Daily Store Summary");
+    expect(text).toContain("Daily store summary");
     expect(text).toContain("₦55,000.00 (14 transactions)");
     expect(text).toContain("₦40,000.00");
     expect(text).toContain("2 items need restock!");

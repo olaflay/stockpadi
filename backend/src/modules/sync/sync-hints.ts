@@ -203,6 +203,9 @@ export function buildCommittedSaleEvent(
     createdAtLocal,
     createdAt,
     createdByUserId: workerId,
+    ...(typeof sale.created_by_user_name === "string" && sale.created_by_user_name.length > 0
+      ? { createdByName: sale.created_by_user_name }
+      : {}),
     workerId,
     voidedAt: null,
     items,
@@ -322,6 +325,24 @@ export async function publishCommittedSaleEvents(
     const payments = (paymentsResult.data ?? []) as SaleRow[];
     const stock = (stockResult.data ?? []) as SaleRow[];
     const credits = (creditResult.data ?? []) as SaleRow[];
+    const creatorIds = [...new Set(sales.map((sale) => stringValue(sale.created_by_user_id)).filter((id): id is string => Boolean(id)))];
+    const admin = supabaseAdmin() as SupabaseClient | undefined;
+    if (admin && typeof (admin as { from?: unknown }).from === "function" && creatorIds.length > 0) {
+      const creatorsResult = await admin
+        .from("users")
+        .select("id, full_name")
+        .eq("business_id", businessId)
+        .in("id", creatorIds);
+      if (!creatorsResult.error) {
+        const names = new Map((creatorsResult.data ?? []).map((creator) => [String(creator.id), String(creator.full_name ?? "")]));
+        for (const sale of sales) {
+          const name = names.get(String(sale.created_by_user_id));
+          if (name) sale.created_by_user_name = name;
+        }
+      } else {
+        logger.warn("completed sale seller name unavailable", { businessId, code: "SALE_SELLER_NAME_UNAVAILABLE" });
+      }
+    }
     const topic = businessSyncTopic(businessId);
     await Promise.all(sales.map(async (sale) => {
       const saleId = stringValue(sale.id);

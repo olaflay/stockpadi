@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { MessageCircle, Download, Ban, RotateCcw } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
-import type { LocalCustomer } from "@/lib/db";
+import type { LocalCustomer, LocalUser } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 import { formatCurrency } from "@/lib/format";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
-import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES } from "@/features/auth/authorization";
+import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES, hasCapability } from "@/features/auth/authorization";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { voidSale, VoidSaleError } from "@/features/pos/void-sale";
 import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
@@ -64,6 +64,10 @@ export default function SaleDetailPage({ params }: PageProps) {
     async () => (sale?.customerId ? tenantGet<LocalCustomer>(db.customers, sale.customerId) : undefined),
     [sale?.customerId]
   );
+  const seller = useLiveQuery(
+    async () => (sale?.createdByUserId ? tenantGet<LocalUser>(db.localUsers, sale.createdByUserId) : undefined),
+    [sale?.createdByUserId],
+  );
   const outboxEntry = useLiveQuery(() => tenantGet<{ status?: string }>(db.outbox, id), [id]);
   const businessProfile = useLiveQuery(() => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID), [], undefined);
 
@@ -94,7 +98,14 @@ export default function SaleDetailPage({ params }: PageProps) {
     );
   }
 
-  if (user.accountType === "WORKER" && sale.createdByUserId !== user.id) {
+  const canViewBranchSales = hasCapability(user, "VIEW_BRANCH_SALES");
+  const workerCanAccessSale = user.accountType !== "WORKER" ||
+    (
+      user.branchIds?.includes(sale.branchId) &&
+      (sale.createdByUserId === user.id || canViewBranchSales)
+    );
+
+  if (!workerCanAccessSale) {
     return (
       <div>
         <ScreenHeader title="Sale" backHref="/sales" />
@@ -104,10 +115,10 @@ export default function SaleDetailPage({ params }: PageProps) {
   }
 
   const syncStatusLabel = !outboxEntry
-    ? "Synced"
+    ? "Saved"
     : outboxEntry.status === "failed"
-      ? "Didn't sync"
-      : "Syncing…";
+      ? "Needs attention"
+      : "Saving…";
 
   function shareReceipt() {
     setShowWhatsAppModal(true);
@@ -179,6 +190,9 @@ export default function SaleDetailPage({ params }: PageProps) {
                 })}
               </p>
               <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{syncStatusLabel}</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+                Sold by {sale.createdByName ?? seller?.fullName ?? (sale.createdByUserId === user.id ? "you" : "staff member")}
+              </p>
             </div>
           </div>
           <div className="shrink-0 text-right">

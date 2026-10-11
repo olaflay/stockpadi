@@ -19,7 +19,7 @@ export function OfflineBanner() {
 
   const message =
     pendingCount >= UNSYNCED_HEADS_UP
-      ? `You're offline. ${pendingCount} changes are saved on this device and will sync when you're back online.`
+      ? `You're offline. ${pendingCount} changes are saved on this device and will upload when you're back online.`
       : "You're offline. Sales and changes are saved on this device and will sync when you're back online.";
 
   return (

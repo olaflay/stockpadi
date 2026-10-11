@@ -28,7 +28,7 @@ const COLUMN_HELP: Array<{ key: string; label: string; note: string; required?: 
   { key: "lowStockThreshold", label: "Low-stock alert", note: "Get warned when stock drops to this number. Leave blank to skip." },
   { key: "expiryTracking", label: "Expiry tracking", note: "off, optional, or mandatory." },
   { key: "expiryDate", label: "Expiry date", note: "ISO YYYY-MM-DD, or an Excel date cell. Required when expiry tracking is mandatory." },
-  { key: "initialStock", label: "Quantity in stock", note: "How many you have now. Leave blank or 0 to start at zero." },
+  { key: "initialStock", label: "Opening stock", note: "How many you have at the selected branch. Leave blank or 0 to start at zero." },
 ];
 
 function StepBadge({ n, text }: { n: number; text: string }) {
@@ -144,7 +144,7 @@ export default function ImportProductsPage() {
     try {
       await importProducts(result.validRows, user, effectiveBranchId);
       showToast(
-        `Imported ${result.validRows.length} product${result.validRows.length === 1 ? "" : "s"}. Syncing in the background.`,
+        `Imported ${result.validRows.length} product${result.validRows.length === 1 ? "" : "s"}. Saving in the background.`,
         "success"
       );
       router.push("/products");

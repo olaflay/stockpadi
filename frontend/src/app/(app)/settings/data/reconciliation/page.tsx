@@ -55,7 +55,7 @@ export default function ReconciliationPage() {
   if (user.accountType !== "BUSINESS_OWNER" && user.accountType !== "ADMIN") {
     return (
       <div>
-        <ScreenHeader title="Sync Reconciliation" backHref="/settings/data" />
+        <ScreenHeader title="Review saved changes" backHref="/settings/data" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -84,16 +84,16 @@ export default function ReconciliationPage() {
         reconciledAt: null,
         nextAttemptAt: null,
       });
-      showToast("Item queued for immediate sync retry.", "success");
+      showToast("Change queued to upload now.", "success");
     } catch {
-      showToast("Couldn't update sync queue item.", "danger");
+      showToast("Couldn't update this saved change.", "danger");
     }
   }
 
   async function handleConfirmReconcile() {
     if (!activeItem) return;
     if (!reconcileReason.trim()) {
-      showToast("A reconciliation reason is mandatory for audit compliance.", "danger");
+      showToast("Add a reason before marking this change for review.", "danger");
       return;
     }
 
@@ -101,12 +101,12 @@ export default function ReconciliationPage() {
     try {
       await markOutboxNeedsReview(activeItem, user.id, reconcileReason);
 
-      showToast("Transaction kept safely in the review queue.", "success");
+      showToast("Change kept safely for review.", "success");
       setIsReconcileModalOpen(false);
       setActiveItem(null);
       setReconcileReason("");
     } catch {
-      showToast("Couldn't reconcile item. Try again.", "danger");
+      showToast("Couldn't save the review note. Try again.", "danger");
     } finally {
       setBusy(false);
     }
@@ -115,7 +115,7 @@ export default function ReconciliationPage() {
   // Emergency Disaster Export: exports outbox mutations to JSON
   async function handleEmergencyExport() {
     if (!outboxItems || outboxItems.length === 0) {
-      showToast("No outbox records to export.", "neutral");
+      showToast("There are no pending changes to export.", "neutral");
       return;
     }
 
@@ -146,7 +146,7 @@ export default function ReconciliationPage() {
       const parsed = JSON.parse(text);
 
       if (parsed.type !== "ojapadi-emergency-outbox" || !Array.isArray(parsed.items)) {
-        showToast("Invalid emergency outbox archive.", "danger");
+        showToast("That saved-changes file is not valid.", "danger");
         e.target.value = "";
         return;
       }
@@ -172,7 +172,7 @@ export default function ReconciliationPage() {
         }
       }
 
-      showToast(`Imported ${importedCount} emergency mutations into sync queue.`, "success");
+      showToast(`Added ${importedCount} change${importedCount === 1 ? "" : "s"} for upload.`, "success");
     } catch {
       showToast("Couldn't read emergency export file.", "danger");
     } finally {
@@ -199,7 +199,7 @@ export default function ReconciliationPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <ScreenHeader title="Sync Reconciliation" backHref="/settings/data" />
+      <ScreenHeader title="Review saved changes" backHref="/settings/data" />
 
       {/* Overview Banner */}
       <section className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4">
@@ -208,9 +208,9 @@ export default function ReconciliationPage() {
             <FileCheck2 size={20} aria-hidden />
           </div>
           <div>
-            <h2 className="text-base font-bold text-on-surface">Owner Reconciliation Queue</h2>
+            <h2 className="text-base font-bold text-on-surface">Changes that need attention</h2>
             <p className="text-xs text-on-surface-muted">
-              Inspect stuck or conflicted offline sales without losing money data.
+              Review saved work that could not be uploaded yet.
             </p>
           </div>
         </div>
@@ -221,14 +221,14 @@ export default function ReconciliationPage() {
             type="button"
             onClick={handleEmergencyExport}
             className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-highest transition-colors"
-            title="Export for broken device disaster transfer"
+            title="Save these changes to move them to another device"
           >
             <Download size={14} />
-            <span>Emergency Export</span>
+            <span>Export saved changes</span>
           </button>
           <label className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer">
             <Upload size={14} />
-            <span>Ingest from Other Device</span>
+            <span>Import from another device</span>
             <input type="file" accept="application/json" onChange={handleEmergencyImport} className="hidden" />
           </label>
         </div>
@@ -277,11 +277,11 @@ export default function ReconciliationPage() {
       {displayedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl bg-surface-container p-8 text-center">
           <FileCheck2 size={36} className="text-on-surface-muted opacity-40 mb-2" />
-          <p className="text-base font-semibold text-on-surface">Queue is clear</p>
+          <p className="text-base font-semibold text-on-surface">Nothing needs attention</p>
           <p className="text-xs text-on-surface-muted max-w-xs mt-1">
             {filter === "issues"
-              ? "No failed or conflicted transactions require owner review."
-              : "No pending offline mutations in this category."}
+              ? "No saved changes need review."
+              : "No changes are waiting to upload."}
           </p>
         </div>
       ) : (

@@ -136,12 +136,12 @@ export default function SettingsPage() {
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
               label="Backup & offline data"
-              description="Sync health, outbox queue and local backup"
+              description="Save status, pending uploads and local backup"
               href="/settings/data"
             />
             <SettingsRow
               label="Sync health"
-              description="Cloud connection, pull completeness and pending changes"
+              description="Connection status and changes waiting to upload"
               href="/settings/sync-health"
             />
             <SettingsRow

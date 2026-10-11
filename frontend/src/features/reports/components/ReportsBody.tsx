@@ -392,7 +392,7 @@ export function ReportsBody({
                         {stat.day}
                       </span>
                       <span className="text-[10px] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
-                        {stat.count > 0 ? stat.count : "—"}
+                        {stat.count > 0 ? stat.count : "0"}
                       </span>
                     </button>
                   );

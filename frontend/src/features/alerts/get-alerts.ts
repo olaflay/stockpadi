@@ -44,8 +44,8 @@ export async function getAlerts(unsyncedCount: number, options: AlertQueryOption
     alerts.push({
       id: "unsynced-outbox",
       type: "unsynced",
-      title: "Unsynced changes",
-      description: `${unsyncedCount} change${unsyncedCount === 1 ? "" : "s"} waiting to sync.`,
+      title: "Changes waiting to upload",
+      description: `${unsyncedCount} change${unsyncedCount === 1 ? "" : "s"} are saved here and will upload when possible.`,
       href: "/settings/data",
     });
   }

@@ -4,6 +4,7 @@ import { logger } from "../../shared/logging/logger.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { hasCapability } from "../authorization/capabilities.js";
 import { tolerantSelect } from "../../shared/database/tolerant-select.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 // Keep server responses small enough for slow 3G and low-memory Android.
 // The opaque cursor lets the client continue without skipping records.
@@ -207,10 +208,15 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
   });
 
   await pullEntity(entities, "sales", async () => {
-    if (context.accountType === "WORKER" && (!hasCapability(context, "VIEW_OWN_SALES") || !hasCapability(context, "VIEW_RECEIPTS"))) return skip("sales");
+    const canViewOwnSales = hasCapability(context, "VIEW_OWN_SALES");
+    const canViewBranchSales = hasCapability(context, "VIEW_BRANCH_SALES");
+    if (context.accountType === "WORKER" && ((!canViewOwnSales && !canViewBranchSales) || !hasCapability(context, "VIEW_RECEIPTS"))) return skip("sales");
     allow("sales");
     let query = db.from("sales").select("id, client_id, branch_id, customer_id, subtotal, discount, total, created_at_local, created_at, created_by_user_id, voided_at").eq("business_id", context.businessId).lte("created_at", cursor.upperWatermark).order("created_at").order("id").limit(PAGE_SIZE + 1);
-    if (context.accountType === "WORKER") query = query.eq("created_by_user_id", actor.id).in("branch_id", context.branchIds);
+    if (context.accountType === "WORKER") {
+      query = query.in("branch_id", context.branchIds);
+      if (!canViewBranchSales) query = query.eq("created_by_user_id", actor.id);
+    }
     const position = cursor.positions.sales;
     if (isTimestampPosition(position)) query = query.or(`created_at.gt.${position.time},and(created_at.eq.${position.time},id.gt.${position.id})`); else query = query.gt("created_at", cursor.lowerWatermark);
     const { data, error } = await query; if (error) throw new HttpError(500, "SALES_LOAD_FAILED", error.message);
@@ -230,7 +236,14 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
       db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids),
     ]) : [[], { data: [], error: null }];
     if (paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", paymentError.message);
-    more.push(page.hasMore); return page.records.map((sale) => ({ ...sale, items: (saleItems ?? []).filter((item) => (item as { sale_id?: unknown }).sale_id === (sale as { id: string }).id), payments: (payments ?? []).filter((payment) => payment.sale_id === (sale as { id: string }).id) }));
+    const creatorIds = [...new Set(page.records.map((sale) => String((sale as { created_by_user_id?: unknown }).created_by_user_id ?? "")).filter(Boolean))];
+    const creatorNames = await loadSaleCreatorNames(context.businessId!, creatorIds);
+    more.push(page.hasMore); return page.records.map((sale) => ({
+      ...sale,
+      created_by_user_name: creatorNames.get(String((sale as { created_by_user_id?: unknown }).created_by_user_id ?? "")) ?? null,
+      items: (saleItems ?? []).filter((item) => (item as { sale_id?: unknown }).sale_id === (sale as { id: string }).id),
+      payments: (payments ?? []).filter((payment) => payment.sale_id === (sale as { id: string }).id),
+    }));
   });
 
   await pullEntity(entities, "sale_refunds", async () => {
@@ -290,3 +303,27 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
 
 function safePullCode(code: string): string { return code === "FORBIDDEN" || code === "ACCOUNT_NOT_APPROVED" || code === "BUSINESS_UNAVAILABLE" ? code : "PULL_FAILED"; }
 function safePullMessage(code: string, message: string): string { return code === "FORBIDDEN" || code === "ACCOUNT_NOT_APPROVED" || code === "BUSINESS_UNAVAILABLE" ? message : "Could not refresh this dataset."; }
+
+async function loadSaleCreatorNames(businessId: string, creatorIds: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (creatorIds.length === 0) return names;
+  try {
+    const { data, error } = await supabaseAdmin()
+      .from("users")
+      .select("id, full_name")
+      .eq("business_id", businessId)
+      .in("id", creatorIds);
+    if (error) {
+      logger.warn("sale seller names unavailable during pull", { businessId, code: "SALE_SELLER_NAME_UNAVAILABLE" });
+      return names;
+    }
+    for (const row of data ?? []) {
+      if (typeof row.id === "string" && typeof row.full_name === "string" && row.full_name.trim()) {
+        names.set(row.id, row.full_name.trim());
+      }
+    }
+  } catch {
+    logger.warn("sale seller names unavailable during pull", { businessId, code: "SALE_SELLER_NAME_UNAVAILABLE" });
+  }
+  return names;
+}
