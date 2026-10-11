@@ -6,13 +6,19 @@ import { hasCapability, requireAssignedBranch, requireCapability } from "../auth
 import { supabaseAdmin } from "../../shared/supabase/client.js";
 import { queueSyncHints } from "../sync/sync-hints.js";
 export async function closeDaySummary(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  // The parameterized account-context RPC is intentionally executable only by
+  // the backend service role. Keep the data queries below user-scoped so RLS
+  // remains an active defense-in-depth check.
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (context.accountType === "WORKER") requireCapability(context, "SUBMIT_RECONCILIATION");
   return reportSummary(db, actor, input, { operational: true });
 }
 
 export async function submitReconciliation(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  // Do not call the hardened parameterized resolver with the user's anon/JWT
+  // client. The server has already authenticated this actor, and the actual
+  // branch lookup and insert continue through the RLS-scoped client below.
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   const body = input as Record<string, unknown>;
   if (typeof body.branchId !== "string" || typeof body.actualCash !== "number") throw new HttpError(400, "INVALID_BODY", "Branch and actual cash are required");
