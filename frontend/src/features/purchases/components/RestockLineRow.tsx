@@ -8,10 +8,10 @@ import type { Product } from "@/types/product";
 import type { PurchaseLine } from "@/features/purchases/receive-purchase";
 
 const inputClass =
-  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20";
+  "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 focus:ring-offset-0 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-container/40 disabled:text-on-surface-muted";
 
 const stepperClass =
-  "flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full bg-surface-container font-semibold text-[length:var(--font-size-title)] text-on-surface hover:bg-surface-container-high transition-colors";
+  "flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full bg-surface-container font-semibold text-[length:var(--font-size-title)] text-on-surface transition-colors hover:bg-brand-accent/10 disabled:cursor-not-allowed";
 
 const stepperDisabledClass =
   "bg-surface-container/40 text-on-surface-muted opacity-40 cursor-not-allowed";
@@ -85,7 +85,7 @@ export function RestockLineRow(props: {
           type="button"
           onClick={() => onRemove(line.productId)}
           aria-label={`Remove ${product.name}`}
-          className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger-container hover:text-on-danger-container transition-colors"
+          className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger-container hover:text-on-danger-container"
         >
           <Trash2 size={18} aria-hidden />
         </button>
