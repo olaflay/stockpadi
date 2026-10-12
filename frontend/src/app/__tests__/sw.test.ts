@@ -15,6 +15,12 @@ vi.mock("serwist", () => {
     NetworkFirst: class MockNetworkFirst {
       constructor(public options: Record<string, unknown>) {}
     },
+    CacheFirst: class MockCacheFirst {
+      constructor(public options: Record<string, unknown>) {}
+    },
+    NetworkOnly: class MockNetworkOnly {
+      constructor(public options: Record<string, unknown> = {}) {}
+    },
     ExpirationPlugin: class MockExpirationPlugin {
       constructor(public options: Record<string, unknown>) {}
     },
@@ -29,6 +35,7 @@ describe("Service Worker configuration (sw.ts)", () => {
   beforeAll(async () => {
     vi.stubGlobal("self", {
       __SW_MANIFEST: ["/offline", "/favicon.ico"],
+      registration: { scope: "https://example.com/" },
       addEventListener: vi.fn((type: string, listener: (event: Event) => void) => workerListeners.set(type, listener)),
     });
 
@@ -38,7 +45,7 @@ describe("Service Worker configuration (sw.ts)", () => {
 
   it("configures Serwist with precache, navigation preload, and lifecycle flags", () => {
     expect(capturedConfig).toBeDefined();
-    expect(capturedConfig?.skipWaiting).toBe(true);
+    expect(capturedConfig?.skipWaiting).toBe(false);
     expect(capturedConfig?.clientsClaim).toBe(true);
     expect(capturedConfig?.navigationPreload).toBe(true);
     expect(capturedConfig?.precacheEntries).toEqual(["/offline", "/favicon.ico"]);
@@ -52,7 +59,9 @@ describe("Service Worker configuration (sw.ts)", () => {
     }>;
 
     expect(runtimeCaching).toBeDefined();
-    const navRule = runtimeCaching[0];
+    const navRule = runtimeCaching.find((rule) => rule.handler.options.cacheName === "stockpadi-navigation-local");
+    expect(navRule).toBeDefined();
+    if (!navRule) throw new Error("Navigation cache rule was not configured");
     expect(navRule.handler.options.cacheName).toBe("stockpadi-navigation-local");
     expect(navRule.handler.options.networkTimeoutSeconds).toBe(3);
 

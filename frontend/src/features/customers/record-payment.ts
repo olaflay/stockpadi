@@ -1,4 +1,4 @@
-import { db, type CustomerCreditMovement } from "@/lib/db";
+import { db, type CustomerCreditMovement, withDatabaseClosedRecovery } from "@/lib/db";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { getCustomerCreditBalance } from "@/features/customers/credit";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
@@ -52,9 +52,9 @@ export async function recordCreditPayment(params: {
     createdAtLocal: now,
   };
 
-  await db.transaction("rw", db.customerCreditMovements, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.customerCreditMovements, db.outbox, async () => {
     await db.customerCreditMovements.add(await withLocalBusinessId(movement));
     await enqueueOutboxWrite(movementId, "credit_payment", await withLocalBusinessId(payload), now);
-  });
+  }));
   return movement;
 }

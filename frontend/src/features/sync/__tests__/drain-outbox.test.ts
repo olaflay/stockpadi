@@ -103,6 +103,52 @@ describe("drainOutbox", () => {
     expect(await db.outbox.get("sale-fast")).toMatchObject({ status: "syncing", awaitingConfirmation: true });
   });
 
+  it("retries a legacy unversioned outbox payload with the same server idempotency identity", async () => {
+    mockSession = { access_token: "test-token" };
+    await setLocalBusinessId("test-business");
+    await db.outbox.add({
+      clientId: "legacy-credit-entry",
+      businessId: "test-business",
+      type: "credit_payment",
+      payload: { id: "legacy-credit-entry", amount: 25 },
+      createdAtLocal: new Date().toISOString(),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+    });
+
+    const committed = new Set<string>();
+    const received: Array<{ client_id: string; idempotency_key: string; payload_version: number }> = [];
+    const fetchSpy = vi.fn().mockImplementation((_url: string, init: { body: string }) => {
+      const body = JSON.parse(init.body) as { batch: Array<{ client_id: string; idempotency_key: string; payload_version: number }> };
+      const item = body.batch[0]!;
+      received.push(item);
+      if (!committed.has(item.idempotency_key)) {
+        committed.add(item.idempotency_key);
+        return Promise.reject(new TypeError("response lost after commit"));
+      }
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers(),
+        json: () => Promise.resolve({ results: [{ clientId: item.client_id, status: "skipped" }] }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const { drainOutbox } = await import("@/features/sync/drain-outbox");
+    await drainOutbox();
+    expect(await db.outbox.get("legacy-credit-entry")).toMatchObject({ status: "pending", attemptCount: 1 });
+
+    await db.outbox.update("legacy-credit-entry", { nextAttemptAt: null });
+    await drainOutbox();
+
+    expect(received).toHaveLength(2);
+    expect(received[0]).toMatchObject({ client_id: "legacy-credit-entry", idempotency_key: "legacy-credit-entry", payload_version: 1 });
+    expect(received[1]?.idempotency_key).toBe(received[0]?.idempotency_key);
+    expect(committed.size).toBe(1);
+    expect(await db.outbox.get("legacy-credit-entry")).toBeUndefined();
+  });
+
   it("removes items the server applied or skipped, keeps failed items with the error recorded", async () => {
     mockSession = { access_token: "test-token" };
     await queueSale("sale-ok");

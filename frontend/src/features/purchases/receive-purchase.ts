@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { Purchase, PurchaseItem } from "@/types/purchase";
 import type { StockMovement } from "@/types/stock-movement";
 import type { CurrentUser } from "@/features/auth/use-current-user";
@@ -73,12 +73,12 @@ export async function receivePurchase(params: {
     createdByUserId: params.createdByUserId,
   }));
 
-  await db.transaction("rw", db.purchases, db.stockMovements, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.purchases, db.stockMovements, db.outbox, async () => {
     const tenantPurchase = await withLocalBusinessId(purchase);
     await db.purchases.add(tenantPurchase);
     await db.stockMovements.bulkAdd(await withLocalBusinessIds(movements));
     await enqueueOutboxWrite(purchaseId, "purchase_receipt", tenantPurchase, now);
-  });
+  }));
 
   return purchase;
 }

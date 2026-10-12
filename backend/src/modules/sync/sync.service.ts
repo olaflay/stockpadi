@@ -44,6 +44,7 @@ interface SyncBatchItem {
   client_id: string;
   mutation_id: string;
   idempotency_key: string;
+  payload_version?: number;
   entity_id?: string;
   operation?: "upsert" | "append";
   expected_version?: number;
@@ -93,6 +94,7 @@ function parseRequest(input: unknown): SyncBatchRequest {
       client_id: candidate.client_id,
       mutation_id: mutationId,
       idempotency_key: typeof candidate.idempotency_key === "string" && candidate.idempotency_key ? candidate.idempotency_key : mutationId,
+      payload_version: typeof candidate.payload_version === "number" && Number.isInteger(candidate.payload_version) && candidate.payload_version > 0 ? candidate.payload_version : 1,
       entity_id: typeof candidate.entity_id === "string" ? candidate.entity_id : undefined,
       operation: candidate.operation === "upsert" || candidate.operation === "append" ? candidate.operation as "upsert" | "append" : undefined,
       expected_version: typeof candidate.expected_version === "number" ? candidate.expected_version : undefined,

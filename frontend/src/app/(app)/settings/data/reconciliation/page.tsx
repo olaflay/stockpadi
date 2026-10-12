@@ -164,6 +164,9 @@ export default function ReconciliationPage() {
         if (!existing) {
           await db.outbox.add({
             ...item,
+            mutationId: item.mutationId ?? item.clientId,
+            idempotencyKey: item.idempotencyKey ?? item.mutationId ?? item.clientId,
+            payloadVersion: item.payloadVersion ?? 1,
             status: "pending",
             attemptCount: 0,
             nextAttemptAt: null,

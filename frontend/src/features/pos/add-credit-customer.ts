@@ -1,4 +1,4 @@
-import { db, type LocalCustomer } from "@/lib/db";
+import { db, type LocalCustomer, withDatabaseClosedRecovery } from "@/lib/db";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId } from "@/lib/local-tenant";
 
@@ -18,10 +18,10 @@ export async function addCreditCustomer(name: string, phone: string): Promise<Lo
 
   const tenantCustomer = await withLocalBusinessId(customer);
 
-  await db.transaction("rw", db.customers, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.customers, db.outbox, async () => {
     await db.customers.add(tenantCustomer);
     await enqueueOutboxWrite(id, "customer", tenantCustomer, customer.updatedAt);
-  });
+  }));
 
   return customer;
 }

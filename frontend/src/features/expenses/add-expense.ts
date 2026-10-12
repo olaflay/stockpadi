@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { Expense } from "@/types/expense";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
@@ -37,11 +37,11 @@ export async function addExpense(params: {
     createdByUserId: params.createdByUserId,
   };
 
-  await db.transaction("rw", db.expenses, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.expenses, db.outbox, async () => {
     const tenantExpense = await withLocalBusinessId(expense);
     await db.expenses.add(tenantExpense);
     await enqueueOutboxWrite(expense.id, "expense", tenantExpense, now);
-  });
+  }));
 
   return expense;
 }
@@ -65,10 +65,10 @@ export async function deleteExpense(id: string): Promise<void> {
     .first();
 
   if (pendingOutbox && (pendingOutbox.status === "pending" || pendingOutbox.status === "blocked")) {
-    await db.transaction("rw", db.expenses, db.outbox, async () => {
+    await withDatabaseClosedRecovery(() => db.transaction("rw", db.expenses, db.outbox, async () => {
       await db.expenses.delete(id);
       await db.outbox.delete(pendingOutbox.clientId);
-    });
+    }));
     return;
   }
 

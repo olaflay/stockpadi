@@ -1,4 +1,4 @@
-import { db, SESSION_SINGLETON_ID } from "@/lib/db";
+import { db, SESSION_SINGLETON_ID, withDatabaseClosedRecovery } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import { getSupabase } from "@/lib/supabase";
 import type { SyncSaleRealtimeEvent } from "@stockpadi/contracts";
@@ -73,7 +73,7 @@ export async function applyCommittedSaleEvent(event: SyncSaleRealtimeEvent): Pro
   const localUser = session ? await db.localUsers.get(session.userId) : undefined;
   if (localUser?.accountType === "WORKER") return false;
 
-  await db.transaction("rw", [db.sales, db.stockMovements, db.customerCreditMovements, db.outbox], async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", [db.sales, db.stockMovements, db.customerCreditMovements, db.outbox], async () => {
     await db.sales.put(saleFromRealtime(event));
 
     for (const movement of event.sale.stockMovements) {
@@ -121,7 +121,7 @@ export async function applyCommittedSaleEvent(event: SyncSaleRealtimeEvent): Pro
       )
     );
     if (queued.length > 0) await db.outbox.bulkDelete(queued.map((item) => item.clientId));
-  });
+  }));
   return true;
 }
 

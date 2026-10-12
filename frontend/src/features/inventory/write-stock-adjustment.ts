@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { StockMovement, AdjustmentReasonCode } from "@/types/stock-movement";
 import { getCurrentStock } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
@@ -50,7 +50,7 @@ export async function writeStockAdjustment(params: {
   // rapid double-tap firing this function twice before the disabling
   // re-render lands can't have both calls read the same stale baseline and
   // apply the correction delta twice.
-  return db.transaction("rw", db.stockMovements, db.outbox, db.inventoryStock, async () => {
+  return withDatabaseClosedRecovery(() => db.transaction("rw", db.stockMovements, db.outbox, db.inventoryStock, async () => {
     const currentStock = await getCurrentStock(params.productId, params.branchId);
     const quantityDelta = params.countedQuantity - currentStock;
 
@@ -90,5 +90,5 @@ export async function writeStockAdjustment(params: {
     await enqueueOutboxWrite(adjustmentId, "stock_adjustment", tenantPayload, now);
 
     return tenantMovement;
-  });
+  }));
 }

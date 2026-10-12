@@ -1,4 +1,7 @@
 import { getSupabase } from "@/lib/supabase";
+import { CLIENT_COMPATIBILITY_VERSION } from "@stockpadi/contracts/config";
+import { observeBackendCompatibility } from "@/features/sync/build-compatibility";
+import { beginPwaCriticalActivity } from "@/lib/pwa-update-activity";
 
 /** A request could not reach the Node application API. */
 export class NetworkUnavailableError extends Error {
@@ -85,14 +88,29 @@ async function request<T>(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(requestUrl(path), {
-        method,
-        signal: controller.signal,
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
+      const finishRequest = beginPwaCriticalActivity("api-request");
+      let response: Response;
+      try {
+        response = await fetch(requestUrl(path), {
+          method,
+          signal: controller.signal,
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "X-Client-Version": CLIENT_COMPATIBILITY_VERSION,
+            ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+      } finally {
+        finishRequest();
+      }
       let result: T | BackendErrorBody | null = null;
       try { result = await response.json() as T | BackendErrorBody; } catch { result = null; }
+      const errorCode = (result as BackendErrorBody | null)?.error?.code;
+      const compatibility = observeBackendCompatibility(response.headers ?? new Headers(), response.status, errorCode);
+      if (!compatibility.compatible) {
+        throw new BackendRequestError(426, "CLIENT_UPGRADE_REQUIRED", "Update required before syncing saved changes.");
+      }
       if (response.status === 401 && !retried) {
         const supabase = getSupabase();
         if (supabase && typeof supabase.auth.refreshSession === "function") {

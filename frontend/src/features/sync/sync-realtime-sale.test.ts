@@ -37,7 +37,11 @@ const db = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/local-tenant", () => ({ getLocalBusinessId }));
-vi.mock("@/lib/db", () => ({ SESSION_SINGLETON_ID: "current", db }));
+vi.mock("@/lib/db", () => ({
+  SESSION_SINGLETON_ID: "current",
+  db,
+  withDatabaseClosedRecovery: (operation: () => Promise<unknown>) => operation(),
+}));
 
 import { applyCommittedSaleEvent } from "./sync-realtime";
 

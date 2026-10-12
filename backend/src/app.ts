@@ -36,10 +36,30 @@ import { handleSyncPull } from "./modules/sync/sync-pull.controller.js";
 import { handleSyncHealth } from "./modules/sync/sync-health.controller.js";
 import { syncRoutes } from "./modules/sync/sync.routes.js";
 import { API_VERSION, getEnvironmentIdentity } from "./shared/environment.js";
+import contract from "./shared/environment-contract.json" with { type: "json" };
 
 // Resolved from the environment rather than written into the source, so a
 // forked deployment reports its own service name on the health route.
 const serviceName = process.env.SERVICE_NAME || "backend";
+const CLIENT_VERSION = contract.clientCompatibilityVersion;
+function minimumClientVersion(): string {
+  return process.env.MIN_CLIENT_VERSION?.trim() || CLIENT_VERSION;
+}
+
+function parseVersion(version: string): number[] | null {
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/.exec(version);
+  return match ? match.slice(1, 4).map(Number) : null;
+}
+
+function isVersionOlder(candidate: string, minimum: string): boolean {
+  const actual = parseVersion(candidate);
+  const required = parseVersion(minimum);
+  if (!actual || !required) return true;
+  for (let index = 0; index < 3; index += 1) {
+    if (actual[index] !== required[index]) return actual[index]! < required[index]!;
+  }
+  return false;
+}
 
 function healthPayload() {
   const identity = getEnvironmentIdentity(process.env, "backend");
@@ -58,6 +78,7 @@ const EXACT_ROUTE_METHODS = new Map<string, readonly string[]>([
   ["/", ["GET"]],
   ["/health", ["GET"]],
   ["/api/health", ["GET"]],
+  ["/api/version", ["GET"]],
   [businessRoutes.path, ["POST"]],
   [branchRoutes.list, ["GET", "POST"]],
   [profileRoutes.path, ["GET", "PATCH"]],
@@ -179,13 +200,16 @@ function jsonResponse(status: number, body: unknown, requestOrigin?: string) {
   const origin = requestOrigin?.replace(/\/$/, "");
   const headers = new Headers({
     "content-type": "application/json",
-    "access-control-allow-headers": "authorization, content-type",
+    "access-control-allow-headers": "authorization, content-type, x-client-version",
+    "access-control-expose-headers": "x-build-version, x-min-client-version",
     "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "referrer-policy": "strict-origin-when-cross-origin",
     vary: "Origin",
   });
+  headers.set("x-build-version", getEnvironmentIdentity(process.env, "backend").buildVersion);
+  headers.set("x-min-client-version", minimumClientVersion());
   if (origin && allowedOrigins().has(origin)) {
     headers.set("access-control-allow-origin", origin);
     headers.set("access-control-allow-credentials", "true");
@@ -208,6 +232,23 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
       const response = jsonResponse(405, { error: { code: "METHOD_NOT_ALLOWED", message: "This method is not allowed for the requested route." } }, requestOrigin);
       response.headers.set("allow", methods.join(", "));
       return response;
+    }
+    if (pathname === "/api/version" && request.method === "GET") {
+      const identity = getEnvironmentIdentity(process.env, "backend");
+      const response = jsonResponse(200, { build: identity.buildVersion, minClient: minimumClientVersion() }, requestOrigin);
+      response.headers.set("cache-control", "no-store, max-age=0");
+      return response;
+    }
+    if (pathname.startsWith("/api/") && pathname !== "/api/version") {
+      const clientVersion = request.headers.get("x-client-version")?.trim() || CLIENT_VERSION;
+      if (isVersionOlder(clientVersion, minimumClientVersion())) {
+        return jsonResponse(426, {
+          error: {
+            code: "CLIENT_UPGRADE_REQUIRED",
+            message: "This app version must be updated before it can sync.",
+          },
+        }, requestOrigin);
+      }
     }
     const limited = rateLimitResponse(request, pathname);
     if (limited) return limited;

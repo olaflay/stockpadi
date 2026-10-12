@@ -23,7 +23,7 @@ describe("browser backend routing", () => {
     await serverGet("/api/sync/pull");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/sync/pull", expect.objectContaining({
-      headers: { Authorization: "Bearer worker-token" },
+      headers: { Authorization: "Bearer worker-token", "X-Client-Version": "0.1.0" },
     }));
   });
 });

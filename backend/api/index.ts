@@ -1,5 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { assertRuntimeEnvironment, getEnvironmentIdentity } from "../src/shared/environment.js";
+import { assertRuntimeEnvironment, CLIENT_COMPATIBILITY_VERSION, getEnvironmentIdentity } from "../src/shared/environment.js";
+
+function compatibilityHeaders(): Record<string, string> {
+  return {
+    "x-build-version": getEnvironmentIdentity(process.env, "backend").buildVersion,
+    "x-min-client-version": process.env.MIN_CLIENT_VERSION?.trim() || CLIENT_COMPATIBILITY_VERSION,
+  };
+}
 
 export function restorePublicUrl(request: Pick<IncomingMessage, "headers" | "url">) {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -21,14 +28,14 @@ export default async function handler(request: IncomingMessage, response: Server
     try {
       assertRuntimeEnvironment(process.env, "backend");
     } catch (cause) {
-      response.writeHead(500, { "content-type": "application/json" });
+      response.writeHead(500, { "content-type": "application/json", ...compatibilityHeaders() });
       response.end(JSON.stringify({ error: { code: "INVALID_RUNTIME_CONFIGURATION", message: "Backend runtime configuration is invalid" } }));
       return;
     }
   }
 
   if (request.method === "GET" && (pathname === "/" || pathname === "/health")) {
-    response.writeHead(200, { "content-type": "application/json" });
+    response.writeHead(200, { "content-type": "application/json", ...compatibilityHeaders() });
     response.end(JSON.stringify({
       status: "ok",
       service: process.env.SERVICE_NAME || "backend",
@@ -43,7 +50,7 @@ export default async function handler(request: IncomingMessage, response: Server
   } catch (cause) {
     console.error("backend function bootstrap failed", cause);
     if (response.headersSent) return response.end();
-    response.writeHead(500, { "content-type": "application/json" });
+    response.writeHead(500, { "content-type": "application/json", ...compatibilityHeaders() });
     response.end(JSON.stringify({ error: { code: "FUNCTION_BOOT_FAILED", message: "Backend function could not start" } }));
   }
 }

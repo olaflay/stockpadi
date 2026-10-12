@@ -21,7 +21,7 @@ describe("callBackend", () => {
     await callBackend("register-business", { email: "owner@example.com" });
 
     expect(fetchMock).toHaveBeenCalledWith("https://backend.example.com/api/businesses/register", expect.objectContaining({
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Client-Version": "0.1.0" },
     }));
   });
 
@@ -32,7 +32,7 @@ describe("callBackend", () => {
     await callBackend("account-context", {});
 
     expect(fetchMock).toHaveBeenCalledWith("https://backend.example.com/api/account-context", expect.objectContaining({
-      headers: { "Content-Type": "application/json", Authorization: "Bearer token-1" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer token-1", "X-Client-Version": "0.1.0" },
     }));
   });
 

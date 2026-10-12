@@ -10,6 +10,7 @@ import {
 import { startSyncRealtime } from "@/features/sync/sync-realtime";
 import { db } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
+import { ensureBackendBuildCompatibility, isSyncPausedForClientUpgrade } from "@/features/sync/build-compatibility";
 
 // This is a missed-event safety net, not the synchronization transport. It is
 // armed only while the app is visible and is cleared as soon as it is hidden.
@@ -104,6 +105,9 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
   setSyncRuntimePhase("syncing");
   setCoordinatorPhase("syncing");
   try {
+    const build = await ensureBackendBuildCompatibility(true);
+    if (!build.compatible) return null;
+
     const saleFastLane = trigger === "sale";
     // Keep the lease around the recovery/account-refresh/upload critical
     // section only. A sale arriving while a routine cycle is downloading can
@@ -113,9 +117,13 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
       if (!saleFastLane) {
         // Only old rows are recovered. A recent syncing row can belong to a
         // live request in another tab and must not be reset mid-flight.
-        await recoverStaleSyncingItems();
-        await recoverStuckSyncingItems(30000);
-        await healStrandedStockCountSubmissions();
+        // The sync lease guarantees there is no active peer-tab upload in this
+        // critical section. A previous page may have been auto-reloaded while
+        // its request was in flight, so replay transient rows immediately;
+        // server idempotency makes a lost response safe.
+        await recoverStaleSyncingItems(0);
+        await recoverStuckSyncingItems(0);
+        await healStrandedStockCountSubmissions(0);
       }
       // Account context is lifecycle state, not a prerequisite for every
       // mutation. The authenticated sync endpoint still authorizes every
@@ -129,6 +137,7 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
       return drainOutbox(saleFastLane ? { types: ["sale"], runMaintenance: false } : undefined);
     }, { waitForLease: saleFastLane && waitForLease });
     if (!pushResult) return null;
+    if (isSyncPausedForClientUpgrade()) return null;
     if (saleFastLane) {
       // The sale fast lane is complete once the authoritative push has
       // returned. Reconciliation remains a follow-up, so it cannot delay

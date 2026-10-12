@@ -6,6 +6,7 @@ import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
 import type { Supplier, Purchase } from "@/types/purchase";
 import type { SaleRefund } from "@/types/sale-refund";
+import { notifyPwaDatabaseBlocked, notifyPwaDatabaseReady, notifyPwaUpdateRequired } from "@/lib/pwa-update-events";
 
 /**
  * Local-first store. Every screen reads from here and renders immediately;
@@ -436,7 +437,70 @@ class StockPadiDB extends Dexie {
     this.version(17).stores({
       saleRefunds: "id, businessId, clientRefundId, saleId, branchId, createdAtLocal",
     });
+
+    // Additive compatibility metadata only. Existing payloads and operation
+    // identities are preserved exactly; unversioned queued rows become v1.
+    this.version(18)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx.table("outbox").toCollection().modify((item) => {
+          if (!Number.isInteger(item.payloadVersion) || item.payloadVersion < 1) item.payloadVersion = 1;
+        });
+      });
   }
 }
 
 export const db = new StockPadiDB();
+
+// Dexie normally closes its old connection on versionchange. Keep that
+// behavior explicit and surface a safe update prompt; no local stores or rows
+// are changed by this lifecycle handling.
+db.on("versionchange", () => {
+  db.close({ disableAutoOpen: false });
+  notifyPwaUpdateRequired("The app is updating to keep your saved data working safely.");
+});
+
+db.on("blocked", () => {
+  notifyPwaDatabaseBlocked();
+});
+
+db.on("ready", () => {
+  notifyPwaDatabaseReady();
+});
+
+export function isDatabaseClosedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { name?: unknown; inner?: unknown; cause?: unknown };
+  return candidate.name === "DatabaseClosedError" || isDatabaseClosedError(candidate.inner) || isDatabaseClosedError(candidate.cause);
+}
+
+/** Retry one atomic local operation once after reopening IndexedDB. */
+export async function withDatabaseClosedRecovery<T>(operation: () => Promise<T>): Promise<T> {
+  const { beginPwaCriticalActivity } = await import("@/lib/pwa-update-activity");
+  try {
+    return await withRecoveryActivity(beginPwaCriticalActivity, operation);
+  } catch (error) {
+    const isVersionError = Boolean(error && typeof error === "object" && (error as { name?: unknown }).name === "VersionError");
+    if (!isDatabaseClosedError(error) && !isVersionError) throw error;
+    try {
+      await db.open();
+      return await withRecoveryActivity(beginPwaCriticalActivity, operation);
+    } catch (retryError) {
+      // A newer schema can make an old tab unable to reopen the database.
+      // Preserve all rows and force the new code to take over; never reset DB.
+      if (isDatabaseClosedError(retryError) || (retryError && typeof retryError === "object" && (retryError as { name?: unknown }).name === "VersionError")) {
+        notifyPwaUpdateRequired("The app is updating. Your saved changes will be retried after reload.");
+      }
+      throw retryError;
+    }
+  }
+}
+
+async function withRecoveryActivity<T>(begin: (name: string) => () => void, operation: () => Promise<T>): Promise<T> {
+  const finish = begin("indexeddb-operation");
+  try {
+    return await operation();
+  } finally {
+    finish();
+  }
+}

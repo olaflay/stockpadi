@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { Supplier } from "@/types/purchase";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
@@ -24,11 +24,11 @@ export async function addSupplier(params: {
     updatedAt: new Date().toISOString(),
   };
 
-  await db.transaction("rw", db.suppliers, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.suppliers, db.outbox, async () => {
     const tenantSupplier = await withLocalBusinessId(supplier);
     await db.suppliers.add(tenantSupplier);
     await enqueueOutboxWrite(supplier.id, "supplier", tenantSupplier, supplier.updatedAt);
-  });
+  }));
 
   return supplier;
 }

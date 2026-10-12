@@ -52,6 +52,7 @@ vi.mock("@/lib/supabase", () => ({ getSupabase: () => supabase }));
 vi.mock("@/lib/db", () => ({
   SESSION_SINGLETON_ID: "current",
   db: { session, localUsers, syncPullState, sales: saleTable, stockMovements, customerCreditMovements, outbox, transaction },
+  withDatabaseClosedRecovery: (operation: () => Promise<unknown>) => operation(),
 }));
 vi.mock("@/features/sync/sync-observability", () => ({ recordRealtimeHint, recordRealtimeReconnect, recordSkippedPull }));
 

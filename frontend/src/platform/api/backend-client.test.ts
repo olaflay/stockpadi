@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 function response(status: number, body: unknown = {}) {
-  return { ok: status >= 200 && status < 300, status, json: vi.fn().mockResolvedValue(body) };
+  return { ok: status >= 200 && status < 300, status, headers: new Headers(), json: vi.fn().mockResolvedValue(body) };
 }
 
 describe("backend client transport policy", () => {
@@ -57,5 +57,14 @@ describe("backend client transport policy", () => {
 
     await expect(serverPost("/api/sync/push", { batch: [] })).rejects.toEqual(expect.any(BackendRequestError));
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the compatibility version with API requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await serverGet("/api/version");
+
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ "X-Client-Version": "0.1.0" });
   });
 });

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { Product } from "@/types/product";
 import type { StockMovement } from "@/types/stock-movement";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
@@ -86,7 +86,7 @@ export async function writeNewProductOffline(
       note: null,
       createdAtLocal: now,
     };
-    await db.transaction("rw", db.products, db.categories, db.stockMovements, db.outbox, async () => {
+    await withDatabaseClosedRecovery(() => db.transaction("rw", db.products, db.categories, db.stockMovements, db.outbox, async () => {
       const categoryWrite = await resolveCategoryWrite(category);
       const product = categoryWrite.id && productInput.categoryId !== categoryWrite.id
         ? { ...productInput, categoryId: categoryWrite.id }
@@ -102,11 +102,11 @@ export async function writeNewProductOffline(
       await db.stockMovements.add(tenantMovement);
       await enqueueOutboxWrite(product.id, "product", tenantProduct, now, { entityId: product.id, dependsOn: categoryWrite.id ? [categoryWrite.id] : undefined });
       await enqueueOutboxWrite(movementId, "stock_adjustment", tenantPayload, now, { dependsOn: [initialStock.branchId, product.id] });
-    });
+    }));
     return;
   }
 
-  await db.transaction("rw", db.products, db.categories, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.products, db.categories, db.outbox, async () => {
     const categoryWrite = await resolveCategoryWrite(category);
     const product = categoryWrite.id && productInput.categoryId !== categoryWrite.id
       ? { ...productInput, categoryId: categoryWrite.id }
@@ -118,7 +118,7 @@ export async function writeNewProductOffline(
     const tenantProduct = await withLocalBusinessId(product);
     await db.products.add(tenantProduct);
     await enqueueOutboxWrite(product.id, "product", tenantProduct, now, { entityId: product.id, dependsOn: categoryWrite.id ? [categoryWrite.id] : undefined });
-  });
+  }));
 }
 
 /**
@@ -131,7 +131,7 @@ export async function writeNewProductOffline(
 export async function writeProductEditOffline(id: string, update: Partial<Product>, category: LocalCategory | null = null, actor: CurrentUser): Promise<void> {
   assertCapability(actor, "MANAGE_PRODUCTS");
   const now = new Date().toISOString();
-  await db.transaction("rw", db.products, db.categories, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.products, db.categories, db.outbox, async () => {
     const existing = await db.products.get(id);
     // The server RPC accepts a complete canonical snapshot. Merging here is
     // what prevents a partial UI patch from turning omitted fields into NULL.
@@ -172,5 +172,5 @@ export async function writeProductEditOffline(id: string, update: Partial<Produc
       await db.products.add({ ...tenantPayload, version: 1 } as Product);
     }
     await enqueueOutboxWrite(id, "product", tenantPayload, now, { entityId: id, dependsOn: categoryWrite.id ? [categoryWrite.id] : undefined });
-  });
+  }));
 }

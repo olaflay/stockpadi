@@ -27,6 +27,7 @@ export interface EnvironmentPairResult {
 
 export const ENVIRONMENT_CONTRACT = contract;
 export const API_VERSION = contract.apiVersion;
+export const CLIENT_COMPATIBILITY_VERSION = contract.clientCompatibilityVersion;
 
 function value(env: EnvironmentVariables, name: string): string {
   return env[name]?.trim() ?? "";
@@ -205,7 +206,10 @@ export function validateRuntimeEnvironment(
     ok: errors.length === 0,
     environment,
     projectRef,
-    buildVersion: value(env, component === "frontend" ? "NEXT_PUBLIC_BUILD_VERSION" : "BUILD_VERSION") || value(env, "VERCEL_GIT_COMMIT_SHA") || "local",
+    // Hosted frontend and backend deployments use the same source commit as
+    // their immutable build identity. Static environment labels such as
+    // "production" are useful locally, but cannot identify a particular deploy.
+    buildVersion: value(env, "VERCEL_GIT_COMMIT_SHA") || value(env, component === "frontend" ? "NEXT_PUBLIC_BUILD_VERSION" : "BUILD_VERSION") || "local",
     errors,
   };
 }

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { assertCapability } from "@/features/auth/authorization";
@@ -10,7 +10,7 @@ import { assertCapability } from "@/features/auth/authorization";
 export async function deleteCategoryOffline(categoryId: string, actor: CurrentUser): Promise<void> {
   assertCapability(actor, "MANAGE_PRODUCTS");
 
-  await db.transaction("rw", db.categories, db.products, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.categories, db.products, db.outbox, async () => {
     const existing = await db.categories.get(categoryId);
     if (!existing) return;
 
@@ -28,5 +28,5 @@ export async function deleteCategoryOffline(categoryId: string, actor: CurrentUs
       new Date().toISOString(),
       { entityId: categoryId }
     );
-  });
+  }));
 }

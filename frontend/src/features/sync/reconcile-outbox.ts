@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { SyncQueueItem } from "@/types/sync";
 
 /**
@@ -10,7 +10,9 @@ export async function markOutboxNeedsReview(item: SyncQueueItem, actorUserId: st
   const trimmedReason = reason.trim();
   if (!trimmedReason) throw new Error("A reconciliation reason is mandatory");
   const now = new Date().toISOString();
-  await db.transaction("rw", db.outbox, db.auditLogs, async () => {
+  const auditId = crypto.randomUUID();
+  const auditClientId = crypto.randomUUID();
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.outbox, db.auditLogs, async () => {
     const current = await db.outbox.get(item.clientId);
     if (!current) throw new Error("Outbox mutation no longer exists");
     await db.outbox.update(item.clientId, {
@@ -22,8 +24,8 @@ export async function markOutboxNeedsReview(item: SyncQueueItem, actorUserId: st
       lastError: current.lastError ?? "Awaiting authoritative resolution",
     });
     await db.auditLogs.add({
-      id: crypto.randomUUID(),
-      clientId: crypto.randomUUID(),
+      id: auditId,
+      clientId: auditClientId,
       businessId: current.businessId,
       actorUserId,
       action: "OUTBOX_MUTATION_MARKED_NEEDS_REVIEW",
@@ -33,5 +35,5 @@ export async function markOutboxNeedsReview(item: SyncQueueItem, actorUserId: st
       afterState: { status: "needs_review", reason: trimmedReason, serverAcknowledged: false },
       createdAtLocal: now,
     });
-  });
+  }));
 }

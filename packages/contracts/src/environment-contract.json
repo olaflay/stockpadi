@@ -1,6 +1,7 @@
 {
   "contractVersion": 1,
   "apiVersion": "v1",
+  "clientCompatibilityVersion": "0.1.0",
   "nodeMajor": 24,
   "topology": "Next.js frontend -> same-origin API -> Node backend -> Supabase/PostgreSQL/RLS/RPC",
   "components": {

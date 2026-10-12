@@ -77,6 +77,20 @@ describe("Node sync push contract", () => {
     expect((db.rpc as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
   });
 
+  it("accepts a legacy v1 sync request without explicit mutation, idempotency, or payload version fields", async () => {
+    resolveAccountContext.mockResolvedValue({ accountType: "BUSINESS_OWNER", businessId: "business-1", branchIds: [], permissions: [] });
+    const db = dbWithRpc({ data: { status: "applied" } });
+    const legacyItem = batchItem({ mutation_id: undefined, idempotency_key: undefined, payload_version: undefined });
+
+    const response = await pushSyncBatch(db, actor, { batch: [legacyItem] });
+
+    expect(response.results[0]).toMatchObject({ status: "applied", clientId: "mutation-1" });
+    expect((db.rpc as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith("sync_apply_sale", {
+      payload: legacyItem.payload,
+      actor_id: actor.id,
+    });
+  });
+
   it("propagates an authoritative RPC identity when a mutable entity is canonicalized", async () => {
     resolveAccountContext.mockResolvedValue({ accountType: "BUSINESS_OWNER", businessId: "business-1", branchIds: [], permissions: [] });
     const db = dbWithRpc({ data: { status: "skipped", id: "category-server", duplicate: true } });

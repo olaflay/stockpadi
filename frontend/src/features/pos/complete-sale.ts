@@ -1,4 +1,4 @@
-import { db, type CustomerCreditMovement } from "@/lib/db";
+import { db, type CustomerCreditMovement, withDatabaseClosedRecovery } from "@/lib/db";
 import type { Sale, SaleItem, SalePayment } from "@/types/sale";
 import type { StockMovement } from "@/types/stock-movement";
 import type { Product } from "@/types/product";
@@ -193,7 +193,7 @@ export async function completeSale(params: {
     creditMovement ? withLocalBusinessId(creditMovement) : Promise.resolve(null),
   ]);
 
-  await db.transaction(
+  await withDatabaseClosedRecovery(() => db.transaction(
     "rw",
     [db.sales, db.stockMovements, db.customerCreditMovements, db.outbox, db.products, db.inventoryStock],
     async () => {
@@ -221,7 +221,7 @@ export async function completeSale(params: {
       }
       await enqueueOutboxWrite(saleId, "sale", tenantSale, now);
     }
-  );
+  ));
 
   return sale;
 }

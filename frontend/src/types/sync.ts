@@ -19,6 +19,8 @@ export interface SyncQueueItem<TPayload = unknown> {
   mutationId?: string;
   /** Stable server idempotency key; immutable events never coalesce this key. */
   idempotencyKey?: string;
+  /** Payload shape contract; existing rows without a value are legacy v1. */
+  payloadVersion?: number;
   businessId?: string;
   type: SyncEntityType;
   operation?: "upsert" | "append";

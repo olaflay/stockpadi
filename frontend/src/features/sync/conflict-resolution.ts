@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import type { SyncQueueItem } from "@/types/sync";
 
 /** Only snapshot entities can be safely discarded or deliberately rebased.
@@ -21,7 +21,7 @@ export async function discardConflictingSnapshot(item: SyncQueueItem): Promise<v
   }
 
   const stateId = `${item.businessId}:session`;
-  await db.transaction("rw", db.outbox, db.syncPullState, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.outbox, db.syncPullState, async () => {
     await db.outbox.delete(item.clientId);
     const state = await db.syncPullState.get(stateId);
     if (state) {
@@ -33,5 +33,5 @@ export async function discardConflictingSnapshot(item: SyncQueueItem): Promise<v
         lastFailedDataset: null,
       });
     }
-  });
+  }));
 }

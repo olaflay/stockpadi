@@ -36,6 +36,8 @@ describe("Vercel backend adapter", () => {
     const response = await fetch(`${baseUrl}/api?__path=health`);
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-build-version")).toBe("local");
+    expect(response.headers.get("x-min-client-version")).toBe("0.1.0");
     expect(await response.json()).toEqual({
       status: "ok",
       service: "backend",
@@ -45,6 +47,14 @@ describe("Vercel backend adapter", () => {
       buildVersion: "local",
       supabaseProjectRef: null,
     });
+  });
+
+  it("serves compatibility metadata through the deployed Node handler", async () => {
+    const baseUrl = await startVercelHandler();
+    const response = await fetch(`${baseUrl}/api?__path=api%2Fversion`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ build: "local", minClient: "0.1.0" });
+    expect(response.headers.get("x-min-client-version")).toBe("0.1.0");
   });
 
   it("loads the application router for non-health routes", async () => {

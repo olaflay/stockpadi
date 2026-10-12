@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import { withLocalBusinessIds } from "@/lib/local-tenant";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
@@ -89,7 +89,7 @@ export async function importProducts(
   // device. Enqueuing each product plus its opening-stock movement (with a
   // stable clientId so a retry never double-counts) makes the import durable
   // and convergent. See .agents/rules/offline-sync-and-ledger.md.
-  await db.transaction("rw", db.products, db.stockMovements, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.products, db.stockMovements, db.outbox, async () => {
     await db.products.bulkAdd(tenantProducts);
     if (tenantMovements.length > 0) await db.stockMovements.bulkAdd(tenantMovements);
     for (const product of tenantProducts) {
@@ -107,5 +107,5 @@ export async function importProducts(
         createdAtLocal: now,
       }, now, { dependsOn: [movement.branchId, movement.productId] });
     }
-  });
+  }));
 }

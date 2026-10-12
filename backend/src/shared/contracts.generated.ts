@@ -202,6 +202,8 @@ export interface SyncPushBatchItem {
   client_id: string;
   mutation_id?: string;
   idempotency_key?: string;
+  /** Optional for old clients; absent payload versions are treated as v1. */
+  payload_version?: number;
   entity_id?: string;
   type: SyncEntityType;
   operation?: "upsert" | "append";

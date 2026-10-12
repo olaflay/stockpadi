@@ -45,6 +45,46 @@ describe("backend service routes", () => {
     expect(body.service).toBe("backend");
   });
 
+  it("exposes safe version metadata and compatibility headers", async () => {
+    const backendUrl = await startBackend();
+    const response = await fetch(`${backendUrl}/api/version`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ build: "local", minClient: "0.1.0" });
+    expect(response.headers.get("x-build-version")).toBe("local");
+    expect(response.headers.get("x-min-client-version")).toBe("0.1.0");
+  });
+
+  it("returns 426 to an unsupported client and leaves the request handler untouched", async () => {
+    const backendUrl = await startBackend();
+    const previous = process.env.MIN_CLIENT_VERSION;
+    process.env.MIN_CLIENT_VERSION = "0.2.0";
+    try {
+      const response = await fetch(`${backendUrl}/api/account-context`, {
+        method: "POST",
+        headers: { "x-client-version": "0.1.0", "x-forwarded-for": "old-client-version-test" },
+      });
+      expect(response.status).toBe(426);
+      expect(response.headers.get("x-min-client-version")).toBe("0.2.0");
+      expect(await response.json()).toEqual({
+        error: { code: "CLIENT_UPGRADE_REQUIRED", message: "This app version must be updated before it can sync." },
+      });
+    } finally {
+      if (previous === undefined) delete process.env.MIN_CLIENT_VERSION;
+      else process.env.MIN_CLIENT_VERSION = previous;
+    }
+  });
+
+  it("keeps accepting requests from the previous client version while the minimum remains unchanged", async () => {
+    const backendUrl = await startBackend();
+    const response = await fetch(`${backendUrl}/api/account-context`, {
+      method: "POST",
+      headers: { "x-client-version": "0.1.0", "x-forwarded-for": "supported-client-version-test" },
+    });
+    expect(response.status).toBe(401);
+    expect(response.headers.get("x-build-version")).toBe("local");
+  });
+
   it("returns a JSON 404 for an unknown route", async () => {
     const backendUrl = await startBackend();
     const response = await fetch(`${backendUrl}/missing`);
@@ -69,12 +109,14 @@ describe("backend service routes", () => {
     const backendUrl = await startBackend();
     for (let index = 0; index < 120; index += 1) {
       const response = await fetch(`${backendUrl}/api/account-context`, {
+        method: "POST",
         headers: { "x-forwarded-for": "rate-limit-test" },
       });
       expect(response.status).toBe(401);
     }
 
     const limited = await fetch(`${backendUrl}/api/account-context`, {
+      method: "POST",
       headers: { "x-forwarded-for": "rate-limit-test" },
     });
     expect(limited.status).toBe(429);

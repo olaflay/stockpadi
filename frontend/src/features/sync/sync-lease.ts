@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 
 const LEASE_ID = "global-sync";
@@ -28,29 +28,29 @@ async function acquireDurableLease(): Promise<boolean> {
   const acquiredAt = new Date(now).toISOString();
   const expiresAt = new Date(now + LEASE_TTL_MS).toISOString();
 
-  return db.transaction("rw", db.syncLeases, async () => {
+  return withDatabaseClosedRecovery(() => db.transaction("rw", db.syncLeases, async () => {
     const current = await db.syncLeases.get(LEASE_ID);
     if (current && current.ownerId !== currentOwnerId && current.expiresAt > acquiredAt) return false;
     await db.syncLeases.put({ id: LEASE_ID, businessId, ownerId: currentOwnerId, acquiredAt, expiresAt });
     return true;
-  });
+  }));
 }
 
 async function renewDurableLease(): Promise<void> {
   const currentOwnerId = getOwnerId();
   const expiresAt = new Date(Date.now() + LEASE_TTL_MS).toISOString();
-  await db.transaction("rw", db.syncLeases, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.syncLeases, async () => {
     const current = await db.syncLeases.get(LEASE_ID);
     if (current?.ownerId === currentOwnerId) await db.syncLeases.update(LEASE_ID, { expiresAt });
-  });
+  }));
 }
 
 async function releaseDurableLease(): Promise<void> {
   const currentOwnerId = getOwnerId();
-  await db.transaction("rw", db.syncLeases, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.syncLeases, async () => {
     const current = await db.syncLeases.get(LEASE_ID);
     if (current?.ownerId === currentOwnerId) await db.syncLeases.delete(LEASE_ID);
-  });
+  }));
 }
 
 async function runOwned<T>(work: () => Promise<T>): Promise<T> {

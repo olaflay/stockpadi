@@ -1,6 +1,6 @@
 import { SYNC_ROUTES } from "@stockpadi/contracts";
 import { BackendRequestError, NetworkUnavailableError, serverGet } from "@/platform/api/backend-client";
-import { db, SESSION_SINGLETON_ID, type LocalBranch, type LocalCategory, type LocalCustomer, type LocalUser, type SyncDiagnostic, type LocalInventoryStock } from "@/lib/db";
+import { db, isDatabaseClosedError, SESSION_SINGLETON_ID, type LocalBranch, type LocalCategory, type LocalCustomer, type LocalUser, type SyncDiagnostic, type LocalInventoryStock, withDatabaseClosedRecovery } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
@@ -9,6 +9,7 @@ import type { Sale } from "@/types/sale";
 import type { SaleRefund } from "@/types/sale-refund";
 import type { SyncQueueItem } from "@/types/sync";
 import { recordRetry } from "@/features/sync/sync-observability";
+import { notifyPwaDataRefresh } from "@/lib/pwa-update-events";
 
 let lastPreloadAt = 0;
 let lastPreloadResult: SessionPreloadResult | null = null;
@@ -118,6 +119,10 @@ export function getLastPreloadResult(): SessionPreloadResult | null {
 
 /** Pull cloud state through the single Node session-pull contract. */
 export async function preloadSessionData(force = false, trigger: SyncPullTrigger = force ? "manual" : "startup"): Promise<SessionPreloadResult> {
+  return withDatabaseClosedRecovery(() => preloadSessionDataOnce(force, trigger));
+}
+
+async function preloadSessionDataOnce(force: boolean, trigger: SyncPullTrigger): Promise<SessionPreloadResult> {
   const startedAt = new Date().toISOString();
   const empty = (fullySynced: boolean): SessionPreloadResult => ({ startedAt, completedAt: new Date().toISOString(), fullySynced, pulls: [] });
   if (typeof window === "undefined") {
@@ -247,6 +252,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
       try {
         recordsApplied = await applyEntity(entityName, records, businessId);
       } catch (cause) {
+        if (isDatabaseClosedError(cause)) throw cause;
         const safe = safePullError(cause);
         throw new PullProcessError(safe.code, safe.message, entityName, safe.httpStatus);
       }
@@ -291,6 +297,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
       recordsApplied: Object.values(entityCounts).reduce((total, count) => total + count, 0),
     }, 0);
   } catch (cause) {
+    if (isDatabaseClosedError(cause)) throw cause;
     const error = safePullError(cause);
     const failedDataset = cause instanceof PullProcessError ? cause.dataset : null;
     const retryable = isRetryablePullFailure(error);
@@ -335,6 +342,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
     pulls,
   };
   lastPreloadResult = result;
+  if (result.fullySynced) notifyPwaDataRefresh();
   return result;
 }
 
