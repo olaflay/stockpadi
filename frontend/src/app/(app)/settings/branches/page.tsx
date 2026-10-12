@@ -11,6 +11,8 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
+import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { writeBranchOffline, setPrimaryBranchOffline } from "@/features/branches/write-branch-offline";
 
@@ -18,6 +20,9 @@ export default function BranchesSettingsPage() {
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [newBranchName, setNewBranchName] = useState("");
+  const [branchToRename, setBranchToRename] = useState<LocalBranch | null>(null);
+  const [branchToArchive, setBranchToArchive] = useState<LocalBranch | null>(null);
+  const [renameInput, setRenameInput] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const branches = useLiveQuery(async () => {
     const result = await tenantArray(db.branches);
@@ -60,9 +65,19 @@ export default function BranchesSettingsPage() {
     setNewBranchName("");
   }
 
-  async function renameBranch(branch: LocalBranch) {
-    const name = window.prompt("Branch name", branch.name)?.trim();
-    if (name && name !== branch.name) await writeBranchOffline({ ...branch, name });
+  function startRename(branch: LocalBranch) {
+    setBranchToRename(branch);
+    setRenameInput(branch.name);
+  }
+
+  async function handleConfirmRename() {
+    if (!branchToRename) return;
+    const trimmed = renameInput.trim();
+    if (trimmed && trimmed !== branchToRename.name) {
+      await writeBranchOffline({ ...branchToRename, name: trimmed });
+      showToast(`Branch renamed to ${trimmed}`, "success");
+    }
+    setBranchToRename(null);
   }
 
   async function setPrimary(branch: LocalBranch) {
@@ -72,16 +87,28 @@ export default function BranchesSettingsPage() {
   }
 
   async function toggleArchive(branch: LocalBranch) {
-    if (branch.isActive && branch.isPrimary) {
-      showToast("Choose another primary branch before archiving this one.", "warning");
+    if (branch.isActive) {
+      if (branch.isPrimary) {
+        showToast("Choose another primary branch before archiving this one.", "warning");
+        return;
+      }
+      if (branches!.filter((candidate) => candidate.isActive).length <= 1) {
+        showToast("Keep at least one active branch for this business.", "warning");
+        return;
+      }
+      setBranchToArchive(branch);
       return;
     }
-    if (branch.isActive && branches!.filter((candidate) => candidate.isActive).length <= 1) {
-      showToast("Keep one active branch for this business.", "warning");
-      return;
-    }
-    await writeBranchOffline({ ...branch, isActive: !branch.isActive });
-    showToast(branch.isActive ? `${branch.name} archived` : `${branch.name} reactivated`, "success");
+    await writeBranchOffline({ ...branch, isActive: true });
+    showToast(`${branch.name} reactivated`, "success");
+  }
+
+  async function handleConfirmArchive() {
+    if (!branchToArchive) return;
+    const branch = branchToArchive;
+    setBranchToArchive(null);
+    await writeBranchOffline({ ...branch, isActive: false });
+    showToast(`${branch.name} archived`, "success");
   }
 
   return (
@@ -98,7 +125,7 @@ export default function BranchesSettingsPage() {
               <div><p>{branch.name}</p>{branch.isPrimary && <span className="text-xs text-brand-accent">Primary branch</span>}</div>
               <div className="flex items-center gap-1">
                 {!branch.isPrimary && <RippleButton type="button" onClick={() => setPrimary(branch)} aria-label={`Set ${branch.name} as primary`} className="rounded-full p-2 text-brand-accent"><Check size={16} aria-hidden /></RippleButton>}
-                <RippleButton type="button" onClick={() => renameBranch(branch)} aria-label={`Rename ${branch.name}`} className="rounded-full p-2 text-on-surface-muted"><Pencil size={16} aria-hidden /></RippleButton>
+                <RippleButton type="button" onClick={() => startRename(branch)} aria-label={`Rename ${branch.name}`} className="rounded-full p-2 text-on-surface-muted"><Pencil size={16} aria-hidden /></RippleButton>
                 {!branch.isPrimary && <RippleButton type="button" onClick={() => toggleArchive(branch)} aria-label={`Archive ${branch.name}`} className="rounded-full p-2 text-danger"><Archive size={16} aria-hidden /></RippleButton>}
               </div>
             </div>
@@ -129,6 +156,65 @@ export default function BranchesSettingsPage() {
             <Plus size={20} aria-hidden />
           </RippleButton>
         </div>
+      )}
+
+      {branchToRename && (
+        <Modal
+          isOpen={branchToRename !== null}
+          onClose={() => setBranchToRename(null)}
+          title="Rename branch"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleConfirmRename();
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div>
+              <label htmlFor="rename-branch-input" className="block text-xs font-semibold text-on-surface-muted mb-1">
+                Branch name
+              </label>
+              <input
+                id="rename-branch-input"
+                type="text"
+                value={renameInput}
+                onChange={(e) => setRenameInput(e.target.value)}
+                autoFocus
+                className="w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2 text-sm text-on-surface focus:border-brand-accent focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setBranchToRename(null)}
+                className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-colors"
+              >
+                Cancel
+              </button>
+              <RippleButton
+                type="submit"
+                disabled={!renameInput.trim()}
+                className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-4 text-xs font-semibold text-brand-accent-contrast disabled:opacity-50"
+              >
+                Save
+              </RippleButton>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {branchToArchive && (
+        <ConfirmDialog
+          isOpen={branchToArchive !== null}
+          onClose={() => setBranchToArchive(null)}
+          onConfirm={handleConfirmArchive}
+          title={`Archive "${branchToArchive.name}"?`}
+          description="Staff assigned to this branch won't be able to record sales until it is reactivated."
+          confirmLabel="Archive branch"
+          cancelLabel="Cancel"
+          variant="danger"
+        />
       )}
     </div>
   );

@@ -34,7 +34,7 @@ export function ErrorState({ title = "Something went wrong", message, onRetry, c
         <RippleButton
           type="button"
           onClick={onRetry}
-          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-elevation-1)] hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-danger px-4 py-3 text-sm font-semibold text-on-danger shadow-[var(--shadow-elevation-1)] hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
         >
           <RotateCcw size={15} aria-hidden />
           <span>Try again</span>

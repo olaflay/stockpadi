@@ -10,6 +10,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { WorkerCapabilityPicker } from "@/features/auth/WorkerCapabilityPicker";
@@ -27,6 +28,7 @@ export default function StaffDetailPage({ params }: PageProps) {
   const user = useCurrentUser();
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staffMember, setStaffMember] = useState<StaffListItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,14 +96,19 @@ export default function StaffDetailPage({ params }: PageProps) {
     } finally { setBusy(false); }
   }
 
-  async function deactivate() {
+  function deactivate() {
     if (!member) return;
-    if (!confirm(`Deactivate ${member.fullName}? They will no longer be able to sign in.`)) return;
+    setShowDeactivateConfirm(true);
+  }
+
+  async function handleConfirmDeactivate() {
+    if (!member) return;
     setBusy(true);
     try {
       await callManageStaff({ action: "deactivate", userId: member.id });
       await db.localUsers.update(member.id, { isActive: false, updatedAt: new Date().toISOString() });
       showToast(`${member.fullName} deactivated`, "success");
+      setShowDeactivateConfirm(false);
       router.replace("/staff");
     } catch (err) { setError(err instanceof ManageStaffError ? err.message : "Could not deactivate worker."); }
     finally { setBusy(false); }
@@ -177,5 +184,17 @@ export default function StaffDetailPage({ params }: PageProps) {
     </section>}
     {memberAccountType === "WORKER" && member.isActive && <RippleButton type="button" onClick={deactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-danger px-4 font-semibold text-danger hover:bg-danger-container/20 disabled:opacity-50 transition-colors">Deactivate worker</RippleButton>}
     {memberAccountType === "WORKER" && !member.isActive && <RippleButton type="button" onClick={reactivate} disabled={busy || !canModify} className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-brand-accent px-4 font-semibold text-brand-accent hover:bg-brand-accent/10 disabled:opacity-50 transition-colors">Reactivate worker</RippleButton>}
+
+    <ConfirmDialog
+      isOpen={showDeactivateConfirm}
+      onClose={() => setShowDeactivateConfirm(false)}
+      onConfirm={handleConfirmDeactivate}
+      isBusy={busy}
+      title={`Deactivate ${member?.fullName ?? "worker"}?`}
+      description="They will immediately lose access to sign in on all devices. You can reactivate their account anytime."
+      confirmLabel="Deactivate worker"
+      cancelLabel="Keep active"
+      variant="danger"
+    />
   </div>;
 }

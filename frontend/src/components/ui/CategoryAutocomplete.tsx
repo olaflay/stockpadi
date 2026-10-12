@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { Check, Plus, X, ChevronDown, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export interface CategoryOption {
   id: string;
@@ -64,6 +65,7 @@ export function CategoryAutocomplete({
 }: CategoryAutocompleteProps) {
   const [query, setQuery] = useState(valueName);
   const [isOpen, setIsOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryOption | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -267,16 +269,10 @@ export function CategoryAutocomplete({
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (window.confirm(`Delete category "${category.name}"? Products in this category will become uncategorized.`)) {
-                      if (value === category.id) {
-                        setQuery("");
-                        onSelect("", "");
-                      }
-                      await onDeleteCategory(category.id);
-                    }
+                    setCategoryToDelete(category);
                   }}
                   className="mr-2 p-1.5 rounded-lg text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-colors"
                 >
@@ -324,16 +320,10 @@ export function CategoryAutocomplete({
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (window.confirm(`Delete category "${category.name}"? Products in this category will become uncategorized.`)) {
-                      if (value === category.id) {
-                        setQuery("");
-                        onSelect("", "");
-                      }
-                      await onDeleteCategory(category.id);
-                    }
+                    setCategoryToDelete(category);
                   }}
                   className="mr-2 p-1.5 rounded-lg text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-colors"
                 >
@@ -367,6 +357,27 @@ export function CategoryAutocomplete({
             </button>
           )}
         </div>
+      )}
+
+      {categoryToDelete && (
+        <ConfirmDialog
+          isOpen={categoryToDelete !== null}
+          onClose={() => setCategoryToDelete(null)}
+          onConfirm={async () => {
+            if (!categoryToDelete) return;
+            if (value === categoryToDelete.id) {
+              setQuery("");
+              onSelect("", "");
+            }
+            await onDeleteCategory?.(categoryToDelete.id);
+            setCategoryToDelete(null);
+          }}
+          title={`Delete "${categoryToDelete.name}"?`}
+          description="Products in this category will become uncategorized. Existing stock and sales records won't be affected."
+          confirmLabel="Delete category"
+          cancelLabel="Cancel"
+          variant="danger"
+        />
       )}
     </div>
   );

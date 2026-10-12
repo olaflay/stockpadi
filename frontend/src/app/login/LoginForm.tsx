@@ -11,6 +11,7 @@ import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { WelcomeIllustration } from "@/components/illustrations/WelcomeIllustration";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TextInput } from "@/components/ui/TextInput";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import Link from "next/link";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { BackendError, callBackend } from "@/features/auth/backend-client";
@@ -333,42 +334,17 @@ export default function LoginForm() {
       </form>
       </div>
 
-      {isApprovalModalOpen && (
-        <div
-          data-modal-container
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="approval-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[3px] p-4 animate-step-in"
-        >
-          <div
-            className="w-full max-w-sm rounded-[28px] bg-surface p-6 sm:p-7 border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-step-in"
-            style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
-          >
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning-container text-on-warning-container mb-3.5 depth-bubble">
-              <Clock size={24} aria-hidden />
-            </div>
-            <h2 id="approval-modal-title" className="text-center text-base sm:text-lg font-bold text-on-surface">
-              Account Not Approved
-            </h2>
-            <p className="mt-1.5 text-center text-xs sm:text-sm font-medium text-warning">
-              Account is not approved. Please wait for approval.
-            </p>
-            <p className="mt-2 text-center text-xs sm:text-sm text-on-surface-muted leading-relaxed">
-              Your account registration was received and is currently waiting for administrator review. You will be able to log in once your account is approved.
-            </p>
-            <div className="mt-5">
-              <RippleButton
-                type="button"
-                onClick={() => setIsApprovalModalOpen(false)}
-                className="w-full justify-center rounded-[var(--radius-control)] bg-brand-accent py-2.5 text-center text-sm font-semibold text-brand-accent-contrast shadow-[var(--shadow-elevation-1)]"
-              >
-                Understood
-              </RippleButton>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={isApprovalModalOpen}
+        onClose={() => setIsApprovalModalOpen(false)}
+        onConfirm={() => setIsApprovalModalOpen(false)}
+        title="Account pending review"
+        description="Your registration has been submitted and is awaiting administrator approval. You will be able to sign in once verified."
+        confirmLabel="Got it"
+        variant="warning"
+        hideCancelButton
+        icon={<Clock size={22} />}
+      />
     </div>
   );
 }

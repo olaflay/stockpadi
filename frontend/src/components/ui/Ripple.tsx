@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { forwardRef, useCallback, useState } from "react";
 import Link, { type LinkProps } from "next/link";
 
 interface RippleSpan {
@@ -64,29 +64,27 @@ export function RippleLayer({ ripples }: { ripples: RippleSpan[] }) {
  * use inside a `.map()` since each rendered instance owns its own hook
  * call. Adds `relative overflow-hidden` itself; callers don't need to.
  */
-export function RippleButton({
-  className = "",
-  onPointerDown,
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { ripples, onPointerDown: startRipple } = useRipple();
-  const hasPosition = className.includes("fixed") || className.includes("absolute") || className.includes("relative");
-  const positionClass = hasPosition ? "" : "relative";
-  return (
-    <button
-      {...props}
-      onPointerDown={(event) => {
-        startRipple(event);
-        onPointerDown?.(event);
-      }}
-      className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
-    >
-      <RippleLayer ripples={ripples} />
-      {children}
-    </button>
-  );
-}
+export const RippleButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+  function RippleButton({ className = "", onPointerDown, children, ...props }, ref) {
+    const { ripples, onPointerDown: startRipple } = useRipple();
+    const hasPosition = className.includes("fixed") || className.includes("absolute") || className.includes("relative");
+    const positionClass = hasPosition ? "" : "relative";
+    return (
+      <button
+        ref={ref}
+        {...props}
+        onPointerDown={(event) => {
+          startRipple(event);
+          onPointerDown?.(event);
+        }}
+        className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
+      >
+        <RippleLayer ripples={ripples} />
+        {children}
+      </button>
+    );
+  }
+);
 
 /** Same idea as RippleButton, for Next.js Link-as-card rows (e.g. product list items). */
 export function RippleLink({

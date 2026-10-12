@@ -28,6 +28,7 @@ import { FAB } from "@/components/ui/FAB";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useNavigation } from "@/components/ui/NavigationContext";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { formatCurrency } from "@/lib/format";
@@ -74,6 +75,7 @@ export default function ProductsPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const { showToast } = useToast();
   const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
 
@@ -119,16 +121,20 @@ export default function ProductsPage() {
     });
   }, []);
 
-  const handleArchiveSelected = useCallback(async () => {
+  const handleArchiveSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setShowBulkConfirm(true);
+  }, [selectedIds.size]);
+
+  const executeArchiveSelected = useCallback(async () => {
     if (selectedIds.size === 0) return;
     const restoring = filter === "archived";
-    const action = restoring ? "Restore" : "Archive";
-    if (!window.confirm(`${action} ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}? ${restoring ? "They will appear in selling and search again." : "They won't appear in selling or search, but historical data is preserved."}`)) return;
     try {
       for (const id of selectedIds) await writeProductEditOffline(id, { archived: !restoring }, null, user);
       showToast(`${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"} ${restoring ? "restored" : "archived"}`, "success");
       setSelectedIds(new Set());
       setDeleteMode(false);
+      setShowBulkConfirm(false);
     } catch {
       showToast(`Couldn't ${restoring ? "restore" : "archive"} products. Try again.`, "danger");
     }
@@ -651,8 +657,8 @@ export default function ProductsPage() {
             type="button"
             onClick={handleArchiveSelected}
             disabled={selectedIds.size === 0}
-            className={`flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] font-medium text-white disabled:opacity-50 hover:opacity-95 transition-opacity ${
-              filter === "archived" ? "bg-brand-accent" : "bg-danger"
+            className={`flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] font-medium disabled:opacity-50 hover:opacity-95 transition-opacity ${
+              filter === "archived" ? "bg-brand-accent text-on-brand" : "bg-danger text-on-danger"
             }`}
           >
             {filter === "archived" ? <RotateCcw size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
@@ -670,6 +676,21 @@ export default function ProductsPage() {
           <Plus size={26} aria-hidden />
         </FAB>
       )}
+
+      <ConfirmDialog
+        isOpen={showBulkConfirm}
+        onClose={() => setShowBulkConfirm(false)}
+        onConfirm={executeArchiveSelected}
+        title={`${filter === "archived" ? "Restore" : "Archive"} ${selectedIds.size} product${selectedIds.size === 1 ? "" : "s"}?`}
+        description={
+          filter === "archived"
+            ? "These products will be returned to inventory and available for sale again."
+            : "These products will be hidden from selling and search. Historical sales records and stock movements remain protected."
+        }
+        confirmLabel={filter === "archived" ? "Restore products" : "Archive products"}
+        cancelLabel="Cancel"
+        variant={filter === "archived" ? "brand" : "danger"}
+      />
     </div>
   );
 }

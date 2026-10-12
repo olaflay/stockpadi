@@ -28,6 +28,7 @@
    /* Brand accent, overridden at runtime from src/config/branding.ts */
    --color-brand-accent: var(--brand-accent-configured, #0a6e4d);
    --color-brand-accent-contrast: #ffffff;
+   --color-on-brand: var(--color-brand-accent-contrast);
    --color-brand-accent-active: var(--color-brand-accent);
 
    /* Surface / text, light mode. Crisp high-contrast neutral scale (WCAG AAA compliant). */
@@ -67,6 +68,31 @@
    --color-on-success: var(--color-brand-accent-contrast);
    --color-on-warning: var(--color-brand-accent-contrast);
    --color-on-danger: var(--color-brand-accent-contrast);
+
+   /* Dynamic payment method and financial transaction domains:
+      - Credit (Violet / Purple): Customer debt, receivables, deferred balances
+      - Info / Transfer (Sky Blue): Bank wires, electronic payment clearance
+      - Terminal / POS (Indigo): Card hardware, POS terminal swipes
+      - Split (Teal): Multi-tender split settlements */
+   --color-credit: #7c3aed;
+   --color-on-credit: var(--color-brand-accent-contrast);
+   --color-credit-container: #ede9fe;
+   --color-on-credit-container: #4c1d95;
+
+   --color-info: #0284c7;
+   --color-on-info: var(--color-brand-accent-contrast);
+   --color-info-container: #e0f2fe;
+   --color-on-info-container: #075985;
+
+   --color-terminal: #4f46e5;
+   --color-on-terminal: var(--color-brand-accent-contrast);
+   --color-terminal-container: #e0e7ff;
+   --color-on-terminal-container: #312e81;
+
+   --color-split: #0d9488;
+   --color-on-split: var(--color-brand-accent-contrast);
+   --color-split-container: #ccfbf1;
+   --color-on-split-container: #134e4a;
 
    /* Subtle brand gradients for headers and key containers */
    --gradient-brand-header: linear-gradient(180deg, #0a6e4d 0%, #075239 100%);
@@ -261,6 +287,7 @@
 
       --color-brand-accent: #4ade80 !important;
       --color-brand-accent-contrast: #052e16 !important;
+      --color-on-brand: var(--color-brand-accent-contrast) !important;
       --color-brand-accent-active: #38c86d !important;
 
       --color-success: #4ade80;
@@ -280,6 +307,26 @@
       --color-on-success: #0d4d21;
       --color-on-warning: #4a3300;
       --color-on-danger: #690005;
+
+      --color-credit: #a78bfa;
+      --color-on-credit: #1e1035;
+      --color-credit-container: #2e1065;
+      --color-on-credit-container: #ddd6fe;
+
+      --color-info: #38bdf8;
+      --color-on-info: #082f49;
+      --color-info-container: #0c3a59;
+      --color-on-info-container: #bae6fd;
+
+      --color-terminal: #818cf8;
+      --color-on-terminal: #1e1b4b;
+      --color-terminal-container: #23215c;
+      --color-on-terminal-container: #c7d2fe;
+
+      --color-split: #2dd4bf;
+      --color-on-split: #042f2e;
+      --color-split-container: #073c39;
+      --color-on-split-container: #99f6e4;
 
       --color-inverse-surface: #e7ebec;
       --color-inverse-on-surface: #262b2c;
@@ -316,6 +363,7 @@
 
    --color-brand-accent: #4ade80 !important;
    --color-brand-accent-contrast: #052e16 !important;
+   --color-on-brand: var(--color-brand-accent-contrast) !important;
    --color-brand-accent-active: #38c86d !important;
 
    --color-success: #4ade80;
@@ -335,6 +383,26 @@
    --color-on-success: #0d4d21;
    --color-on-warning: #4a3300;
    --color-on-danger: #690005;
+
+   --color-credit: #a78bfa;
+   --color-on-credit: #1e1035;
+   --color-credit-container: #2e1065;
+   --color-on-credit-container: #ddd6fe;
+
+   --color-info: #38bdf8;
+   --color-on-info: #082f49;
+   --color-info-container: #0c3a59;
+   --color-on-info-container: #bae6fd;
+
+   --color-terminal: #818cf8;
+   --color-on-terminal: #1e1b4b;
+   --color-terminal-container: #23215c;
+   --color-on-terminal-container: #c7d2fe;
+
+   --color-split: #2dd4bf;
+   --color-on-split: #042f2e;
+   --color-split-container: #073c39;
+   --color-on-split-container: #99f6e4;
 
    --color-inverse-surface: #e7ebec;
    --color-inverse-on-surface: #262b2c;

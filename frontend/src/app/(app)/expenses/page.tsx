@@ -12,6 +12,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { FilterDropdownBar, type FilterGroup } from "@/components/ui/FilterDropdownBar";
 import { MonthGroupHeader } from "@/components/ui/MonthGroupHeader";
 import { TransactionItemRow } from "@/components/ui/TransactionItemRow";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FAB } from "@/components/ui/FAB";
 import { useToast } from "@/components/ui/Toast";
 import { getPeriodStartIso, formatTransactionTimestamp, getMonthYearKey, formatMonthYear } from "@/lib/date";
@@ -41,6 +42,7 @@ export default function ExpensesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -117,8 +119,7 @@ export default function ExpensesPage() {
 
   const canDelete = hasCapability(user, "MANAGE_EXPENSES");
 
-  async function handleDelete(id: string, category: string) {
-    if (!confirm(`Delete this ${category} expense? This cannot be undone.`)) return;
+  async function handleDelete(id: string) {
     try {
       await deleteExpense(id);
       showToast("Expense deleted", "success");
@@ -255,7 +256,7 @@ export default function ExpensesPage() {
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => handleDelete(expense.id, expense.category)}
+                          onClick={() => setDeleteTarget({ id: expense.id, category: expense.category })}
                           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 sm:opacity-100 p-2 rounded-full text-on-surface-muted hover:text-danger hover:bg-danger/10 transition-all"
                           aria-label={`Delete ${expense.category} expense`}
                         >
@@ -282,6 +283,22 @@ export default function ExpensesPage() {
       </FAB>
 
       <AddExpenseSheet isOpen={isAddSheetOpen} onClose={() => setIsAddSheetOpen(false)} />
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          const targetId = deleteTarget.id;
+          setDeleteTarget(null);
+          await handleDelete(targetId);
+        }}
+        title="Delete expense?"
+        description={`Remove this ${deleteTarget?.category ? `"${deleteTarget.category}" ` : ""}expense entry? This will permanently update your expense records.`}
+        confirmLabel="Delete expense"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RippleButton } from "@/components/ui/Ripple";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { db } from "@/lib/db";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -60,6 +61,10 @@ export default function SyncHealthPage() {
   const safety = useSyncSafety();
   const [busy, setBusy] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [pendingConflictResolution, setPendingConflictResolution] = useState<{
+    item: SyncQueueItem;
+    mode: "cloud" | "local";
+  } | null>(null);
   const [cloud, setCloud] = useState<"unknown" | "connected" | "failed">("unknown");
   const [cloudError, setCloudError] = useState<string | null>(null);
   const businessId = user.businessId;
@@ -160,21 +165,20 @@ export default function SyncHealthPage() {
     }
   }
 
-  async function resolveWithCloudVersion(item: SyncQueueItem) {
+  async function executeResolveWithCloud(item: SyncQueueItem) {
     if (!canResolveConflictInPlace(item) || resolvingId) return;
-    if (!window.confirm("Discard this device's rejected change and download the cloud version?")) return;
     setResolvingId(item.clientId);
     try {
       await discardConflictingSnapshot(item);
       await runSyncCycle("manual");
+      setPendingConflictResolution(null);
     } finally {
       setResolvingId(null);
     }
   }
 
-  async function keepMyProductVersion(item: SyncQueueItem) {
+  async function executeKeepMyProductVersion(item: SyncQueueItem) {
     if (item.type !== "product" || !canResolveConflictInPlace(item) || resolvingId) return;
-    if (!window.confirm("Replace the cloud product details with this device's version? Stock history will not be changed.")) return;
     setResolvingId(item.clientId);
     const desired = item.payload as Product;
     try {
@@ -188,6 +192,7 @@ export default function SyncHealthPage() {
         throw new Error("The cloud version could not be confirmed. Your change remains in the conflict list.");
       }
       await writeProductEditOffline(cloudProduct.id, { ...desired, version: cloudProduct.version, updatedAt: new Date().toISOString() }, null, user);
+      setPendingConflictResolution(null);
     } finally {
       setResolvingId(null);
     }
@@ -252,8 +257,8 @@ export default function SyncHealthPage() {
                   <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{item.lastErrorMessage ?? "This record changed on another device."}</p>
                   {canResolve ? (
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <RippleButton type="button" disabled={isResolving || !online} onClick={() => void resolveWithCloudVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
-                      {item.type === "product" && <RippleButton type="button" disabled={isResolving || !online} onClick={() => void keepMyProductVersion(item)} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
+                      <RippleButton type="button" disabled={isResolving || !online} onClick={() => setPendingConflictResolution({ item, mode: "cloud" })} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface px-3 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-50">Use cloud version</RippleButton>
+                      {item.type === "product" && <RippleButton type="button" disabled={isResolving || !online} onClick={() => setPendingConflictResolution({ item, mode: "local" })} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast disabled:opacity-50">Keep my product version</RippleButton>}
                     </div>
                   ) : <p className="mt-3 text-[length:var(--font-size-caption)] text-warning">Ledger history is protected. Resolve this by creating a correcting stock or sales entry.</p>}
                 </article>
@@ -292,6 +297,38 @@ export default function SyncHealthPage() {
           ))}
         </div>
       </section>}
+
+      {pendingConflictResolution && (
+        <ConfirmDialog
+          isOpen={pendingConflictResolution !== null}
+          onClose={() => setPendingConflictResolution(null)}
+          onConfirm={() => {
+            if (pendingConflictResolution.mode === "cloud") {
+              return executeResolveWithCloud(pendingConflictResolution.item);
+            } else {
+              return executeKeepMyProductVersion(pendingConflictResolution.item);
+            }
+          }}
+          isBusy={resolvingId !== null}
+          title={
+            pendingConflictResolution.mode === "cloud"
+              ? "Use cloud version?"
+              : "Keep local version?"
+          }
+          description={
+            pendingConflictResolution.mode === "cloud"
+              ? "Discard this device's rejected change and download the latest cloud version."
+              : "Replace the cloud product details with this device's local version. Stock history will not be changed."
+          }
+          confirmLabel={
+            pendingConflictResolution.mode === "cloud"
+              ? "Use cloud version"
+              : "Keep local version"
+          }
+          cancelLabel="Cancel"
+          variant={pendingConflictResolution.mode === "cloud" ? "brand" : "warning"}
+        />
+      )}
     </div>
   );
 }

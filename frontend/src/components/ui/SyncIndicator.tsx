@@ -183,7 +183,7 @@ export function SyncIndicator({
             role="status"
             title="Some changes need attention. Open save details."
             aria-label="Some changes need attention. Open save details."
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors active:scale-95 disabled:opacity-60 ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors active:scale-95 disabled:opacity-60 ${isContrast ? "text-warning hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
           >
             <span aria-hidden className="h-2 w-2 rounded-full bg-warning" />
           </button>
@@ -209,7 +209,7 @@ export function SyncIndicator({
         disabled={isSyncing}
         role="status"
         title="Open Sync Diagnostics"
-        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-amber-400 text-black" : "bg-warning-container text-on-warning-container"}`}
+        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-warning text-on-warning" : "bg-warning-container text-on-warning-container"}`}
       >
         <AlertTriangle size={13} aria-hidden />
         {compact ? `${syncSafety.queueCount} changes need attention` : "Needs attention"}
@@ -229,7 +229,7 @@ export function SyncIndicator({
             title="Open Sync Diagnostics"
             aria-label="Open Sync Diagnostics"
             className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold disabled:opacity-70 transition-transform active:scale-95 ${
-              isContrast ? "bg-red-500 text-white" : "bg-danger-container text-on-danger-container"
+              isContrast ? "bg-danger text-on-danger" : "bg-danger-container text-on-danger-container"
             }`}
           >
             <span aria-hidden className="h-2 w-2 rounded-full animate-pulse bg-white" />
@@ -263,7 +263,7 @@ export function SyncIndicator({
           type="button"
           onClick={handleRetryFailed}
           disabled={isRetrying}
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-danger px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-white hover:bg-danger/90 transition-colors active:scale-95 disabled:opacity-70"
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-danger px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-danger hover:opacity-90 transition-opacity active:scale-95 disabled:opacity-70"
         >
           <RefreshCw size={12} className={isRetrying ? "animate-spin" : ""} />
           <span>{isRetrying ? "Retrying…" : "Sync now"}</span>
@@ -289,10 +289,10 @@ export function SyncIndicator({
           <span
             aria-hidden
             className="h-2 w-2 rounded-full"
-            style={{ background: isContrast ? "#fca5a5" : "var(--color-danger)" }}
+            style={{ background: isContrast ? "var(--color-stock-alert)" : "var(--color-danger)" }}
           />
           <span className="font-number leading-none">{pendingCount}</span>
-          <RefreshCw size={11} className={isContrast ? "text-red-200" : "text-danger opacity-80"} />
+          <RefreshCw size={11} className={isContrast ? "text-danger-container" : "text-danger opacity-80"} />
         </button>
       );
     }
@@ -318,7 +318,7 @@ export function SyncIndicator({
     if (compact) {
       return (
         <div className="inline-flex items-center gap-1">
-          <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" title="Sync issue. Open Sync Diagnostics." aria-label="Sync issue. Open Sync Diagnostics." className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning"}`}>
+          <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" title="Sync issue. Open Sync Diagnostics." aria-label="Sync issue. Open Sync Diagnostics." className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isContrast ? "text-warning hover:bg-white/10" : "text-warning"}`}>
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
           </button>
           <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-warning-container text-on-warning-container"}`}>
@@ -353,7 +353,7 @@ export function SyncIndicator({
             role="status"
             aria-label={runtimePhase === "idle" ? "Sync issue. Open Sync Diagnostics." : "Sync in progress. Open Sync Diagnostics."}
             title={runtimePhase === "idle" ? "Sync issue. Open Sync Diagnostics." : "Sync in progress. Open Sync Diagnostics."}
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isContrast ? "text-amber-200 hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isContrast ? "text-warning hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
           >
             <span aria-hidden className={`h-2 w-2 rounded-full ${runtimePhase === "idle" ? "bg-warning" : "bg-success animate-pulse"}`} />
           </button>
@@ -397,7 +397,7 @@ export function SyncIndicator({
           <span
             aria-hidden
             className="h-1.5 w-1.5 rounded-full"
-            style={{ background: isContrast ? "#86efac" : "var(--color-success)" }}
+            style={{ background: isContrast ? "var(--color-on-brand-container)" : "var(--color-success)" }}
           />
           <RefreshCw size={11} className={isSyncing ? "animate-spin text-white" : isContrast ? "text-white/80" : "opacity-60"} />
         </button>
@@ -437,7 +437,7 @@ export function SyncIndicator({
           <span
             aria-hidden
             className="h-2 w-2 animate-pulse rounded-full"
-            style={{ background: isContrast ? "#86efac" : "var(--color-brand-accent)" }}
+            style={{ background: isContrast ? "var(--color-on-brand-container)" : "var(--color-brand-accent)" }}
           />
           <span className="font-number leading-none">{isSyncing ? "…" : pendingCount}</span>
         </button>
@@ -482,7 +482,7 @@ export function SyncIndicator({
         type="button"
         onClick={handleForceSync}
         disabled={isSyncing}
-        className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] bg-brand-accent px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-white hover:bg-brand-accent/90 transition-colors active:scale-95 disabled:opacity-70"
+        className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] bg-brand-accent px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-brand hover:bg-brand-accent/90 transition-colors active:scale-95 disabled:opacity-70"
       >
         <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
         <span>{isSyncing ? "Saving…" : "Sync now"}</span>

@@ -19,6 +19,13 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   credit: "Credit (Owing)",
 };
 
+const METHOD_ACTIVE_STYLES: Record<PaymentMethod, string> = {
+  cash: "bg-brand-accent text-on-brand border-brand-accent",
+  transfer: "bg-info text-on-info border-info",
+  pos_terminal: "bg-terminal text-on-terminal border-terminal",
+  credit: "bg-credit text-on-credit border-credit",
+};
+
 /** Quick bank-provider chips for transfer audit metadata (§9.3). */
 const TRANSFER_PROVIDERS = ["OPay", "Moniepoint", "PalmPay", "Kuda", "Commercial Bank"];
 
@@ -265,7 +272,7 @@ export function PaymentStep(props: {
                         aria-pressed={isSelected}
                         className={`min-h-[36px] px-3 rounded-xl text-xs font-semibold transition-all border ${
                           isSelected
-                            ? "bg-brand-accent text-on-brand border-brand-accent shadow-xs font-bold"
+                            ? `${METHOD_ACTIVE_STYLES[method] ?? "bg-brand-accent text-on-brand border-brand-accent"} shadow-xs font-bold`
                             : "bg-surface text-on-surface border-border/40 hover:bg-surface-container"
                         }`}
                       >

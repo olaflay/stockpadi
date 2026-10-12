@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatCurrency } from "@/lib/format";
 import { cartLineKey } from "@/features/pos/use-cart";
 import type { CartLine } from "@/features/pos/complete-sale";
@@ -49,6 +50,7 @@ export function CartStep(props: {
 
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountInput, setDiscountInput] = useState(discount > 0 ? String(discount) : "");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // `undefined` means the stock query has not resolved yet. It must NOT be
   // read as "no problem": unresolved blocks checkout and increment.
@@ -93,9 +95,7 @@ export function CartStep(props: {
           )}
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm("Clear all items from the cart?")) onClearCart();
-            }}
+            onClick={() => setShowClearConfirm(true)}
             aria-label="Clear all items from cart"
             className="min-h-[var(--touch-target-min)] flex items-center px-2 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-danger font-medium hover:bg-danger/5 transition-colors"
           >
@@ -342,6 +342,21 @@ export function CartStep(props: {
         </Modal>
       )}
 
+      {showClearConfirm && (
+        <ConfirmDialog
+          isOpen={showClearConfirm}
+          onClose={() => setShowClearConfirm(false)}
+          onConfirm={() => {
+            onClearCart();
+            setShowClearConfirm(false);
+          }}
+          title="Clear cart?"
+          description="All items in this sale will be removed."
+          confirmLabel="Clear cart"
+          cancelLabel="Keep items"
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

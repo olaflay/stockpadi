@@ -17,6 +17,7 @@ import { useOnlineStatus } from "@/lib/use-online-status";
 import { voidSale, VoidSaleError } from "@/features/pos/void-sale";
 import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReceiptIllustration } from "@/components/illustrations";
 import { WhatsAppReceiptModal } from "@/components/pos/WhatsAppReceiptModal";
 import { PdfReceiptDownloadModal } from "@/components/pos/PdfReceiptDownloadModal";
@@ -32,6 +33,13 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   transfer: "Bank Transfer",
   pos_terminal: "POS",
   credit: "Credit (Owing)",
+};
+
+const METHOD_BADGES: Record<PaymentMethod, { bg: string; text: string }> = {
+  cash: { bg: "bg-brand-container", text: "text-on-brand-container" },
+  transfer: { bg: "bg-info-container", text: "text-on-info-container" },
+  pos_terminal: { bg: "bg-terminal-container", text: "text-on-terminal-container" },
+  credit: { bg: "bg-credit-container", text: "text-on-credit-container" },
 };
 
 interface PageProps {
@@ -50,6 +58,7 @@ export default function SaleDetailPage({ params }: PageProps) {
   const isOnline = useOnlineStatus();
 
   const [voiding, setVoiding] = useState(false);
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState("");
@@ -126,14 +135,18 @@ export default function SaleDetailPage({ params }: PageProps) {
 
 
 
-  async function handleVoid() {
+  function handleVoid() {
     if (!sale || sale.voidedAt) return;
-    if (!window.confirm("Void this sale? Stock will be added back and this can't be undone.")) return;
+    setShowVoidConfirm(true);
+  }
 
+  async function executeVoid() {
+    if (!sale || sale.voidedAt) return;
     setVoiding(true);
     try {
       await voidSale({ saleId: sale.id, branchId: sale.branchId });
       showToast("Sale cancelled. Stock restored.", "success");
+      setShowVoidConfirm(false);
     } catch (err) {
       showToast(err instanceof VoidSaleError ? err.message : "Couldn't void this sale.", "danger");
     } finally {
@@ -241,16 +254,17 @@ export default function SaleDetailPage({ params }: PageProps) {
         <section>
           <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface-muted">Payment</h2>
           {sale.payments.length === 1 ? (
-            <div className="rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
-              <p className="text-[length:var(--font-size-body)] text-on-surface">
-                Paid: <span className="font-medium">{PAYMENT_LABELS[sale.payments[0].method]}</span>
-              </p>
+            <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
+              <span className="text-[length:var(--font-size-body)] text-on-surface">Payment method</span>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${METHOD_BADGES[sale.payments[0].method]?.bg ?? "bg-surface-container"} ${METHOD_BADGES[sale.payments[0].method]?.text ?? "text-on-surface"}`}>
+                {PAYMENT_LABELS[sale.payments[0].method]}
+              </span>
             </div>
           ) : (
             <ul className="flex flex-col gap-2">
               {sale.payments.map((payment, index) => (
                 <li key={index} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
-                  <span className="text-[length:var(--font-size-body)] text-on-surface">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${METHOD_BADGES[payment.method]?.bg ?? "bg-surface-container"} ${METHOD_BADGES[payment.method]?.text ?? "text-on-surface"}`}>
                     {PAYMENT_LABELS[payment.method]}
                   </span>
                   <span className="font-number text-[length:var(--font-size-body)] font-medium tabular-nums text-on-surface">
@@ -412,6 +426,18 @@ export default function SaleDetailPage({ params }: PageProps) {
           }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={showVoidConfirm}
+        onClose={() => setShowVoidConfirm(false)}
+        onConfirm={executeVoid}
+        isBusy={voiding}
+        title="Void this sale?"
+        description="All items will be returned to inventory and this sale will be marked void. This cannot be undone."
+        confirmLabel="Void sale"
+        cancelLabel="Keep sale"
+        variant="danger"
+      />
     </div>
   );
 }

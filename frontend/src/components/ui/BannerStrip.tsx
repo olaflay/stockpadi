@@ -82,7 +82,7 @@ export function BannerStrip() {
   return (
     <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
-        <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-amber-950 dark:text-amber-200">
+        <div className="bg-warning-container border-b border-warning/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-on-warning-container">
           Store pending admin approval · Changes are saved locally and will upload once verified
         </div>
       )}

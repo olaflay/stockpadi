@@ -198,7 +198,7 @@ export function ContactsHubView({
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                   isSelected
-                    ? "bg-white/20 text-white"
+                    ? "bg-on-brand/15 text-on-brand"
                     : "bg-surface-container-highest text-on-surface-muted"
                 }`}
               >

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatCurrency } from "@/lib/format";
 import type { ParkedSale } from "@/features/pos/parked-sales";
 
@@ -9,6 +11,8 @@ export function ParkedSalesModal(props: {
   onResume: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const [saleToDiscard, setSaleToDiscard] = useState<string | null>(null);
+
   return (
     <Modal
       isOpen={props.isOpen}
@@ -56,9 +60,7 @@ export function ParkedSalesModal(props: {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm("Discard this held cart?")) props.onDelete(sale.id);
-                      }}
+                      onClick={() => setSaleToDiscard(sale.id)}
                       className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-danger/10 px-3 py-1.5 font-medium text-danger transition-colors hover:bg-danger/20"
                     >
                       Discard
@@ -70,6 +72,20 @@ export function ParkedSalesModal(props: {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={saleToDiscard !== null}
+        onClose={() => setSaleToDiscard(null)}
+        onConfirm={() => {
+          if (saleToDiscard) props.onDelete(saleToDiscard);
+          setSaleToDiscard(null);
+        }}
+        title="Discard held sale?"
+        description="This held sale will be permanently deleted."
+        confirmLabel="Discard sale"
+        cancelLabel="Keep"
+        variant="danger"
+      />
     </Modal>
   );
 }

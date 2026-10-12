@@ -113,12 +113,12 @@ export function ContactDetailModal({
                 </span>
               )}
               {isSupplier && (
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                <span className="inline-flex items-center rounded-full bg-info-container px-2 py-0.5 text-[10px] font-semibold text-on-info-container">
                   Supplier
                 </span>
               )}
               {isDebtor && (
-                <span className="inline-flex items-center rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold text-danger">
+                <span className="inline-flex items-center rounded-full bg-credit-container px-2 py-0.5 text-[10px] font-semibold text-on-credit-container">
                   Owing
                 </span>
               )}

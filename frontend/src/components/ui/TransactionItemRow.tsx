@@ -22,7 +22,7 @@ export interface TransactionItemRowProps {
 
 const STATUS_CONFIG: Record<TransactionStatus, { label: string; textClass: string }> = {
   completed: { label: "", textClass: "" },
-  owing: { label: "Owing", textClass: "text-purple-400 font-medium" },
+  owing: { label: "Owing", textClass: "text-credit font-medium" },
   cancelled: { label: "Cancelled", textClass: "text-danger font-medium" },
 };
 

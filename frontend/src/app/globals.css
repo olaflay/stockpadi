@@ -4,6 +4,7 @@
 @theme inline {
   --color-brand-accent: var(--color-brand-accent);
   --color-brand-accent-contrast: var(--color-brand-accent-contrast);
+  --color-on-brand: var(--color-on-brand);
   --color-brand-accent-active: var(--color-brand-accent-active);
   --color-surface: var(--color-surface);
   --color-surface-container-lowest: var(--color-surface-container-lowest);
@@ -17,9 +18,11 @@
   --color-outline: var(--color-outline);
   --color-outline-variant: var(--color-outline-variant);
   --color-success: var(--color-success);
+  --color-on-success: var(--color-on-success);
   --color-warning: var(--color-warning);
   --color-on-warning: var(--color-on-warning);
   --color-danger: var(--color-danger);
+  --color-on-danger: var(--color-on-danger);
   --color-stock-alert: var(--color-stock-alert);
   --color-brand-container: var(--color-brand-container);
   --color-on-brand-container: var(--color-on-brand-container);
@@ -29,6 +32,27 @@
   --color-on-warning-container: var(--color-on-warning-container);
   --color-danger-container: var(--color-danger-container);
   --color-on-danger-container: var(--color-on-danger-container);
+
+  --color-credit: var(--color-credit);
+  --color-on-credit: var(--color-on-credit);
+  --color-credit-container: var(--color-credit-container);
+  --color-on-credit-container: var(--color-on-credit-container);
+
+  --color-info: var(--color-info);
+  --color-on-info: var(--color-on-info);
+  --color-info-container: var(--color-info-container);
+  --color-on-info-container: var(--color-on-info-container);
+
+  --color-terminal: var(--color-terminal);
+  --color-on-terminal: var(--color-on-terminal);
+  --color-terminal-container: var(--color-terminal-container);
+  --color-on-terminal-container: var(--color-on-terminal-container);
+
+  --color-split: var(--color-split);
+  --color-on-split: var(--color-on-split);
+  --color-split-container: var(--color-split-container);
+  --color-on-split-container: var(--color-on-split-container);
+
   --color-inverse-surface: var(--color-inverse-surface);
   --color-inverse-on-surface: var(--color-inverse-on-surface);
   --color-badge-bg: var(--color-badge-bg);

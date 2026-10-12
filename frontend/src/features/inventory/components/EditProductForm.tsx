@@ -1,8 +1,7 @@
 import { useState, type BaseSyntheticEvent } from "react";
 import type { Control, FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { RippleButton } from "@/components/ui/Ripple";
-import { Modal } from "@/components/ui/Modal";
-import { AlertTriangle } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import {
   ProductCoreFields,
@@ -164,42 +163,17 @@ export function EditProductForm({
       </form>
 
       {/* Confirmation Warning Modal */}
-      <Modal
+      <ConfirmDialog
         isOpen={isDeleteModalOpen}
-        onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
-        title="Archive product"
-      >
-        <div className="flex flex-col items-center gap-3 text-center py-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger mb-1">
-            <AlertTriangle size={28} aria-hidden />
-          </div>
-          <p className="text-[length:var(--font-size-title)] font-semibold text-on-surface">
-            Archive this product?
-          </p>
-          <p className="text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed max-w-sm">
-            It will disappear from selling and search, while sales and stock history remain protected. The archive change will sync to every device.
-          </p>
-
-          <div className="mt-4 flex w-full gap-3">
-            <button
-              type="button"
-              onClick={() => setIsDeleteModalOpen(false)}
-              disabled={isDeleting}
-              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <RippleButton
-              type="button"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              className="flex-1 min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-danger px-4 text-[length:var(--font-size-body)] font-semibold text-white hover:opacity-95 transition-opacity disabled:opacity-50"
-            >
-              {isDeleting ? "Archiving…" : "Archive product"}
-            </RippleButton>
-          </div>
-        </div>
-      </Modal>
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isBusy={isDeleting}
+        title="Archive product?"
+        description="This product will be hidden from selling and search. Historical sales and inventory records remain protected."
+        confirmLabel="Archive product"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
 
       <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-2 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] bg-surface/95 backdrop-blur-md border-t border-border/60 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface after:pointer-events-none">
         <div className="max-w-xl md:max-w-2xl mx-auto w-full">

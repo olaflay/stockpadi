@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Receipt, Plus, BarChart3, ArrowDownLeft, XCircle } from "lucide-react";
+import { Receipt, Plus, BarChart3, ArrowDownLeft, XCircle, Smartphone, CreditCard, Layers } from "lucide-react";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -235,6 +235,8 @@ export default function SalesPage() {
                 {group.sales.map((sale) => {
                   const isVoided = Boolean(sale.voidedAt);
                   const isCredit = sale.payments.some((p) => p.method === "credit");
+                  const isSplit = sale.payments.length > 1;
+                  const primaryMethod = sale.payments[0]?.method;
                   const itemCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
                   const methodSummary =
                     sale.payments.length === 1
@@ -245,19 +247,25 @@ export default function SalesPage() {
                   if (isVoided) status = "cancelled";
                   else if (isCredit) status = "owing";
 
-                  const icon = isVoided ? (
-                    <XCircle size={18} />
-                  ) : isCredit ? (
-                    <ArrowDownLeft size={18} />
-                  ) : (
-                    <Receipt size={18} />
-                  );
+                  let icon = <Receipt size={18} />;
+                  let iconBgClass = "bg-brand-container text-on-brand-container";
 
-                  const iconBgClass = isVoided
-                    ? "bg-danger/15 text-danger"
-                    : isCredit
-                    ? "bg-purple-500/15 text-purple-400"
-                    : "bg-brand-accent/15 text-brand-accent-active";
+                  if (isVoided) {
+                    icon = <XCircle size={18} />;
+                    iconBgClass = "bg-danger-container text-on-danger-container";
+                  } else if (isCredit) {
+                    icon = <ArrowDownLeft size={18} />;
+                    iconBgClass = "bg-credit-container text-on-credit-container";
+                  } else if (isSplit) {
+                    icon = <Layers size={18} />;
+                    iconBgClass = "bg-split-container text-on-split-container";
+                  } else if (primaryMethod === "transfer") {
+                    icon = <Smartphone size={18} />;
+                    iconBgClass = "bg-info-container text-on-info-container";
+                  } else if (primaryMethod === "pos_terminal") {
+                    icon = <CreditCard size={18} />;
+                    iconBgClass = "bg-terminal-container text-on-terminal-container";
+                  }
 
                   return (
                     <li key={sale.id}>
