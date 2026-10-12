@@ -12,6 +12,8 @@ import { recordRetry } from "@/features/sync/sync-observability";
 
 let lastPreloadAt = 0;
 let lastPreloadResult: SessionPreloadResult | null = null;
+let lastPreloadSessionKey: string | null = null;
+let redactedWorkerSession: string | null = null;
 // Non-forced callers are throttled as a final guard against accidental duplicate
 // callers. The coordinator's active reconciliation is ten minutes and all
 // event-driven triggers use a forced cursor pull.
@@ -123,9 +125,6 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
     lastPreloadResult = result;
     return result;
   }
-  if (!force && Date.now() - lastPreloadAt < PRELOAD_THROTTLE_MS && lastPreloadResult) return lastPreloadResult;
-  lastPreloadAt = Date.now();
-
   const businessId = await getLocalBusinessId();
   if (!businessId) {
     const result = empty(false);
@@ -138,6 +137,23 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   // failed-pull diagnostic (which would incorrectly show "Refresh needed").
   const session = await db.session.get(SESSION_SINGLETON_ID);
   const localUser = session ? await db.localUsers.get(session.userId) : undefined;
+  const sessionKey = `${businessId}:${localUser?.id ?? "unknown"}:${localUser?.accountType ?? "unknown"}`;
+  if (lastPreloadSessionKey !== sessionKey) {
+    lastPreloadAt = 0;
+    lastPreloadResult = null;
+    redactedWorkerSession = null;
+    lastPreloadSessionKey = sessionKey;
+  }
+  if (localUser?.accountType === "WORKER") {
+    if (redactedWorkerSession !== sessionKey) {
+      await redactWorkerCostCache(businessId);
+      redactedWorkerSession = sessionKey;
+    }
+  } else {
+    redactedWorkerSession = null;
+  }
+  if (!force && Date.now() - lastPreloadAt < PRELOAD_THROTTLE_MS && lastPreloadResult) return lastPreloadResult;
+  lastPreloadAt = Date.now();
   if (
     localUser?.accountType === "BUSINESS_OWNER" &&
     localUser.businessStatus &&
@@ -151,8 +167,9 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   const pulls: PullEndpointResult[] = [];
   const pullStateId = `${businessId}:session`;
   const priorState = await db.syncPullState.get(pullStateId);
-  const initialCursor = priorState?.cursor ?? null;
-  const bypassBackoff = ["manual", "push-success", "online", "local-write", "realtime-reconnect", "resume", "service-worker"].includes(trigger)
+  const restoreOwnerSensitiveData = localUser?.accountType !== "WORKER" && priorState?.workerCostReadModelsRedacted === true;
+  const initialCursor = restoreOwnerSensitiveData ? null : priorState?.cursor ?? null;
+  const bypassBackoff = restoreOwnerSensitiveData || ["manual", "push-success", "online", "local-write", "realtime-reconnect", "resume", "service-worker"].includes(trigger)
     || (trigger === "online" && priorState?.lastPullErrorCode === "NETWORK_UNAVAILABLE");
   if (!bypassBackoff && priorState?.nextPullAttemptAt && priorState.nextPullAttemptAt > startedAt) {
     return lastPreloadResult ?? empty(false);
@@ -262,6 +279,7 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
       nextPullAttemptAt: null,
       lastPullDurationMs: Math.max(0, Date.now() - pullStartedClock),
       lastCoordinatorPhase: "downloading",
+      workerCostReadModelsRedacted: localUser?.accountType === "WORKER",
     });
     await storeDiagnostic(businessId, {
       endpoint: "/api/sync/pull",
@@ -318,6 +336,34 @@ export async function preloadSessionData(force = false, trigger: SyncPullTrigger
   };
   lastPreloadResult = result;
   return result;
+}
+
+async function redactWorkerCostCache(businessId: string): Promise<void> {
+  await db.transaction("rw", db.products, db.sales, db.syncPullState, async () => {
+    await db.products.where("businessId").equals(businessId).modify((product) => {
+      (product as Product).costPrice = 0;
+    });
+    await db.sales.where("businessId").equals(businessId).modify((sale) => {
+      const localSale = sale as Sale;
+      localSale.items = localSale.items.map((item) => ({ ...item, unitCost: null, costBasis: null, costFlags: null }));
+    });
+    const stateId = `${businessId}:session`;
+    const state = await db.syncPullState.get(stateId);
+    await db.syncPullState.put({
+      ...(state ?? {
+        id: stateId,
+        businessId,
+        cursor: null,
+        startedAt: null,
+        completedAt: null,
+        pagesFetched: 0,
+        entityCounts: {},
+        partialErrors: [],
+        lastCompletePullAt: null,
+      }),
+      workerCostReadModelsRedacted: true,
+    });
+  });
 }
 
 function validateSessionPullResponse(raw: unknown, businessId: string, localUser: LocalUser | undefined): SessionPullResponse {
@@ -397,7 +443,7 @@ function validateEntityRecords(entity: PullEntityName, records: unknown[], local
       case "categories":
         requireString(value.id, "id", entity); requireString(value.name, "name", entity); requireTimestamp(value.created_at, "created_at", entity); break;
       case "products":
-        requireString(value.id, "id", entity); requireString(value.name, "name", entity); requireString(value.sku, "sku", entity); requireFiniteNumber(value.cost_price, "cost_price", entity); requireFiniteNumber(value.sell_price, "sell_price", entity); requireTimestamp(value.updated_at, "updated_at", entity); break;
+        requireString(value.id, "id", entity); requireString(value.name, "name", entity); requireString(value.sku, "sku", entity); if (value.cost_price !== null && value.cost_price !== undefined) requireFiniteNumber(value.cost_price, "cost_price", entity); requireFiniteNumber(value.sell_price, "sell_price", entity); requireTimestamp(value.updated_at, "updated_at", entity); break;
       case "suppliers":
         requireString(value.id, "id", entity); requireString(value.name, "name", entity); requireTimestamp(value.updated_at, "updated_at", entity); break;
       case "inventory": {

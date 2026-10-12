@@ -373,9 +373,11 @@ export default function NewPurchasePage() {
                               In list ×{added.quantity}
                             </span>
                           )}
-                          <span className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
-                            {formatCurrency(p.costPrice)}
-                          </span>
+                          {p.costPrice > 0 && (
+                            <span className="font-number text-[length:var(--font-size-caption)] tabular-nums text-on-surface-muted">
+                              {formatCurrency(p.costPrice)}
+                            </span>
+                          )}
                         </span>
                       </button>
                     </li>

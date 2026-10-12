@@ -159,7 +159,7 @@ export function RestockLineRow(props: {
             </span>
           ) : (
             <span className="text-[11px]">
-              Current cost: {formatCurrency(product.costPrice)}
+              Enter the unit cost from the supplier's invoice.
             </span>
           )}
         </div>

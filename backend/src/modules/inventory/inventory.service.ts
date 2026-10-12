@@ -26,10 +26,23 @@ export async function listProducts(db: SupabaseClient, actor: User) {
   const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireCapability(context, "VIEW_PRODUCTS");
-  const query = db.from("products").select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, cost_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at").eq("business_id", context.businessId).order("name");
-  const { data, error } = await query;
-  if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
-  return { products: data ?? [], businessId: context.businessId };
+  const includeCost = context.accountType !== "WORKER";
+  let products: Array<Record<string, unknown>>;
+  if (includeCost) {
+    const { data, error } = await supabaseAdmin().from("products")
+      .select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, cost_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at")
+      .eq("business_id", context.businessId).order("name");
+    if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
+    products = (data ?? []) as unknown as Array<Record<string, unknown>>;
+  } else {
+    const { data, error } = await db.from("products")
+      .select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at")
+      .eq("business_id", context.businessId).order("name");
+    if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
+    // Preserve the public numeric response shape without disclosing the real cost.
+    products = (data ?? []).map((product) => ({ ...product, cost_price: 0 }));
+  }
+  return { products, businessId: context.businessId };
 }
 
 export async function listCategories(db: SupabaseClient, actor: User) {

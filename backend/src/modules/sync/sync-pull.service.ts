@@ -22,6 +22,7 @@ interface PullCursor {
   upperWatermark: string;
   positions: Record<string, TimestampPosition | InventoryPosition | undefined>;
   deferred: string[];
+  sensitiveDataPolicyVersion?: 1;
 }
 
 export interface PullEntityResult { entity: string; success: boolean; records: unknown[]; lastSuccessfulPullAt: string | null; error: { code: string; message: string } | null; }
@@ -31,7 +32,7 @@ function encodeCursor(value: PullCursor): string { return Buffer.from(JSON.strin
 function decodeCursor(value: string | undefined, serverTime: string): PullCursor {
   if (!value) return { version: 2, lowerWatermark: "1970-01-01T00:00:00.000Z", upperWatermark: serverTime, positions: {}, deferred: [] };
   try {
-    const decoded = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { version?: number; watermark?: string; lowerWatermark?: string; upperWatermark?: string; positions?: PullCursor["positions"]; deferred?: unknown[]; complete?: boolean };
+    const decoded = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { version?: number; watermark?: string; lowerWatermark?: string; upperWatermark?: string; positions?: PullCursor["positions"]; deferred?: unknown[]; complete?: boolean; sensitiveDataPolicyVersion?: number };
     if (decoded.version === 1 && typeof decoded.watermark === "string") {
       return { version: 2, lowerWatermark: decoded.watermark, upperWatermark: serverTime, positions: {}, deferred: [] };
     }
@@ -47,8 +48,9 @@ function decodeCursor(value: string | undefined, serverTime: string): PullCursor
     const deferred = Array.isArray(decoded.deferred)
       ? decoded.deferred.filter((entity): entity is string => typeof entity === "string" && CURSOR_DATASETS.has(entity))
       : [];
-    if (decoded.complete) return { version: 2, lowerWatermark: deferred.length ? decoded.lowerWatermark : decoded.upperWatermark, upperWatermark: serverTime, positions: {}, deferred };
-    return { ...decoded, deferred } as PullCursor;
+    const sensitiveDataPolicyVersion = decoded.sensitiveDataPolicyVersion === 1 ? 1 : undefined;
+    if (decoded.complete) return { version: 2, lowerWatermark: deferred.length ? decoded.lowerWatermark : decoded.upperWatermark, upperWatermark: serverTime, positions: {}, deferred, sensitiveDataPolicyVersion };
+    return { ...decoded, deferred, sensitiveDataPolicyVersion } as PullCursor;
   } catch { throw new HttpError(400, "INVALID_CURSOR", "The sync cursor is invalid. A complete refresh is required."); }
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
@@ -93,6 +95,15 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   const serverTime = new Date().toISOString();
   const cursor = decodeCursor(requestedCursor, serverTime);
+  // Existing worker devices may have cached cost fields from earlier pulls.
+  // Re-fetch their permitted product and receipt datasets once so those rows
+  // are overwritten with cost-free server projections, then resume deltas.
+  if (context.accountType === "WORKER" && cursor.sensitiveDataPolicyVersion !== 1) {
+    cursor.positions.products = undefined;
+    cursor.positions.sales = undefined;
+    cursor.lowerWatermark = "1970-01-01T00:00:00.000Z";
+    cursor.sensitiveDataPolicyVersion = 1;
+  }
   const entities: PullEntityResult[] = [];
   const more: boolean[] = [];
   const deferred = new Set(cursor.deferred);
@@ -165,11 +176,30 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
   await pullEntity(entities, "products", async () => {
     if (!hasCapability(context, "VIEW_PRODUCTS")) return skip("products");
     allow("products");
-    let query = db.from("products").select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, cost_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at").eq("business_id", context.businessId).lte("updated_at", cursor.upperWatermark).order("updated_at").order("id").limit(PAGE_SIZE + 1);
+    const includeCost = context.accountType !== "WORKER";
     const position = cursor.positions.products;
-    if (isTimestampPosition(position)) query = query.or(`updated_at.gt.${position.time},and(updated_at.eq.${position.time},id.gt.${position.id})`); else query = query.gt("updated_at", cursor.lowerWatermark);
-    const { data, error } = await query; if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
-    const page = takePage(cursor, "products", data ?? [], position); more.push(page.hasMore); return page.records;
+    let records: Array<Record<string, unknown>>;
+    if (includeCost) {
+      let query = supabaseAdmin().from("products")
+        .select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, cost_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at")
+        .eq("business_id", context.businessId).lte("updated_at", cursor.upperWatermark).order("updated_at").order("id").limit(PAGE_SIZE + 1);
+      if (isTimestampPosition(position)) query = query.or(`updated_at.gt.${position.time},and(updated_at.eq.${position.time},id.gt.${position.id})`); else query = query.gt("updated_at", cursor.lowerWatermark);
+      const { data, error } = await query;
+      if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
+      records = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    } else {
+      let query = db.from("products")
+        .select("id, business_id, sku, barcode, name, category_id, brand_id, unit_label, alt_unit_label, alt_unit_conversion_factor, alt_unit_sell_price, sell_price, low_stock_threshold, expiry_tracking, expiry_date, archived, version, updated_at")
+        .eq("business_id", context.businessId).lte("updated_at", cursor.upperWatermark).order("updated_at").order("id").limit(PAGE_SIZE + 1);
+      if (isTimestampPosition(position)) query = query.or(`updated_at.gt.${position.time},and(updated_at.eq.${position.time},id.gt.${position.id})`); else query = query.gt("updated_at", cursor.lowerWatermark);
+      const { data, error } = await query;
+      if (error) throw new HttpError(500, "PRODUCTS_LOAD_FAILED", error.message);
+      // Keep the legacy numeric field valid for installed clients while hiding
+      // the actual cost from worker accounts.
+      records = (data ?? []).map((product) => ({ ...product, cost_price: 0 }));
+    }
+    const page = takePage(cursor, "products", records, position); more.push(page.hasMore);
+    return page.records;
   });
 
   await pullEntity(entities, "suppliers", async () => {
@@ -222,9 +252,17 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
     const { data, error } = await query; if (error) throw new HttpError(500, "SALES_LOAD_FAILED", error.message);
     const page = takePage(cursor, "sales", data ?? [], position);
     const ids = page.records.map((row) => (row as { id: string }).id);
-    const [saleItems, { data: payments, error: paymentError }] = ids.length ? await Promise.all([
-      tolerantSelect(
-        (columns) => db.from("sale_items").select(columns).in("sale_id", ids),
+    const loadSaleItems = async () => {
+      if (!ids.length) return [];
+      if (context.accountType === "WORKER") {
+        const { data: items, error: itemsError } = await db.from("sale_items")
+          .select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor")
+          .in("sale_id", ids);
+        if (itemsError) throw new HttpError(500, "SALES_LOAD_FAILED", itemsError.message);
+        return items ?? [];
+      }
+      return tolerantSelect(
+        (columns) => supabaseAdmin().from("sale_items").select(columns).in("sale_id", ids),
         {
           table: "sale_items",
           baseColumns: ["sale_id", "product_id", "quantity", "unit_price", "discount", "unit_label", "unit_conversion_factor"],
@@ -232,9 +270,12 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
         }
       ).catch((err) => {
         throw new HttpError(500, "SALES_LOAD_FAILED", err.message ?? "Could not load sale items");
-      }),
-      db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids),
-    ]) : [[], { data: [], error: null }];
+      });
+    };
+    const [saleItems, { data: payments, error: paymentError }] = await Promise.all([
+      loadSaleItems(),
+      ids.length ? db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids) : Promise.resolve({ data: [], error: null }),
+    ]);
     if (paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", paymentError.message);
     const creatorIds = [...new Set(page.records.map((sale) => String((sale as { created_by_user_id?: unknown }).created_by_user_id ?? "")).filter(Boolean))];
     const creatorNames = await loadSaleCreatorNames(context.businessId!, creatorIds);
@@ -296,6 +337,7 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
     upperWatermark: cursor.upperWatermark,
     positions: {},
     deferred: deferredEntities,
+    ...(cursor.sensitiveDataPolicyVersion === undefined ? {} : { sensitiveDataPolicyVersion: cursor.sensitiveDataPolicyVersion }),
     complete: true,
   } as PullCursor & { complete: true });
   return { ok: true, businessId: context.businessId, serverTime: cursor.upperWatermark, cursor: hasMore ? null : completedCursor, nextCursor: hasMore ? nextCursor : null, hasMore, entities };

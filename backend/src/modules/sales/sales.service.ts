@@ -36,8 +36,11 @@ export async function listSales(db: SupabaseClient, actor: User) {
       }
     }
   }
+  const loadSaleItems = () => context.accountType === "WORKER"
+    ? db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor").in("sale_id", ids)
+    : supabaseAdmin().from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids);
   const [{ data: items, error: itemError }, { data: payments, error: paymentError }] = await Promise.all([
-    db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids),
+    loadSaleItems(),
     db.from("sale_payments").select("sale_id, method, amount").in("sale_id", ids),
   ]);
   if (itemError || paymentError) throw new HttpError(500, "SALES_LOAD_FAILED", itemError?.message ?? paymentError?.message ?? "Could not load sale details");

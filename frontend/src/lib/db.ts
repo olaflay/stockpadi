@@ -181,6 +181,8 @@ export interface SyncPullState {
   entityCounts: Record<string, number>;
   partialErrors: string[];
   lastCompletePullAt: string | null;
+  /** True while worker-safe read models have replaced owner-only cost fields. */
+  workerCostReadModelsRedacted?: boolean;
   /** The last automatic/manual event that initiated a pull. Safe diagnostics only. */
   lastPullTrigger?: string | null;
   /** Set when connectivity/foreground/auth caused an immediate pull attempt. */

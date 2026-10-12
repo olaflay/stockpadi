@@ -54,6 +54,52 @@ function healthPayload() {
   };
 }
 
+const EXACT_ROUTE_METHODS = new Map<string, readonly string[]>([
+  ["/", ["GET"]],
+  ["/health", ["GET"]],
+  ["/api/health", ["GET"]],
+  [businessRoutes.path, ["POST"]],
+  [branchRoutes.list, ["GET", "POST"]],
+  [profileRoutes.path, ["GET", "PATCH"]],
+  [customerRoutes.list, ["GET", "POST"]],
+  [customerRoutes.creditPayment, ["POST"]],
+  [purchaseRoutes.list, ["GET"]],
+  [purchaseRoutes.receive, ["POST"]],
+  [expenseRoutes.list, ["GET", "POST"]],
+  [inventoryRoutes.product, ["GET", "POST"]],
+  [inventoryRoutes.categories, ["GET"]],
+  [inventoryRoutes.stockAdjustment, ["POST"]],
+  [inventoryRoutes.stockCount, ["POST"]],
+  [inventoryRoutes.stock, ["GET"]],
+  [reportRoutes.summary, ["GET", "POST"]],
+  [reconciliationRoutes.summary, ["GET", "POST"]],
+  [reconciliationRoutes.submit, ["POST"]],
+  [reconciliationRoutes.history, ["GET"]],
+  [workerRoutes.list.path, ["GET", "POST"]],
+  [workerRoutes.audit.path, ["GET"]],
+  [adminRoutes.path, ["POST"]],
+  [accountRoutes.path, ["POST"]],
+  [salesRoutes.list, ["GET"]],
+  [salesRoutes.path, ["POST"]],
+  [salesRoutes.refund, ["POST"]],
+  [emailVerificationRoutes.send, ["POST"]],
+  [emailVerificationRoutes.verify, ["POST"]],
+  [passwordRoutes.update, ["POST"]],
+  [syncRoutes.pull, ["GET"]],
+  [syncRoutes.health, ["GET"]],
+  [syncRoutes.push, ["POST"]],
+]);
+
+function allowedMethods(pathname: string): readonly string[] | null {
+  const methods = EXACT_ROUTE_METHODS.get(pathname);
+  if (methods) return methods;
+  if (/^\/api\/businesses\/branches\/[^/]+$/.test(pathname)) return ["PATCH", "DELETE"];
+  if (/^\/api\/workers\/[^/]+\/action$/.test(pathname)) return ["POST"];
+  if (pathname.startsWith(customerRoutes.detailPrefix)) return ["GET"];
+  if (pathname.startsWith("/api/workers/") && pathname !== workerRoutes.audit.path) return ["GET"];
+  return null;
+}
+
 // Cap request bodies to bound memory use on a raw http server with no
 // framework-level body size guard. 1 MiB is ample for every endpoint here
 // (the largest payloads are sync batches / close-day submissions, which the
@@ -156,13 +202,19 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
   logger.info("request started", { method: request.method, path: pathname });
 
   try {
+    if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
+    const methods = allowedMethods(pathname);
+    if (methods && !methods.includes(request.method)) {
+      const response = jsonResponse(405, { error: { code: "METHOD_NOT_ALLOWED", message: "This method is not allowed for the requested route." } }, requestOrigin);
+      response.headers.set("allow", methods.join(", "));
+      return response;
+    }
     const limited = rateLimitResponse(request, pathname);
     if (limited) return limited;
     const contentLength = Number(request.headers.get("content-length") ?? 0);
     if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
       return jsonResponse(413, { error: { code: "PAYLOAD_TOO_LARGE", message: `Request body must not exceed ${MAX_BODY_BYTES} bytes` } }, requestOrigin);
     }
-    if (request.method === "OPTIONS") return jsonResponse(204, null, requestOrigin);
     if (request.method === "GET" && (pathname === "/" || pathname === "/health" || pathname === "/api/health")) return jsonResponse(200, healthPayload(), requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);

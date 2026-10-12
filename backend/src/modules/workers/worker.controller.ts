@@ -7,13 +7,13 @@ import { executeWorkerOperation, getStaffAudit, getStaffMember, listStaff } from
 export async function handleWorkerList(request: globalThis.Request) {
   const auth = await authenticateRequest(request);
   const context = await resolveAccountContext(supabaseAdmin(), auth.user, { allowPendingOwner: true });
-  return listStaff(context, supabaseForAccessToken(auth.accessToken));
+  return listStaff(context, supabaseAdmin());
 }
 
 export async function handleWorkerMember(request: globalThis.Request, userId: string) {
   const auth = await authenticateRequest(request);
   const context = await resolveAccountContext(supabaseAdmin(), auth.user, { allowPendingOwner: true });
-  return getStaffMember(context, userId, supabaseForAccessToken(auth.accessToken));
+  return getStaffMember(context, userId, supabaseAdmin());
 }
 
 export async function handleWorkerAudit(request: globalThis.Request) {

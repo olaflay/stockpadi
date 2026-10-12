@@ -3,9 +3,10 @@ import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import { requireBusinessOwner } from "../authorization/capabilities.js";
 import { queueSyncHints } from "../sync/sync-hints.js";
+import { supabaseAdmin } from "../../shared/supabase/client.js";
 
 export async function getBusinessProfile(db: SupabaseClient, actor: User) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   const { data, error } = await db.from("business_profile").select("id, name, business_type, currency, branding, status, owing_message_template, updated_at").eq("id", context.businessId).maybeSingle();
   if (error) throw new HttpError(500, "PROFILE_LOAD_FAILED", "Could not load the business profile.");
@@ -14,7 +15,7 @@ export async function getBusinessProfile(db: SupabaseClient, actor: User) {
 }
 
 export async function updateBusinessProfile(db: SupabaseClient, actor: User, input: unknown) {
-  const context = await resolveAccountContext(db, actor);
+  const context = await resolveAccountContext(supabaseAdmin(), actor);
   if (!context.businessId) throw new HttpError(403, "FORBIDDEN", "A business account is required");
   requireBusinessOwner(context);
   const body = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;

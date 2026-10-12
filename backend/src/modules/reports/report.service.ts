@@ -33,16 +33,25 @@ export async function reportSummary(db: SupabaseClient, actor: User, input: unkn
   const expenseRows = (expenses.data ?? []).filter(filterBranch);
   const purchaseRows = (purchases.data ?? []).filter(filterBranch);
   const refundRows = (refunds.data ?? []).filter(filterBranch);
-  const { data: products, error: productsError } = await db.from("products").select("id, name, sku, cost_price, sell_price, low_stock_threshold").eq("business_id", context.businessId);
-  if (productsError) throw new HttpError(500, "REPORT_FAILED", productsError.message);
-  const productIds = (products ?? []).map((product) => product.id as string);
+  let products: Array<Record<string, unknown>> = [];
+  if (context.accountType !== "WORKER") {
+    const { data, error } = await supabaseAdmin().from("products")
+      .select("id, name, sku, cost_price, sell_price, low_stock_threshold")
+      .eq("business_id", context.businessId);
+    if (error) throw new HttpError(500, "REPORT_FAILED", error.message);
+    products = (data ?? []) as unknown as Array<Record<string, unknown>>;
+  }
+  const productIds = products.map((product) => product.id as string);
   const stockResult = productIds.length ? await db.from("inventory_stock").select("product_id, branch_id, quantity").in("product_id", productIds) : { data: [], error: null };
   if (stockResult.error) throw new HttpError(500, "REPORT_FAILED", stockResult.error.message);
   const saleIds = salesRows.map((sale) => sale.id as string);
   const refundIds = refundRows.map((refund) => refund.id as string);
+  const loadSaleItems = (ids: string[]) => context.accountType === "WORKER"
+    ? db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor").in("sale_id", ids)
+    : supabaseAdmin().from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids);
   const [paymentResult, itemResult, refundItemResult, refundPaymentResult] = saleIds.length || refundIds.length ? await Promise.all([
     db.from("sale_payments").select("sale_id, method, amount").in("sale_id", saleIds),
-    db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", saleIds),
+    loadSaleItems(saleIds),
     db.from("sale_refund_items").select("refund_id, product_id, quantity, unit_price, total, unit_conversion_factor").in("refund_id", refundIds),
     db.from("sale_refund_payments").select("refund_id, method, amount").in("refund_id", refundIds),
   ]) : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
