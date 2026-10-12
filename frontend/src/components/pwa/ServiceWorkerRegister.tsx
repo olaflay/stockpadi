@@ -23,7 +23,6 @@ export function ServiceWorkerRegister() {
   const [databaseBlocked, setDatabaseBlocked] = useState(false);
   const databaseBlockedRef = useRef(false);
   const syncPhaseRef = useRef(syncPhase);
-  syncPhaseRef.current = syncPhase;
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const registrationPromise = useRef<Promise<ServiceWorkerRegistration> | null>(null);
   const updateCheckPromise = useRef<Promise<void> | null>(null);
@@ -34,6 +33,10 @@ export function ServiceWorkerRegister() {
   const failureCount = useRef(0);
   const hadController = useRef(false);
   const disposed = useRef(false);
+
+  useEffect(() => {
+    syncPhaseRef.current = syncPhase;
+  }, [syncPhase]);
 
   const showFallback = useCallback((message?: string) => {
     if (message) setUpdateMessage(message);

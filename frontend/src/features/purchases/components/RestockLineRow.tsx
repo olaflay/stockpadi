@@ -159,7 +159,7 @@ export function RestockLineRow(props: {
             </span>
           ) : (
             <span className="text-[11px]">
-              Enter the unit cost from the supplier's invoice.
+              Enter the unit cost from the supplier&apos;s invoice.
             </span>
           )}
         </div>
