@@ -11,6 +11,7 @@ import { PAYMENT_METHODS, type PaymentMethod, type SalePayment } from "@/types/s
 import { db, type LocalCustomer } from "@/lib/db";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { isContactPickerSupported, openNativeContactPicker } from "@/lib/contact-picker";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
@@ -82,6 +83,7 @@ export function PaymentStep(props: {
   } = props;
 
   const { showToast } = useToast();
+  const isKeyboardOpen = useKeyboardOpen();
   const [customerSearch, setCustomerSearch] = useState("");
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -235,11 +237,11 @@ export function PaymentStep(props: {
   }
 
   return (
-    <div key="payment" className="flex h-full min-w-0 flex-col gap-4 animate-step-in">
+    <div key="payment" className="flex h-full min-w-0 flex-col gap-2.5 animate-step-in">
       {!hideHeader && <ScreenHeader title="Payment" onBack={onBack} />}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto pb-2">
-        <div className="flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1">
+        <div className="flex flex-col gap-1 rounded-[var(--radius-card)] bg-surface-container-low px-3.5 py-2">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
               {itemCount} item{itemCount === 1 ? "" : "s"}
@@ -302,6 +304,9 @@ export function PaymentStep(props: {
                   step="0.01"
                   value={payment.amount}
                   onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLElement).blur();
+                  }}
                   className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body)] font-number font-semibold text-on-surface outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                 />
               </div>
@@ -330,6 +335,9 @@ export function PaymentStep(props: {
                     placeholder="Sender name / session ID"
                     value={transferMeta[index]?.sender ?? ""}
                     onChange={(e) => setTransferSender(index, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLElement).blur();
+                    }}
                     className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                   />
                 </div>
@@ -358,6 +366,9 @@ export function PaymentStep(props: {
                     placeholder="Terminal account / label (e.g. Counter 1, Lekki POS)"
                     value={posMeta[index]?.terminalLabel ?? ""}
                     onChange={(e) => setPosTerminalLabel(index, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLElement).blur();
+                    }}
                     className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-caption)] text-on-surface"
                   />
                 </div>
@@ -439,6 +450,9 @@ export function PaymentStep(props: {
               placeholder="How much did the customer give you?"
               value={cashTendered}
               onChange={(e) => handleTenderedTyped(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLElement).blur();
+              }}
               className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums outline-none focus:ring-2 focus:ring-brand-accent/20"
             />
             {tenderedAmount > 0 && (
@@ -510,6 +524,9 @@ export function PaymentStep(props: {
                         aria-label="Add customer phone number"
                         value={missingPhoneInput}
                         onChange={(e) => setMissingPhoneInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLElement).blur();
+                        }}
                         placeholder="e.g. 0803 123 4567"
                         className="min-h-[36px] flex-1 rounded-[var(--radius-control)] bg-surface px-2.5 text-xs text-on-surface outline-none border border-border"
                       />
@@ -532,6 +549,9 @@ export function PaymentStep(props: {
                   aria-label="Search customer by name or phone"
                   value={customerSearch}
                   onChange={(event) => setCustomerSearch(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLElement).blur();
+                  }}
                   placeholder="Search customer by name or phone"
                   className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                 />
@@ -580,6 +600,9 @@ export function PaymentStep(props: {
                       autoFocus
                       value={newCustomerName}
                       onChange={(event) => setNewCustomerName(event.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") (e.target as HTMLElement).blur();
+                      }}
                       placeholder="Customer name *"
                       className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                     />
@@ -588,6 +611,9 @@ export function PaymentStep(props: {
                         aria-label="Phone (required for credit)"
                         value={newCustomerPhone}
                         onChange={(event) => setNewCustomerPhone(event.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLElement).blur();
+                        }}
                         placeholder="Phone number * (required for credit)"
                         className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                       />
@@ -621,7 +647,11 @@ export function PaymentStep(props: {
         )}
       </div>
 
-      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div
+        className={`sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200 ${
+          isKeyboardOpen ? "hidden pointer-events-none" : "flex"
+        }`}
+      >
         <RippleButton
           id="tour-pos-checkout"
           type="button"

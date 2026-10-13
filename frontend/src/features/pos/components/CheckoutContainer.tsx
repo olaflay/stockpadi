@@ -147,26 +147,28 @@ export function CheckoutContainer(props: {
 
   return (
     <div
-      className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-3 animate-step-in"
+      className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-1.5 animate-step-in"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Reliable Header with Back Button */}
-      <ScreenHeader
-        title={activeTab === "cart" ? "Review Cart" : "Payment & Tender"}
-        onBack={handleBack}
-      />
-
-      {/* Top Segmented Control Track (No Icons, Text-Only) */}
-      <div className="px-0.5">
-        <M3SegmentedButton
-          type="single"
-          options={segmentOptions}
-          value={activeTab}
-          onChange={(val) => setActiveTab(val as "cart" | "payment")}
-          size="default"
-          ariaLabel="Checkout step tabs"
+      {/* Sticky Header & Compact Segmented Control Track */}
+      <div className="sticky top-0 z-10 shrink-0 bg-surface/98 backdrop-blur-xs flex flex-col gap-1.5 pb-1">
+        <ScreenHeader
+          title={activeTab === "cart" ? "Review Cart" : "Payment & Tender"}
+          onBack={handleBack}
+          className="mb-0 min-h-[40px]"
         />
+
+        <div className="px-0.5">
+          <M3SegmentedButton
+            type="single"
+            options={segmentOptions}
+            value={activeTab}
+            onChange={(val) => setActiveTab(val as "cart" | "payment")}
+            size="compact"
+            ariaLabel="Checkout step tabs"
+          />
+        </div>
       </div>
 
       {/* Horizontally-Segmented Carousel Panes */}

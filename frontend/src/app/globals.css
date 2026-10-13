@@ -298,6 +298,19 @@ body {
   animation: count-pop var(--motion-duration-medium) var(--easing-emphasized-decelerate);
 }
 
+/* Progressive gradient scrim for floating/sticky bottom CTA action bars.
+   Solid surface color behind the button for contrast, easing smoothly
+   to transparent at the top so scrolling content dissolves naturally without harsh borders. */
+.cta-scrim-container {
+  background: linear-gradient(
+    to top,
+    var(--color-surface) 0%,
+    var(--color-surface) 60%,
+    color-mix(in srgb, var(--color-surface) 80%, transparent) 82%,
+    transparent 100%
+  );
+}
+
 /* Toast entrance animation from top */
 @keyframes toast-slide-down {
   from {

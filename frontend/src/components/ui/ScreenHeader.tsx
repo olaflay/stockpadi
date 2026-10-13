@@ -25,6 +25,10 @@ interface ScreenHeaderProps {
    * Optional right-hand action (e.g. Cancel button, view reports link)
    */
   action?: React.ReactNode;
+  /**
+   * Optional container className override (e.g. for tight header bars)
+   */
+  className?: string;
 }
 
 export function ScreenHeader({
@@ -33,6 +37,7 @@ export function ScreenHeader({
   backHref,
   hideBack = false,
   action,
+  className,
 }: ScreenHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -87,7 +92,7 @@ export function ScreenHeader({
     "flex h-12 w-12 shrink-0 -ml-2 items-center justify-center rounded-full text-on-surface hover:bg-surface-container active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent";
 
   return (
-    <div className="mb-3.5 sm:mb-4 flex items-center gap-2 sm:gap-2.5 min-h-[48px]">
+    <div className={`flex items-center gap-2 sm:gap-2.5 ${className ?? "mb-3.5 sm:mb-4 min-h-[48px]"}`}>
       <button
         type="button"
         onClick={handleBack}

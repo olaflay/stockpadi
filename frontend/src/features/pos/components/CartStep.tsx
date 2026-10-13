@@ -76,10 +76,10 @@ export function CartStep(props: {
   }
 
   return (
-    <div key="cart" className="flex h-full min-w-0 flex-col gap-4 animate-step-in">
+    <div key="cart" className="flex h-full min-w-0 flex-col gap-2.5 animate-step-in">
       {!hideHeader && <ScreenHeader title="Cart" onBack={onBack} />}
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 py-0.5">
         <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
           {itemCount} item{itemCount === 1 ? "" : "s"}
         </span>
@@ -104,7 +104,7 @@ export function CartStep(props: {
         </div>
       </div>
 
-      <ul className="flex flex-1 flex-col gap-2 overflow-y-auto pb-2">
+      <ul className="flex flex-1 flex-col gap-2 overflow-y-auto pb-1">
         {cartLines.map((line) => {
           const product = products.find((p) => p.id === line.productId);
           if (!product) return null;
@@ -207,7 +207,9 @@ export function CartStep(props: {
         })}
       </ul>
 
-      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-3 border-t border-border/60 bg-surface/95 backdrop-blur-md px-gutter sm:px-gutter-lg pt-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div
+        className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200"
+      >
         {hasOutOfStockItem && (
           <div className="rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger flex items-center justify-between">
             <span>

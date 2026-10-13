@@ -4,35 +4,84 @@ import { useEffect, useState } from "react";
 
 /**
  * Detects when the on-screen soft keyboard is open on mobile browsers via
- * window.visualViewport. When the keyboard opens with
- * `interactive-widget=resizes-content`, the visual viewport shrinks; a large
- * drop in height relative to window.innerHeight means the keyboard is up.
+ * the VisualViewport API and focused text-entry inputs.
  *
- * Used to hide the bottom nav during text entry (Google Drive behaviour)
- * instead of letting `position: fixed; bottom: 0` float above the keyboard.
+ * When an input receives focus on a touch device or when the visual viewport
+ * drops significantly (> 100px below window.innerHeight), this returns true.
+ *
+ * Used to hide fixed/sticky bottom action bars (CTA buttons, bottom nav)
+ * during text entry so they never float upward to obstruct inputs or squash the screen.
  */
 export function useKeyboardOpen(): boolean {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
+    if (typeof window === "undefined") return;
 
-    let lastHeight = vv.height;
+    const isTouchMobile = () =>
+      window.innerWidth < 1024 &&
+      ("ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
 
-    const onResize = () => {
-      const ratio = vv.height / window.innerHeight;
-      // Keyboard up: visual viewport drops well below layout viewport.
-      // Thumb-rule: < 0.8 of the layout height means an input is being typed.
-      setOpen(ratio < 0.8 && vv.height < lastHeight);
-      lastHeight = vv.height;
+    const checkState = () => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      const type = (activeEl as HTMLInputElement)?.type;
+      const isTextInput =
+        Boolean(isInput) &&
+        type !== "checkbox" &&
+        type !== "radio" &&
+        type !== "hidden" &&
+        type !== "file";
+
+      const vv = window.visualViewport;
+      // If visual viewport height shrunk by > 100px relative to window height, keyboard is open
+      const viewportShrunk = vv ? vv.height < window.innerHeight - 100 : false;
+
+      if (isTouchMobile() && (isTextInput || viewportShrunk)) {
+        setOpen(true);
+      } else if (viewportShrunk) {
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
     };
 
-    vv.addEventListener("resize", onResize);
-    vv.addEventListener("scroll", onResize);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleFocus = () => {
+      if (timer) clearTimeout(timer);
+      checkState();
+    };
+
+    const handleBlur = () => {
+      if (timer) clearTimeout(timer);
+      // Small tick so focus transitioning between inputs does not flicker
+      timer = setTimeout(checkState, 60);
+    };
+
+    const handleViewportChange = () => {
+      checkState();
+    };
+
+    window.addEventListener("focusin", handleFocus, { passive: true });
+    window.addEventListener("focusout", handleBlur, { passive: true });
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleViewportChange);
+
+    // Initial check in case rendered while input already focused
+    checkState();
+
     return () => {
-      vv.removeEventListener("resize", onResize);
-      vv.removeEventListener("scroll", onResize);
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("focusin", handleFocus);
+      window.removeEventListener("focusout", handleBlur);
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     };
   }, []);
 
