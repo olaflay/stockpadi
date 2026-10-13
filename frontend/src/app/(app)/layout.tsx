@@ -30,19 +30,6 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
-      {/* Global safe-area bottom blanket: guarantees every subpage, form, and detail screen blankets the curved chin */}
-      <div
-        aria-hidden
-        className="fixed bottom-0 inset-x-0 pointer-events-none z-30 bg-surface"
-        style={{
-          height: "max(16px, env(safe-area-inset-bottom, 16px))",
-        }}
-      />
-      {/* Deep overscroll blanket: guards against bounce/pull down to ensure zero black void */}
-      <div
-        aria-hidden
-        className="fixed -bottom-32 inset-x-0 h-40 pointer-events-none z-20 bg-surface"
-      />
       <BottomNav />
     </div>
   );

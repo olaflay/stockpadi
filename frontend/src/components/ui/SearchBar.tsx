@@ -54,7 +54,7 @@ export function SearchBar({
 
   return (
     <div
-      className={`relative flex min-h-[48px] w-full items-center rounded-2xl bg-surface-container-high transition-all focus-within:bg-surface-container-highest focus-within:ring-2 focus-within:ring-brand-accent/25 ${className}`}
+      className={`relative flex min-h-[48px] w-full items-center rounded-2xl bg-surface-container-high transition-all focus-within:bg-surface-container-highest focus-within:ring-2 focus-within:ring-brand-accent ${className}`}
     >
       {/* Leading Search Icon */}
       <Search
@@ -76,7 +76,7 @@ export function SearchBar({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
+        className="search-bar-input h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none focus:outline-none focus:ring-0 focus:[box-shadow:none] focus:shadow-none"
       />
 
       {/* Trailing Controls: Clear Button & Optional Trailing Action.

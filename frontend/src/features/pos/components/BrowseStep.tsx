@@ -23,6 +23,7 @@ import type { CartLine } from "@/features/pos/complete-sale";
 import type { Product } from "@/types/product";
 import type { LocalCategory } from "@/lib/db";
 import { useNavigation } from "@/components/ui/NavigationContext";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 
 export function BrowseStep(props: {
   query: string;
@@ -69,6 +70,7 @@ export function BrowseStep(props: {
   const router = useRouter();
   const { showToast } = useToast();
   const { setSearchActive, setOverrideHidden } = useNavigation();
+  const isKeyboardOpen = useKeyboardOpen();
 
   useEffect(() => {
     setOverrideHidden(itemCount > 0);
@@ -665,7 +667,11 @@ export function BrowseStep(props: {
       )}
 
       {itemCount > 0 && (
-        <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex items-center justify-between gap-3 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200 animate-step-in">
+        <div
+          className={`sticky bottom-0 z-30 mt-auto -mx-gutter sm:-mx-gutter-lg items-center justify-between gap-3 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200 animate-step-in ${
+            isKeyboardOpen ? "hidden pointer-events-none" : "flex"
+          }`}
+        >
           <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
             {itemCount} item{itemCount === 1 ? "" : "s"} · <span key={total} className="animate-count-pop font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
           </span>

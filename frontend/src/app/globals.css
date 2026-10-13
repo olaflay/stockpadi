@@ -405,6 +405,13 @@ textarea:focus {
   box-shadow: 0 0 0 2px var(--color-brand-accent);
 }
 
+input.search-bar-input:focus,
+input[type="search"].search-bar-input:focus,
+.search-bar-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 a:focus-visible,
 button:focus-visible,
 [role="button"]:focus-visible,

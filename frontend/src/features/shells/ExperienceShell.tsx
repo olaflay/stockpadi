@@ -67,19 +67,6 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <main className="min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
           {children}
         </main>
-        {/* Global safe-area bottom blanket: guarantees every subpage, form, and detail screen blankets the curved chin */}
-        <div
-          aria-hidden
-          className="fixed bottom-0 inset-x-0 pointer-events-none z-30 bg-surface"
-          style={{
-            height: "max(16px, env(safe-area-inset-bottom, 16px))",
-          }}
-        />
-        {/* Deep overscroll blanket: guards against bounce/pull down to ensure zero black void */}
-        <div
-          aria-hidden
-          className="fixed -bottom-32 inset-x-0 h-40 pointer-events-none z-20 bg-surface"
-        />
         <nav
           data-bottom-nav
           aria-label={`${shell} navigation`}
