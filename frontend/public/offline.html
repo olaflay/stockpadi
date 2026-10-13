@@ -2,102 +2,240 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>OjàPadi. Offline mode</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#121516">
+  <title>Offline</title>
   <style>
-    *, *:before, *:after { box-sizing: border-box; }
+    :root {
+      color-scheme: light dark;
+      --offline-scrim: rgb(8 12 11 / 58%);
+      --offline-panel: #171b1c;
+      --offline-panel-edge: #32383a;
+      --offline-text: #f1f5f2;
+      --offline-muted: #c0c9c3;
+      --offline-accent: #4ade80;
+      --offline-on-accent: #052e16;
+      --offline-secondary: #252b29;
+      --offline-secondary-edge: #49514c;
+      --offline-secondary-text: #f1f5f2;
+      --offline-radius: 1.75rem;
+      --offline-control-radius: 0.875rem;
+      --offline-touch-target: 2.75rem;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --offline-panel: #ffffff;
+        --offline-panel-edge: #d6dcde;
+        --offline-text: #14181a;
+        --offline-muted: #4e5a5d;
+        --offline-accent: #0a6e4d;
+        --offline-on-accent: #ffffff;
+        --offline-secondary: #eff2f3;
+        --offline-secondary-edge: #c4ccce;
+        --offline-secondary-text: #14181a;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
     body {
       margin: 0;
-      padding: 24px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif;
-      background-color: #080b14;
-      color: #f8fafc;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      color: var(--offline-text);
+      background: #121516;
+      font-family: "Google Sans Flex", "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    .offline-backdrop {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      pointer-events: none;
+      filter: blur(0.2rem) saturate(0.82);
+      transform: scale(1.035);
+      opacity: 0.78;
+    }
+
+    .offline-scrim {
+      position: fixed;
+      inset: 0;
+      background: var(--offline-scrim);
+      backdrop-filter: blur(0.45rem);
+      -webkit-backdrop-filter: blur(0.45rem);
+    }
+
+    .offline-layout {
+      position: relative;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      text-align: center;
+      min-height: 100dvh;
+      padding: 1.5rem;
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     }
-    .card {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 20px;
-      padding: 36px 24px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+
+    .offline-dialog {
+      width: min(100%, 27rem);
+      padding: 1.75rem;
+      border: 1px solid var(--offline-panel-edge);
+      border-radius: var(--offline-radius);
+      background: var(--offline-panel);
+      box-shadow: 0 1.125rem 2.5rem rgb(0 0 0 / 28%);
     }
-    .icon-badge {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: rgba(11, 122, 85, 0.15);
-      border: 1px solid rgba(11, 122, 85, 0.4);
-      color: #10b981;
+
+    .offline-icon {
+      display: grid;
+      width: 3.5rem;
+      height: 3.5rem;
+      place-items: center;
+      margin-bottom: 1.125rem;
+      border-radius: 1.25rem;
+      color: var(--offline-accent);
+      background: color-mix(in srgb, var(--offline-accent) 13%, transparent);
+    }
+
+    .offline-icon svg { width: 1.75rem; height: 1.75rem; }
+
+    h1 {
+      margin: 0 0 0.625rem;
+      font-size: clamp(1.25rem, 1.05rem + 1.5vw, 1.5rem);
+      font-weight: 650;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--offline-muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .offline-actions {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .offline-button {
       display: flex;
+      min-height: var(--offline-touch-target);
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px auto;
-      font-size: 28px;
-    }
-    h1 {
-      font-size: 20px;
-      margin: 0 0 10px 0;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.01em;
-    }
-    p {
-      font-size: 14px;
-      color: #94a3b8;
-      margin: 0 0 28px 0;
-      line-height: 1.6;
-    }
-    .btn {
-      display: block;
       width: 100%;
-      background-color: #0b7a55;
-      color: #ffffff;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 15px;
-      padding: 14px 20px;
-      border-radius: 12px;
-      margin-bottom: 12px;
+      padding: 0.75rem 1rem;
+      border: 1px solid transparent;
+      border-radius: var(--offline-control-radius);
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 650;
       text-align: center;
-      transition: background 0.2s ease;
-    }
-    .btn:hover {
-      background-color: #0d9466;
-    }
-    .btn-secondary {
-      display: block;
-      width: 100%;
-      background-color: #1e293b;
-      color: #e2e8f0;
       text-decoration: none;
-      font-weight: 600;
-      font-size: 14px;
-      padding: 12px 20px;
-      border-radius: 12px;
-      border: 1px solid #334155;
       cursor: pointer;
-      margin-bottom: 10px;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn-secondary:hover {
-      background-color: #334155;
+
+    .offline-button[hidden] { display: none; }
+
+    .offline-button:focus-visible {
+      outline: 3px solid var(--offline-accent);
+      outline-offset: 3px;
     }
+
+    .offline-button-primary {
+      color: var(--offline-on-accent);
+      background: var(--offline-accent);
+    }
+
+    .offline-button-secondary {
+      color: var(--offline-secondary-text);
+      border-color: var(--offline-secondary-edge);
+      background: var(--offline-secondary);
+    }
+
+    @media (max-width: 40rem) {
+      .offline-layout {
+        align-items: flex-end;
+        padding: 1rem;
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      .offline-dialog { padding: 1.5rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+
+    /* If this document itself is served as the cached backdrop, hide its
+       duplicate dialog while keeping the cached page inert and script-free. */
+    .offline-preview .offline-scrim,
+    .offline-preview .offline-dialog { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="icon-badge">⚡</div>
-    <h1>You're offline. OjàPadi still works.</h1>
-    <p>Your saved work stays on this device. Record sales, scan barcodes, and manage your inventory. It will upload when you're back online.</p>
-    <a href="/pos" class="btn">Go to Sell POS</a>
-    <a href="/products" class="btn-secondary">View Products</a>
-    <button onclick="window.location.reload()" class="btn-secondary">Check Connection</button>
-  </div>
+  <iframe
+    class="offline-backdrop"
+    title=""
+    aria-hidden="true"
+    tabindex="-1"
+    inert
+    sandbox="allow-same-origin"
+    referrerpolicy="no-referrer"
+  ></iframe>
+  <div class="offline-scrim" aria-hidden="true"></div>
+
+  <main class="offline-layout">
+    <section class="offline-dialog" role="dialog" aria-modal="true" aria-labelledby="offline-title" aria-describedby="offline-description">
+      <div class="offline-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9a15 15 0 0 1 17.3-2.1M6.5 12.5a9.5 9.5 0 0 1 8.8-1.8M10 16a4 4 0 0 1 3.5-.7" />
+          <path d="m3 3 18 18M12 20h.01" />
+        </svg>
+      </div>
+      <h1 id="offline-title">You’re offline.</h1>
+      <p id="offline-description">Your work is saved on this device. Record sales, scan barcodes, and manage inventory. It uploads when you’re back online.</p>
+      <div class="offline-actions">
+        <button class="offline-button offline-button-primary" id="retry-button" type="button">Try again</button>
+        <button class="offline-button offline-button-secondary" id="back-button" type="button" hidden>Go back</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const backdrop = document.querySelector(".offline-backdrop");
+      const backButton = document.getElementById("back-button");
+      let sameOriginReferrer = null;
+
+      try {
+        const referrer = new URL(document.referrer);
+        if (referrer.origin === window.location.origin && referrer.pathname !== window.location.pathname) {
+          sameOriginReferrer = referrer;
+          backButton.hidden = false;
+          backdrop.src = referrer.pathname;
+          backdrop.addEventListener("load", () => {
+            try {
+              backdrop.contentDocument?.documentElement.classList.add("offline-preview");
+            } catch { /* A cached cross-origin response is never made interactive. */ }
+          });
+        }
+      } catch { /* No safe same-origin page is available behind this dialog. */ }
+
+      document.getElementById("retry-button").addEventListener("click", () => window.location.reload());
+      backButton.addEventListener("click", () => {
+        window.location.assign(sameOriginReferrer ? sameOriginReferrer.pathname : "/");
+      });
+      document.getElementById("retry-button").focus({ preventScroll: true });
+    })();
+  </script>
 </body>
 </html>
