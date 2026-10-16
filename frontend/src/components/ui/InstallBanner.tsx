@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
+import { Download, Share, X } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 import { getBrandingConfig } from "@/config/branding";
 
@@ -30,14 +30,31 @@ function rememberInstallPromptDismissal(): void {
   }
 }
 
+function isIosSafari(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const isIos = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: boolean }).MSStream;
+  const isStandalone =
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+    (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches);
+  return isIos && !isStandalone;
+}
+
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIos, setIsIos] = useState(false);
   const [visible, setVisible] = useState(false);
   const branding = getBrandingConfig();
 
   useEffect(() => {
     // If user has dismissed it recently, don't show
     if (isInstallPromptDismissed()) return;
+
+    if (isIosSafari()) {
+      setIsIos(true);
+      setVisible(true);
+      return;
+    }
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -73,7 +90,7 @@ export function InstallBanner() {
     setVisible(false);
   };
 
-  if (!visible || !deferredPrompt) return null;
+  if (!visible || (!isIos && !deferredPrompt)) return null;
 
   return (
     <div
@@ -81,20 +98,28 @@ export function InstallBanner() {
       aria-live="polite"
       className="relative flex items-center justify-between gap-3 bg-brand-accent px-5 py-3 text-brand-accent-contrast shadow-[var(--shadow-elevation-1)] animate-step-in"
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <Download size={18} className="shrink-0" />
-        <span className="text-[length:var(--font-size-caption)] font-medium truncate">
-          Install {branding.businessName} for faster, offline access
-        </span>
+        {isIos ? (
+          <span className="text-[length:var(--font-size-caption)] font-medium leading-tight">
+            Install {branding.businessName}: tap <Share size={14} className="inline-block mx-0.5 -mt-0.5" /> then &ldquo;Add to Home Screen&rdquo;
+          </span>
+        ) : (
+          <span className="text-[length:var(--font-size-caption)] font-medium truncate">
+            Install {branding.businessName} for faster, offline access
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
-        <RippleButton
-          type="button"
-          onClick={handleInstallClick}
-          className="rounded-[var(--radius-inline)] bg-brand-accent-contrast px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-brand-accent hover:opacity-90 transition-opacity"
-        >
-          Install
-        </RippleButton>
+        {!isIos && (
+          <RippleButton
+            type="button"
+            onClick={handleInstallClick}
+            className="rounded-[var(--radius-inline)] bg-brand-accent-contrast px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-brand-accent hover:opacity-90 transition-opacity"
+          >
+            Install
+          </RippleButton>
+        )}
         <button
           type="button"
           onClick={handleDismiss}

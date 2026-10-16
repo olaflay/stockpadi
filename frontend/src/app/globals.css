@@ -121,12 +121,18 @@
    ========================================================== */
 
 /* 1. Eliminate 300ms mobile touch tap delay globally */
-a, button, input, select, textarea, [role="button"] {
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
   touch-action: manipulation;
 }
 
 /* Prevent iOS Safari from auto-zooming viewport on input focus */
 @media screen and (max-width: 768px) {
+
   input[type="text"],
   input[type="number"],
   input[type="email"],
@@ -204,6 +210,7 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
+
   *::-webkit-scrollbar {
     display: none;
     width: 0px;
@@ -229,7 +236,7 @@ body {
 }
 
 /* 3. Skip offscreen rendering for long lists & data tables */
-.fast-render-list > * {
+.fast-render-list>* {
   content-visibility: auto;
   contain-intrinsic-size: 1px 60px;
 }
@@ -255,12 +262,10 @@ body {
   bottom: 0;
   left: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%);
   animation: shimmer 1.5s infinite linear;
 }
 
@@ -270,6 +275,7 @@ body {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -288,6 +294,7 @@ body {
   from {
     transform: scale(1.25);
   }
+
   to {
     transform: scale(1);
   }
@@ -302,13 +309,11 @@ body {
    Solid surface color behind the button for contrast, easing smoothly
    to transparent at the top so scrolling content dissolves naturally without harsh borders. */
 .cta-scrim-container {
-  background: linear-gradient(
-    to top,
-    var(--color-surface) 0%,
-    var(--color-surface) 60%,
-    color-mix(in srgb, var(--color-surface) 80%, transparent) 82%,
-    transparent 100%
-  );
+  background: linear-gradient(to top,
+      var(--color-surface) 0%,
+      var(--color-surface) 60%,
+      color-mix(in srgb, var(--color-surface) 80%, transparent) 82%,
+      transparent 100%);
 }
 
 /* Toast entrance animation from top */
@@ -317,6 +322,7 @@ body {
     opacity: 0;
     transform: translateY(-16px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -333,6 +339,7 @@ body {
     opacity: 0;
     transform: translateY(16px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -349,6 +356,7 @@ body {
     opacity: 0;
     transform: translateY(100%);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -388,6 +396,7 @@ body {
     transform: scale(0);
     opacity: var(--state-opacity-pressed);
   }
+
   to {
     transform: scale(1);
     opacity: 0;
@@ -436,8 +445,14 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* Tonal Container System (Google Tonal Fill — Zero Card Shadows) */
 .depth-card {
@@ -449,7 +464,7 @@ input:-webkit-autofill:active {
   background-color: var(--color-surface-container);
   box-shadow: none;
   transition: transform var(--motion-duration-short) var(--easing-standard),
-              background-color var(--motion-duration-short) var(--easing-standard);
+    background-color var(--motion-duration-short) var(--easing-standard);
 }
 
 .depth-card-interactive:hover {
@@ -497,5 +512,3 @@ body:has(input:focus, textarea:focus) [data-bottom-nav] {
   content-visibility: auto;
   contain-intrinsic-size: 0 68px;
 }
-
-

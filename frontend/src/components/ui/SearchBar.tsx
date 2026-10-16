@@ -18,16 +18,6 @@ interface SearchBarProps {
   inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-/**
- * Standardized Material Design 3 Search Bar component.
- *
- * Provides:
- * - 48px min-height touch target
- * - Left-aligned leading Search icon
- * - Integrated 1-tap Clear button (X) when query is active
- * - Container-based focus-within styling (bg-surface-container-high -> bg-surface-container-highest)
- * - Trailing action slot for barcode scanner or badge counters
- */
 export function SearchBar({
   value,
   onChange,
@@ -47,28 +37,24 @@ export function SearchBar({
 
   const handleClear = () => {
     onChange("");
-    if ("current" in ref && ref.current) {
-      ref.current.focus();
-    }
+    ref.current?.focus();
   };
 
   return (
     <div
       className={`relative flex min-h-[48px] w-full items-center rounded-2xl bg-surface-container-high transition-all focus-within:bg-surface-container-highest focus-within:ring-2 focus-within:ring-brand-accent ${className}`}
     >
-      {/* Leading Search Icon */}
       <Search
         size={19}
         className="pointer-events-none absolute left-3.5 text-on-surface-muted"
         aria-hidden
       />
 
-      {/* Main Search Input */}
       <input
         ref={ref}
         id={id}
         type="search"
-        aria-label={ariaLabel || placeholder}
+        aria-label={ariaLabel ?? placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
@@ -76,14 +62,11 @@ export function SearchBar({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="search-bar-input h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none focus:outline-none focus:ring-0 focus:[box-shadow:none] focus:shadow-none"
+        className="search-bar-input h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
       />
 
-      {/* Trailing Controls: Clear Button & Optional Trailing Action.
-          Keeping this in the flex layout prevents the controls from covering
-          the input when a held-sales action is present on a narrow phone. */}
       <div className="relative mr-2 flex shrink-0 items-center gap-1">
-        {value.length > 0 && (
+        {value ? (
           <button
             type="button"
             onClick={handleClear}
@@ -92,7 +75,7 @@ export function SearchBar({
           >
             <X size={16} aria-hidden />
           </button>
-        )}
+        ) : null}
         {trailingAction}
       </div>
     </div>
