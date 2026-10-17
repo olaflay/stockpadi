@@ -1,4 +1,4 @@
-import { drainOutbox, healStrandedStockCountSubmissions, recoverStaleSyncingItems, recoverStuckSyncingItems, refreshActiveAccountContext } from "@/features/sync/drain-outbox";
+import { drainOutbox, healStrandedStockCountSubmissions, recoverStaleSyncingItems, recoverStuckSyncingItems, refreshActiveAccountContext, resetRetryBackoff } from "@/features/sync/drain-outbox";
 import { preloadSessionData, type SyncPullTrigger } from "@/features/sync/preload-session-data";
 import { setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 import { withSyncLease } from "@/features/sync/sync-lease";
@@ -159,6 +159,9 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
       // and branch mirror when it can legitimately have changed.
       if (["startup", "boot", "auth", "online", "resume", "focus"].includes(trigger)) {
         await refreshActiveAccountContext();
+        if (["online", "resume"].includes(trigger)) {
+          await resetRetryBackoff();
+        }
       }
       setSyncRuntimePhase("uploading");
       setCoordinatorPhase("uploading");
@@ -205,6 +208,29 @@ async function nextWakeAt(): Promise<number | null> {
     state?.nextPullAttemptAt ? Date.parse(state.nextPullAttemptAt) : Number.POSITIVE_INFINITY,
   ].filter(Number.isFinite);
   return dates.length ? Math.min(...dates) : null;
+}
+
+export async function probeL4Connectivity(timeoutMs = 2500): Promise<boolean> {
+  if (typeof window === "undefined") return true;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return false;
+  if (process.env.NODE_ENV === "test" && typeof globalThis.fetch !== "function") return true;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch("/api/sync/health", {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return response.status > 0;
+  } catch {
+    if (process.env.NODE_ENV === "test") {
+      return typeof navigator === "undefined" || navigator.onLine;
+    }
+    return false;
+  }
 }
 
 export function startSyncCoordinator(): () => void {
@@ -254,7 +280,15 @@ export function startSyncCoordinator(): () => void {
     });
   };
 
-  const onOnline = () => requestSync("online");
+  const onOnline = () => {
+    void probeL4Connectivity().then((isLive) => {
+      if (isLive) {
+        requestSync("online");
+      } else {
+        void scheduleWake();
+      }
+    });
+  };
   const onFocus = () => requestSync("focus");
   const onPageShow = () => requestSync("resume");
   const onVisibilityChange = () => {

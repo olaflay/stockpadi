@@ -5,6 +5,7 @@ const recoverStaleSyncingItems = vi.hoisted(() => vi.fn().mockResolvedValue(unde
 const recoverStuckSyncingItems = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const healStrandedStockCountSubmissions = vi.hoisted(() => vi.fn().mockResolvedValue(0));
 const refreshActiveAccountContext = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const resetRetryBackoff = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const drainOutbox = vi.hoisted(() => vi.fn());
 const preloadSessionData = vi.hoisted(() => vi.fn().mockResolvedValue({ fullySynced: true }));
 
@@ -14,6 +15,7 @@ vi.mock("@/features/sync/drain-outbox", () => ({
   recoverStaleSyncingItems,
   recoverStuckSyncingItems,
   refreshActiveAccountContext,
+  resetRetryBackoff,
 }));
 vi.mock("@/features/sync/preload-session-data", () => ({ preloadSessionData }));
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => null }));

@@ -11,52 +11,19 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
-import type { SessionPreloadResult } from "@/features/sync/preload-session-data";
+import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 
 const CLOUD_HEALTH_MAX_AGE_MS = 90_000;
 const MANUAL_SYNC_COOLDOWN_MS = 15_000;
 let lastManualSyncSuccessAt = 0;
 
-const PULL_DATASET_LABELS: Record<string, string> = {
-  business_profile: "business settings",
-  branches: "branches",
-  categories: "categories",
-  products: "products",
-  inventory: "stock levels",
-  suppliers: "suppliers",
-  customers: "customers",
-  credit_movements: "customer balances",
-  sales: "sales history",
-  purchases: "purchases",
-  expenses: "expenses",
-  session: "cloud data",
-};
-
-function pullFailureMessage(result: SessionPreloadResult): string {
-  const failure = result.pulls.find((pull) => !pull.success);
-  if (!failure) return "Some cloud data is still waiting to refresh. Try again in a moment.";
-
-  const dataset = PULL_DATASET_LABELS[failure.entity] ?? "cloud data";
-  switch (failure.error?.code) {
-    case "NETWORK_UNAVAILABLE":
-      return `The connection dropped while refreshing ${dataset}. Your local changes are safe; reconnect and try again.`;
-    case "ACCOUNT_NOT_APPROVED":
-    case "BUSINESS_UNAVAILABLE":
-      return "Your account is not ready for cloud refresh yet. Local changes remain safe and will retry automatically.";
-    case "FORBIDDEN":
-      return `Your access could not refresh ${dataset}. Ask the business owner to check your access and assigned branch.`;
-    case "PULL_BRANCH_SCOPE_MISMATCH":
-      return "Your branch access changed while syncing. Sign in again after the branch assignment is confirmed.";
-    default:
-      return `The cloud could not refresh ${dataset}. Your local changes are safe; try again when the connection is stable.`;
-  }
-}
-
 /**
- * Sync status indicator with manual "Force Sync Now" control.
+ * Sync status indicator with manual 'Save now' control.
  * In compact mode (for headers/mobile toolbars), renders as a slim icon/counter pill
- * so screen titles ("Sell", "Products") never get squished or truncated.
- * Supports variant="contrast" for dark/brand-accent headers.
+ * so screen titles ('Sell', 'Products') never get squished or truncated.
+ * Supports variant='contrast' for dark/brand-accent headers.
+ *
+ * Microcopy is short, fast to read, and zero-jargon.
  */
 export function SyncIndicator({
   compact = false,
@@ -68,6 +35,7 @@ export function SyncIndicator({
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const isOnline = useOnlineStatus();
+  const user = useCurrentUserOptional();
   const router = useRouter();
   const runtimePhase = useSyncRuntimePhase();
   const pullDiagnostics = useLiveQuery(async () => {
@@ -86,12 +54,14 @@ export function SyncIndicator({
   const [now, setNow] = useState<number | null>(null);
   const { showToast } = useToast();
   const isContrast = variant === "contrast";
+
   useEffect(() => {
     const updateNow = () => setNow(Date.now());
     updateNow();
     const interval = window.setInterval(updateNow, 30_000);
     return () => window.clearInterval(interval);
   }, []);
+
   const cloudHealthy = Boolean(
     isOnline &&
     pullComplete &&
@@ -105,26 +75,21 @@ export function SyncIndicator({
 
   const handleForceSync = async () => {
     if (isSyncing) {
-      showToast("Saving is already in progress. It will finish in the background.", "neutral");
+      showToast("Saving…", "neutral");
       return;
     }
-    // Repeated-tap protection: If all local changes are already pushed and a full
-    // sync completed recently within the cooldown window, reassure the user
-    // immediately without spamming Supabase database endpoints.
     const nowTimestamp = Date.now();
     if (pendingCount === 0 && nowTimestamp - lastManualSyncSuccessAt < MANUAL_SYNC_COOLDOWN_MS && !pullFailure) {
-      showToast("All changes are already up to date.", "success");
+      showToast("All saved.", "success");
       return;
     }
 
     setIsSyncing(true);
     setSyncRuntimePhase("syncing");
     if (compact && pendingCount > 0) {
-      showToast(`Saving ${pendingCount} change${pendingCount === 1 ? "" : "s"}…`, "neutral");
+      showToast(`Saving ${pendingCount}…`, "neutral");
     }
     try {
-      // Use the same authoritative cycle as automatic sync. In particular it
-      // refreshes a worker's branch assignment before validating pulled stock.
       const cycle = await runSyncCycle("manual");
       if (!cycle) return;
       const { pushResult, pullResult } = cycle;
@@ -134,18 +99,18 @@ export function SyncIndicator({
         : 0;
       if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && pullResult.fullySynced) {
         lastManualSyncSuccessAt = Date.now();
-        showToast("Saved. All changes are up to date.", "success");
+        showToast("Saved.", "success");
       } else if (pushResult.pendingRemaining === 0 && unresolvedPushes === 0 && !pullResult.fullySynced) {
-        showToast(pullFailureMessage(pullResult), "warning");
+        showToast("Saved on phone.", "neutral");
       } else if (unresolvedPushes > 0) {
-        showToast(`${unresolvedPushes} change${unresolvedPushes === 1 ? "" : "s"} needs attention before saving can finish.`, "warning");
+        showToast(`${unresolvedPushes} to review.`, "warning");
       } else if (pushResult.drained > 0) {
-        showToast(`${pushResult.drained} saved, ${pushResult.pendingRemaining} still uploading...`, "neutral");
+        showToast(`${pushResult.drained} saved, ${pushResult.pendingRemaining} left…`, "neutral");
       } else {
-        showToast(`${pushResult.pendingRemaining} changes waiting to upload.`, "neutral");
+        showToast(`${pushResult.pendingRemaining} waiting to save.`, "neutral");
       }
     } catch {
-      showToast("Could not finish saving. Check your connection and try again.", "warning");
+      showToast("Could not save. Check connection.", "warning");
     } finally {
       setSyncRuntimePhase("idle");
       setIsSyncing(false);
@@ -157,21 +122,23 @@ export function SyncIndicator({
     setIsRetrying(true);
     try {
       await retryFailedOutboxItems();
-      // Retry marks durable failures pending; the cycle immediately sends
-      // them and then pulls cloud state in both directions.
       await runSyncCycle("manual");
       const firstFailed = await db.outbox.where("status").equals("failed").first();
       const firstBlocked = await db.outbox.where("status").equals("blocked").first();
-      if (["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") || ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")) {
-        showToast("Account pending verification. Products and sales are saved locally and will upload once approved.", "warning");
+      if (
+        ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstFailed?.errorCode ?? "") ||
+        ["ACCOUNT_NOT_APPROVED", "BUSINESS_UNAVAILABLE"].includes(firstBlocked?.errorCode ?? "")
+      ) {
+        showToast("Pending setup. Saved on phone.", "warning");
       } else if (compact) {
-        showToast(`Retried sync for ${failedCount} change${failedCount === 1 ? "" : "s"}.`, "neutral");
+        showToast(`Retried ${failedCount}.`, "neutral");
       }
     } finally {
       setIsRetrying(false);
     }
   };
 
+  // High-risk write safety backpressure (100+ unsaved mutations older than 48h)
   if (failedCount === 0 && syncSafety.required) {
     if (compact) {
       return (
@@ -181,8 +148,8 @@ export function SyncIndicator({
             onClick={openDiagnostics}
             disabled={isSyncing}
             role="status"
-            title="Some changes need attention. Open save details."
-            aria-label="Some changes need attention. Open save details."
+            title="Save required"
+            aria-label="Save required"
             className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors active:scale-95 disabled:opacity-60 ${isContrast ? "text-warning hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
           >
             <span aria-hidden className="h-2 w-2 rounded-full bg-warning" />
@@ -191,12 +158,12 @@ export function SyncIndicator({
             type="button"
             onClick={handleForceSync}
             disabled={isSyncing}
-            title="Sync now"
-            aria-label="Sync now"
+            title="Save now"
+            aria-label="Save now"
             className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-warning-container text-on-warning-container"}`}
           >
             <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
-            <span>Sync now</span>
+            <span>Save now</span>
           </button>
         </div>
       );
@@ -208,15 +175,16 @@ export function SyncIndicator({
         onClick={openDiagnostics}
         disabled={isSyncing}
         role="status"
-        title="Open Sync Diagnostics"
+        title="Save required"
         className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:opacity-60 ${isContrast ? "bg-warning text-on-warning" : "bg-warning-container text-on-warning-container"}`}
       >
         <AlertTriangle size={13} aria-hidden />
-        {compact ? `${syncSafety.queueCount} changes need attention` : "Needs attention"}
+        Save required
       </button>
     );
   }
 
+  // Failed outbox mutations requiring user review
   if (failedCount > 0) {
     if (compact) {
       return (
@@ -226,8 +194,8 @@ export function SyncIndicator({
             onClick={openDiagnostics}
             disabled={isRetrying}
             role="status"
-            title="Open Sync Diagnostics"
-            aria-label="Open Sync Diagnostics"
+            title="Review needed"
+            aria-label="Review needed"
             className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold disabled:opacity-70 transition-transform active:scale-95 ${
               isContrast ? "bg-danger text-on-danger" : "bg-danger-container text-on-danger-container"
             }`}
@@ -239,12 +207,14 @@ export function SyncIndicator({
             type="button"
             onClick={handleRetryFailed}
             disabled={isRetrying}
+            title="Save now"
+            aria-label="Save now"
             className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium transition-colors active:scale-95 disabled:opacity-70 ${
               isContrast ? "bg-white/20 text-white hover:bg-white/30" : "bg-danger/10 text-danger hover:bg-danger/20"
             }`}
           >
             <RefreshCw size={11} className={isRetrying ? "animate-spin" : ""} />
-            <span>Sync now</span>
+            <span>Save now</span>
           </button>
         </div>
       );
@@ -257,7 +227,7 @@ export function SyncIndicator({
           className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-inline)] bg-danger-container px-3 text-[length:var(--font-size-caption)] text-on-danger-container"
         >
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: "var(--color-danger)" }} />
-          <span>{failedCount} {failedCount === 1 ? "change" : "changes"} need attention</span>
+          <span>{failedCount} to review</span>
         </span>
         <button
           type="button"
@@ -266,13 +236,13 @@ export function SyncIndicator({
           className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-danger px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-danger hover:opacity-90 transition-opacity active:scale-95 disabled:opacity-70"
         >
           <RefreshCw size={12} className={isRetrying ? "animate-spin" : ""} />
-          <span>{isRetrying ? "Retrying…" : "Sync now"}</span>
+          <span>{isRetrying ? "…" : "Save now"}</span>
         </button>
       </div>
     );
   }
 
-  // Offline state with pending items — calm, affirmative copy
+  // Offline state with pending items — calm, fast microcopy
   if (!isOnline && pendingCount > 0) {
     if (compact) {
       return (
@@ -280,8 +250,8 @@ export function SyncIndicator({
           type="button"
           onClick={openDiagnostics}
           role="status"
-          title="Open Sync Diagnostics"
-          aria-label="Open Sync Diagnostics"
+          title="Offline · Saved on phone"
+          aria-label="Offline · Saved on phone"
           className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-transform active:scale-95 ${
             isContrast ? "bg-white/15 text-white" : "bg-danger-container text-on-danger-container"
           }`}
@@ -302,6 +272,7 @@ export function SyncIndicator({
         type="button"
         onClick={openDiagnostics}
         role="status"
+        title="Offline · Saved on phone"
         className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted"
       >
         <span
@@ -309,39 +280,58 @@ export function SyncIndicator({
           className="h-2 w-2 rounded-full"
           style={{ background: "var(--color-brand-accent)" }}
         />
-        <span>Offline · Changes saved</span>
+        <span>Offline · Saved</span>
       </button>
     );
   }
 
+  // Ambient demotion: catalog download drops are non-disruptive when pendingCount === 0
   if (pendingCount === 0 && pullFailure) {
     if (compact) {
       return (
-        <div className="inline-flex items-center gap-1">
-          <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" title="Sync issue. Open Sync Diagnostics." aria-label="Sync issue. Open Sync Diagnostics." className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isContrast ? "text-warning hover:bg-white/10" : "text-warning"}`}>
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-          </button>
-          <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-warning-container text-on-warning-container"}`}>
-            <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
-            Sync now
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={openDiagnostics}
+          disabled={isSyncing}
+          role="status"
+          title="All saved"
+          aria-label="All saved"
+          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs transition-colors disabled:opacity-70 ${
+            isContrast ? "text-brand-accent-contrast/90 hover:text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"
+          }`}
+        >
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: isContrast ? "var(--color-on-brand-container)" : "var(--color-success)" }} />
+          <RefreshCw size={11} className={isSyncing ? "animate-spin text-white" : isContrast ? "text-white/80" : "opacity-60"} />
+        </button>
       );
     }
     return (
       <div className="inline-flex items-center gap-2">
-        <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-warning-container px-3 py-1 text-[length:var(--font-size-caption)] text-on-warning-container transition-colors hover:opacity-90">
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-warning" />
-          Needs attention
+        <button
+          type="button"
+          onClick={openDiagnostics}
+          disabled={isSyncing}
+          role="status"
+          aria-label="All saved"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted transition-colors hover:opacity-90"
+        >
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
+          All saved
         </button>
-        <button type="button" onClick={handleForceSync} disabled={isSyncing} className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-warning px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-warning disabled:opacity-60">
+        <button
+          type="button"
+          onClick={handleForceSync}
+          disabled={isSyncing}
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-surface disabled:opacity-60"
+        >
           <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
-          Sync now
+          Save now
         </button>
       </div>
     );
   }
 
+  // Active sync phase or stale server contact
   if (pendingCount === 0 && (runtimePhase !== "idle" || !cloudHealthy)) {
     if (compact) {
       return (
@@ -351,16 +341,23 @@ export function SyncIndicator({
             onClick={openDiagnostics}
             disabled={isSyncing}
             role="status"
-            aria-label={runtimePhase === "idle" ? "Sync issue. Open Sync Diagnostics." : "Sync in progress. Open Sync Diagnostics."}
-            title={runtimePhase === "idle" ? "Sync issue. Open Sync Diagnostics." : "Sync in progress. Open Sync Diagnostics."}
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isContrast ? "text-warning hover:bg-white/10" : "text-warning hover:bg-warning-container"}`}
+            aria-label={runtimePhase === "idle" ? "All saved" : "Saving…"}
+            title={runtimePhase === "idle" ? "All saved" : "Saving…"}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isContrast ? "text-white/80 hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}
           >
-            <span aria-hidden className={`h-2 w-2 rounded-full ${runtimePhase === "idle" ? "bg-warning" : "bg-success animate-pulse"}`} />
+            <span aria-hidden className={`h-2 w-2 rounded-full ${runtimePhase === "idle" ? "bg-success" : "bg-success animate-pulse"}`} />
           </button>
           {runtimePhase === "idle" && (
-            <button type="button" onClick={handleForceSync} disabled={isSyncing} title="Sync now" aria-label="Sync now" className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}>
+            <button
+              type="button"
+              onClick={handleForceSync}
+              disabled={isSyncing}
+              title="Save now"
+              aria-label="Save now"
+              className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}
+            >
               <RefreshCw size={11} />
-              <span>Sync now</span>
+              <span>Save now</span>
             </button>
           )}
         </div>
@@ -369,15 +366,34 @@ export function SyncIndicator({
 
     return (
       <div className="inline-flex items-center gap-1">
-        <button type="button" onClick={openDiagnostics} disabled={isSyncing} role="status" aria-label="Open Sync Diagnostics" title="Open Sync Diagnostics" className={`inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] transition-colors ${isContrast ? "text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}>
-          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${runtimePhase === "idle" ? "bg-warning" : "bg-success animate-pulse"}`} />
-          {runtimePhase === "idle" ? "Needs attention" : phaseLabel}
+        <button
+          type="button"
+          onClick={openDiagnostics}
+          disabled={isSyncing}
+          role="status"
+          aria-label="All saved"
+          title="All saved"
+          className={`inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] transition-colors ${isContrast ? "text-white hover:bg-white/10" : "text-on-surface-muted hover:bg-surface-container"}`}
+        >
+          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${runtimePhase === "idle" ? "bg-success" : "bg-success animate-pulse"}`} />
+          {runtimePhase === "idle" ? "All saved" : phaseLabel}
         </button>
-        {runtimePhase === "idle" && <button type="button" onClick={handleForceSync} disabled={isSyncing} className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}><RefreshCw size={11} />Sync now</button>}
+        {runtimePhase === "idle" && (
+          <button
+            type="button"
+            onClick={handleForceSync}
+            disabled={isSyncing}
+            className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium disabled:opacity-60 ${isContrast ? "bg-white/20 text-white" : "bg-surface-container-high text-on-surface"}`}
+          >
+            <RefreshCw size={11} />
+            Save now
+          </button>
+        )}
       </div>
     );
   }
 
+  // Fully healthy and idle
   if (pendingCount === 0 && runtimePhase === "idle" && cloudHealthy) {
     if (compact) {
       return (
@@ -386,8 +402,8 @@ export function SyncIndicator({
           onClick={openDiagnostics}
           disabled={isSyncing}
           role="status"
-          title="Open Sync Diagnostics"
-          aria-label="Open Sync Diagnostics"
+          title="All saved"
+          aria-label="All saved"
           className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs transition-colors disabled:opacity-70 ${
             isContrast
               ? "text-brand-accent-contrast/90 hover:text-white hover:bg-white/10"
@@ -410,29 +426,30 @@ export function SyncIndicator({
         onClick={openDiagnostics}
         disabled={isSyncing}
         role="status"
-        aria-label="Open Sync Diagnostics"
-        title="Open Sync Diagnostics"
+        aria-label="All saved"
+        title="All saved"
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] px-2 py-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted hover:bg-surface-container transition-colors disabled:opacity-70"
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
-          {pullComplete ? "Saved just now" : "Connection not checked"}
+        {pullComplete ? "All saved" : "Connection not checked"}
         <RefreshCw size={10} aria-hidden />
       </button>
     );
   }
 
+  // Pending changes waiting to save
   if (compact) {
     return (
       <div className="inline-flex items-center gap-1.5">
-      <button
-        type="button"
-        onClick={openDiagnostics}
-        role="status"
-        title={`${pendingCount} changes waiting to upload. Open save details.`}
-        aria-label={`${pendingCount} changes waiting to upload. Open save details.`}
-        className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors ${
-          isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
-        }`}
+        <button
+          type="button"
+          onClick={openDiagnostics}
+          role="status"
+          title={`${pendingCount} waiting to save`}
+          aria-label={`${pendingCount} waiting to save`}
+          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors ${
+            isContrast ? "bg-white/15 text-white" : "bg-surface-container-high text-on-surface-muted"
+          }`}
         >
           <span
             aria-hidden
@@ -446,8 +463,8 @@ export function SyncIndicator({
           onClick={handleForceSync}
           disabled={isSyncing}
           role="button"
-          title="Tap to sync now"
-          aria-label="Tap to sync now"
+          title="Save now"
+          aria-label="Save now"
           className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs font-medium transition-colors active:scale-95 disabled:opacity-70 ${
             isContrast
               ? "bg-white/20 text-white hover:bg-white/30"
@@ -455,7 +472,7 @@ export function SyncIndicator({
           }`}
         >
           <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
-          <span>Sync now</span>
+          <span>Save now</span>
         </button>
       </div>
     );
@@ -467,8 +484,8 @@ export function SyncIndicator({
         type="button"
         onClick={openDiagnostics}
         role="status"
-        title="Open Sync Diagnostics"
-        aria-label={`${pendingCount} changes waiting to upload. Open save details.`}
+        title="Open save details"
+        aria-label={`${pendingCount} waiting to save`}
         className="inline-flex items-center gap-2 rounded-[var(--radius-inline)] bg-surface-container-high px-3 py-1 text-[length:var(--font-size-caption)] text-on-surface-muted"
       >
         <span
@@ -485,7 +502,7 @@ export function SyncIndicator({
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-inline)] bg-brand-accent px-3 py-1 text-[length:var(--font-size-caption)] font-medium text-on-brand hover:bg-brand-accent/90 transition-colors active:scale-95 disabled:opacity-70"
       >
         <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
-        <span>{isSyncing ? "Saving…" : "Sync now"}</span>
+        <span>{isSyncing ? "Saving…" : "Save now"}</span>
       </button>
     </div>
   );

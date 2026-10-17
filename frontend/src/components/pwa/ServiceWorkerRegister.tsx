@@ -102,7 +102,7 @@ export function ServiceWorkerRegister() {
 
     const reportUpdateFailure = (error?: unknown) => {
       failureCount.current += 1;
-      if (failureCount.current >= 3) showFallback("The app update could not finish. Your saved changes are safe.");
+      if (failureCount.current >= 3) showFallback("Update paused. Saved on phone.");
       if (process.env.NODE_ENV !== "production" && error) console.debug("[PWA] Update check did not complete.", error);
     };
     const observeUpdateSuccess = () => { failureCount.current = 0; };
@@ -269,7 +269,7 @@ export function ServiceWorkerRegister() {
 
   if (!fallbackVisible && !databaseBlocked) return null;
   const message = databaseBlocked
-    ? "Close StockPadi in your other tabs or windows. The update will continue when they close."
+    ? "Close this app in other tabs or windows to finish updating safely."
     : updateMessage;
 
   return (

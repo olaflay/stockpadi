@@ -18,6 +18,7 @@ import { useNavigation } from "@/components/ui/NavigationContext";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { completeSale } from "@/features/pos/complete-sale";
+import { resolveStatusMessage } from "@/features/sync/statusMessages";
 import { resolveStockStatus, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
 import { useCart } from "@/features/pos/use-cart";
 import { parsePosQuery } from "@/lib/parse-pos-query";
@@ -277,11 +278,19 @@ function PosPageContent() {
       savedSaleId = sale.id;
     } catch (err) {
       console.error("Failed to complete sale:", err);
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Couldn't save the sale. It's still in your cart, try again.";
-      const isStockError = message.toLowerCase().includes("stock");
+      const isStockError = err instanceof Error && err.message.toLowerCase().includes("stock");
+      let message: string;
+      if (isStockError) {
+        message = err.message;
+      } else if (err instanceof Error && err.message.startsWith("SYNC_REQUIRED")) {
+        const status = resolveStatusMessage("SYNC_REQUIRED", { accountType: user.accountType });
+        message = `${status.headline}: ${status.body}`;
+      } else {
+        const status = resolveStatusMessage(err, { accountType: user.accountType });
+        message = status.id === "UNKNOWN_ERROR"
+          ? "Couldn't save the sale. It's still in your cart, try again."
+          : `${status.headline}: ${status.body}`;
+      }
       showToast(
         message,
         "danger",

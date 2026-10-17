@@ -69,6 +69,14 @@ interface DrainOptions {
   runMaintenance?: boolean;
 }
 
+export async function resetRetryBackoff(): Promise<void> {
+  const pending = (await db.outbox.where("status").equals("pending").toArray()).filter(matchesActiveTenant);
+  const withDelay = pending.filter((item) => item.nextAttemptAt !== null);
+  if (withDelay.length > 0) {
+    await db.outbox.bulkUpdate(withDelay.map((item) => ({ key: item.clientId, changes: { nextAttemptAt: null } })));
+  }
+}
+
 function includesDrainType(item: SyncQueueItem, types: Set<SyncEntityType> | null): boolean {
   return types === null || types.has(item.type);
 }

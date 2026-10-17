@@ -31,6 +31,10 @@ export function setDrainDebounceMs(ms: number | null): void {
  * of opening redundant concurrent HTTP connections and thrashing the cellular radio.
  */
 function scheduleImmediateDrain(trigger: "local-write" | "sale"): void {
+  registerBackgroundSyncHint();
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return;
+  }
   if (trigger === "sale") pendingTrigger = "sale";
 
   const delayMs = customDebounceMs !== null
