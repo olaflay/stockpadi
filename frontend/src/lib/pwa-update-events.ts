@@ -22,3 +22,10 @@ export function notifyPwaDataRefresh(): void {
   if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
   window.dispatchEvent(new CustomEvent(PWA_DATA_REFRESH_EVENT));
 }
+
+export const PWA_STORAGE_QUOTA_EXCEEDED_EVENT = "stockpadi:storage-quota-exceeded";
+
+export function notifyPwaStorageQuotaExceeded(details?: { remainingBytes?: number }): void {
+  if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
+  window.dispatchEvent(new CustomEvent(PWA_STORAGE_QUOTA_EXCEEDED_EVENT, { detail: details ?? {} }));
+}

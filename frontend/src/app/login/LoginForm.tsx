@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, WifiOff, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { startSession } from "@/features/auth/session";
+import type { CurrentUser } from "@/features/auth/use-current-user";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { RippleButton } from "@/components/ui/Ripple";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
@@ -97,6 +99,18 @@ export default function LoginForm() {
         permissions: string[];
       }>("account-context", {});
       const profile = context.profile;
+      const currentUser: CurrentUser = {
+        id: profile.id,
+        fullName: profile.full_name,
+        emailVerified: profile.email_verified ?? false,
+        accountType: context.accountType,
+        permissions: (context.permissions ?? []).filter((permission): permission is WorkerCapability =>
+          (WORKER_CAPABILITIES as readonly string[]).includes(permission)
+        ),
+        businessId: context.businessId,
+        branchIds: context.branchIds ?? [],
+        businessStatus: context.businessStatus,
+      };
       await db.localUsers.put({
         id: profile.id,
         businessId: context.businessId,
@@ -113,7 +127,7 @@ export default function LoginForm() {
         await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { businessId: context.businessId });
         await setLocalBusinessId(context.businessId);
       }
-      await startSession(profile.id);
+      await startSession(profile.id, currentUser);
       // Route based on accountState
       const state = context.accountState;
       if (state === "REGISTERED_UNVERIFIED") {

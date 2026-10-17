@@ -7,16 +7,24 @@ import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { removeLegacyTestUser } from "@/features/auth/legacy-cleanup";
-import { refreshSession } from "@/features/auth/session";
+import { refreshSession, sessionExpiryFromNow } from "@/features/auth/session";
 import { setLocalBusinessId } from "@/lib/local-tenant";
 import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
+import {
+  clearFastPathAuthSession,
+  readFastPathAuthSession,
+  writeFastPathAuthSession,
+  type FastPathAuthSession,
+} from "@/features/auth/auth-session-sync";
+import { ensureStoragePersistence } from "@/lib/storage-persistence";
 
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
 /**
- * Watchdog timeout in milliseconds. If session resolution or route transition
- * does not resolve within 4,000ms, the watchdog circuit breaker trips to prevent
- * the user from being trapped in an indefinite skeleton loading deadlock.
+ * Watchdog timeout in milliseconds. If session resolution does not resolve within
+ * 4,000ms and no fast-path session exists, the watchdog mounts an in-place
+ * recovery modal ("App storage is taking longer than usual — Tap to reload")
+ * without destroying valid credentials or forcing a logout redirect.
  */
 export const AUTH_WATCHDOG_TIMEOUT_MS = 4000;
 
@@ -25,15 +33,34 @@ export const AUTH_WATCHDOG_TIMEOUT_MS = 4000;
  * authenticated app shell (src/app/(app)/layout.tsx) so every screen under
  * it can call useCurrentUser() and get a resolved user synchronously,
  * instead of every screen separately handling a loading/no-session state.
- * See docs/RESEARCH-AND-PLAN.md Phase 2 item 14 and PRD Section 10.3.
+ *
+ * Implements a Two-Tier Fast-Path Auth Pipeline:
+ * - Tier 1: Synchronous localStorage mirror (auth-session-sync) hydrates
+ *   instantly on cold start (0ms), eliminating blank skeletons and cold-boot hangs.
+ * - Tier 2: Dexie IndexedDB live query runs asynchronously to keep the session
+ *   refreshed and verify authoritative tenant isolation.
+ * - Deadlock Recovery: Stalled storage delays NEVER trigger destructive redirects.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const sessionRefreshed = useRef(false);
   const [watchdogTripped, setWatchdogTripped] = useState(false);
+  const [fastPathSession, setFastPathSession] = useState<FastPathAuthSession | null>(() =>
+    readFastPathAuthSession()
+  );
 
-  useEffect(() => { void removeLegacyTestUser(); }, []);
+  useEffect(() => {
+    void removeLegacyTestUser();
+    void ensureStoragePersistence().catch(() => false);
+  }, []);
+
+  // Hydrate tenant ID immediately if fast-path is present
+  useEffect(() => {
+    if (fastPathSession?.user.businessId) {
+      void setLocalBusinessId(fastPathSession.user.businessId);
+    }
+  }, [fastPathSession]);
 
   const resolved = useLiveQuery(async () => {
     try {
@@ -65,71 +92,109 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Routing guards — only redirect when not already on the target page
+  // Sync fast-path mirror when IndexedDB produces an authoritative resolution
   useEffect(() => {
     if (!resolved) return;
-    if (resolved.kind === "expired" || resolved.kind === "no-session" || resolved.kind === "needs-login") {
-      if (!pathname.startsWith("/login")) {
-        router.replace("/login?force=true");
-      }
-      return;
+
+    if (resolved.kind === "active") {
+      writeFastPathAuthSession(resolved.user, sessionExpiryFromNow());
+      setFastPathSession((prev) =>
+        prev?.user.id === resolved.user.id && prev.expiresAt === sessionExpiryFromNow()
+          ? prev
+          : {
+              version: 1,
+              userId: resolved.user.id,
+              expiresAt: sessionExpiryFromNow(),
+              user: resolved.user,
+              cachedAt: new Date().toISOString(),
+            }
+      );
+    } else if (
+      resolved.kind === "expired" ||
+      resolved.kind === "no-session" ||
+      resolved.kind === "needs-login"
+    ) {
+      clearFastPathAuthSession();
+      setFastPathSession(null);
     }
-    if (resolved.kind === "active" && resolved.user.accountType === "ADMIN") {
+  }, [resolved]);
+
+  // Determine active user across Tier 1 (fast-path) and Tier 2 (Dexie live query)
+  const activeUser: CurrentUser | null =
+    resolved?.kind === "active"
+      ? resolved.user
+      : (!resolved && fastPathSession ? fastPathSession.user : null);
+
+  // Routing guards — only redirect when authoritative resolution requires it or for role-specific routes
+  useEffect(() => {
+    // If Dexie has explicitly resolved an unauthenticated state, redirect to login
+    if (resolved) {
+      if (
+        resolved.kind === "expired" ||
+        resolved.kind === "no-session" ||
+        resolved.kind === "needs-login"
+      ) {
+        if (!pathname.startsWith("/login")) {
+          router.replace("/login?force=true");
+        }
+        return;
+      }
+    }
+
+    if (!activeUser) return;
+
+    if (activeUser.accountType === "ADMIN") {
       if (!pathname.startsWith("/admin")) {
         router.replace("/admin");
       }
       return;
     }
-    if (resolved.kind === "active" && resolved.user.accountType === "BUSINESS_OWNER") {
+
+    if (activeUser.accountType === "BUSINESS_OWNER") {
       // Unverified accounts can use the app locally; cloud sync is gated by verification status
-      if (resolved.user.businessStatus === "verified" && !resolved.user.emailVerified && !pathname.startsWith("/verify-email")) {
+      if (
+        activeUser.businessStatus === "verified" &&
+        !activeUser.emailVerified &&
+        !pathname.startsWith("/verify-email")
+      ) {
         router.replace("/verify-email");
       }
     }
-  }, [resolved, router, pathname]);
+  }, [resolved, activeUser, router, pathname]);
 
-  // Watchdog circuit breaker: guarantees the skeleton state cannot stay mounted indefinitely.
-  // If session resolution or route transition does not resolve within 4,000ms, fall back to a
-  // recoverable state or execute an explicit redirect to /login?force=true.
+  // Non-destructive watchdog supervisor:
+  // If no active user is available (neither via fast-path nor Dexie) and storage takes longer
+  // than 4,000ms, mount an in-place recovery modal.
+  // Storage delays are NEVER treated as authentication failures.
   useEffect(() => {
-    if (resolved?.kind === "active") {
+    if (activeUser) {
       setWatchdogTripped(false);
       return;
     }
 
     const timer = setTimeout(() => {
       setWatchdogTripped(true);
-      if (!pathname.startsWith("/login")) {
-        try {
-          router.replace("/login?force=true");
-        } catch {
-          if (typeof window !== "undefined") {
-            window.location.replace("/login?force=true");
-          }
-        }
-      }
+      // NOTE: We deliberately do NOT execute router.replace("/login?force=true") here.
     }, AUTH_WATCHDOG_TIMEOUT_MS);
 
     return () => clearTimeout(timer);
-  }, [resolved, pathname, router]);
+  }, [activeUser]);
 
   // Refresh session expiry once per mount, NOT on every resolved change.
-  // Writing to db.session inside a dependency of the same useLiveQuery that
-  // produces `resolved` would create an infinite re-render loop.
   useEffect(() => {
-    if (resolved?.kind === "active") {
-      if (resolved.user.businessId) {
-        void setLocalBusinessId(resolved.user.businessId);
+    if (activeUser) {
+      if (activeUser.businessId) {
+        void setLocalBusinessId(activeUser.businessId);
       }
       if (!sessionRefreshed.current) {
         sessionRefreshed.current = true;
         void refreshSession();
       }
     }
-  }, [resolved]);
+  }, [activeUser]);
 
-  // Recoverable state when watchdog circuit breaker trips
-  if (watchdogTripped && (!resolved || resolved.kind !== "active")) {
+  // Non-destructive in-place recovery UI when storage stalls
+  if (watchdogTripped && !activeUser) {
     return (
       <div
         data-testid="auth-watchdog-fallback"
@@ -154,10 +219,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <h2 className="text-base font-semibold text-on-surface">
-              Session resolution took longer than expected
+              App storage is taking longer than usual — Tap to reload
             </h2>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Redirecting to sign-in so you can continue securely.
+              Your session and data are safe. A quick reload will reconnect app storage.
             </p>
           </div>
           <div className="flex flex-col w-full gap-2 pt-2">
@@ -165,14 +230,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => {
                 if (typeof window !== "undefined") {
-                  window.location.replace("/login?force=true");
-                } else {
-                  router.replace("/login?force=true");
+                  window.location.reload();
                 }
               }}
               className="w-full py-2.5 px-4 rounded-xl bg-brand text-on-brand font-medium text-xs shadow-xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
             >
-              Continue to Sign In
+              Tap to reload
             </button>
             <button
               type="button"
@@ -185,13 +248,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             >
               Reload App
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.replace("/login?force=true");
+                } else {
+                  router.replace("/login?force=true");
+                }
+              }}
+              className="w-full py-1.5 text-xs text-on-surface-variant/70 hover:text-on-surface underline transition-colors cursor-pointer"
+            >
+              Continue to Sign In
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!resolved || resolved.kind !== "active") {
+  if (!activeUser) {
     return (
       <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface select-none">
         {/* Top green brand header skeleton matching TopStoreHeader */}
@@ -287,6 +363,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <CurrentUserContext.Provider value={resolved.user}>{children}</CurrentUserContext.Provider>;
+  return <CurrentUserContext.Provider value={activeUser}>{children}</CurrentUserContext.Provider>;
 }
 

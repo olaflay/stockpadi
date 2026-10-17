@@ -452,21 +452,56 @@ class StockPadiDB extends Dexie {
 
 export const db = new StockPadiDB();
 
+let databaseBlocked = false;
+
 // Dexie normally closes its old connection on versionchange. Keep that
 // behavior explicit and surface a safe update prompt; no local stores or rows
 // are changed by this lifecycle handling.
 db.on("versionchange", () => {
-  db.close({ disableAutoOpen: false });
+  try {
+    db.close({ disableAutoOpen: false });
+  } catch {
+    // Non-blocking close
+  }
   notifyPwaUpdateRequired("The app is updating to keep your saved data working safely.");
 });
 
 db.on("blocked", () => {
+  databaseBlocked = true;
+  // If this connection is holding locks that block another tab/version upgrade, release them gracefully
+  if (db.isOpen()) {
+    try {
+      db.close({ disableAutoOpen: false });
+    } catch {
+      // Non-blocking close
+    }
+  }
   notifyPwaDatabaseBlocked();
 });
 
 db.on("ready", () => {
+  databaseBlocked = false;
   notifyPwaDatabaseReady();
 });
+
+export function isDatabaseBlocked(): boolean {
+  return databaseBlocked;
+}
+
+/** Gracefully recovers a closed or stalled Dexie IndexedDB connection. */
+export async function recoverDatabaseConnection(): Promise<boolean> {
+  try {
+    if (db.isOpen()) {
+      db.close({ disableAutoOpen: false });
+    }
+    await db.open();
+    databaseBlocked = false;
+    return true;
+  } catch (err) {
+    console.warn("[Dexie] Database recovery attempt failed:", err);
+    return false;
+  }
+}
 
 export function isDatabaseClosedError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;

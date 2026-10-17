@@ -2,6 +2,11 @@ import { db } from "@/lib/db";
 import type { SyncEntityType } from "@/types/sync";
 import { getCachedLocalBusinessId, getLocalBusinessId } from "@/lib/local-tenant";
 import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
+import {
+  handleStorageQuotaFailure,
+  isQuotaExceededError,
+  StorageQuotaExceededError,
+} from "@/lib/storage-persistence";
 
 const MUTABLE_ENTITY_TYPES: SyncEntityType[] = ["product", "customer", "supplier", "branch", "category"];
 
@@ -99,59 +104,67 @@ export async function enqueueOutboxWrite(
   const operation = mutable ? "upsert" as const : "append" as const;
   const expectedVersion = isRecord(canonicalPayload) && typeof canonicalPayload.version === "number" ? canonicalPayload.version : undefined;
 
-  // Product edits are snapshots, not immutable ledger events. Coalescing a
-  // still-pending product row prevents a duplicate-primary-key abort while
-  // retaining the original client idempotency key for a product create.
-  if (existing && MUTABLE_ENTITY_TYPES.includes(type) && existing.status !== "syncing") {
-    await db.outbox.put({
-      ...existing,
-      businessId,
-      mutationId: existing.mutationId ?? existing.clientId,
-      idempotencyKey: existing.idempotencyKey ?? existing.clientId,
-      payloadVersion: existing.payloadVersion ?? 1,
-      payload: canonicalPayload,
-      operation,
-      expectedVersion,
-      createdAtLocal,
-      status: "pending",
-      lastError: null,
-      errorCode: null,
-      lastErrorCode: null,
-      lastErrorMessage: null,
-      nextAttemptAt: null,
-      sequence: lastSequence + 1,
-      entityId,
-      dependsOn: options.dependsOn ?? existing.dependsOn,
-      dependsOnMutationIds: options.dependsOn ?? existing.dependsOnMutationIds,
-    });
-  } else {
-    const eventId = existing && existing.status === "syncing" ? `${clientId}:${crypto.randomUUID()}` : clientId;
-    const dependencies = existing && existing.status === "syncing"
-      ? [...new Set([...(options.dependsOn ?? []), existing.entityId ?? existing.mutationId ?? existing.clientId])]
-      : options.dependsOn;
-    await db.outbox.put({
-      clientId: eventId,
-      mutationId: eventId,
-      idempotencyKey: eventId,
-      payloadVersion: 1,
-      businessId,
-      type,
-      operation,
-      expectedVersion,
-      payload: canonicalPayload,
-      createdAtLocal,
-      status: "pending",
-      attemptCount: existing && existing.status === "syncing" ? 0 : existing?.attemptCount ?? 0,
-      lastError: null,
-      errorCode: null,
-      lastErrorCode: null,
-      lastErrorMessage: null,
-      nextAttemptAt: null,
-      sequence: lastSequence + 1,
-      entityId,
-      dependsOn: dependencies,
-      dependsOnMutationIds: dependencies,
-    });
+  try {
+    // Product edits are snapshots, not immutable ledger events. Coalescing a
+    // still-pending product row prevents a duplicate-primary-key abort while
+    // retaining the original client idempotency key for a product create.
+    if (existing && MUTABLE_ENTITY_TYPES.includes(type) && existing.status !== "syncing") {
+      await db.outbox.put({
+        ...existing,
+        businessId,
+        mutationId: existing.mutationId ?? existing.clientId,
+        idempotencyKey: existing.idempotencyKey ?? existing.clientId,
+        payloadVersion: existing.payloadVersion ?? 1,
+        payload: canonicalPayload,
+        operation,
+        expectedVersion,
+        createdAtLocal,
+        status: "pending",
+        lastError: null,
+        errorCode: null,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        nextAttemptAt: null,
+        sequence: lastSequence + 1,
+        entityId,
+        dependsOn: options.dependsOn ?? existing.dependsOn,
+        dependsOnMutationIds: options.dependsOn ?? existing.dependsOnMutationIds,
+      });
+    } else {
+      const eventId = existing && existing.status === "syncing" ? `${clientId}:${crypto.randomUUID()}` : clientId;
+      const dependencies = existing && existing.status === "syncing"
+        ? [...new Set([...(options.dependsOn ?? []), existing.entityId ?? existing.mutationId ?? existing.clientId])]
+        : options.dependsOn;
+      await db.outbox.put({
+        clientId: eventId,
+        mutationId: eventId,
+        idempotencyKey: eventId,
+        payloadVersion: 1,
+        businessId,
+        type,
+        operation,
+        expectedVersion,
+        payload: canonicalPayload,
+        createdAtLocal,
+        status: "pending",
+        attemptCount: existing && existing.status === "syncing" ? 0 : existing?.attemptCount ?? 0,
+        lastError: null,
+        errorCode: null,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        nextAttemptAt: null,
+        sequence: lastSequence + 1,
+        entityId,
+        dependsOn: dependencies,
+        dependsOnMutationIds: dependencies,
+      });
+    }
+  } catch (error) {
+    if (isQuotaExceededError(error)) {
+      void handleStorageQuotaFailure(error);
+      throw new StorageQuotaExceededError();
+    }
+    throw error;
   }
 
   // Trigger one immediate canonical drain after every local write. The online

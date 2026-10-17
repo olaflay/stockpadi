@@ -69,11 +69,13 @@ const serwist = new Serwist({
     // Next's default HTML matcher keys off a request Content-Type header,
     // which navigations do not send. Explicitly cache document navigations so
     // already-warmed authenticated routes can boot without a network.
+    // networkTimeoutSeconds is bounded to 0.8s so cold start on dead 2G/3G
+    // does not hang the cashier's screen for 3 seconds before cache fallback.
     {
       matcher: ({ request, sameOrigin }) => sameOrigin && (request.mode === "navigate" || request.headers.get("accept")?.includes("text/html") === true),
       handler: new NetworkFirst({
         cacheName: NAVIGATION_CACHE,
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 0.8,
         plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
       }),
     },

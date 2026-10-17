@@ -1,5 +1,12 @@
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
 import { getDeviceId } from "@/features/auth/device-id";
+import {
+  clearFastPathAuthSession,
+  updateFastPathAuthSessionExpiry,
+  writeFastPathAuthSession,
+} from "@/features/auth/auth-session-sync";
+import type { CurrentUser } from "@/features/auth/use-current-user";
+import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/authorization";
 
 /**
  * How long the local device session lasts without any use.
@@ -13,14 +20,40 @@ export function sessionExpiryFromNow(): string {
   return new Date(Date.now() + SESSION_DURATION_HOURS * 60 * 60 * 1000).toISOString();
 }
 
-/** Writes/refreshes the local session after a successful online login. */
-export async function startSession(userId: string): Promise<void> {
+/** Writes/refreshes the local session and synchronizes the fast-path mirror. */
+export async function startSession(userId: string, userOverride?: CurrentUser): Promise<void> {
+  const expiresAt = sessionExpiryFromNow();
   await db.session.put({
     id: SESSION_SINGLETON_ID,
     userId,
     deviceId: getDeviceId(),
-    expiresAt: sessionExpiryFromNow(),
+    expiresAt,
   });
+
+  if (userOverride) {
+    writeFastPathAuthSession(userOverride, expiresAt);
+  } else {
+    try {
+      const localUser = await db.localUsers.get(userId);
+      if (localUser && localUser.isActive && localUser.accountType) {
+        const currentUser: CurrentUser = {
+          id: localUser.id,
+          fullName: localUser.fullName,
+          emailVerified: localUser.emailVerified,
+          accountType: localUser.accountType,
+          permissions: (localUser.permissions ?? []).filter((p): p is WorkerCapability =>
+            (WORKER_CAPABILITIES as readonly string[]).includes(p)
+          ),
+          businessId: localUser.businessId,
+          branchIds: localUser.branchIds ?? [],
+          businessStatus: localUser.businessStatus,
+        };
+        writeFastPathAuthSession(currentUser, expiresAt);
+      }
+    } catch {
+      // Non-blocking mirror hydration
+    }
+  }
 }
 
 /**
@@ -32,11 +65,14 @@ export async function startSession(userId: string): Promise<void> {
 export async function refreshSession(): Promise<void> {
   const session = await db.session.get(SESSION_SINGLETON_ID);
   if (!session) return; // Nothing to refresh — no active session
-  await db.session.update(SESSION_SINGLETON_ID, { expiresAt: sessionExpiryFromNow() });
+  const newExpiry = sessionExpiryFromNow();
+  await db.session.update(SESSION_SINGLETON_ID, { expiresAt: newExpiry });
+  updateFastPathAuthSessionExpiry(newExpiry);
 }
 
 export async function clearSession(): Promise<void> {
   await db.session.delete(SESSION_SINGLETON_ID);
+  clearFastPathAuthSession();
 }
 
 export type SessionState =

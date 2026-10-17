@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { AuthProvider, AUTH_WATCHDOG_TIMEOUT_MS, CurrentUserContext } from "../AuthProvider";
+import { AUTH_SESSION_SYNC_KEY } from "../auth-session-sync";
 
 // Mock next/navigation
 const mockReplace = vi.fn();
@@ -23,6 +24,7 @@ vi.mock("../legacy-cleanup", () => ({
 
 vi.mock("../session", () => ({
   refreshSession: vi.fn().mockResolvedValue(undefined),
+  sessionExpiryFromNow: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
 }));
 
 vi.mock("@/lib/local-tenant", () => ({
@@ -51,12 +53,13 @@ vi.mock("@/lib/db", () => ({
   SESSION_SINGLETON_ID: "singleton",
 }));
 
-describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
+describe("AuthProvider Fast-Path Hydration & Non-Destructive Storage Supervisor", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockReplace.mockClear();
     currentPathname = "/dashboard";
     mockLiveQueryResult = undefined;
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -68,7 +71,57 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
     expect(AUTH_WATCHDOG_TIMEOUT_MS).toBe(4000);
   });
 
-  it("renders clean borderless skeleton while session resolution is pending (<4,000ms)", () => {
+  it("hydrates instantly (0ms) from synchronous fast-path mirror when IndexedDB is stalled on cold start", () => {
+    const mirrorUser = {
+      id: "user-fast-1",
+      fullName: "Fast Hydrated Owner",
+      emailVerified: true,
+      accountType: "BUSINESS_OWNER",
+      permissions: [],
+      businessId: "biz-fast-1",
+      branchIds: ["branch-1"],
+      businessStatus: "verified",
+    };
+
+    window.localStorage.setItem(
+      AUTH_SESSION_SYNC_KEY,
+      JSON.stringify({
+        version: 1,
+        userId: mirrorUser.id,
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        user: mirrorUser,
+        cachedAt: new Date().toISOString(),
+      })
+    );
+
+    // Stalled IndexedDB connection
+    mockLiveQueryResult = undefined;
+
+    render(
+      <AuthProvider>
+        <CurrentUserContext.Consumer>
+          {(user) => <div data-testid="child-content">Active User: {user?.fullName}</div>}
+        </CurrentUserContext.Consumer>
+      </AuthProvider>
+    );
+
+    // Hydrated immediately without waiting for IndexedDB
+    expect(screen.getByTestId("child-content")).toBeTruthy();
+    expect(screen.getByText("Active User: Fast Hydrated Owner")).toBeTruthy();
+    expect(screen.queryByTestId("auth-watchdog-fallback")).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    // Past 4,000ms: user remains safely inside app and is NEVER redirected to /login
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("auth-watchdog-fallback")).toBeNull();
+    expect(screen.getByText("Active User: Fast Hydrated Owner")).toBeTruthy();
+  });
+
+  it("renders clean borderless skeleton while session resolution is pending when no mirror exists (<4,000ms)", () => {
     mockLiveQueryResult = undefined;
 
     const { container } = render(
@@ -77,27 +130,22 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
       </AuthProvider>
     );
 
-    // Child should not be rendered yet
     expect(screen.queryByTestId("child-content")).toBeNull();
-
-    // Watchdog fallback should not be rendered yet
     expect(screen.queryByTestId("auth-watchdog-fallback")).toBeNull();
 
-    // Verify wireframe stroke classes are NOT present in skeleton elements
     const borderOutlineElements = container.querySelectorAll(
       '[class*="border-outline-variant"], [class*="divide-outline-variant"]'
     );
     expect(borderOutlineElements.length).toBe(0);
 
-    // Hero card, KPI grids, and lower card must be borderless
     const heroCard = container.querySelector(".rounded-3xl.p-4");
     expect(heroCard).not.toBeNull();
     expect(heroCard?.className).not.toContain("border-outline-variant");
     expect(heroCard?.className).not.toContain("border ");
   });
 
-  it("trips watchdog circuit breaker after 4,000ms deadlock and triggers redirect to /login?force=true", () => {
-    mockLiveQueryResult = undefined; // Stalled/deadlocked useLiveQuery
+  it("trips watchdog and mounts non-destructive in-place recovery modal without redirecting to /login when storage stalls past 4,000ms", () => {
+    mockLiveQueryResult = undefined; // Stalled/deadlocked useLiveQuery with no local mirror
 
     render(
       <AuthProvider>
@@ -120,24 +168,24 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
       vi.advanceTimersByTime(1);
     });
 
-    // Circuit breaker is tripped
-    expect(mockReplace).toHaveBeenCalledWith("/login?force=true");
+    // CRITICAL: User is NEVER redirected to /login on storage stalls
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByTestId("auth-watchdog-fallback")).toBeTruthy();
     expect(
-      screen.getByText("Session resolution took longer than expected")
+      screen.getByText("App storage is taking longer than usual — Tap to reload")
     ).toBeTruthy();
   });
 
-  it("provides recoverable user action buttons in the watchdog fallback state", () => {
+  it("provides non-destructive recovery actions that reload the window safely preserving current URL", () => {
     mockLiveQueryResult = undefined;
 
     const originalLocation = window.location;
-    const mockLocationReplace = vi.fn();
+    const mockLocationReload = vi.fn();
     delete (window as any).location;
     (window as any).location = {
       ...originalLocation,
-      replace: mockLocationReplace,
-      reload: vi.fn(),
+      reload: mockLocationReload,
+      replace: vi.fn(),
     };
 
     render(
@@ -150,18 +198,17 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
       vi.advanceTimersByTime(AUTH_WATCHDOG_TIMEOUT_MS);
     });
 
-    const signInBtn = screen.getByRole("button", { name: "Continue to Sign In" });
-    fireEvent.click(signInBtn);
-    expect(mockLocationReplace).toHaveBeenCalledWith("/login?force=true");
-
-    const reloadBtn = screen.getByRole("button", { name: "Reload App" });
+    const reloadBtn = screen.getByRole("button", { name: "Tap to reload" });
     fireEvent.click(reloadBtn);
-    expect(window.location.reload).toHaveBeenCalled();
+
+    // Safe in-place reload executed without altering route or deleting credentials
+    expect(mockLocationReload).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
 
     (window as any).location = originalLocation;
   });
 
-  it("cancels watchdog and renders children when session resolves to active user within 4,000ms", () => {
+  it("cancels watchdog and renders children when Dexie resolves active user within 4,000ms and syncs mirror", () => {
     const activeUser = {
       id: "user-1",
       fullName: "Test Owner",
@@ -190,9 +237,13 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
       </AuthProvider>
     );
 
-    // Resolved synchronously
     expect(screen.getByTestId("child-content")).toBeTruthy();
     expect(screen.getByText("Welcome Test Owner (BUSINESS_OWNER)")).toBeTruthy();
+
+    // Fast-path mirror was synchronized
+    const savedMirror = JSON.parse(window.localStorage.getItem(AUTH_SESSION_SYNC_KEY) || "{}");
+    expect(savedMirror.userId).toBe("user-1");
+    expect(savedMirror.user.fullName).toBe("Test Owner");
 
     // Advance time past 4,000ms — watchdog should NOT fire
     act(() => {
@@ -203,7 +254,19 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
     expect(screen.queryByTestId("auth-watchdog-fallback")).toBeNull();
   });
 
-  it("trips watchdog if needs-login route transition stalls beyond 4,000ms", () => {
+  it("redirects to /login and clears fast-path mirror when IndexedDB explicitly resolves needs-login", () => {
+    // Pre-seed mirror
+    window.localStorage.setItem(
+      AUTH_SESSION_SYNC_KEY,
+      JSON.stringify({
+        version: 1,
+        userId: "old-user",
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        user: { id: "old-user", fullName: "Old", accountType: "WORKER" },
+        cachedAt: new Date().toISOString(),
+      })
+    );
+
     mockLiveQueryResult = { kind: "needs-login" };
 
     render(
@@ -212,15 +275,10 @@ describe("AuthProvider Watchdog Circuit Breaker & Skeleton Layout", () => {
       </AuthProvider>
     );
 
-    // Initial redirect triggered immediately by routing guard
+    // Initial redirect triggered by authoritative no-session from IndexedDB
     expect(mockReplace).toHaveBeenCalledWith("/login?force=true");
 
-    // But if page transition doesn't complete and component stays mounted past 4,000ms
-    act(() => {
-      vi.advanceTimersByTime(AUTH_WATCHDOG_TIMEOUT_MS);
-    });
-
-    // Fallback UI mounts so user is not stuck on skeleton
-    expect(screen.getByTestId("auth-watchdog-fallback")).toBeTruthy();
+    // Fast-path mirror is cleared so old session cannot be used
+    expect(window.localStorage.getItem(AUTH_SESSION_SYNC_KEY)).toBeNull();
   });
 });

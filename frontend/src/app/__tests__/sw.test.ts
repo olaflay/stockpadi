@@ -52,7 +52,7 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(mockAddEventListeners).toHaveBeenCalledOnce();
   });
 
-  it("registers navigation caching strategy with 3-second network timeout", () => {
+  it("registers navigation caching strategy with 0.8-second network timeout", () => {
     const runtimeCaching = capturedConfig?.runtimeCaching as Array<{
       matcher: (options: { request: Request; sameOrigin: boolean }) => boolean;
       handler: { options: { cacheName: string; networkTimeoutSeconds: number } };
@@ -63,7 +63,7 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(navRule).toBeDefined();
     if (!navRule) throw new Error("Navigation cache rule was not configured");
     expect(navRule.handler.options.cacheName).toBe("stockpadi-navigation-local");
-    expect(navRule.handler.options.networkTimeoutSeconds).toBe(3);
+    expect(navRule.handler.options.networkTimeoutSeconds).toBe(0.8);
 
     // Test matcher behavior: sameOrigin navigation
     const sameOriginNavReq = new Request("https://example.com/pos", {

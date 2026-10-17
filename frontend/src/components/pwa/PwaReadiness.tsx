@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ensureStoragePersistence } from "@/lib/storage-persistence";
 
 /** Requests durable storage without doing network work during PWA startup.
  *
@@ -12,15 +13,7 @@ import { useEffect } from "react";
  */
 export function PwaReadiness() {
   useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.onLine) return;
-    try {
-      if ("storage" in navigator && typeof navigator.storage?.persist === "function") {
-        void navigator.storage.persist().catch(() => false);
-      }
-    } catch {
-      // Storage persistence is an optimization. Some standalone browsers can
-      // expose the API but still throw while requesting it.
-    }
+    void ensureStoragePersistence().catch(() => false);
   }, []);
 
   return null;

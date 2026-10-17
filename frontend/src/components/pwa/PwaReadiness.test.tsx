@@ -15,4 +15,16 @@ describe("PwaReadiness", () => {
 
     expect(() => render(<PwaReadiness />)).not.toThrow();
   });
+
+  it("requests storage persistence even when offline on cold start", () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const persistMock = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(navigator, "storage", {
+      configurable: true,
+      value: { persist: persistMock },
+    });
+
+    render(<PwaReadiness />);
+    expect(persistMock).toHaveBeenCalledTimes(1);
+  });
 });
