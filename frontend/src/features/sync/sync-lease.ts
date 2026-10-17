@@ -45,12 +45,64 @@ async function renewDurableLease(): Promise<void> {
   }));
 }
 
+const LEASE_EVENT_CHANNEL = "stockpadi-sync-lease-events";
+
+function broadcastLeaseRelease(): void {
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const channel = new BroadcastChannel(LEASE_EVENT_CHANNEL);
+      channel.postMessage({ type: "released", timestamp: Date.now() });
+      channel.close();
+    }
+  } catch {
+    // BroadcastChannel unsupported or blocked in isolated contexts
+  }
+}
+
+async function waitForLeaseReleaseOrTimeout(timeoutMs: number): Promise<void> {
+  if (typeof BroadcastChannel === "undefined") {
+    await new Promise((resolve) => setTimeout(resolve, timeoutMs));
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    let resolved = false;
+    let channel: BroadcastChannel | null = null;
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, timeoutMs);
+
+    const cleanup = () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      try {
+        channel?.close();
+      } catch {}
+    };
+
+    try {
+      channel = new BroadcastChannel(LEASE_EVENT_CHANNEL);
+      channel.onmessage = (event) => {
+        if (event?.data?.type === "released") {
+          cleanup();
+          resolve();
+        }
+      };
+    } catch {
+      cleanup();
+      resolve();
+    }
+  });
+}
+
 async function releaseDurableLease(): Promise<void> {
   const currentOwnerId = getOwnerId();
   await withDatabaseClosedRecovery(() => db.transaction("rw", db.syncLeases, async () => {
     const current = await db.syncLeases.get(LEASE_ID);
     if (current?.ownerId === currentOwnerId) await db.syncLeases.delete(LEASE_ID);
   }));
+  broadcastLeaseRelease();
 }
 
 async function runOwned<T>(work: () => Promise<T>): Promise<T> {
@@ -71,16 +123,41 @@ async function runOwned<T>(work: () => Promise<T>): Promise<T> {
 export async function withSyncLease<T>(work: () => Promise<T>, options: SyncLeaseOptions = {}): Promise<T | null> {
   if (leaseDepth > 0) return runOwned(work);
 
+  const MAX_LEASE_WAIT_MS = 5_000;
+
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request("stockpadi-sync-coordinator", { ifAvailable: !options.waitForLease }, async (lock) => {
-      if (!lock) return null;
-      return runOwned(work);
-    });
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), MAX_LEASE_WAIT_MS) : null;
+    try {
+      return await navigator.locks.request(
+        "stockpadi-sync-coordinator",
+        {
+          ifAvailable: !options.waitForLease,
+          ...(options.waitForLease && controller ? { signal: controller.signal } : {}),
+        },
+        async (lock) => {
+          if (!lock) return null;
+          return runOwned(work);
+        }
+      );
+    } catch {
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   if (options.waitForLease) {
+    const start = Date.now();
+    let attempt = 0;
     while (!(await acquireDurableLease())) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      const elapsed = Date.now() - start;
+      if (elapsed >= MAX_LEASE_WAIT_MS) return null;
+      const remaining = MAX_LEASE_WAIT_MS - elapsed;
+      // Exponential backoff capped at 400ms, immediately waking on BroadcastChannel release event
+      const backoff = Math.min(remaining, Math.min(80 * Math.pow(1.5, attempt), 400));
+      attempt++;
+      await waitForLeaseReleaseOrTimeout(backoff);
     }
   } else if (!(await acquireDurableLease())) {
     return null;

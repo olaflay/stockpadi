@@ -16,20 +16,50 @@ function registerBackgroundSyncHint(): void {
   }).catch(() => undefined);
 }
 
+let immediateDrainTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingTrigger: "local-write" | "sale" = "local-write";
+let customDebounceMs: number | null = null;
+
+/** Override drain debounce ms for benchmarking or specialized batching. */
+export function setDrainDebounceMs(ms: number | null): void {
+  customDebounceMs = ms;
+}
+
 /**
- * Wake the canonical coordinator in the next microtask. This preserves a
- * single Dexie transaction for the local write while avoiding an artificial
- * polling/debounce delay before the durable outbox is pushed.
+ * Wake the canonical coordinator with adaptive debounce. Back-to-back writes
+ * within the debounce window coalesce cleanly into a single batch push instead
+ * of opening redundant concurrent HTTP connections and thrashing the cellular radio.
  */
 function scheduleImmediateDrain(trigger: "local-write" | "sale"): void {
-  queueMicrotask(() => {
-    void import("@/features/sync/SyncCoordinator").then(({ triggerSync }) => {
-      return triggerSync(trigger);
-    }).catch(() => {
-      // The durable outbox remains available for the next lifecycle, network,
-      // Realtime, retry, or reconciliation trigger.
+  if (trigger === "sale") pendingTrigger = "sale";
+
+  const delayMs = customDebounceMs !== null
+    ? customDebounceMs
+    : (typeof process !== "undefined" && process.env.NODE_ENV === "test" ? 0 : 35);
+
+  if (delayMs === 0) {
+    queueMicrotask(() => {
+      const current = pendingTrigger;
+      pendingTrigger = "local-write";
+      void import("@/features/sync/SyncCoordinator").then(({ triggerSync }) => {
+        return triggerSync(current);
+      }).catch(() => {
+        // The durable outbox remains available for the next lifecycle, network,
+        // Realtime, retry, or reconciliation trigger.
+      });
     });
-  });
+    return;
+  }
+
+  if (immediateDrainTimer) clearTimeout(immediateDrainTimer);
+  immediateDrainTimer = setTimeout(() => {
+    immediateDrainTimer = null;
+    const current = pendingTrigger;
+    pendingTrigger = "local-write";
+    void import("@/features/sync/SyncCoordinator").then(({ triggerSync }) => {
+      return triggerSync(current);
+    }).catch(() => {});
+  }, delayMs);
 }
 
 /**

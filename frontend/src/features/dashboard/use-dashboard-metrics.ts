@@ -44,100 +44,118 @@ export interface DashboardMetrics {
 export function useDashboardMetrics(branchId: string | null, viewerId: string | null = null): DashboardMetrics | undefined {
   return useLiveQuery(async () => {
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return await db.transaction(
+        "r",
+        [
+          db.products,
+          db.sales,
+          db.outbox,
+          db.expenses,
+          db.purchases,
+          db.customerCreditMovements,
+          db.stockMovements,
+          db.inventoryStock,
+          db.businessProfile,
+          db.session,
+          db.localUsers,
+        ],
+        async () => {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const todayStart = getStartOfTodayIso();
 
-      const todayStart = getStartOfTodayIso();
+          // Targeted indexed range lookups running concurrently within an isolated read-only snapshot
+          const [products, todaySales, outboxPending, expenses, purchases, creditMovements, pastSales] = await Promise.all([
+            tenantArray(db.products),
+            tenantArray(db.sales.where("createdAtLocal").aboveOrEqual(todayStart)),
+            tenantArray(db.outbox.where("status").anyOf("pending", "syncing")),
+            tenantArray(db.expenses.where("createdAtLocal").aboveOrEqual(todayStart)),
+            tenantArray(db.purchases.where("createdAtLocal").aboveOrEqual(todayStart)),
+            tenantArray(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(todayStart)),
+            tenantArray(
+              db.sales
+                .where("createdAtLocal")
+                .between(thirtyDaysAgo.toISOString(), todayStart, true, false)
+                .reverse()
+                .limit(300)
+            ),
+          ]);
 
-      const [products, recentSales, outboxPending, expenses, purchases, creditMovements] = await Promise.all([
-        tenantArray(db.products),
-        tenantArray(db.sales
-          .where("createdAtLocal")
-          .aboveOrEqual(thirtyDaysAgo.toISOString())
-          ),
-        tenantArray(db.outbox.where("status").anyOf("pending", "syncing")),
-        tenantArray(db.expenses.where("createdAtLocal").aboveOrEqual(todayStart)),
-        tenantArray(db.purchases.where("createdAtLocal").aboveOrEqual(todayStart)),
-        tenantArray(db.customerCreditMovements.where("createdAtLocal").aboveOrEqual(todayStart)),
-      ]);
-      const relevantSales = recentSales.filter(
-        (sale) =>
-          !sale.voidedAt &&
-          sale.createdAtLocal >= todayStart &&
-          (branchId === null || sale.branchId === branchId) &&
-          (viewerId === null || sale.createdByUserId === viewerId)
-      );
+          const relevantSales = todaySales.filter(
+            (sale) =>
+              !sale.voidedAt &&
+              (branchId === null || sale.branchId === branchId) &&
+              (viewerId === null || sale.createdByUserId === viewerId)
+          );
 
-      const stockByProduct = await getStockByProduct(branchId);
+          const stockByProduct = await getStockByProduct(branchId);
 
-      // Hero figure: cost value of all stock on hand, plus how many products
-      // actually carry stock. Counted only from the ledger-derived stock map,
-      // never from a mutable quantity field (see .agents/rules/offline-sync-and-ledger.md).
-      // Hero figure: cost value of all stock on hand, plus how many products
-      // actually carry stock. Counted only from the ledger-derived stock map,
-      // using integer Kobo arithmetic to prevent IEEE-754 float drift.
-      let inventoryValueKobo = 0;
-      let stockedProductCount = 0;
-      for (const product of products) {
-        const qty = stockByProduct.get(product.id) ?? 0;
-        if (qty > 0) {
-          stockedProductCount += 1;
-          inventoryValueKobo += Math.round(qty * toKobo(product.costPrice ?? 0));
-        }
-      }
-      const inventoryValue = fromKobo(inventoryValueKobo);
+          // Hero figure: cost value of all stock on hand, plus how many products
+          // actually carry stock. Counted only from the ledger-derived stock map,
+          // using integer Kobo arithmetic to prevent IEEE-754 float drift.
+          let inventoryValueKobo = 0;
+          let stockedProductCount = 0;
+          for (const product of products) {
+            const qty = stockByProduct.get(product.id) ?? 0;
+            if (qty > 0) {
+              stockedProductCount += 1;
+              inventoryValueKobo += Math.round(qty * toKobo(product.costPrice ?? 0));
+            }
+          }
+          const inventoryValue = fromKobo(inventoryValueKobo);
 
-      const lowStockIds = await getLowStockProductIds(undefined, branchId, products, stockByProduct);
-      const lowStockCount = lowStockIds.size;
+          const lowStockIds = await getLowStockProductIds(undefined, branchId, products, stockByProduct);
+          const lowStockCount = lowStockIds.size;
 
-      const expiringIds = await getExpiringProductIds(undefined, branchId, products, stockByProduct);
-      const expiringCount = expiringIds.size;
+          const expiringIds = await getExpiringProductIds(undefined, branchId, products, stockByProduct);
+          const expiringCount = expiringIds.size;
 
-      // Frequency calculations for Quick Add (last 30 days)
-      const freqMap: Record<string, number> = {};
-      for (const sale of recentSales) {
-        if (sale.voidedAt) continue;
-        if (branchId !== null && sale.branchId !== branchId) continue;
-        for (const item of sale.items) {
-          freqMap[item.productId] = (freqMap[item.productId] ?? 0) + item.quantity;
-        }
-      }
+          // Frequency calculations for Quick Add (combining today's sales and indexed recent sales up to 300)
+          const freqMap: Record<string, number> = {};
+          const allSalesForTop = [...todaySales, ...pastSales];
+          for (const sale of allSalesForTop) {
+            if (sale.voidedAt) continue;
+            if (branchId !== null && sale.branchId !== branchId) continue;
+            for (const item of sale.items) {
+              freqMap[item.productId] = (freqMap[item.productId] ?? 0) + item.quantity;
+            }
+          }
 
-      const productMap = new Map(products.map((p) => [p.id, p]));
-      const sortedProductIdsByFreq = Object.keys(freqMap).sort((a, b) => freqMap[b] - freqMap[a]);
-      
-      // Select top 6 products that have positive stock (O(1) lookup per id)
-      let selectedProducts = sortedProductIdsByFreq
-        .map((id) => {
-          const p = productMap.get(id);
-          if (!p) return null;
-          const qty = stockByProduct.get(p.id) ?? 0;
-          return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
-        })
-        .filter((p): p is NonNullable<typeof p> => p !== null && p.currentStock > 0);
+          const productMap = new Map(products.map((p) => [p.id, p]));
+          const sortedProductIdsByFreq = Object.keys(freqMap).sort((a, b) => freqMap[b] - freqMap[a]);
 
-      // If less than 6, backfill with remaining in-stock products
-      if (selectedProducts.length < 6) {
-        const remaining = products
-          .filter((p) => !freqMap[p.id])
-          .map((p) => {
-            const qty = stockByProduct.get(p.id) ?? 0;
-            return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
-          })
-          .filter((p) => p.currentStock > 0);
-        selectedProducts = selectedProducts.concat(remaining);
-      }
+          // Select top 6 products that have positive stock (O(1) lookup per id)
+          let selectedProducts = sortedProductIdsByFreq
+            .map((id) => {
+              const p = productMap.get(id);
+              if (!p) return null;
+              const qty = stockByProduct.get(p.id) ?? 0;
+              return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null && p.currentStock > 0);
 
-      const topProducts = selectedProducts.slice(0, 6);
+          // If less than 6, backfill with remaining in-stock products
+          if (selectedProducts.length < 6) {
+            const remaining = products
+              .filter((p) => !freqMap[p.id])
+              .map((p) => {
+                const qty = stockByProduct.get(p.id) ?? 0;
+                return { id: p.id, name: p.name, sellPrice: p.sellPrice, currentStock: qty };
+              })
+              .filter((p) => p.currentStock > 0);
+            selectedProducts = selectedProducts.concat(remaining);
+          }
 
-      const relevantExpenses = expenses.filter((e) => branchId === null || e.branchId === branchId || !e.branchId);
-      const todaysExpensesTotal = relevantExpenses.reduce((sum, e) => sum + e.amount, 0);
+          const topProducts = selectedProducts.slice(0, 6);
 
-      const relevantPurchases = purchases.filter((p) => branchId === null || p.branchId === branchId);
-      const todaysPurchasesTotal = relevantPurchases.reduce(
-        (sum: number, p: Purchase) => sum + p.items.reduce((lineSum: number, i) => lineSum + i.quantity * i.unitCost, 0),
-        0
-      );
+          const relevantExpenses = expenses.filter((e) => branchId === null || e.branchId === branchId || !e.branchId);
+          const todaysExpensesTotal = relevantExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+          const relevantPurchases = purchases.filter((p) => branchId === null || p.branchId === branchId);
+          const todaysPurchasesTotal = relevantPurchases.reduce(
+            (sum: number, p: Purchase) => sum + p.items.reduce((lineSum: number, i) => lineSum + i.quantity * i.unitCost, 0),
+            0
+          );
 
       // Sum by payment method so mixed-payment sales (e.g. ₦9,000 cash + ₦1,000 credit)
       // contribute their actual paid cash/transfer amounts to cash flow rather than being dropped entirely.
@@ -196,7 +214,8 @@ export function useDashboardMetrics(branchId: string | null, viewerId: string | 
         topProducts,
         error: null,
       } satisfies DashboardMetrics;
-    } catch (err) {
+    });
+  } catch (err) {
       return {
         hasAnyProducts: false,
         todaysSalesTotal: 0,

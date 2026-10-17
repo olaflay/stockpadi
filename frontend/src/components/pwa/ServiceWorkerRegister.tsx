@@ -87,10 +87,9 @@ export function ServiceWorkerRegister() {
 
   const refreshCurrentData = useCallback(() => {
     if (typeof navigator !== "undefined" && navigator.onLine) {
-      router.refresh();
       void ensureBackendBuildCompatibility(true);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     disposed.current = false;

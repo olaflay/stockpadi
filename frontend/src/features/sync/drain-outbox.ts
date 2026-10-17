@@ -40,7 +40,9 @@ interface SyncPushItemResult {
 // backend accepts up to 100, but the client deliberately sends 25 so one slow
 // or failed group does not hold the rest of the queue hostage.
 const DRAIN_BATCH_SIZE = 25;
-const PUSH_TIMEOUT_MS = 30_000;
+export const DEFAULT_PUSH_TIMEOUT_MS = 8_000;
+export const SALE_FAST_LANE_TIMEOUT_MS = 6_000;
+const AUTH_SESSION_TIMEOUT_MS = 3_000;
 const MAX_AUTOMATIC_RETRIES = 8;
 
 // Types whose acknowledgement is NOT sufficient to retire the row, because the
@@ -60,8 +62,6 @@ const MAX_AUTOMATIC_RETRIES = 8;
 // on queue depth - a separate concern from projection confirmation.
 const STOCK_AFFECTING_TYPES = new Set(["sale", "stock_adjustment", "purchase_receipt"]);
 
-let isDraining = false;
-
 interface DrainOptions {
   /** Restrict a fast lane to one mutation class without touching other work. */
   types?: SyncEntityType[];
@@ -73,47 +73,60 @@ function includesDrainType(item: SyncQueueItem, types: Set<SyncEntityType> | nul
   return types === null || types.has(item.type);
 }
 
-/**
- * Web Locks API coordinates this across browser tabs on the same origin —
- * the plain in-memory isDraining flag below only prevented two concurrent
- * calls within a single tab. Without cross-tab coordination, two tabs open
- * at once could both drain the same pending rows; the loser's insert hits a
- * unique-constraint error server-side and gets marked "failed" locally even
- * though the data synced successfully via the winner (self-heals on manual
- * retry, but confusing). Falls back to the in-memory-only guard on browsers
- * without navigator.locks (Safari < 15.4).
- */
+let activeDrainPromise: Promise<{ drained: number; pendingRemaining: number }> | null = null;
+
 export async function drainOutbox(options: DrainOptions = {}): Promise<{ drained: number; pendingRemaining: number }> {
-  await getLocalBusinessId();
-  const types = options.types ? new Set(options.types) : null;
-
-  const getPendingCount = async () =>
-    (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+  if (activeDrainPromise) {
+    const prior = await activeDrainPromise;
+    const types = options.types ? new Set(options.types) : null;
+    const remaining = (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
       .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types)).length;
-
-  const initialCount = await getPendingCount();
-  if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
-  const compatibility = await ensureBackendBuildCompatibility();
-  if (!compatibility.compatible || isSyncPausedForClientUpgrade()) {
-    return { drained: 0, pendingRemaining: initialCount };
+    if (remaining > 0 && !activeDrainPromise) {
+      return drainOutbox(options);
+    }
+    return prior;
   }
 
-  if (isDraining) return { drained: 0, pendingRemaining: initialCount };
-  isDraining = true;
-  try {
-    await withSyncLease(() => withDatabaseClosedRecovery(() => drainOnce(options)));
-  } finally {
-    isDraining = false;
-  }
+  const promise = (async () => {
+    await getLocalBusinessId();
+    const types = options.types ? new Set(options.types) : null;
 
-  const finalCount = await getPendingCount();
-  return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
+    const getPendingCount = async () =>
+      (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+        .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types)).length;
+
+    const initialCount = await getPendingCount();
+    if (initialCount === 0) return { drained: 0, pendingRemaining: 0 };
+    const compatibility = await ensureBackendBuildCompatibility();
+    if (!compatibility.compatible || isSyncPausedForClientUpgrade()) {
+      return { drained: 0, pendingRemaining: initialCount };
+    }
+
+    try {
+      await withSyncLease(() => withDatabaseClosedRecovery(() => drainOnce(options)), { waitForLease: true });
+    } finally {
+      // In-flight execution completed
+    }
+
+    const finalCount = await getPendingCount();
+    return { drained: Math.max(0, initialCount - finalCount), pendingRemaining: finalCount };
+  })();
+
+  activeDrainPromise = promise;
+  promise.finally(() => {
+    if (activeDrainPromise === promise) {
+      activeDrainPromise = null;
+    }
+  });
+  return promise;
 }
 
 async function drainOnce(options: DrainOptions = {}): Promise<void> {
   await getLocalBusinessId();
   if (options.runMaintenance !== false) await resumeAccountBlockedWrites();
   const types = options.types ? new Set(options.types) : null;
+  const isSaleFastLane = Boolean(options.types && options.types.length === 1 && options.types[0] === "sale");
+  const pushTimeoutMs = isSaleFastLane ? SALE_FAST_LANE_TIMEOUT_MS : DEFAULT_PUSH_TIMEOUT_MS;
   const restoredCategoryIds = new Set<string>();
 
   for (;;) {
@@ -127,10 +140,13 @@ async function drainOnce(options: DrainOptions = {}): Promise<void> {
     // received yet, but the client can safely restore that dependency from
     // the same tenant's local category row. Never invent a category or use a
     // row from another business.
-    await withDatabaseClosedRecovery(() => restoreMissingProductCategoryDependencies(queued, restoredCategoryIds));
-    await withDatabaseClosedRecovery(() => linkQueuedProductCategoryDependencies(queued));
-    queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
-      .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types));
+    // In sale fast lanes or batches without products, bypass category recovery to keep checkout zero-latency.
+    if (!isSaleFastLane && options.runMaintenance !== false && queued.some((item) => item.type === "product")) {
+      await withDatabaseClosedRecovery(() => restoreMissingProductCategoryDependencies(queued, restoredCategoryIds));
+      await withDatabaseClosedRecovery(() => linkQueuedProductCategoryDependencies(queued));
+      queued = (await db.outbox.where("status").anyOf("pending", "blocked").toArray())
+        .filter((item) => matchesActiveTenant(item) && includesDrainType(item, types));
+    }
     const allActive = (await db.outbox.toArray()).filter(matchesActiveTenant);
 
     const ready: SyncQueueItem[] = [];
@@ -177,7 +193,7 @@ async function drainOnce(options: DrainOptions = {}): Promise<void> {
       // A failed batch is parked with its own retry metadata. Continue with
       // independent batches so one bad record or a transient response does
       // not block unrelated sales and inventory work.
-      progressed = (await drainSlice(ready.slice(offset, offset + DRAIN_BATCH_SIZE))) || progressed;
+      progressed = (await drainSlice(ready.slice(offset, offset + DRAIN_BATCH_SIZE), pushTimeoutMs)) || progressed;
     }
     if (!progressed) return;
   }
@@ -311,16 +327,38 @@ async function resumeAccountBlockedWrites(): Promise<void> {
   }))));
 }
 
-async function drainSlice(slice: SyncQueueItem[]): Promise<boolean> {
-  return withDatabaseClosedRecovery(() => drainSliceOnce(slice));
+async function drainSlice(slice: SyncQueueItem[], timeoutMs = DEFAULT_PUSH_TIMEOUT_MS): Promise<boolean> {
+  return withDatabaseClosedRecovery(() => drainSliceOnce(slice, timeoutMs));
 }
 
-async function drainSliceOnce(slice: SyncQueueItem[]): Promise<boolean> {
+function sanitizeWirePayload(payload: unknown): unknown {
+  if (payload === null || typeof payload !== "object") return payload;
+  if (Array.isArray(payload)) {
+    return payload.map(sanitizeWirePayload);
+  }
+  const clean: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(payload as Record<string, unknown>)) {
+    if (val === undefined) continue;
+    clean[key] = val !== null && typeof val === "object" ? sanitizeWirePayload(val) : val;
+  }
+  return clean;
+}
+
+async function drainSliceOnce(slice: SyncQueueItem[], timeoutMs = DEFAULT_PUSH_TIMEOUT_MS): Promise<boolean> {
   // Auth SDK access is intentionally the only Supabase SDK use here. The
   // business request itself goes through the Node application API.
   const supabase = getSupabase();
   if (!supabase) return false;
-  const { data: { session } } = await supabase.auth.getSession();
+
+  // Unyielding auth guard: if GoTrue locks or stalls, abort after AUTH_SESSION_TIMEOUT_MS
+  // so the sync loop never hangs or freezes IndexedDB transactions.
+  const sessionResult = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise<{ data: { session: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null } }), AUTH_SESSION_TIMEOUT_MS)
+    ),
+  ]);
+  const session = sessionResult?.data?.session;
   if (!session) return false;
 
   const sessionRow = await db.session.get("current");
@@ -349,20 +387,25 @@ async function drainSliceOnce(slice: SyncQueueItem[]): Promise<boolean> {
       SYNC_ROUTES.push,
       {
         device_id: (await db.session.get("current"))?.deviceId ?? null,
-        batch: slice.map((item) => ({
-          client_id: item.mutationId ?? item.clientId,
-          mutation_id: item.mutationId ?? item.clientId,
-          idempotency_key: item.idempotencyKey ?? item.clientId,
-          payload_version: item.payloadVersion ?? 1,
-          entity_id: item.entityId ?? item.clientId,
-          operation: item.operation ?? (["product", "customer", "supplier", "branch", "category"].includes(item.type) ? "upsert" : "append"),
-          expected_version: item.expectedVersion,
-          type: item.type,
-          payload: item.payload,
-          created_at_local: item.createdAtLocal,
-        })),
+        batch: slice.map((item) => {
+          const batchItem: Record<string, unknown> = {
+            client_id: item.mutationId ?? item.clientId,
+            mutation_id: item.mutationId ?? item.clientId,
+            idempotency_key: item.idempotencyKey ?? item.clientId,
+            payload_version: item.payloadVersion ?? 1,
+            entity_id: item.entityId ?? item.clientId,
+            operation: item.operation ?? (["product", "customer", "supplier", "branch", "category"].includes(item.type) ? "upsert" : "append"),
+            type: item.type,
+            payload: sanitizeWirePayload(item.payload),
+            created_at_local: item.createdAtLocal,
+          };
+          if (typeof item.expectedVersion === "number") {
+            batchItem.expected_version = item.expectedVersion;
+          }
+          return batchItem;
+        }),
       },
-      { timeoutMs: PUSH_TIMEOUT_MS }
+      { timeoutMs }
     );
     if (!isRecord(response) || !Array.isArray(response.results)) {
       await parkRetryable(slice, "MISSING_RESULT", "Sync response did not contain per-operation results.");

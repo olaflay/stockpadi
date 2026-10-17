@@ -2,7 +2,7 @@ import { db, type CustomerCreditMovement, withDatabaseClosedRecovery } from "@/l
 import type { Sale, SaleItem, SalePayment } from "@/types/sale";
 import type { StockMovement } from "@/types/stock-movement";
 import type { Product } from "@/types/product";
-import { getCurrentStock } from "@/features/inventory/stock";
+import { getCurrentStock, getPendingStockMovementIds } from "@/features/inventory/stock";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { tenantGet, withLocalBusinessId } from "@/lib/local-tenant";
@@ -200,8 +200,10 @@ export async function completeSale(params: {
       // A sale must never silently drive stock negative — see
       // .agents/rules/offline-sync-and-ledger.md. Checked inside this
       // transaction so it's atomic with the writes below.
+      // Preload pending movement IDs once for all items to eliminate redundant outbox table scans.
+      const pendingMovementIds = await getPendingStockMovementIds();
       for (const [productId, requested] of requestedBaseQtyByProduct) {
-        const currentStock = await getCurrentStock(productId, params.branchId);
+        const currentStock = await getCurrentStock(productId, params.branchId, pendingMovementIds);
         if (requested > currentStock) {
           const product = await tenantGet<Product>(db.products, productId);
           const name = product?.name ?? "This item";

@@ -75,12 +75,36 @@ function coalesceTrigger(current: SyncPullTrigger | null, next: SyncPullTrigger)
   return current;
 }
 
+let coordinatorDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingDebounceResolvers: Array<(res: SyncCycleResult | null) => void> = [];
+let debouncedHighestTrigger: SyncPullTrigger | null = null;
+
 /**
  * Schedules one canonical cycle. A trigger arriving during a cycle is kept as
  * one follow-up trigger; it never starts a second concurrent cursor or outbox
- * operation.
+ * operation. An optional debounceMs allows rapid back-to-back writes to coalesce.
  */
-export function triggerSync(trigger: SyncPullTrigger): Promise<SyncCycleResult | null> {
+export function triggerSync(trigger: SyncPullTrigger, debounceMs = 0): Promise<SyncCycleResult | null> {
+  if (debounceMs > 0) {
+    debouncedHighestTrigger = coalesceTrigger(debouncedHighestTrigger, trigger);
+    return new Promise((resolve) => {
+      pendingDebounceResolvers.push(resolve);
+      if (coordinatorDebounceTimer) clearTimeout(coordinatorDebounceTimer);
+      coordinatorDebounceTimer = setTimeout(() => {
+        coordinatorDebounceTimer = null;
+        const currentTrigger = debouncedHighestTrigger ?? trigger;
+        debouncedHighestTrigger = null;
+        const resolvers = pendingDebounceResolvers;
+        pendingDebounceResolvers = [];
+        void triggerSync(currentTrigger, 0).then((res) => {
+          for (const r of resolvers) r(res);
+        }).catch(() => {
+          for (const r of resolvers) r(null);
+        });
+      }, debounceMs);
+    });
+  }
+
   if (activeCycle) {
     if (trigger === "sale" && activeTrigger !== "sale") {
       recordCoalescedTrigger();
@@ -104,6 +128,10 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
   beginSyncSession(trigger);
   setSyncRuntimePhase("syncing");
   setCoordinatorPhase("syncing");
+  const watchdog = setTimeout(() => {
+    setSyncRuntimePhase("idle");
+    setCoordinatorPhase("idle");
+  }, 12_000);
   try {
     const build = await ensureBackendBuildCompatibility(true);
     if (!build.compatible) return null;
@@ -157,6 +185,7 @@ async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false):
     );
     return { pushResult, pullResult };
   } finally {
+    clearTimeout(watchdog);
     setSyncRuntimePhase("idle");
     setCoordinatorPhase("idle");
   }

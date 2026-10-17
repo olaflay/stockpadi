@@ -41,7 +41,7 @@ describe("owner and worker stock convergence", () => {
 
   async function freshDevice(): Promise<void> {
     await Promise.all([
-      db.products.clear(), db.stockMovements.clear(), db.inventoryStock.clear(), db.outbox.clear(), db.sales.clear(), db.purchases.clear(), db.syncPullState.clear(), db.syncDiagnostics.clear(),
+      db.products.clear(), db.stockMovements.clear(), db.inventoryStock.clear(), db.outbox.clear(), db.sales.clear(), db.purchases.clear(), db.syncPullState.clear(), db.syncDiagnostics.clear(), db.syncLeases.clear(),
     ]);
     await db.businessProfile.put({ id: BUSINESS_PROFILE_SINGLETON_ID, businessId: "business-a", name: "Store", businessTypeId: "retail", currency: "NGN" });
   }

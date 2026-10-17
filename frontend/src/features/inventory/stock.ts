@@ -5,7 +5,11 @@ import { getLocalBusinessId, isLocalTenantRow, matchesActiveTenant } from "@/lib
  * Current stock is always computed from the ledger, never read from a
  * mutable field. See .agents/rules/offline-sync-and-ledger.md.
  */
-export async function getCurrentStock(productId: string, branchId: string): Promise<number> {
+export async function getCurrentStock(
+  productId: string,
+  branchId: string,
+  preloadedPendingMovementIds?: Set<string>
+): Promise<number> {
   const businessId = await getLocalBusinessId();
   const movements = await db.stockMovements
     .where("productId")
@@ -16,7 +20,7 @@ export async function getCurrentStock(productId: string, branchId: string): Prom
   if (businessId && db.tables.some((table) => table.name === "inventoryStock")) {
     const projection = await db.inventoryStock.get(`${businessId}:${productId}:${branchId}`);
     if (projection) {
-      const pendingMovementIds = await getPendingStockMovementIds();
+      const pendingMovementIds = preloadedPendingMovementIds ?? (await getPendingStockMovementIds());
       return projection.quantity + movements
         .filter((movement) => pendingMovementIds.has(movement.clientId))
         .reduce((total, movement) => total + movement.quantityDelta, 0);
