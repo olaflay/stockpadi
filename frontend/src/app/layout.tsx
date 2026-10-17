@@ -14,10 +14,16 @@ import "./globals.css";
 const THEME_INIT_SCRIPT = `
 try {
   var t = localStorage.getItem("stockpadi-theme");
+  var isDark = t === "dark" || (t !== "light" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
   if (t === "light" || t === "dark") {
     document.documentElement.setAttribute("data-theme", t);
   } else {
     document.documentElement.removeAttribute("data-theme");
+  }
+  var color = isDark ? "#1c2022" : "#eff2f3";
+  var metas = document.querySelectorAll('meta[name="theme-color"]');
+  for (var i = 0; i < metas.length; i++) {
+    metas[i].setAttribute("content", color);
   }
 } catch (e) {}
 `;
@@ -39,14 +45,21 @@ try {
 const EARLY_THEME_STYLE = `
   html, body {
     background-color: #ffffff;
+    color: #14181a;
   }
   @media (prefers-color-scheme: dark) {
     html, body {
       background-color: #121516;
+      color: #e7ebec;
     }
   }
+  :root[data-theme="light"], :root[data-theme="light"] body {
+    background-color: #ffffff !important;
+    color: #14181a !important;
+  }
   :root[data-theme="dark"], :root[data-theme="dark"] body {
-    background-color: #121516;
+    background-color: #121516 !important;
+    color: #e7ebec !important;
   }
 `;
 
@@ -153,8 +166,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#121516" },
+    { media: "(prefers-color-scheme: light)", color: "#eff2f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c2022" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -191,7 +204,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${googleSansFlex.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${googleSansFlex.variable} ${geistMono.variable} h-full antialiased bg-surface text-on-surface`}
       style={{
         "--color-brand-accent": branding.accentColor,
         "--brand-accent-configured": branding.accentColor,

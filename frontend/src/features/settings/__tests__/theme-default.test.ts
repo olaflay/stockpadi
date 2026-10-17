@@ -45,4 +45,33 @@ describe("Theme Default for New Users", () => {
 
     expect(screen.getByText(DEFAULT_THEME)).toBeTruthy();
   });
+
+  it("dynamically synchronizes <meta name=\"theme-color\"> with active theme tokens", () => {
+    // Inject a dummy meta tag
+    const meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("content", "#ffffff");
+    document.head.appendChild(meta);
+
+    let setThemeFn: (theme: any) => void = () => {};
+    function SwitcherProbe() {
+      const ctx = useContext(ThemeContext);
+      if (ctx) setThemeFn = ctx.setTheme;
+      return createElement("span", null, ctx?.theme);
+    }
+
+    render(createElement(ThemeProvider, null, createElement(SwitcherProbe)));
+
+    // Switch to dark mode
+    setThemeFn("dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(meta.getAttribute("content")).toBe("#1c2022");
+
+    // Switch to light mode
+    setThemeFn("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(meta.getAttribute("content")).toBe("#eff2f3");
+
+    meta.remove();
+  });
 });

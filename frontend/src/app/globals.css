@@ -233,9 +233,16 @@ body {
   }
 }
 
-/* Global removal of tap highlight flash on mobile touch devices */
-html, body {
+/* Global root canvas and body surface token bindings: prevents browser white leaks in safe areas and dynamic viewports */
+html,
+body {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
   -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 /* Typography & Numerals: Neue Helvetica for major number displays, prices, and stats */

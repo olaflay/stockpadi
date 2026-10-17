@@ -164,12 +164,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         {/* Bottom Navigation Dock Placeholder */}
         <nav
-          className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/30 bg-surface/90 backdrop-blur-md px-2 py-1"
+          className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 bg-surface-container px-2 py-1 after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface-container after:pointer-events-none"
           style={{
             paddingBottom: "max(0.35rem, calc(env(safe-area-inset-bottom, 0px) + 0.15rem))",
           }}
           aria-hidden
         >
+          {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
+          <div
+            aria-hidden
+            className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
+          />
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex min-h-[42px] flex-1 flex-col items-center justify-center gap-0.5 py-1">
               <Skeleton className="h-7 w-12 sm:w-14 rounded-full" />

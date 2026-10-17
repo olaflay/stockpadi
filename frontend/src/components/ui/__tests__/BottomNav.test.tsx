@@ -128,4 +128,22 @@ describe("BottomNav component", () => {
     expect(screen.queryByText("Stock")).toBeNull();
     expect(screen.queryByText("Products")).toBeNull();
   });
+
+  it("strictly binds navbar, safe-area padding, and downward chin blanket to bg-surface-container", () => {
+    currentPath = "/dashboard";
+    const { container } = render(<BottomNav />);
+    const nav = container.querySelector("nav[data-bottom-nav]") as HTMLElement;
+
+    expect(nav).toBeDefined();
+    // Nav element binds to design system surface container and pseudo-element blanket
+    expect(nav.className).toContain("bg-surface-container");
+    expect(nav.style.paddingBottom).toContain("safe-area-inset-bottom");
+    expect(nav.style.paddingBottom).toContain("0.35rem");
+
+    // Downward chin blanket element is present and binds to bg-surface-container
+    const blanket = nav.querySelector("div[aria-hidden]") as HTMLElement;
+    expect(blanket).toBeDefined();
+    expect(blanket.className).toContain("bg-surface-container");
+    expect(blanket.className).toContain("top-full");
+  });
 });
