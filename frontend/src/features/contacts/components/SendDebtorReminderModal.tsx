@@ -41,16 +41,16 @@ function SendDebtorReminderForm({
   return (
     <div className="flex flex-col gap-4">
       {/* Debtor Summary Card */}
-      <div className="flex items-center justify-between rounded-2xl bg-danger-container/20 p-3.5 border border-danger/20">
+      <div className="flex items-center justify-between rounded-2xl bg-credit-container p-3.5 border border-credit/20">
         <div>
-          <p className="text-sm font-bold text-on-surface">{contact.name}</p>
-          <p className="text-xs text-on-surface-muted font-number mt-0.5">
+          <p className="text-sm font-bold text-on-credit-container">{contact.name}</p>
+          <p className="text-xs text-on-credit-container/80 font-number mt-0.5">
             {contact.phone ? formatDisplayPhone(contact.phone) : "No phone recorded"}
           </p>
         </div>
         <div className="text-right">
-          <span className="text-[11px] text-on-surface-muted block">Amount Owed</span>
-          <span className="font-number text-lg font-bold tabular-nums text-danger">
+          <span className="text-[11px] text-on-credit-container/80 block">Amount Owed</span>
+          <span className="font-number text-lg font-bold tabular-nums text-on-credit-container">
             {formatCurrency(contact.balance)}
           </span>
         </div>

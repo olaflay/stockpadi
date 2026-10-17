@@ -55,10 +55,10 @@ export async function getCustomerDebtAges(): Promise<Map<string, number>> {
   return ages;
 }
 
-/** Aging bucket labels and colors for the debt aging chip. */
+/** Aging bucket labels and colors for the debt aging chip using calibrated semantic container tokens. */
 export function getAgingBucket(days: number): { label: string; colorClass: string } {
-  if (days <= 7) return { label: "Current", colorClass: "bg-success/15 text-success" };
-  if (days <= 30) return { label: `${days}d`, colorClass: "bg-warning/15 text-warning" };
-  if (days <= 90) return { label: `${days}d`, colorClass: "bg-orange-500/15 text-orange-500" };
-  return { label: `${days}d+`, colorClass: "bg-danger/15 text-danger" };
+  if (days <= 7) return { label: "Current", colorClass: "bg-success-container text-on-success-container" };
+  if (days <= 30) return { label: `${days}d`, colorClass: "bg-warning-container text-on-warning-container" };
+  if (days <= 90) return { label: `${days}d`, colorClass: "bg-warning-container text-on-warning-container" };
+  return { label: `${days}d+`, colorClass: "bg-danger-container text-on-danger-container" };
 }

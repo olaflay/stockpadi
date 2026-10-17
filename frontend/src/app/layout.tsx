@@ -7,7 +7,6 @@ import { ThemeProvider } from "@/features/settings/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PwaReadiness } from "@/components/pwa/PwaReadiness";
 import { InstallBanner } from "@/components/ui/InstallBanner";
-import { SplashScreen } from "@/components/pwa/SplashScreen";
 import "./globals.css";
 
 // Runs before hydration so a pinned light/dark choice applies on first
@@ -37,7 +36,7 @@ try {
 } catch (e) {}
 `;
 
-const SPLASH_STYLE = `
+const EARLY_THEME_STYLE = `
   html, body {
     background-color: #ffffff;
   }
@@ -49,33 +48,7 @@ const SPLASH_STYLE = `
   :root[data-theme="dark"], :root[data-theme="dark"] body {
     background-color: #121516;
   }
-  #splash{
-    position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-    background:var(--splash-bg,transparent);
-    opacity:1;transition:opacity .35s cubic-bezier(.4,0,.2,1);
-  }
-  #splash.is-leaving{opacity:0;pointer-events:none}
-  #splash svg{width:min(52vw,200px);height:auto;overflow:visible}
-  #splash svg *{transform-box:fill-box;transform-origin:center}
-
-  #splash .tile{animation:splash-tile .7s cubic-bezier(.16,1,.3,1) both}
-  #splash .loop{stroke-dasharray:100;animation:splash-draw 1s .3s cubic-bezier(.65,0,.35,1) both}
-  #splash .arc{stroke-dasharray:100;animation:splash-draw .6s .9s cubic-bezier(.65,0,.35,1) both}
-  #splash .node{animation:splash-in .5s 1.15s cubic-bezier(.16,1,.3,1) both}
-  #splash .sun{animation:splash-in .55s 1.3s cubic-bezier(.16,1,.3,1) both}
-  #splash .sun-core{animation:splash-in .45s 1.4s cubic-bezier(.16,1,.3,1) both}
-
-  @keyframes splash-tile{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
-  @keyframes splash-draw{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}
-  @keyframes splash-in{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
-
-  @media (prefers-reduced-motion:reduce){
-    #splash *{animation:none!important}
-    #splash{transition-duration:.01s}
-  }
 `;
-
-const SPLASH_FAILSAFE_SCRIPT = `setTimeout(function(){var s=document.getElementById('splash');if(s)s.remove()},10000);`;
 
 const googleSansFlex = localFont({
   src: "./fonts/google-sans-flex-latin.woff2",
@@ -226,7 +199,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <head>
-        <style dangerouslySetInnerHTML={{ __html: SPLASH_STYLE }} />
+        <style dangerouslySetInnerHTML={{ __html: EARLY_THEME_STYLE }} />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: UUID_POLYFILL_SCRIPT }} />
         <script
@@ -235,27 +208,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full flex flex-col bg-surface text-on-surface">
-        <div id="splash" role="status" aria-label="Loading">
-          <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <linearGradient id="sp-bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#0b7a55"/><stop offset="100%" stopColor="#044730"/></linearGradient>
-              <linearGradient id="sp-lp" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#ffffff"/><stop offset="100%" stopColor="#d1fae5"/></linearGradient>
-              <linearGradient id="sp-ac" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#fbbf24"/><stop offset="100%" stopColor="#f59e0b"/></linearGradient>
-            </defs>
-            <g className="tile">
-              <rect width="512" height="512" rx="112" fill="url(#sp-bg)"/>
-              <rect x="24" y="24" width="464" height="464" rx="88" stroke="#fff" strokeOpacity={0.14} strokeWidth="4"/>
-            </g>
-            <path className="loop" pathLength={100} d="M256 148C194.144 148 144 198.144 144 260C144 321.856 194.144 372 256 372C317.856 372 368 321.856 368 260C368 227.156 353.844 197.62 331.258 177.2" stroke="url(#sp-lp)" strokeWidth="42" strokeLinecap="round"/>
-            <path className="arc" pathLength={100} d="M208 260C208 233.49 229.49 212 256 212C282.51 212 304 233.49 304 260C304 286.51 282.51 308 256 308" stroke="#fff" strokeOpacity={0.4} strokeWidth="18" strokeLinecap="round"/>
-            <circle className="node" cx="256" cy="260" r="22" fill="#fff"/>
-            <circle className="sun" cx="348" cy="154" r="24" fill="url(#sp-ac)"/>
-            <circle className="sun-core" cx="348" cy="154" r="10" fill="#fff"/>
-          </svg>
-        </div>
-        <script dangerouslySetInnerHTML={{ __html: SPLASH_FAILSAFE_SCRIPT }} />
         <ThemeProvider>
-          <SplashScreen />
           <ServiceWorkerRegister />
           <PwaReadiness />
           <InstallBanner />

@@ -209,6 +209,7 @@ body {
   * {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   *::-webkit-scrollbar {
@@ -217,6 +218,24 @@ body {
     height: 0px;
     background: transparent;
   }
+
+  /* Prevent iOS Safari automatic page zoom on focus by ensuring font-size is at least 16px */
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Global removal of tap highlight flash on mobile touch devices */
+html, body {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Typography & Numerals: Neue Helvetica for major number displays, prices, and stats */
@@ -505,6 +524,13 @@ body:has(input:focus, textarea:focus) [data-bottom-nav] {
   transform: translateY(100%);
   pointer-events: none;
   transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+body:has(input:focus, textarea:focus) [data-install-banner] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
 }
 
 /* Layout containment for smooth 60fps scrolling over large lists under load */

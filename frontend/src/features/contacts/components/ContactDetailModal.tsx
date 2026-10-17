@@ -128,9 +128,9 @@ export function ContactDetailModal({
 
         {/* Debtor Highlights Banner */}
         {isDebtor && (
-          <div className="rounded-2xl bg-danger-container/20 p-4 border border-danger/20">
+          <div className="rounded-2xl bg-credit-container p-4 border border-credit/20">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-on-surface-muted">
+              <span className="text-xs font-medium text-on-credit-container/80">
                 Outstanding Balance
               </span>
               {aging && (
@@ -140,7 +140,7 @@ export function ContactDetailModal({
                 </span>
               )}
             </div>
-            <p className="mt-1 font-number text-2xl font-bold tabular-nums text-danger">
+            <p className="mt-1 font-number text-2xl font-bold tabular-nums text-on-credit-container">
               {formatCurrency(contact.balance)}
             </p>
           </div>

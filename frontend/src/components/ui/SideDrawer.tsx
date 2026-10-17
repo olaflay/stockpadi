@@ -27,6 +27,8 @@ import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useIsStandalone, openInstallPrompt } from "@/lib/pwa-install";
+import { Download } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -57,6 +59,7 @@ export function SideDrawer() {
   const storeName = businessProfile?.name?.trim() || branding.businessName;
 
   const drawerRef = React.useRef<HTMLElement>(null);
+  const isStandalone = useIsStandalone();
 
   // Close on path change
   useEffect(() => {
@@ -290,6 +293,20 @@ export function SideDrawer() {
 
         {/* Drawer Footer: Support, Appearance & Sign Out */}
         <div className="shrink-0 space-y-2 border-t border-border/40 bg-surface-container-low px-3.5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))]">
+          {!isStandalone && (
+            <button
+              type="button"
+              onClick={() => {
+                closeDrawer();
+                openInstallPrompt();
+              }}
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-brand-accent bg-brand-accent/10 hover:bg-brand-accent/15 active:scale-[0.99] transition-all w-full text-left"
+            >
+              <Download size={16} className="text-brand-accent shrink-0" aria-hidden />
+              <span>Install App on Device</span>
+            </button>
+          )}
+
           <Link
             href="/settings/help"
             onClick={closeDrawer}

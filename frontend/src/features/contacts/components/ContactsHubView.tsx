@@ -136,32 +136,32 @@ export function ContactsHubView({
 
       {/* Total Owed Highlight Banner & Template Shortcut */}
       {(kind === "debtors" || counts.debtors > 0) && totalOwed > 0 && (
-        <div className="flex flex-col gap-2.5 rounded-2xl bg-danger-container/20 p-4 border border-danger/20">
+        <div className="flex flex-col gap-2.5 rounded-2xl bg-credit-container p-4 border border-credit/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-on-surface-muted">
+              <p className="text-xs font-medium text-on-credit-container/80">
                 Money outside (Customer debt)
               </p>
-              <p className="mt-0.5 font-number text-2xl font-bold tabular-nums text-danger">
+              <p className="mt-0.5 font-number text-2xl font-bold tabular-nums text-on-credit-container">
                 {formatCurrency(totalOwed)}
               </p>
             </div>
             <div className="text-right">
-              <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger">
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-credit">
                 <Users size={14} />
                 <span>{counts.debtors} owing</span>
               </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-danger/15 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-on-surface-muted truncate">
+          <div className="pt-2 border-t border-credit/20 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-on-credit-container/80 truncate">
               Debtor reminder template:
             </span>
             <button
               type="button"
               onClick={() => setTemplateModalOpen(true)}
-              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-brand-accent hover:bg-surface-container-high transition-colors"
+              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-credit hover:bg-surface/90 transition-colors shadow-2xs"
             >
               <MessageSquare size={13} />
               <span>Edit Reminder Message</span>
@@ -267,7 +267,7 @@ export function ContactsHubView({
                   <div className="flex shrink-0 items-center gap-2">
                     {isDebtor ? (
                       <div className="flex flex-col items-end">
-                        <span className="font-number text-sm font-bold tabular-nums text-danger">
+                        <span className="font-number text-sm font-bold tabular-nums text-credit">
                           {formatCurrency(contact.balance)}
                         </span>
                         {aging && (

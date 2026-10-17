@@ -62,7 +62,7 @@ export function SearchBar({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="search-bar-input h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
+        className="search-bar-input h-full min-h-[48px] min-w-0 flex-1 bg-transparent pl-11 pr-2 text-[16px] sm:text-[length:var(--font-size-body)] text-on-surface placeholder:text-on-surface-muted/70 outline-none"
       />
 
       <div className="relative mr-2 flex shrink-0 items-center gap-1">

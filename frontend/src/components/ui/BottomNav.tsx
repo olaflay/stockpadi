@@ -43,12 +43,12 @@ const DELICATE_FORM_FLOWS = [
   "/onboarding",
 ];
 
-export function isDelicateFormRoute(pathname: string): boolean {
+function isDelicateFormRoute(pathname: string): boolean {
   if (!pathname) return false;
   return DELICATE_FORM_FLOWS.some((flow) => pathname === flow || pathname.startsWith(`${flow}/`));
 }
 
-export function isSecondaryDestination(pathname: string): boolean {
+function isSecondaryDestination(pathname: string): boolean {
   if (!pathname) return false;
   return SECONDARY_ROUTES_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)

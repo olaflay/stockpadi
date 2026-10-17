@@ -68,14 +68,14 @@ function KpiCard({
 }) {
   const content = (
     <>
-      <p className="text-[11px] sm:text-xs font-medium text-on-surface-muted leading-tight truncate">
+      <p className="text-xs font-semibold text-on-surface-variant leading-tight truncate">
         {label}
       </p>
       <div className="mt-1.5 min-w-0">
-        <p className={`truncate font-number text-lg font-bold tracking-tight tabular-nums sm:text-xl ${valueClassName}`}>
+        <p className={`font-number text-[clamp(15px,4.2vw,18px)] font-bold tracking-tight tabular-nums leading-snug break-words ${valueClassName}`}>
           {value}
         </p>
-        <p className="mt-0.5 text-[11px] sm:text-xs text-on-surface-muted leading-tight truncate">
+        <p className="mt-0.5 text-xs text-on-surface-muted leading-tight truncate">
           {sub}
         </p>
       </div>
@@ -131,13 +131,13 @@ export default function DashboardPage() {
     },
     hasCapability(user, "MANAGE_PRODUCTS") && {
       key: "add-product",
-      label: "Add product",
+      label: "New item",
       href: "/products/new",
       icon: Plus,
     },
     hasCapability(user, "RECEIVE_STOCK") && {
       key: "restock",
-      label: "Receive delivery",
+      label: "Restock",
       href: "/purchases/new",
       icon: PackagePlus,
     },
@@ -149,7 +149,7 @@ export default function DashboardPage() {
     },
     hasCapability(user, "SUBMIT_STOCK_COUNT") && !hasCapability(user, "MANAGE_PRODUCTS") && {
       key: "stock-count",
-      label: "Stock count",
+      label: "Audit",
       href: "/stock-count",
       icon: ClipboardCheck,
     },
@@ -189,23 +189,28 @@ export default function DashboardPage() {
     : 0;
 
   if (metrics === undefined) {
+    const isWorker = user.accountType === "WORKER";
+    const expectedKpiCount = isWorker ? (canSeeCustomers ? 2 : 1) : 4;
     return (
       <div className="flex flex-col gap-4">
         <ScreenHeader title="Dashboard" hideBack={true} />
-        <Skeleton className="h-28 w-full" />
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
+        <Skeleton className="h-28 w-full rounded-3xl" />
+        <div className="grid grid-cols-4 gap-2">
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-20 rounded-2xl" />
+        </div>
+        <div className={`grid gap-2.5 sm:gap-3 ${expectedKpiCount === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+          {Array.from({ length: expectedKpiCount }).map((_, i) => (
+            <Skeleton key={i} className="h-24 sm:h-28 rounded-2xl" />
+          ))}
         </div>
         <div className="mt-1 flex flex-col gap-3">
           <Skeleton className="h-5 w-32" />
           <div className="flex flex-col gap-2">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
+            <Skeleton className="h-16 rounded-2xl" />
+            <Skeleton className="h-16 rounded-2xl" />
           </div>
         </div>
       </div>
@@ -242,7 +247,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="pb-16">
+    <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       <ScreenHeader title="Dashboard" hideBack={true} />
 
       {/* Email verification banner — shown only to owner until email confirmed */}
@@ -284,13 +289,13 @@ export default function DashboardPage() {
 
       {/* PRIMARY HERO CARD: Today's Sales */}
       {canSeeOwnSales && (
-        <div className="mb-3 flex w-full flex-col rounded-3xl bg-surface-container p-4 sm:p-5 text-left border border-border/20 shadow-xs">
+        <div className="mb-3.5 flex w-full flex-col rounded-3xl bg-surface-container p-4 sm:p-5 text-left border border-border/20 shadow-xs">
           {/* Small top header with label in capital letters and dynamic date */}
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-on-surface-muted">
+            <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
               {user.accountType === "WORKER" ? "YOUR SALES TODAY" : "TODAY'S SALES"}
             </p>
-            <span className="text-[11px] sm:text-xs font-medium text-on-surface-muted shrink-0">
+            <span className="text-xs font-medium text-on-surface-muted shrink-0">
               {formatDashboardHeroDate()}
             </span>
           </div>
@@ -301,9 +306,25 @@ export default function DashboardPage() {
           </p>
 
           {/* High-signal Breakdown */}
-          <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted leading-tight">
+          <p className="mt-1 text-xs text-on-surface-muted leading-tight">
             {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
           </p>
+
+          {/* Cleveland-McGill Proportional Visual Ratio Bar */}
+          {metrics.todaysSalesTotal > 0 && (
+            <div className="mt-2.5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest" aria-hidden>
+              <div
+                style={{ width: `${Math.min(100, Math.max(0, (metrics.todaysPaidSalesTotal / metrics.todaysSalesTotal) * 100))}%` }}
+                className="bg-brand-accent transition-all duration-300"
+                title="Cash takings"
+              />
+              <div
+                style={{ width: `${Math.min(100, Math.max(0, (metrics.todaysCreditSalesTotal / metrics.todaysSalesTotal) * 100))}%` }}
+                className="bg-credit transition-all duration-300"
+                title="Credit sales"
+              />
+            </div>
+          )}
 
           {/* M3 / One UI Tonal Action Card for View Sales & Receipts */}
           <RippleLink
@@ -316,6 +337,66 @@ export default function DashboardPage() {
               <ArrowRight size={15} className="text-brand-accent group-hover:translate-x-0.5 transition-transform" />
             </div>
           </RippleLink>
+        </div>
+      )}
+
+      {/* QUICK ACTIONS DOCK: Anchored directly below hero in the primary thumb arc */}
+      {quickActions.length > 0 && (
+        <div
+          className={`mb-3.5 rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
+            quickActions.length === 2
+              ? "grid-cols-2"
+              : quickActions.length === 3
+              ? "grid-cols-3"
+              : "grid-cols-4"
+          }`}
+        >
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            if ("href" in action && action.href) {
+              return (
+                <RippleLink
+                  key={action.key}
+                  href={action.href}
+                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                >
+                  <div
+                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                      action.isPrimary
+                        ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                        : "bg-surface-container-highest text-brand-accent group-hover:bg-brand-container/40 group-hover:text-brand-accent"
+                    }`}
+                  >
+                    <Icon size={22} strokeWidth={2.4} aria-hidden />
+                  </div>
+                  <span className={`mt-2 text-xs sm:text-[13px] text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors ${action.isPrimary ? "font-semibold" : "font-medium"}`}>
+                    {action.label}
+                  </span>
+                </RippleLink>
+              );
+            }
+            return (
+              <RippleButton
+                key={action.key}
+                type="button"
+                onClick={action.onClick}
+                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+              >
+                <div
+                  className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                    action.isPrimary
+                      ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                      : "bg-surface-container-highest text-brand-accent group-hover:bg-brand-container/40 group-hover:text-brand-accent"
+                  }`}
+                >
+                  <Icon size={22} strokeWidth={2.4} aria-hidden />
+                </div>
+                <span className={`mt-2 text-xs sm:text-[13px] text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors ${action.isPrimary ? "font-semibold" : "font-medium"}`}>
+                  {action.label}
+                </span>
+              </RippleButton>
+            );
+          })}
         </div>
       )}
 
@@ -348,7 +429,7 @@ export default function DashboardPage() {
             value={customersOwingData !== undefined ? formatCurrency(customersOwingData.totalOwed) : "…"}
             sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "debtor" : "debtors"}` : "Cleared"}
             actionLabel="Debtors →"
-            valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-danger" : "text-on-surface"}
+            valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-credit" : "text-on-surface"}
             href="/contacts?tab=debtors"
           />
         )}
@@ -363,59 +444,11 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* 4-GRID ACTION TILES: Unified containers with brand-green icons across all actions */}
-      {quickActions.length > 0 && (
-        <div
-          className={`mt-3.5 rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
-            quickActions.length === 2
-              ? "grid-cols-2"
-              : quickActions.length === 3
-              ? "grid-cols-3"
-              : "grid-cols-4"
-          }`}
-        >
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            if ("href" in action && action.href) {
-              return (
-                <RippleLink
-                  key={action.key}
-                  href={action.href}
-                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-                >
-                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container/40 group-hover:text-brand-accent transition-all">
-                    <Icon size={22} strokeWidth={2.4} aria-hidden />
-                  </div>
-                  <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                    {action.label}
-                  </span>
-                </RippleLink>
-              );
-            }
-            return (
-              <RippleButton
-                key={action.key}
-                type="button"
-                onClick={action.onClick}
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
-              >
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container-highest text-brand-accent shadow-xs group-hover:bg-brand-container/40 group-hover:text-brand-accent transition-all">
-                  <Icon size={22} strokeWidth={2.4} aria-hidden />
-                </div>
-                <span className="mt-2 text-xs sm:text-[13px] font-medium text-on-surface group-hover:text-brand-accent text-center leading-tight truncate w-full transition-colors">
-                  {action.label}
-                </span>
-              </RippleButton>
-            );
-          })}
-        </div>
-      )}
-
       {/* Expiring Products Alert */}
       {metrics.expiringCount > 0 && (
         <RippleLink
           href="/products?filter=expiring"
-          className="mt-3 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
+          className="mt-3.5 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-danger-container text-on-danger-container px-4 py-3 text-left transition-all hover:brightness-95"
         >
           <span className="text-[length:var(--font-size-body)] font-medium">
             {metrics.expiringCount} {metrics.expiringCount === 1 ? "product" : "products"} expired or expiring soon
@@ -448,7 +481,7 @@ export default function DashboardPage() {
                 </div>
                 <RippleLink
                   href={`/pos?add=${p.id}`}
-                  className="flex h-8 items-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all"
+                  className="relative flex h-8 items-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all before:absolute before:-inset-2 before:content-['']"
                   aria-label={`Sell ${p.name}`}
                 >
                   <span>+ Sell</span>
