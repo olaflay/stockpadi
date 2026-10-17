@@ -105,7 +105,7 @@ export function BottomNav() {
           isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         }`}
         style={{
-          paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 0.35rem))",
+          paddingBottom: "max(0.35rem, calc(env(safe-area-inset-bottom, 0px) + 0.15rem))",
           willChange: "transform, opacity",
         }}
       >
@@ -136,18 +136,18 @@ export function BottomNav() {
                 type="button"
                 id={`tour-nav-${item.label.toLowerCase()}`}
                 onClick={() => setIsMoreOpen((prev) => !prev)}
-                className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+                className={`flex min-h-[42px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[11px] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                   isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
                 }`}
                 aria-expanded={isMoreOpen}
                 aria-label="Open more options menu"
               >
                 <span
-                  className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
+                  className={`relative flex h-7 w-12 sm:w-14 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
                     isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
                   }`}
                 >
-                  <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
+                  <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
                   {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
                 </span>
                 {item.label}
@@ -161,17 +161,17 @@ export function BottomNav() {
               href={item.href}
               id={`tour-nav-${item.label.toLowerCase()}`}
               prefetch={true}
-              className={`flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
+              className={`flex min-h-[42px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[11px] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                 isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
               }`}
               aria-current={isActive ? "page" : undefined}
             >
               <span
-                className={`relative flex h-8 w-16 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
+                className={`relative flex h-7 w-12 sm:w-14 items-center justify-center rounded-full transition-all duration-[var(--motion-duration-short)] ${
                   isActive ? "bg-brand-container text-on-brand-container" : "text-on-surface-muted"
                 }`}
               >
-                <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden />
+                <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
                 {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
               </span>
               {item.label}

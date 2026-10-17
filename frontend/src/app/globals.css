@@ -270,7 +270,9 @@ html, body {
 .animate-shimmer {
   position: relative;
   overflow: hidden;
-  background-color: var(--color-surface-container);
+  background-color: var(--color-skeleton-bg, var(--color-surface-container));
+  border: 1px solid var(--color-skeleton-border, transparent);
+  backdrop-filter: blur(4px);
 }
 
 .animate-shimmer::after {
@@ -281,11 +283,13 @@ html, body {
   bottom: 0;
   left: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.05) 50%,
-      rgba(255, 255, 255, 0) 100%);
-  animation: shimmer 1.5s infinite linear;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--shimmer-highlight, rgba(255, 255, 255, 0.12)) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite ease-in-out;
 }
 
 /* Calm entrance for step transitions (POS checkout, receipt) */

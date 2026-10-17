@@ -24,8 +24,8 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
       <BannerStrip />
       <SideDrawer />
       <main
-        className={`min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 w-full max-w-xl md:max-w-2xl mx-auto transition-[padding] duration-200 ${
-          isNavVisible ? "pb-24 sm:pb-28" : "pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"
+        className={`min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-2 sm:pt-2.5 w-full max-w-xl md:max-w-2xl mx-auto transition-[padding] duration-200 ${
+          isNavVisible ? "pb-18 sm:pb-20" : "pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"
         }`}
       >
         {children}

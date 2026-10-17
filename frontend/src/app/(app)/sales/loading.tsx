@@ -3,15 +3,17 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function SalesLoading() {
   return (
-    <div className="flex flex-col gap-4">
-      <ScreenHeader title="Sales" />
-      <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
+    <div className="flex flex-col gap-3 pb-6">
+      <ScreenHeader title="Sales" hideBack={true} />
+      <Skeleton className="h-10 w-full rounded-xl" />
       <div className="flex flex-col gap-2">
-        <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />
-        <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />
-        <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />
-        <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />
-        <Skeleton className="h-16 w-full rounded-[var(--radius-card)]" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
       </div>
     </div>
   );

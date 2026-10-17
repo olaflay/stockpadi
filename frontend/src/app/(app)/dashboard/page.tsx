@@ -192,26 +192,54 @@ export default function DashboardPage() {
     const isWorker = user.accountType === "WORKER";
     const expectedKpiCount = isWorker ? (canSeeCustomers ? 2 : 1) : 4;
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 pb-6 sm:pb-8">
         <ScreenHeader title="Dashboard" hideBack={true} />
-        <Skeleton className="h-28 w-full rounded-3xl" />
-        <div className="grid grid-cols-4 gap-2">
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-20 rounded-2xl" />
+
+        {/* Hero Focus Card Placeholder */}
+        <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 border border-outline-variant/20 shadow-xs">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-28 rounded" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-8 w-44 rounded-lg my-1" />
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3.5 w-24 rounded" />
+            <Skeleton className="h-3.5 w-18 rounded" />
+          </div>
         </div>
-        <div className={`grid gap-2.5 sm:gap-3 ${expectedKpiCount === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-          {Array.from({ length: expectedKpiCount }).map((_, i) => (
-            <Skeleton key={i} className="h-24 sm:h-28 rounded-2xl" />
+
+        {/* Quick Actions Dock Placeholder */}
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 sm:h-18 rounded-2xl" />
           ))}
         </div>
-        <div className="mt-1 flex flex-col gap-3">
-          <Skeleton className="h-5 w-32" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
+
+        {/* 2x2 KPI Grid Placeholder */}
+        <div className={`grid gap-2.5 sm:gap-3 ${expectedKpiCount === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+          {Array.from({ length: expectedKpiCount }).map((_, i) => (
+            <div
+              key={i}
+              className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3.5 w-16 rounded" />
+                <Skeleton className="h-3.5 w-3.5 rounded-full" />
+              </div>
+              <Skeleton className="h-6 w-24 rounded-md" />
+              <Skeleton className="h-3 w-14 rounded" />
+            </div>
+          ))}
+        </div>
+
+        {/* Recent Activity Rows filling down the screen */}
+        <div className="rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col gap-2.5 mt-1">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3.5 w-28 rounded" />
+            <Skeleton className="h-3.5 w-12 rounded" />
           </div>
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -247,7 +275,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="pb-6 sm:pb-8">
       <ScreenHeader title="Dashboard" hideBack={true} />
 
       {/* Email verification banner — shown only to owner until email confirmed */}

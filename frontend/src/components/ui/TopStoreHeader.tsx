@@ -66,20 +66,20 @@ export function TopStoreHeader() {
       role="banner"
       aria-label="Application header"
     >
-      <div className="w-full flex h-13 sm:h-14 items-center justify-between px-4 sm:px-6 max-w-xl md:max-w-2xl mx-auto">
+      <div className="w-full flex h-11 sm:h-12 items-center justify-between px-4 sm:px-6 max-w-xl md:max-w-2xl mx-auto">
         {/* Left: Hamburger Drawer Trigger + Page Name */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             type="button"
             onClick={openDrawer}
             aria-label="Open navigation menu"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
-            <Menu size={22} aria-hidden />
+            <Menu size={20} aria-hidden />
           </button>
 
           <h1
-            className="truncate text-lg sm:text-xl font-bold tracking-tight text-white leading-tight"
+            className="truncate text-base sm:text-lg font-bold tracking-tight text-white leading-tight"
             title={pageTitle}
           >
             {pageTitle}
@@ -87,15 +87,15 @@ export function TopStoreHeader() {
         </div>
 
         {/* Right: Sync Indicator & Alerts */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <SyncIndicator compact variant="contrast" />
           {alertCount > 0 && (
             <Link
               href="/alerts"
               aria-label={`${alertCount} unread alerts`}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+              className="relative flex h-7.5 w-7.5 items-center justify-center rounded-full text-white/90 hover:text-white hover:bg-white/10 transition-colors"
             >
-              <Bell size={17} aria-hidden />
+              <Bell size={16} aria-hidden />
               <span
                 className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--color-stock-alert)] ring-1.5 ring-[var(--brand-accent-configured,#0a6e4d)]"
                 aria-hidden

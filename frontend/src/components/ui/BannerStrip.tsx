@@ -82,12 +82,12 @@ export function BannerStrip() {
   return (
     <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
-        <div className="bg-warning-container border-b border-warning/20 px-4 py-1.5 text-center text-[length:var(--font-size-caption)] font-medium text-on-warning-container">
+        <div className="bg-warning-container border-b border-warning/20 px-4 py-1 text-center text-[11px] font-medium leading-tight text-on-warning-container">
           Store pending admin approval · Changes are saved locally and will upload once verified
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-1.5 bg-surface-container-high px-4 py-1.5 text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
+      <div className="flex items-center justify-center gap-1.5 bg-surface-container-high px-4 py-1 text-center text-[11px] font-medium leading-tight text-on-surface-muted">
         <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncStatusTone}`} />
         <span>{syncStatus}</span>
       </div>

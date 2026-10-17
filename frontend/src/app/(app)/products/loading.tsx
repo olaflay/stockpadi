@@ -3,8 +3,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function ProductsLoading() {
   return (
-    <div className="flex flex-col gap-4">
-      <ScreenHeader title="Products" />
+    <div className="flex flex-col gap-3 pb-6">
+      <ScreenHeader title="Products" hideBack={true} />
       <Skeleton className="h-10 w-full" />
       <div className="flex gap-2 mb-2">
         <Skeleton className="h-8 w-16 rounded-full" />
