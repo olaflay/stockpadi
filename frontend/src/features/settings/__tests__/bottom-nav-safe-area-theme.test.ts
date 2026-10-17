@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import fs from "fs";
+import path from "path";
 import {
   THEME_CHROME_COLORS,
   resolveEffectiveTheme,
@@ -79,4 +81,46 @@ describe("Bottom Navigation Safe Area & Dynamic Theme Synchronization", () => {
 
     expect(pwaSystemChromeColor).toBe(navBarBackgroundDark);
   });
+
+  it("verifies zero boundary color mismatch between navbar surface container and PWA system chrome in light mode", () => {
+    const navBarBackgroundLight = "#eff2f3"; // --color-surface-container in light mode
+    syncSystemThemeColor("light");
+    const pwaSystemChromeColor = metaTag.getAttribute("content");
+
+    expect(pwaSystemChromeColor).toBe(navBarBackgroundLight);
+  });
+
+  it("asserts identical bg-surface-container token alignment between BottomNav and layout safe-area chin blankets", () => {
+    const layoutPath = path.resolve(__dirname, "../../../app/(app)/layout.tsx");
+    const bottomNavPath = path.resolve(__dirname, "../../../components/ui/BottomNav.tsx");
+
+    const layoutContent = fs.readFileSync(layoutPath, "utf-8");
+    const bottomNavContent = fs.readFileSync(bottomNavPath, "utf-8");
+
+    // BottomNav must use bg-surface-container
+    expect(bottomNavContent).toContain("bg-surface-container");
+
+    // Global safe-area bottom blanket and deep overscroll blanket must use bg-surface-container
+    expect(layoutContent).toContain("Global safe-area bottom blanket");
+    expect(layoutContent).toContain("Deep overscroll blanket");
+
+    // Must NOT contain bg-surface on the chin blanket
+    const chinSection = layoutContent.slice(
+      layoutContent.indexOf("Global safe-area bottom blanket"),
+      layoutContent.indexOf("<BottomNav />")
+    );
+    expect(chinSection).toContain("bg-surface-container");
+    expect(chinSection).not.toContain("bg-surface ");
+    expect(chinSection).not.toContain("bg-surface\"");
+  });
+
+  it("asserts manifest.json standalone theme properties align with surfaceContainer chrome color", () => {
+    const manifestPath = path.resolve(__dirname, "../../../../public/manifest.json");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+
+    expect(manifest.display).toBe("standalone");
+    expect(manifest.theme_color).toBe(THEME_CHROME_COLORS.light);
+    expect(manifest.background_color).toBe(THEME_CHROME_COLORS.light);
+  });
 });
+

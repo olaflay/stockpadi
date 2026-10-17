@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useEffect, useRef } from "react";
+import { createContext, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
@@ -14,6 +14,13 @@ import { WORKER_CAPABILITIES, type WorkerCapability } from "@/features/auth/auth
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
 /**
+ * Watchdog timeout in milliseconds. If session resolution or route transition
+ * does not resolve within 4,000ms, the watchdog circuit breaker trips to prevent
+ * the user from being trapped in an indefinite skeleton loading deadlock.
+ */
+export const AUTH_WATCHDOG_TIMEOUT_MS = 4000;
+
+/**
  * The one place that decides "is this device logged in." Wraps the
  * authenticated app shell (src/app/(app)/layout.tsx) so every screen under
  * it can call useCurrentUser() and get a resolved user synchronously,
@@ -24,32 +31,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const sessionRefreshed = useRef(false);
+  const [watchdogTripped, setWatchdogTripped] = useState(false);
 
   useEffect(() => { void removeLegacyTestUser(); }, []);
 
   const resolved = useLiveQuery(async () => {
-    const session = await db.session.get(SESSION_SINGLETON_ID);
-    if (!session) {
-      return { kind: "needs-login" as const };
+    try {
+      const session = await db.session.get(SESSION_SINGLETON_ID);
+      if (!session) {
+        return { kind: "needs-login" as const };
+      }
+      if (new Date(session.expiresAt).getTime() < Date.now()) return { kind: "expired" as const };
+      const user = await db.localUsers.get(session.userId);
+      if (!user || !user.isActive || !user.accountType) return { kind: "no-session" as const };
+      return {
+        kind: "active" as const,
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          emailVerified: user.emailVerified,
+          accountType: user.accountType,
+          permissions: (user.permissions ?? []).filter((permission): permission is WorkerCapability =>
+            (WORKER_CAPABILITIES as readonly string[]).includes(permission)
+          ),
+          businessId: user.businessId,
+          branchIds: user.branchIds ?? [],
+          businessStatus: user.businessStatus,
+        },
+      };
+    } catch (err) {
+      console.warn("AuthProvider session resolution failed:", err);
+      return { kind: "no-session" as const };
     }
-    if (new Date(session.expiresAt).getTime() < Date.now()) return { kind: "expired" as const };
-    const user = await db.localUsers.get(session.userId);
-    if (!user || !user.isActive || !user.accountType) return { kind: "no-session" as const };
-    return {
-      kind: "active" as const,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        emailVerified: user.emailVerified,
-        accountType: user.accountType,
-        permissions: (user.permissions ?? []).filter((permission): permission is WorkerCapability =>
-          (WORKER_CAPABILITIES as readonly string[]).includes(permission)
-        ),
-        businessId: user.businessId,
-        branchIds: user.branchIds ?? [],
-        businessStatus: user.businessStatus,
-      },
-    };
   }, []);
 
   // Routing guards — only redirect when not already on the target page
@@ -75,6 +88,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [resolved, router, pathname]);
 
+  // Watchdog circuit breaker: guarantees the skeleton state cannot stay mounted indefinitely.
+  // If session resolution or route transition does not resolve within 4,000ms, fall back to a
+  // recoverable state or execute an explicit redirect to /login?force=true.
+  useEffect(() => {
+    if (resolved?.kind === "active") {
+      setWatchdogTripped(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setWatchdogTripped(true);
+      if (!pathname.startsWith("/login")) {
+        try {
+          router.replace("/login?force=true");
+        } catch {
+          if (typeof window !== "undefined") {
+            window.location.replace("/login?force=true");
+          }
+        }
+      }
+    }, AUTH_WATCHDOG_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [resolved, pathname, router]);
+
   // Refresh session expiry once per mount, NOT on every resolved change.
   // Writing to db.session inside a dependency of the same useLiveQuery that
   // produces `resolved` would create an infinite re-render loop.
@@ -89,6 +127,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [resolved]);
+
+  // Recoverable state when watchdog circuit breaker trips
+  if (watchdogTripped && (!resolved || resolved.kind !== "active")) {
+    return (
+      <div
+        data-testid="auth-watchdog-fallback"
+        className="flex h-dvh max-h-dvh w-full max-w-full flex-col items-center justify-center bg-surface px-6 text-center select-none"
+      >
+        <div className="w-full max-w-sm rounded-3xl bg-surface-container p-6 shadow-sm flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-brand-container/30 flex items-center justify-center text-brand">
+            <svg
+              className="h-6 w-6 animate-spin text-brand"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-base font-semibold text-on-surface">
+              Session resolution took longer than expected
+            </h2>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Redirecting to sign-in so you can continue securely.
+            </p>
+          </div>
+          <div className="flex flex-col w-full gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.replace("/login?force=true");
+                } else {
+                  router.replace("/login?force=true");
+                }
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-brand text-on-brand font-medium text-xs shadow-xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Continue to Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.reload();
+                }
+              }}
+              className="w-full py-2 px-4 rounded-xl text-on-surface-variant hover:text-on-surface text-xs font-medium transition-colors cursor-pointer"
+            >
+              Reload App
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!resolved || resolved.kind !== "active") {
     return (
@@ -114,8 +215,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             <Skeleton className="h-4 w-40 rounded-full" />
           </div>
 
-          {/* Hero Sales Card Placeholder */}
-          <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 border border-outline-variant/20 shadow-xs">
+          {/* Hero Sales Card Placeholder — borderless tonal silhouette */}
+          <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 shadow-xs">
             <div className="flex items-center justify-between">
               <Skeleton className="h-4 w-28 rounded" />
               <Skeleton className="h-5 w-16 rounded-full" />
@@ -134,12 +235,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ))}
           </div>
 
-          {/* 2x2 KPI Grid Placeholder */}
+          {/* 2x2 KPI Grid Placeholder — borderless tonal silhouette */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col justify-between"
+                className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-3.5 w-16 rounded" />
@@ -151,8 +252,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ))}
           </div>
 
-          {/* Lower Recent Activity Placeholder to fill the screen */}
-          <div className="rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col gap-2.5">
+          {/* Lower Recent Activity Placeholder — borderless tonal silhouette */}
+          <div className="rounded-2xl p-3 bg-surface-container/60 flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
               <Skeleton className="h-3.5 w-28 rounded" />
               <Skeleton className="h-3.5 w-12 rounded" />
@@ -188,3 +289,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return <CurrentUserContext.Provider value={resolved.user}>{children}</CurrentUserContext.Provider>;
 }
+

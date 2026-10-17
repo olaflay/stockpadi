@@ -44,9 +44,9 @@
    --color-outline: #73796e;
    --color-outline-variant: #c3cbcd;
 
-   /* Skeleton loading tokens: translucent surface blending with adaptive ambient shimmer */
+   /* Skeleton loading tokens: borderless tonal silhouettes matching One UI / M3 */
    --color-skeleton-bg: color-mix(in srgb, var(--color-surface-container) 65%, transparent);
-   --color-skeleton-border: color-mix(in srgb, var(--color-outline-variant, #9aa3a6) 30%, transparent);
+   --color-skeleton-border: transparent;
    --shimmer-highlight: rgba(255, 255, 255, 0.65);
 
    --color-success: #1a7f3c;
@@ -291,9 +291,9 @@
       --color-outline: #8c9388;
       --color-outline-variant: #43494a;
 
-      /* Dark mode translucent skeleton loading tokens */
+      /* Dark mode borderless tonal skeleton loading tokens */
       --color-skeleton-bg: color-mix(in srgb, var(--color-surface-container) 60%, transparent);
-      --color-skeleton-border: color-mix(in srgb, var(--color-outline-variant, #43494a) 40%, transparent);
+      --color-skeleton-border: transparent;
       --shimmer-highlight: rgba(255, 255, 255, 0.08);
 
       --color-brand-accent: #4ade80 !important;
@@ -372,9 +372,9 @@
    --color-outline: #8c9388;
    --color-outline-variant: #43494a;
 
-   /* Explicit dark theme translucent skeleton loading tokens */
+   /* Explicit dark theme borderless tonal skeleton loading tokens */
    --color-skeleton-bg: color-mix(in srgb, var(--color-surface-container) 60%, transparent);
-   --color-skeleton-border: color-mix(in srgb, var(--color-outline-variant, #43494a) 40%, transparent);
+   --color-skeleton-border: transparent;
    --shimmer-highlight: rgba(255, 255, 255, 0.08);
 
    --color-brand-accent: #4ade80 !important;

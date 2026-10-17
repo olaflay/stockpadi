@@ -26,8 +26,8 @@ export default function AppLoading() {
         <Skeleton className="h-9 w-24 rounded-full" />
       </div>
 
-      {/* Divided Flat List Skeletons */}
-      <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
+      {/* Borderless Flat List Skeletons */}
+      <div className="rounded-3xl bg-surface-container/60 overflow-hidden shadow-xs">
         <div className="flex items-center justify-between px-4 py-3.5 gap-3">
           <div className="flex-1 flex flex-col gap-1.5">
             <Skeleton className="h-4 w-40 rounded" />
