@@ -379,6 +379,58 @@ describe("sync_apply_branch and sync_apply_category: first-class dependencies", 
     );
     expect(duplicate.rows[0].result).toMatchObject({ status: "skipped", duplicate: true });
   });
+
+  it("deletes a category and uncategorizes its products when the payload carries a delete flag", async () => {
+    const categoryId = crypto.randomUUID();
+    const created = await db.query<{ result: { status: string; id: string } }>(
+      `select sync_apply_category($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: categoryId, name: "Bakery" }), actorId]
+    );
+    expect(created.rows[0].result).toMatchObject({ status: "applied", id: categoryId });
+
+    const product = await db.query<{ id: string }>(
+      `insert into products (business_id, sku, name, cost_price, sell_price, category_id) values ((select business_id from users where id = $1), 'BAKERY-SKU', 'Bread', 100, 150, $2) returning id;`,
+      [actorId, categoryId]
+    );
+    const linkedProductId = product.rows[0].id;
+
+    // The client sends the category's name alongside the delete flag.
+    const deleted = await db.query<{ result: { status: string; id: string; deleted: boolean } }>(
+      `select sync_apply_category($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: categoryId, name: "Bakery", deleted: true }), actorId]
+    );
+    expect(deleted.rows[0].result).toMatchObject({ status: "applied", id: categoryId, deleted: true });
+
+    const remaining = await db.query<{ count: number }>(
+      `select count(*)::int as count from categories where id = $1;`,
+      [categoryId]
+    );
+    expect(remaining.rows[0].count).toBe(0);
+
+    // The category_id FK is cleared, so the hard delete cannot violate it.
+    const uncategorized = await db.query<{ category_id: string | null }>(
+      `select category_id from products where id = $1;`,
+      [linkedProductId]
+    );
+    expect(uncategorized.rows[0].category_id).toBeNull();
+  });
+
+  it("treats a delete for a category that was never synced up as a no-op, not an error", async () => {
+    const result = await db.query<{ result: { status: string; id: string } }>(
+      `select sync_apply_category($1::jsonb, $2::uuid) as result;`,
+      [JSON.stringify({ id: crypto.randomUUID(), name: "Never Synced", deleted: true }), actorId]
+    );
+    expect(result.rows[0].result).toMatchObject({ status: "applied" });
+  });
+
+  it("rejects a category delete that omits the name, which the client must always send", async () => {
+    await expect(
+      db.query(`select sync_apply_category($1::jsonb, $2::uuid);`, [
+        JSON.stringify({ id: crypto.randomUUID(), deleted: true }),
+        actorId,
+      ])
+    ).rejects.toThrow();
+  });
 });
 
 describe("tenant-ownership isolation across sync_apply_*", () => {

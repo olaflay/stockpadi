@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -18,6 +19,38 @@ export const THEME_CHROME_COLORS = {
   light: "#eff2f3",
   dark: "#1c2022",
 } as const;
+
+/**
+ * The browser paints the OS system chrome (status bar, Android navigation
+ * bar) — the strip BELOW the app's bottom nav — from the FIRST
+ * <meta name="theme-color"> whose media query matches the device.
+ *
+ * A media-free tag always matches, so owning one and keeping it first
+ * makes the painted colour deterministic: whatever Next.js writes into
+ * <head> on a client-side navigation, the browser still reads this tag.
+ */
+const CHROME_META_ID = "app-theme-color";
+
+function ensureChromeMeta(): HTMLMetaElement {
+  const head = document.head;
+  let meta = document.getElementById(CHROME_META_ID) as HTMLMetaElement | null;
+
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("id", CHROME_META_ID);
+    head.appendChild(meta);
+  }
+
+  // Keep it first among the theme-color tags so it always wins the
+  // "first matching meta" rule.
+  const first = document.querySelector('meta[name="theme-color"]');
+  if (first && first !== meta) {
+    head.insertBefore(meta, first);
+  }
+
+  return meta;
+}
 
 export const ThemeContext = createContext<{
   theme: ThemePreference;
@@ -41,15 +74,51 @@ export function syncSystemThemeColor(theme: ThemePreference) {
   if (typeof document === "undefined") return;
   const effective = resolveEffectiveTheme(theme);
   const color = THEME_CHROME_COLORS[effective];
+  const isPinned = theme === "light" || theme === "dark";
 
-  const metaTags = document.querySelectorAll('meta[name="theme-color"]');
-  if (metaTags.length > 0) {
-    metaTags.forEach((tag) => tag.setAttribute("content", color));
+  // The OS system chrome (status bar, Android navigation bar) paints the
+  // area BELOW the app's bottom nav, and it only ever reads
+  // <meta name="theme-color">.
+  //
+  // A PINNED theme must win over the device, so every tag carries the
+  // pinned token: a browser whose OS is in light mode would otherwise
+  // select the light-media tag and paint the system nav bar light while the
+  // app itself is dark.
+  //
+  // In "system" mode the media-scoped pair is restored to its own
+  // media-appropriate colour, so the device still drives the system chrome
+  // and an OS light->dark flip is followed live.
+  const chromeMeta = ensureChromeMeta();
+  chromeMeta.setAttribute("content", color);
+
+  document.querySelectorAll('meta[name="theme-color"]').forEach((tag) => {
+    if (tag === chromeMeta) return;
+    const media = tag.getAttribute("media") ?? "";
+    if (isPinned) {
+      tag.setAttribute("content", color);
+    } else if (media.includes("dark")) {
+      tag.setAttribute("content", THEME_CHROME_COLORS.dark);
+    } else if (media.includes("light")) {
+      tag.setAttribute("content", THEME_CHROME_COLORS.light);
+    } else {
+      tag.setAttribute("content", color);
+    }
+  });
+
+  // The browser's own canvas, scrollbar and overscroll area follow
+  // `color-scheme`. Without this the root stays "normal" (light) in dark
+  // mode, which is what leaves a white strip under the nav bar on a device
+  // with a home indicator.
+  //
+  // A PINNED theme sets it inline, because the pinned choice has to win
+  // over the device. "system" deliberately leaves it to CSS, whose
+  // prefers-color-scheme query keeps following the device live — an inline
+  // value would override that query and pin the canvas until the next
+  // navigation.
+  if (isPinned) {
+    document.documentElement.style.colorScheme = effective;
   } else {
-    const meta = document.createElement("meta");
-    meta.setAttribute("name", "theme-color");
-    meta.setAttribute("content", color);
-    document.head.appendChild(meta);
+    document.documentElement.style.removeProperty("color-scheme");
   }
 }
 
@@ -87,6 +156,7 @@ function readStoredTheme(): ThemePreference {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(readStoredTheme);
+  const pathname = usePathname();
 
   const setTheme = useCallback((next: ThemePreference) => {
     setThemeState(next);
@@ -114,6 +184,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mq.removeEventListener?.("change", handleChange);
     };
   }, [theme]);
+
+  // Next.js re-renders the root layout's <head> on every client-side
+  // navigation, which restores the static media-scoped <meta
+  // name="theme-color"> pair declared in src/app/layout.tsx. A user who
+  // pinned Dark in Settings therefore had the light token painted under the
+  // bottom nav bar again the moment they navigated to another screen.
+  //
+  // Re-syncing on every route change re-applies the pinned token after the
+  // head has been rebuilt. The OS-preference media query is also re-read
+  // here, so a "system" preference still follows the device.
+  useEffect(() => {
+    syncSystemThemeColor(theme);
+  }, [theme, pathname]);
 
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }

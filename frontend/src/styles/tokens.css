@@ -25,6 +25,13 @@
  */
 
 :root {
+   /* The browser's own canvas, scrollbar and overscroll area follow this
+      declaration. Without it the root stays "normal" (light) in dark mode,
+      which is what leaves a white strip under the bottom nav bar on a device
+      with a home indicator. Kept in CSS, not JS, so the page is correct
+      before hydration. */
+   color-scheme: light;
+
    /* Brand accent, overridden at runtime from src/config/branding.ts */
    --color-brand-accent: var(--brand-accent-configured, #0a6e4d);
    --color-brand-accent-contrast: #ffffff;
@@ -279,6 +286,7 @@
    overrides the OS preference either way. See src/features/settings/ThemeProvider.tsx. */
 @media (prefers-color-scheme: dark) {
    :root:not([data-theme="light"]) {
+      color-scheme: dark;
       --color-surface: #121516;
       --color-surface-container-lowest: #0d1011;
       --color-surface-container-low: #171b1c;
@@ -360,6 +368,7 @@
 }
 
 :root[data-theme="dark"] {
+   color-scheme: dark;
    --color-surface: #121516;
    --color-surface-container-lowest: #0d1011;
    --color-surface-container-low: #171b1c;

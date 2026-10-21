@@ -21,9 +21,37 @@ try {
     document.documentElement.removeAttribute("data-theme");
   }
   var color = isDark ? "#1c2022" : "#eff2f3";
+  var chrome = document.createElement("meta");
+  chrome.setAttribute("name", "theme-color");
+  chrome.setAttribute("id", "app-theme-color");
+  chrome.setAttribute("content", color);
+  var existing = document.querySelector('meta[name="theme-color"]');
+  if (existing) {
+    existing.parentNode.insertBefore(chrome, existing);
+  } else {
+    document.head.appendChild(chrome);
+  }
   var metas = document.querySelectorAll('meta[name="theme-color"]');
   for (var i = 0; i < metas.length; i++) {
-    metas[i].setAttribute("content", color);
+    var media = metas[i].getAttribute("media") || "";
+    if (t === "light" || t === "dark") {
+      // Pinned choice wins over the device: every tag carries the same
+      // token, so whichever one the browser selects paints the pinned
+      // colour in the system chrome below the bottom nav.
+      metas[i].setAttribute("content", color);
+    } else if (media.indexOf("dark") !== -1) {
+      metas[i].setAttribute("content", "#1c2022");
+    } else if (media.indexOf("light") !== -1) {
+      metas[i].setAttribute("content", "#eff2f3");
+    } else {
+      metas[i].setAttribute("content", color);
+    }
+  }
+  if (t === "light" || t === "dark") {
+    // A pinned choice sets color-scheme inline so the browser canvas matches
+    // the app rather than the device. "system" is left to CSS, whose
+    // prefers-color-scheme query keeps following the device.
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }
 } catch (e) {}
 `;
