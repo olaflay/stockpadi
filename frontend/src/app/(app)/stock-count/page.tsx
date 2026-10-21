@@ -239,7 +239,16 @@ export default function StockCountPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <NoResultsState query={debouncedQuery} />
+        <NoResultsState
+          query={debouncedQuery}
+          entityLabel="products"
+          action={
+            hasCapability(user, "MANAGE_PRODUCTS")
+              ? { label: "Add a product", href: "/products/new" }
+              : undefined
+          }
+          onClear={() => setQuery("")}
+        />
       ) : (
         <ul className="flex flex-col gap-2.5">
           {filtered.slice(0, visibleLimit).map((product) => {

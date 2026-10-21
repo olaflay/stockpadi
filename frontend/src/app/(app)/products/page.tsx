@@ -72,6 +72,10 @@ export default function ProductsPage() {
   const [prevQuery, setPrevQuery] = useState("");
   const [prevFilter, setPrevFilter] = useState<ProductFilter>("all");
   const [scanning, setScanning] = useState(false);
+  // Set only when the current query came from a barcode scan. The search
+  // box matches name, SKU, or barcode, so the query alone cannot say which
+  // field a "create this" action should prefill.
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -364,6 +368,7 @@ export default function ProductsPage() {
           value={query}
           onChange={(val) => {
             setQuery(val);
+            setScannedBarcode(null);
             setSearchActive(Boolean(val.trim()));
           }}
           onFocus={() => setSearchActive(true)}
@@ -388,6 +393,7 @@ export default function ProductsPage() {
         <BarcodeScanner
           onResult={(res) => {
             setQuery(res);
+            setScannedBarcode(res);
             setScanning(false);
           }}
           onCancel={() => setScanning(false)}
@@ -456,19 +462,27 @@ export default function ProductsPage() {
       {filtered.length === 0 ? (
         <div className="flex flex-1 flex-col justify-center py-6 min-h-[360px]">
           {debouncedQuery ? (
-            <>
-              <NoResultsState query={debouncedQuery} />
-              {canEditProducts && (
-                <div className="mt-4 flex justify-center">
-                  <Link
-                    href={`/products/new?barcode=${encodeURIComponent(debouncedQuery)}`}
-                    className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast"
-                  >
-                    Create product with barcode
-                  </Link>
-                </div>
-              )}
-            </>
+            <NoResultsState
+              query={debouncedQuery}
+              entityLabel="products"
+              action={
+                canEditProducts
+                  ? scannedBarcode
+                    ? {
+                        label: "Create product with barcode",
+                        href: `/products/new?barcode=${encodeURIComponent(scannedBarcode)}`,
+                      }
+                    : {
+                        label: "Create product",
+                        href: `/products/new?name=${encodeURIComponent(debouncedQuery)}`,
+                      }
+                  : undefined
+              }
+              onClear={() => {
+                setQuery("");
+                setScannedBarcode(null);
+              }}
+            />
           ) : (
             <EmptyState
               icon={Package}
@@ -562,7 +576,7 @@ export default function ProductsPage() {
                           {product.name}
                         </p>
                         {categories?.find((c) => c.id === product.categoryId)?.name && (
-                          <span className="shrink-0 text-[10px] text-on-surface-muted bg-surface-container-high px-2 py-0.5 rounded-full font-medium">
+                          <span className="shrink-0 text-[length:var(--font-size-caption)] text-on-surface-muted bg-surface-container-high px-2 py-0.5 rounded-full font-medium">
                             {categories.find((c) => c.id === product.categoryId)?.name}
                           </span>
                         )}
@@ -586,7 +600,7 @@ export default function ProductsPage() {
 
                       <div className="mt-0.5 flex items-center gap-2">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold ${
                             statusFor(product) === "out"
                               ? "bg-danger-container text-on-danger-container"
                               : statusFor(product) === "low"
@@ -611,7 +625,7 @@ export default function ProductsPage() {
                           <span>{stockTextFor(product)}</span>
                         </span>
                         {filter === "expiring" && product.expiryDate && (
-                          <span className="text-[11px] text-danger font-medium">
+                          <span className="text-[length:var(--font-size-caption)] text-danger font-medium">
                             Expires {product.expiryDate}
                           </span>
                         )}

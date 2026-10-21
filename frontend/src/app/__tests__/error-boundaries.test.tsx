@@ -27,7 +27,8 @@ describe("Error boundaries and 404 recovery", () => {
   it("renders branded NotFound page with recovery link to POS", () => {
     render(<NotFound />);
 
-    expect(screen.getByText("Page Not Found")).toBeDefined();
+    // Sentence case per the locked UX writing standard.
+    expect(screen.getByText("Page not found")).toBeDefined();
     expect(
       screen.getByText("The screen or record you requested does not exist or has been moved.")
     ).toBeDefined();

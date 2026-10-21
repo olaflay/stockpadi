@@ -308,14 +308,14 @@ export default function ReconciliationPage() {
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-on-surface capitalize">{item.type.replace(/_/g, " ")}</p>
                         <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          className={`rounded-md px-2 py-0.5 text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider ${
                             isIssue ? "bg-danger-container text-on-danger-container" : "bg-surface-container-high text-on-surface-muted"
                           }`}
                         >
                           {item.status}
                         </span>
                       </div>
-                      <p className="text-[11px] text-on-surface-muted mt-0.5">
+                      <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
                         Recorded {new Date(item.createdAtLocal).toLocaleString()}
                       </p>
                     </div>

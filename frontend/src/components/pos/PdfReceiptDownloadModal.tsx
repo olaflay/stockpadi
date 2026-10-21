@@ -57,7 +57,7 @@ export function PdfReceiptDownloadModal({
         {/* Quick Edit Fields */}
         <div className="flex flex-col gap-3 rounded-2xl bg-surface-container p-3.5 border border-border/30">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-on-surface-muted">Store Phone / Contact</span>
+            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">Store Phone / Contact</span>
             <TextInput
               value={storePhone}
               onChange={(e) => setStorePhone(e.target.value)}
@@ -66,7 +66,7 @@ export function PdfReceiptDownloadModal({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-on-surface-muted">Customer Name (optional)</span>
+            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">Customer Name (optional)</span>
             <TextInput
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
@@ -75,7 +75,7 @@ export function PdfReceiptDownloadModal({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-on-surface-muted">Receipt Footer Note</span>
+            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">Receipt Footer Note</span>
             <textarea
               value={footerNote}
               onChange={(e) => setFooterNote(e.target.value)}

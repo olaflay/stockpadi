@@ -221,7 +221,7 @@ export function SideDrawer() {
                 <p className="truncate text-base font-bold text-white tracking-tight" title={storeName}>
                   {storeName}
                 </p>
-                <span className="shrink-0 inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white uppercase tracking-wider">
+                <span className="shrink-0 inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-white uppercase tracking-wider">
                   {user.accountType === "ADMIN"
                     ? "Admin"
                     : user.accountType === "BUSINESS_OWNER"
@@ -256,7 +256,7 @@ export function SideDrawer() {
             return (
               <div key={section.title} className="space-y-1">
                 {sIdx > 0 && <div className="border-t border-border/40 my-2.5 mx-2" />}
-                <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-muted">
+                <p className="px-3 pb-1 text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-on-surface-muted">
                   {section.title}
                 </p>
                 {visibleItems.map((item) => {
@@ -335,7 +335,7 @@ export function SideDrawer() {
             <span>Sign Out</span>
           </button>
 
-          <p className="text-center text-[10px] text-on-surface-muted pt-0.5">
+          <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted pt-0.5">
             {branding.businessName} • Offline-First Retail
           </p>
         </div>

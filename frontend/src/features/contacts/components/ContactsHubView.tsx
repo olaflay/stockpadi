@@ -155,7 +155,7 @@ export function ContactsHubView({
           </div>
 
           <div className="pt-2 border-t border-credit/20 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-on-credit-container/80 truncate">
+            <span className="text-[length:var(--font-size-caption)] text-on-credit-container/80 truncate">
               Debtor reminder template:
             </span>
             <button
@@ -196,7 +196,7 @@ export function ContactsHubView({
             >
               <span>{chip.label}</span>
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                className={`rounded-full px-1.5 py-0.2 text-[length:var(--font-size-caption)] ${
                   isSelected
                     ? "bg-on-brand/15 text-on-brand"
                     : "bg-surface-container-highest text-on-surface-muted"
@@ -221,7 +221,12 @@ export function ContactsHubView({
           }}
         />
       ) : filteredContacts.length === 0 ? (
-        <NoResultsState query={debouncedQuery} />
+        <NoResultsState
+          query={debouncedQuery}
+          entityLabel="contacts"
+          action={{ label: "Add contact", onClick: () => setAddModalOpen(true) }}
+          onClear={() => setSearchQuery("")}
+        />
       ) : (
         <ul className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
           {filteredContacts.map((contact) => {
@@ -250,7 +255,7 @@ export function ContactsHubView({
                         </p>
                         {/* Kind Badges */}
                         {contact.kinds.includes("supplier") && (
-                          <span className="shrink-0 inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+                          <span className="shrink-0 inline-flex items-center rounded-full bg-info-container px-1.5 py-0.2 text-[length:var(--font-size-caption)] font-semibold text-on-info-container">
                             Supplier
                           </span>
                         )}
@@ -272,7 +277,7 @@ export function ContactsHubView({
                         </span>
                         {aging && (
                           <span
-                            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-medium ${aging.colorClass}`}
+                            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.2 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}
                           >
                             <Clock size={10} />
                             <span>{aging.label}</span>
@@ -284,7 +289,7 @@ export function ContactsHubView({
                         Supplier
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-brand-accent">
+                      <span className="inline-flex items-center gap-1 text-[length:var(--font-size-caption)] text-brand-accent">
                         <UserCheck size={14} />
                         <span>Customer</span>
                       </span>

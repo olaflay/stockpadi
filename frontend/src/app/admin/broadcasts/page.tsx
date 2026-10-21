@@ -133,7 +133,7 @@ export default function AdminBroadcastsPage() {
                 <Radio size={18} className="text-brand-accent" />
                 <span className="text-sm font-bold text-on-surface">New Announcement</span>
               </div>
-              <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[11px] font-semibold text-brand-accent">
+              <span className="rounded-full bg-brand-accent/10 px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-brand-accent">
                 Target: All Tenants
               </span>
             </div>
@@ -151,7 +151,7 @@ export default function AdminBroadcastsPage() {
                 placeholder="Type your platform announcement here (e.g. Scheduled maintenance tonight at 2:00 AM UTC)…"
                 className="w-full rounded-xl border border-border bg-surface p-3.5 text-xs sm:text-sm text-on-surface placeholder:text-on-surface-muted/60 focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all resize-none"
               />
-              <div className="flex justify-between items-center text-[11px] text-on-surface-muted">
+              <div className="flex justify-between items-center text-[length:var(--font-size-caption)] text-on-surface-muted">
                 <span>Direct delivery to active merchant sessions.</span>
                 <span className={content.length >= 480 ? "text-danger font-semibold" : ""}>
                   {content.length} / 500
@@ -175,7 +175,7 @@ export default function AdminBroadcastsPage() {
                   <Info size={16} />
                   <div className="text-left">
                     <p className="font-bold">Standard</p>
-                    <p className="text-[10px] opacity-70 font-normal">Informational banner</p>
+                    <p className="text-[length:var(--font-size-caption)] opacity-70 font-normal">Informational banner</p>
                   </div>
                 </button>
 
@@ -191,7 +191,7 @@ export default function AdminBroadcastsPage() {
                   <AlertTriangle size={16} />
                   <div className="text-left">
                     <p className="font-bold">Urgent / Alert</p>
-                    <p className="text-[10px] opacity-70 font-normal">Highlighted notice</p>
+                    <p className="text-[length:var(--font-size-caption)] opacity-70 font-normal">Highlighted notice</p>
                   </div>
                 </button>
               </div>
@@ -250,7 +250,7 @@ export default function AdminBroadcastsPage() {
                     <span className="text-xs font-bold uppercase tracking-wider">
                       {getBrandingConfig().businessName} Announcement
                     </span>
-                    <span className="text-[10px] opacity-70">Just now</span>
+                    <span className="text-[length:var(--font-size-caption)] opacity-70">Just now</span>
                   </div>
                   <p className="mt-1 text-xs text-on-surface leading-relaxed">
                     {content.trim() || "Your broadcast announcement text will appear here in real time."}
@@ -260,7 +260,7 @@ export default function AdminBroadcastsPage() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg bg-surface-container p-3 text-[11px] text-on-surface-muted flex items-center gap-2">
+          <div className="mt-4 rounded-lg bg-surface-container p-3 text-[length:var(--font-size-caption)] text-on-surface-muted flex items-center gap-2">
             <CheckCircle2 size={13} className="text-success shrink-0" />
             <span>Online-only push. Does not affect offline sales operations.</span>
           </div>
@@ -302,7 +302,7 @@ export default function AdminBroadcastsPage() {
                     <p className="text-xs sm:text-sm font-medium text-on-surface leading-snug break-words">
                       {item.content}
                     </p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-on-surface-muted">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
                       <span className="flex items-center gap-1">
                         <Clock size={11} />
                         <span>{formatShortDate(item.created_at.split("T")[0])}</span>
@@ -310,13 +310,13 @@ export default function AdminBroadcastsPage() {
                       <span>•</span>
                       <span className="capitalize">Status: {item.status}</span>
                       <span>•</span>
-                      <span className="font-mono text-[10px]">ID: {item.id.slice(0, 8)}</span>
+                      <span className="font-mono text-[length:var(--font-size-caption)]">ID: {item.id.slice(0, 8)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="self-end sm:self-center shrink-0">
-                  <span className="rounded-md bg-surface-container px-2.5 py-1 text-[11px] font-semibold text-on-surface-muted">
+                  <span className="rounded-md bg-surface-container px-2.5 py-1 text-[length:var(--font-size-caption)] font-semibold text-on-surface-muted">
                     Published
                   </span>
                 </div>

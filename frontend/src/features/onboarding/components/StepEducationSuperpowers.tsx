@@ -91,7 +91,7 @@ export function StepEducationSuperpowers({
                     {item.title}
                   </span>
                 </div>
-                <span className="rounded-full bg-brand-accent/15 px-2 py-0.5 text-[11px] font-medium text-brand-accent">
+                <span className="rounded-full bg-brand-accent/15 px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium text-brand-accent">
                   {item.badge}
                 </span>
               </div>

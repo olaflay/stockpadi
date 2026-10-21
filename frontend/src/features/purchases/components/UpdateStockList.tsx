@@ -55,7 +55,12 @@ export function UpdateStockList({
       </div>
 
       {filtered.length === 0 ? (
-        <NoResultsState query={query} />
+        <NoResultsState
+          query={query}
+          entityLabel="products"
+          action={{ label: "Add a product", href: "/products/new" }}
+          onClear={() => onQueryChange("")}
+        />
       ) : (
         <ul className="flex flex-col gap-3">
           {filtered.map((product) => {

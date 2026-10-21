@@ -515,7 +515,7 @@ export function PaymentStep(props: {
                       <AlertCircle size={15} />
                       <span>Phone number required for credit sale</span>
                     </div>
-                    <p className="text-[11px] text-on-surface-muted">
+                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                       Add a phone number for {selectedCreditCustomer.name} so you can send payment reminders.
                     </p>
                     <div className="flex gap-2">
@@ -617,7 +617,7 @@ export function PaymentStep(props: {
                         placeholder="Phone number * (required for credit)"
                         className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 text-[length:var(--font-size-body)] text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20"
                       />
-                      <p className="mt-1 text-[11px] text-on-surface-muted">
+                      <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">
                         Phone number is required so you can send debt reminders.
                       </p>
                     </div>

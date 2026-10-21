@@ -347,7 +347,7 @@ export default function SyncHealthPage() {
           </div>
           <div className="min-w-0 flex-1">
             <span
-              className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+              className={`inline-block rounded-full px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold uppercase tracking-wider ${
                 statusView.category === "healthy"
                   ? "bg-success/10 text-success"
                   : statusView.category === "offline"
@@ -437,7 +437,7 @@ export default function SyncHealthPage() {
                       {/* This Device Card */}
                       <div className="flex flex-col justify-between gap-3 rounded-[var(--radius-control)] bg-surface-container p-3">
                         <div>
-                          <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-muted">
+                          <span className="text-[length:var(--font-size-caption)] font-semibold uppercase tracking-wider text-on-surface-muted">
                             This Device
                           </span>
                           {isProduct && causal && (
@@ -472,7 +472,7 @@ export default function SyncHealthPage() {
                       {/* Other Device Card */}
                       <div className="flex flex-col justify-between gap-3 rounded-[var(--radius-control)] bg-surface-container p-3">
                         <div>
-                          <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-muted">
+                          <span className="text-[length:var(--font-size-caption)] font-semibold uppercase tracking-wider text-on-surface-muted">
                             Other Device
                           </span>
                           {isProduct && (
@@ -537,7 +537,7 @@ export default function SyncHealthPage() {
             </>
           )}
         </button>
-        <p className="text-center text-[11px] text-on-surface-muted">
+        <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
           Only needed if requested by customer support
         </p>
       </div>

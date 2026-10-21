@@ -26,7 +26,7 @@ export function CountBadge({ count, className = "", tone = "neutral" }: BadgePro
   return (
     <span
       aria-label={`${count} items`}
-      className={`inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-bold border border-surface shadow-sm ${toneClass} ${className}`}
+      className={`inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[length:var(--font-size-caption)] font-bold border border-surface shadow-sm ${toneClass} ${className}`}
     >
       {displayCount}
     </span>
@@ -52,8 +52,8 @@ export function AlertBadge({
       aria-label={`${count} unread notifications`}
       className={
         inline
-          ? `inline-flex h-4.5 min-w-[1.125rem] items-center justify-center rounded-full bg-badge-alert-bg px-1.5 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-xs ${className}`
-          : `absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[10px] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`
+          ? `inline-flex h-4.5 min-w-[1.125rem] items-center justify-center rounded-full bg-badge-alert-bg px-1.5 text-[length:var(--font-size-caption)] font-bold text-badge-alert-fg border border-surface shadow-xs ${className}`
+          : `absolute top-0 right-0 -mr-2 -mt-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-badge-alert-bg px-1 text-[length:var(--font-size-caption)] font-bold text-badge-alert-fg border border-surface shadow-sm ${className}`
       }
     >
       {count > 99 ? "99+" : count}

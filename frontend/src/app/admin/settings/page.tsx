@@ -127,7 +127,7 @@ export default function AdminSettingsPage() {
           </div>
           <div className="mt-3">
             <p className="text-sm font-bold text-on-surface">Supabase Cloud</p>
-            <p className="text-[11px] text-success flex items-center gap-1 mt-0.5 font-medium">
+            <p className="text-[length:var(--font-size-caption)] text-success flex items-center gap-1 mt-0.5 font-medium">
               <CheckCircle2 size={12} />
               <span>Operational (Healthy)</span>
             </p>
@@ -142,7 +142,7 @@ export default function AdminSettingsPage() {
           </div>
           <div className="mt-3">
             <p className="text-sm font-bold text-on-surface">Postgres RLS</p>
-            <p className="text-[11px] text-success flex items-center gap-1 mt-0.5 font-medium">
+            <p className="text-[length:var(--font-size-caption)] text-success flex items-center gap-1 mt-0.5 font-medium">
               <CheckCircle2 size={12} />
               <span>Zero-Leak Partitioning</span>
             </p>
@@ -157,7 +157,7 @@ export default function AdminSettingsPage() {
           </div>
           <div className="mt-3">
             <p className="text-sm font-bold text-on-surface">Append-Only Delta</p>
-            <p className="text-[11px] text-success flex items-center gap-1 mt-0.5 font-medium">
+            <p className="text-[length:var(--font-size-caption)] text-success flex items-center gap-1 mt-0.5 font-medium">
               <CheckCircle2 size={12} />
               <span>Immutable Ledger</span>
             </p>
@@ -172,7 +172,7 @@ export default function AdminSettingsPage() {
           </div>
           <div className="mt-3">
             <p className="text-sm font-bold text-on-surface">Vercel Edge</p>
-            <p className="text-[11px] text-success flex items-center gap-1 mt-0.5 font-medium">
+            <p className="text-[length:var(--font-size-caption)] text-success flex items-center gap-1 mt-0.5 font-medium">
               <CheckCircle2 size={12} />
               <span>Git-Push Automated</span>
             </p>
@@ -188,7 +188,7 @@ export default function AdminSettingsPage() {
             <span className="text-sm font-bold text-on-surface">Cluster Telemetry</span>
           </div>
           {stats?.checked_at && (
-            <span className="text-[11px] text-on-surface-muted">
+            <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Last probe: {new Date(stats.checked_at).toLocaleTimeString()}
             </span>
           )}
@@ -206,7 +206,7 @@ export default function AdminSettingsPage() {
             <div className="rounded-xl bg-surface p-3.5 border border-border/60">
               <span className="text-xs font-medium text-on-surface-muted">Total Businesses</span>
               <p className="mt-1 text-2xl font-bold text-on-surface">{stats?.total_tenants ?? 0}</p>
-              <p className="text-[10px] text-success mt-0.5 font-medium">
+              <p className="text-[length:var(--font-size-caption)] text-success mt-0.5 font-medium">
                 {stats?.verified_tenants ?? 0} active & verified
               </p>
             </div>
@@ -214,19 +214,19 @@ export default function AdminSettingsPage() {
             <div className="rounded-xl bg-surface p-3.5 border border-border/60">
               <span className="text-xs font-medium text-on-surface-muted">Total Users</span>
               <p className="mt-1 text-2xl font-bold text-on-surface">{stats?.total_users ?? 0}</p>
-              <p className="text-[10px] text-on-surface-muted mt-0.5">Across all tenants</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">Across all tenants</p>
             </div>
 
             <div className="rounded-xl bg-surface p-3.5 border border-border/60">
               <span className="text-xs font-medium text-on-surface-muted">Total Products</span>
               <p className="mt-1 text-2xl font-bold text-on-surface">{stats?.total_products ?? 0}</p>
-              <p className="text-[10px] text-on-surface-muted mt-0.5">Catalog items tracked</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">Catalog items tracked</p>
             </div>
 
             <div className="rounded-xl bg-surface p-3.5 border border-border/60">
               <span className="text-xs font-medium text-on-surface-muted">Broadcast Alerts</span>
               <p className="mt-1 text-2xl font-bold text-on-surface">{stats?.total_broadcasts ?? 0}</p>
-              <p className="text-[10px] text-on-surface-muted mt-0.5">Platform announcements</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">Platform announcements</p>
             </div>
           </div>
         )}
@@ -262,7 +262,7 @@ export default function AdminSettingsPage() {
               </li>
             </ul>
           </div>
-          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[11px] text-on-surface-muted">
+          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
             Governed strictly by `.agents/rules/` within the repository root.
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function AdminSettingsPage() {
                   <Download size={15} className="text-brand-accent" />
                   <div className="text-left">
                     <p className="font-bold">Export Diagnostic Snapshot</p>
-                    <p className="text-[10px] text-on-surface-muted">Download platform stats and timestamp (JSON)</p>
+                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Download platform stats and timestamp (JSON)</p>
                   </div>
                 </div>
                 <span className="text-xs text-brand-accent font-semibold">Download</span>
@@ -301,7 +301,7 @@ export default function AdminSettingsPage() {
                   <HardDrive size={15} className="text-brand-accent" />
                   <div className="text-left">
                     <p className="font-bold">Revalidate Local Cache</p>
-                    <p className="text-[10px] text-on-surface-muted">Sync local IndexedDB store with platform</p>
+                    <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Sync local IndexedDB store with platform</p>
                   </div>
                 </div>
                 <span className="text-xs text-on-surface-muted font-semibold">Revalidate</span>
@@ -309,7 +309,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[11px] text-on-surface-muted">
+          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
             Platform operations are logged to the Postgres `audit_logs` table.
           </div>
         </div>

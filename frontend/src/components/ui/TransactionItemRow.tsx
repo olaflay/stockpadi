@@ -78,7 +78,7 @@ export function TransactionItemRow({
           {formatCurrency(amount)}
         </span>
         {displayStatusLabel ? (
-          <span className={`text-[11px] ${statusInfo.textClass}`}>
+          <span className={`text-[length:var(--font-size-caption)] ${statusInfo.textClass}`}>
             {displayStatusLabel}
           </span>
         ) : null}

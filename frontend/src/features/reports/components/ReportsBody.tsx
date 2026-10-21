@@ -259,7 +259,7 @@ export function ReportsBody({
 
         {period === "custom" && onSelectCustomRange && (
           <div className="flex items-center gap-2 pt-1 animate-step-in">
-            <label className="flex-1 flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+            <label className="flex-1 flex flex-col gap-1 text-[length:var(--font-size-caption)] text-on-surface-muted font-medium">
               <span>From</span>
               <input
                 type="date"
@@ -274,7 +274,7 @@ export function ReportsBody({
                 className="w-full rounded-[var(--radius-control)] border border-border/40 bg-surface px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-accent"
               />
             </label>
-            <label className="flex-1 flex flex-col gap-1 text-[11px] text-on-surface-muted font-medium">
+            <label className="flex-1 flex flex-col gap-1 text-[length:var(--font-size-caption)] text-on-surface-muted font-medium">
               <span>To</span>
               <input
                 type="date"
@@ -311,7 +311,7 @@ export function ReportsBody({
           {/* Hero Revenue Card */}
           <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
+              <span className="text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
                 <span>Total Sales ({PERIOD_LABELS[period]?.toLowerCase()})</span>
                 <InfoTooltip text="Total gross revenue recorded across all branches during this period." />
               </span>
@@ -344,7 +344,7 @@ export function ReportsBody({
                   </h3>
                 </div>
                 {peakDay && (
-                  <span className="text-[10px] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[length:var(--font-size-caption)] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Peak: {peakDay.day}
                   </span>
                 )}
@@ -385,13 +385,13 @@ export function ReportsBody({
                         />
                       </div>
                       <span
-                        className={`text-[11px] font-semibold ${
+                        className={`text-[length:var(--font-size-caption)] font-semibold ${
                           isPeak ? "text-brand-accent font-bold" : "text-on-surface-muted"
                         }`}
                       >
                         {stat.day}
                       </span>
-                      <span className="text-[10px] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
+                      <span className="text-[length:var(--font-size-caption)] font-number text-on-surface-muted tabular-nums truncate w-full text-center">
                         {stat.count > 0 ? stat.count : "0"}
                       </span>
                     </button>
@@ -414,7 +414,7 @@ export function ReportsBody({
                     <span>Clean Profit</span>
                     <InfoTooltip text="Sales revenue minus product cost (what you paid) and shop operational expenses." />
                   </p>
-                  <p className="text-[11px] text-on-surface-muted">
+                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                     Sales minus product cost and shop expenses
                   </p>
                 </div>
@@ -493,7 +493,7 @@ export function ReportsBody({
                     <span>Money in Hand (Cash Flow)</span>
                     <InfoTooltip text="Actual physical cash and transfers collected in your till minus money paid out for restocks and expenses." />
                   </p>
-                  <p className="text-[11px] text-on-surface-muted">
+                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                     Real cash collected minus shop cash spent
                   </p>
                 </div>
@@ -572,7 +572,7 @@ export function ReportsBody({
               <p className="font-number text-base font-bold text-on-surface tabular-nums">
                 {formatCurrency(periodExpensesTotal)}
               </p>
-              <span className="text-[10px] text-on-surface-muted">
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                 {periodExpenses.length} entries recorded →
               </span>
             </RippleLink>
@@ -588,7 +588,7 @@ export function ReportsBody({
               <p className="font-number text-base font-bold text-on-surface tabular-nums">
                 {formatCurrency(periodPurchasesTotal)}
               </p>
-              <span className="text-[10px] text-on-surface-muted">
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                 {periodPurchases.length} deliveries received →
               </span>
             </RippleLink>
@@ -602,13 +602,13 @@ export function ReportsBody({
           {/* Quick Cash vs Debt Snapshot — flat inline section */}
           <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3 border border-border/20">
             <div>
-              <p className="text-[11px] text-on-surface-muted">Cash in Hand</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Cash in Hand</p>
               <p className="font-number text-base font-bold text-success tabular-nums">
                 {formatCurrency(cashReceivedFromSales)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-on-surface-muted">Money Outside (Credit)</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Money Outside (Credit)</p>
               <p className="font-number text-base font-bold text-warning tabular-nums">
                 {formatCurrency(totalCreditSales)}
               </p>
@@ -660,16 +660,16 @@ export function ReportsBody({
 
                     <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-container-high/60 p-3 text-xs">
                       <div>
-                        <span className="text-[10px] text-on-surface-muted">Sales Recorded</span>
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Sales Recorded</span>
                         <p className="font-number font-bold text-on-surface text-sm tabular-nums">
                           {formatCurrency(day.totalSales)}
                         </p>
-                        <span className="text-[10px] text-on-surface-muted">
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                           {day.saleCount} {day.saleCount === 1 ? "sale" : "sales"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-on-surface-muted">Clean Profit</span>
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Clean Profit</span>
                         <p
                           className={`font-number font-bold text-sm tabular-nums ${
                             isProfitPositive ? "text-success" : "text-danger"
@@ -677,7 +677,7 @@ export function ReportsBody({
                         >
                           {day.netProfit === null ? "Unavailable" : formatCurrency(day.netProfit)}
                         </p>
-                        <span className="text-[10px] text-on-surface-muted">
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                           Expenses: -{formatCurrency(day.expensesTotal)}
                         </span>
                       </div>
@@ -720,11 +720,11 @@ export function ReportsBody({
                                 <span className="text-xs font-semibold text-on-surface">
                                   {saleTime}
                                 </span>
-                                <span className="rounded-full bg-brand-container px-2 py-0.5 text-[9px] font-semibold text-on-brand-container uppercase">
+                                <span className="rounded-full bg-brand-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-brand-container uppercase">
                                   {primaryPayment}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-on-surface-muted truncate mt-0.5">
+                              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted truncate mt-0.5">
                                 {itemCount} {itemCount === 1 ? "item" : "items"}
                               </p>
                             </div>
@@ -758,13 +758,13 @@ export function ReportsBody({
               </h3>
               <Package size={16} className="text-brand-accent" />
             </div>
-            <p className="text-[11px] text-on-surface-muted mb-3">
+            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mb-3">
               Total value of all items currently sitting in your shop
             </p>
 
             <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-surface-container-high/60 p-3 mb-3">
               <div>
-                <span className="text-[10px] text-on-surface-muted font-medium">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted font-medium">
                   Selling Value (Expected)
                 </span>
                 <p className="font-number text-lg font-bold text-on-surface tabular-nums mt-0.5">
@@ -773,7 +773,7 @@ export function ReportsBody({
               </div>
 
               <div>
-                <span className="text-[10px] text-on-surface-muted font-medium">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted font-medium">
                   Cost Value (What you paid)
                 </span>
                 <p className="font-number text-lg font-bold text-on-surface-muted tabular-nums mt-0.5">
@@ -810,7 +810,7 @@ export function ReportsBody({
               {lowStockProducts.length > 0 && (
                 <RippleLink
                   href="/purchases"
-                  className="text-[11px] font-semibold text-brand-accent hover:underline flex items-center gap-1"
+                  className="text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:underline flex items-center gap-1"
                 >
                   <span>Restock</span>
                   <ArrowRight size={12} />
@@ -840,7 +840,7 @@ export function ReportsBody({
                         </span>
                         <RippleLink
                           href="/purchases"
-                          className="rounded-lg bg-brand-container px-2 py-1 text-[10px] font-bold text-on-brand-container hover:opacity-90"
+                          className="rounded-lg bg-brand-container px-2 py-1 text-[length:var(--font-size-caption)] font-bold text-on-brand-container hover:opacity-90"
                         >
                           Restock
                         </RippleLink>

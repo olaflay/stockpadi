@@ -175,7 +175,7 @@ export function AddContactModal({
               className="pl-10"
             />
           </div>
-          <p className="text-[11px] text-on-surface-muted">
+          <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
             Used for WhatsApp debt reminders and receipts.
           </p>
         </label>

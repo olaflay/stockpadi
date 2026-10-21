@@ -144,24 +144,24 @@ export default function PendingApprovalPage() {
         {/* Progress indicator — email verification precedes approval */}
         <div className="flex items-center gap-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
           <div className="flex items-center gap-1.5 opacity-50">
-            <span className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center text-brand-accent-contrast text-[10px]">
+            <span className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center text-brand-accent-contrast text-[length:var(--font-size-caption)]">
               <CheckCircle2 className="h-3 w-3" />
             </span>
             <span className="line-through">Account</span>
           </div>
           <div className="h-px flex-1 bg-brand-accent/40" />
           <div className="flex items-center gap-1.5">
-            <span className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center text-brand-accent-contrast text-[10px] font-bold">2</span>
+            <span className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center text-brand-accent-contrast text-[length:var(--font-size-caption)] font-bold">2</span>
             <span className="font-semibold text-brand-accent">Admin approval</span>
           </div>
           <div className="h-px flex-1 bg-border" />
           <div className="flex items-center gap-1.5 opacity-40">
-            <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-[10px] font-bold">3</span>
+            <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-[length:var(--font-size-caption)] font-bold">3</span>
             <span>Email</span>
           </div>
           <div className="h-px flex-1 bg-border" />
           <div className="flex items-center gap-1.5 opacity-40">
-            <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-[10px] font-bold">4</span>
+            <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-[length:var(--font-size-caption)] font-bold">4</span>
             <span>Start</span>
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function PendingApprovalPage() {
               <span className="text-on-surface">Email verified</span>
             </div>
             <div className="flex items-center gap-2 text-[length:var(--font-size-body)]">
-              <span className="h-4 w-4 rounded-full border border-border flex items-center justify-center text-[10px] font-bold text-on-surface-muted" aria-hidden>3</span>
+              <span className="h-4 w-4 rounded-full border border-border flex items-center justify-center text-[length:var(--font-size-caption)] font-bold text-on-surface-muted" aria-hidden>3</span>
               <span className="text-on-surface-muted">Waiting for admin approval</span>
             </div>
           </div>

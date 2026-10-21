@@ -1,56 +1,47 @@
-import { useRouter } from "next/navigation";
-import { Search, Plus } from "lucide-react";
-import { RippleButton } from "@/components/ui/Ripple";
+"use client";
+
+import { Search } from "lucide-react";
+import { StateCard } from "@/components/ui/StateCard";
 
 interface NoResultsStateProps {
   query: string;
+  /**
+   * What the user was searching within, used in the heading. Defaults to
+   * "items" so the copy stays true on every screen that uses this.
+   */
+  entityLabel?: string;
+  /**
+   * The CTA that creates the missing thing. Supplied by the caller because
+   * only the caller knows what "create" means on this screen — a product,
+   * a contact, a stock count. When omitted, the card offers no create
+   * action rather than a wrong one.
+   */
+  action?: { label: string; onClick?: () => void; href?: string };
+  /** Quiet secondary action, e.g. "Clear search filter". */
   onClear?: () => void;
   className?: string;
 }
 
-/** Distinct from EmptyState: the data exists, this filter/search just matched nothing. */
-export function NoResultsState({ query, onClear, className }: NoResultsStateProps) {
-  const router = useRouter();
-
+/**
+ * Distinct from EmptyState: the data exists, this filter/search just matched
+ * nothing. Renders through the shared StateCard so every state view keeps
+ * one layout, per `.agents/rules/design-system.md`.
+ */
+export function NoResultsState({
+  query,
+  entityLabel = "items",
+  action,
+  onClear,
+  className,
+}: NoResultsStateProps) {
   return (
-    <div
-      role="status"
-      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
-        <div className="mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container-high shrink-0 depth-bubble">
-          <Search size={24} className="text-on-surface-muted" aria-hidden />
-        </div>
-
-        <p className="text-base sm:text-lg font-bold text-on-surface leading-snug">
-          No results for &quot;{query}&quot;
-        </p>
-
-        <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
-          Try a different keyword or create this product right away.
-        </p>
-      </div>
-
-      <div className="flex w-full flex-col items-center gap-2 pt-4 mt-auto">
-        <RippleButton
-          type="button"
-          onClick={() => router.push(`/products/new?prefill=${encodeURIComponent(query)}`)}
-          className="w-full min-h-[var(--touch-target-min)] flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
-        >
-          <Plus size={16} aria-hidden />
-          <span>Create &quot;{query}&quot;</span>
-        </RippleButton>
-
-        {onClear && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="min-h-[var(--touch-target-min)] text-xs font-semibold text-on-surface-muted hover:text-on-surface transition-colors cursor-pointer"
-          >
-            Clear search filter
-          </button>
-        )}
-      </div>
-    </div>
+    <StateCard
+      icon={Search}
+      title={`No results for "${query}"`}
+      description={`Try a different keyword or clear the search to see all ${entityLabel}.`}
+      action={action}
+      secondaryAction={onClear ? { label: "Clear search filter", onClick: onClear } : undefined}
+      className={className}
+    />
   );
 }

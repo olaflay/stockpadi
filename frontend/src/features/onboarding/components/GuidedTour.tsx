@@ -102,7 +102,7 @@ export function GuidedTour() {
       >
         <Compass size={15} aria-hidden />
         <span>Guide</span>
-        <span className="ml-0.5 rounded-full bg-on-brand-container/15 px-1.5 py-0.5 text-[10px] tabular-nums">
+        <span className="ml-0.5 rounded-full bg-on-brand-container/15 px-1.5 py-0.5 text-[length:var(--font-size-caption)] tabular-nums">
           {step + 1}/{TOUR_STEPS.length}
         </span>
       </button>
@@ -135,7 +135,7 @@ export function GuidedTour() {
               <StepIcon size={18} aria-hidden />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-brand-accent">
+              <p className="text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-brand-accent">
                 Step {step + 1} of {TOUR_STEPS.length}
               </p>
               <h2 className="text-base sm:text-lg font-bold text-on-surface leading-tight">

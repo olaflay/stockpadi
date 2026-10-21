@@ -440,4 +440,4 @@ Do not edit a deployed migration. Check `npx supabase migration list` and use a 
 
 PostgreSQL is the source of truth. RLS and backend authorization enforce tenant and branch isolation. Dexie and IndexedDB are frontend offline storage only. The Node backend is the single authoritative sync engine for queued offline operations and pull convergence. Supabase compatibility functions, where retained for deployed clients, proxy to the Node backend and do not contain a competing sync implementation.
 
-See `AGENTS.md`, `docs/ARCHITECTURE-AUDIT.md`, `docs/adr/0001-canonical-application-flow.md`, `docs/PRD.md`, and `.agents/rules/` for the detailed engineering rules.
+See `AGENTS.md`, `docs/README.md`, `docs/adr/0001-canonical-application-flow.md`, `docs/PRD.md`, and `.agents/rules/` for the detailed engineering rules.

@@ -49,7 +49,7 @@ function SendDebtorReminderForm({
           </p>
         </div>
         <div className="text-right">
-          <span className="text-[11px] text-on-credit-container/80 block">Amount Owed</span>
+          <span className="text-[length:var(--font-size-caption)] text-on-credit-container/80 block">Amount Owed</span>
           <span className="font-number text-lg font-bold tabular-nums text-on-credit-container">
             {formatCurrency(contact.balance)}
           </span>
@@ -69,7 +69,7 @@ function SendDebtorReminderForm({
                 onClose();
                 onOpenTemplateEditor();
               }}
-              className="inline-flex items-center gap-1 text-[11px] text-brand-accent hover:underline"
+              className="inline-flex items-center gap-1 text-[length:var(--font-size-caption)] text-brand-accent hover:underline"
             >
               <Edit3 size={12} />
               <span>Edit General Template</span>
@@ -82,7 +82,7 @@ function SendDebtorReminderForm({
           rows={4}
           className="w-full rounded-2xl border border-border/40 bg-surface-container-low p-3.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 resize-none transition-all"
         />
-        <p className="text-[11px] text-on-surface-muted">
+        <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
           You can edit this message before sending (e.g. to add your bank details).
         </p>
       </label>

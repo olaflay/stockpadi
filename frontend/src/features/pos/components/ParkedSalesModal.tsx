@@ -45,7 +45,7 @@ export function ParkedSalesModal(props: {
                   </div>
                   <div className="flex items-center justify-between gap-3 text-on-surface-muted">
                     <span>{saleQty} item{saleQty === 1 ? "" : "s"}{sale.discount > 0 ? ` (incl. -${formatCurrency(sale.discount)} discount)` : ""}</span>
-                    <span className="shrink-0 text-[10px]">{new Date(sale.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className="shrink-0 text-[length:var(--font-size-caption)]">{new Date(sale.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                   <div className="flex gap-2 border-t border-border/40 pt-1">
                     <button

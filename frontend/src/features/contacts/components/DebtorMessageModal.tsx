@@ -104,7 +104,7 @@ function DebtorMessageForm({
 
       {/* Tag Quick-Insert Chips */}
       <div>
-        <span className="text-[11px] font-medium text-on-surface-muted">
+        <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface-muted">
           Tap to insert dynamic details:
         </span>
         <div className="mt-1.5 flex flex-wrap gap-1.5">

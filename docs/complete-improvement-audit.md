@@ -184,11 +184,10 @@ Every researched feature was re-vetted against the product sentence (offline-fir
 | --- | --- | --- |
 | Payment processing (Bumpa Wallet/Terminal, Tracepos gateways) | Bumpa, Tracepos | Locked boundary: payment-as-tag, no PCI liability (`payment-and-pci-scope.md`). The terminal wins payments; we win the night. |
 | E-commerce website builder, shipping, delivery timeline | Bumpa | Wrong shape: shop-floor POS, not social-commerce. Building it makes us Bumpa-with-less. |
-| Blog, gift cards, coupons, abandoned-cart recovery, sales countdown, product reviews on website | Bumpa | E-commerce chrome that adds buttons to a till. Rejected by the minimalism doctrine. |
-| AI copilot | Tracepos | The ledger already answers "what did I sell, who owes me." An AI chat adds noise, not answers. WATCH only. |
+| AI chat / copilot | Tracepos | Not a core till feature. All AI research, voice workflows, smart invoice scanning, and future AI suggestions are consolidated into [ROADMAP-AND-BACKLOG.md §5](ROADMAP-AND-BACKLOG.md#5-ai--automation-innovation-roadmap). |
 | Loyalty points, three-way match | SimpleBks, PRD-deferred | Already deferred; keep deferred. A points system is a marketing feature, not a ledger feature. |
 | Hardware printer bundle (₦55k) | FigoBooks | Valid GTM for them; we'd rather ship Web Bluetooth (feature 16) than inventory hardware. WATCH. |
-| "AI agent for MSMEs" positioning | FigoBooks/Thrive Media | Positioning, not product. Reject the marketing, keep the receipts. |
+| "AI agent for MSMEs" positioning | FigoBooks/Thrive Media | Positioning, not product. Reject generic marketing; all practical retail AI proposals live in [ROADMAP-AND-BACKLOG.md §5](ROADMAP-AND-BACKLOG.md#5-ai--automation-innovation-roadmap). |
 | Per-product-tier pricing (free 5 products) | Tracepos | One price, unlimited users/locations. Tier-by-catalog-size is the anti-pattern we beat. |
 | Full M3 dynamic color / multi-hue theming | M3 spec | One brand accent is the product. 5 accent themes max (feature 8). |
 | Legacy browser polyfills | FigoBooks | WATCH only — add if Android 8 WebView actually breaks. |

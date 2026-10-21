@@ -108,17 +108,17 @@ export function ContactDetailModal({
             {/* Badges */}
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {isCustomer && (
-                <span className="inline-flex items-center rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface">
+                <span className="inline-flex items-center rounded-full bg-surface-container-high px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-surface">
                   Customer
                 </span>
               )}
               {isSupplier && (
-                <span className="inline-flex items-center rounded-full bg-info-container px-2 py-0.5 text-[10px] font-semibold text-on-info-container">
+                <span className="inline-flex items-center rounded-full bg-info-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-info-container">
                   Supplier
                 </span>
               )}
               {isDebtor && (
-                <span className="inline-flex items-center rounded-full bg-credit-container px-2 py-0.5 text-[10px] font-semibold text-on-credit-container">
+                <span className="inline-flex items-center rounded-full bg-credit-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-credit-container">
                   Owing
                 </span>
               )}
@@ -134,7 +134,7 @@ export function ContactDetailModal({
                 Outstanding Balance
               </span>
               {aging && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${aging.colorClass}`}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium ${aging.colorClass}`}>
                   <Clock size={12} />
                   <span>{aging.label}</span>
                 </span>
@@ -194,7 +194,7 @@ export function ContactDetailModal({
               className="flex items-center justify-between rounded-xl bg-surface-container px-3.5 py-3 text-left hover:bg-surface-container-high transition-colors"
             >
               <div className="flex items-center gap-2.5">
-                <ShoppingCart size={16} className="text-primary" />
+                <ShoppingCart size={16} className="text-info" />
                 <span className="text-xs font-semibold text-on-surface">
                   New Purchase from Supplier
                 </span>

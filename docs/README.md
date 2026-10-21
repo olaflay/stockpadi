@@ -1,39 +1,91 @@
-# OjàPadi — Documentation Index
+# OjàPadi — Documentation System (Diátaxis Architecture)
 
-The single entry point for OjàPadi product architecture, specifications, improvement audits, and operational guides.
+The single entry point for OjàPadi product architecture, technical specifications, operational runbooks, and engineering backlog.
+
+Structured in accordance with the **Diátaxis Documentation Framework** (Tutorials, How-To Guides, Reference, and Explanation) and governed by the **TRUST Standard** (`.agents/rules/trust-standard.md`).
 
 ---
 
-## 1. Core Documentation Map
+## 1. Documentation Map (Diátaxis)
 
-| Document | Purpose | When to Consult |
+```
+                     PRACTICAL KNOWLEDGE
+                              ▲
+                              │
+            HOW-TO GUIDES     │     TUTORIALS
+       (Problem-oriented)     │   (Learning-oriented)
+                              │
+                              │   • specs/activation-onboarding.md
+• PWA-UPDATE-VERIFICATION.md  │   • specs/coach-marks.md
+• products-import-template    │
+                              │
+──────────────────────────────┼──────────────────────────────►
+                              │                     THEORETICAL
+          REFERENCE           │    EXPLANATION      KNOWLEDGE
+    (Information-oriented)    │  (Understanding-oriented)
+                              │
+• LAUNCH_SCOPE.md             │   • PRD.md (Concept & Trust)
+• COSTING-AND-PRICING.md      │   • adr/0001-canonical-application-flow.md
+• ROADMAP-AND-BACKLOG.md      │   • complete-improvement-audit.md
+• CLIENT-SERVER-COMPATIBILITY │
+• REBRANDING-PLAN.md          │
+• specs/README.md             │
+                              ▼
+```
+
+### 1.1 Reference (Information-Oriented / Technical Specifications)
+
+| Document | Scope & Authority | When to Consult |
 |---|---|---|
-| [PRD.md](PRD.md) | The authoritative product requirements document: users, journeys, offline-first data model, single-tenant database scoping, payment-as-tag boundary. **Section 8.1 carries the TRUST standard as a product requirement.** | Understanding high-level product architecture, permissions, and non-negotiables. |
-| [LAUNCH_SCOPE.md](LAUNCH_SCOPE.md) | **The frozen Must / V1.1 / Future boundary**, with every capability classified against real evidence and the nine open launch blockers named. | **Before starting any feature work.** This is what decides whether a task is in scope. |
-| [COSTING-AND-PRICING.md](COSTING-AND-PRICING.md) | The costing decision (moving weighted average, immutably snapshotted) and the customer pricing decision, with citations. | Working on profit, margin, cost, or anything that puts a number in front of an owner. |
-| [SCAFFOLD.md](SCAFFOLD.md) | Technical build log: directory tree structure, data layer, hooks, and verification checklists. | Working on the codebase and navigating component layers. |
-| [BUSINESS-MODEL-AND-ROADMAP.md](BUSINESS-MODEL-AND-ROADMAP.md) | Plan tiers, phased feature value, and scaling economics. | Evaluating commercial scope and roadmap sequencing. |
-| [complete-improvement-audit.md](complete-improvement-audit.md) | Master improvement audit: prioritized evaluation of features (keep/build/remove/reject), doctrines on minimalism, performance, and data-lite design. | Planning roadmap improvements or auditing UX. |
-| [specs/](specs/README.md) | Specification Index: implementation status (shipped vs next up) for Units Model, Contacts Hub, Hub Dashboard, Stock Count Redesign, and Coach Marks. | Building or reviewing upcoming specced features. |
-| [PENDING-TASKS-AND-RESEARCH.md](PENDING-TASKS-AND-RESEARCH.md) | **Pending Tasks & Research Log:** Specifications for $0 Cloudflare R2 backups, Stranded Outbox / Owner Reconciliation Queue, and 2GB Android hardware pilot protocol. | Reviewing pending architectural tasks, zero-cost backup workflow, or stranded outbox design. |
-| [../questions.md](../questions.md) | Open findings and decisions still requiring the owner's answer. | When something is unresolved and you need to know what is already known. |
+| [LAUNCH_SCOPE.md](LAUNCH_SCOPE.md) | **The frozen Must / V1.1 / Future boundary**, with all 23 core capabilities classified against executed verification. | **Before starting any feature work.** Decides whether a capability is in scope. |
+| [COSTING-AND-PRICING.md](COSTING-AND-PRICING.md) | The costing law (moving weighted average cost, snapshotted at sale, IAS 2 compliant) and customer pricing rules. | Working on profit calculations, inventory valuations, or financial displays. |
+| [ROADMAP-AND-BACKLOG.md](ROADMAP-AND-BACKLOG.md) | **Master product roadmap, commercial subscription tiers (Free/Pro/Enterprise), architectural backlog, and AI constitution.** | Reviewing upcoming sprints, Cloudflare R2 backup spec, cashier shift sessions, or AI automation. |
+| [CLIENT-SERVER-COMPATIBILITY.md](CLIENT-SERVER-COMPATIBILITY.md) | API versioning contract (`X-Client-Version`, `X-Min-Client-Version`), outbox schema v1, and rolling migration changelog. | Modifying API request/response payloads or outbox schemas. |
+| [REBRANDING-PLAN.md](REBRANDING-PLAN.md) | Master rebrand specification and pointer to the zero-hardcoding law (`.agents/rules/reusability-and-multi-client.md`). | Adding any UI copy, brand token, or forkable configuration. |
+| [specs/](specs/README.md) | Active feature specification index: Units Model, Contacts Hub, Hub Dashboard, and Stock Count redesign. | Implementing specced roadmap features. |
+
+### 1.2 Explanation (Understanding-Oriented / Architecture & Principles)
+
+| Document | Scope & Authority | When to Consult |
+|---|---|---|
+| [PRD.md](PRD.md) | Authoritative Product Requirements Document: user journeys, data model, multi-tenant database scoping, and **Section 8.1 TRUST Standard**. | Understanding product vision, tenant permissions, and non-negotiables. |
+| [adr/0001-canonical-application-flow.md](adr/0001-canonical-application-flow.md) | **ADR 0001:** Canonical browser-to-database flow, single-flight coordinator, same-origin Node API gateway, and Postgres authority. | Modifying client-server transport, service worker scope, or data layers. |
+| [complete-improvement-audit.md](complete-improvement-audit.md) | Master improvement audit: Keep/Reject/Remove feature evaluations, minimalism doctrine (Google Photos/Drive), and performance budgets. | Evaluating UX flows, proposed features, or screen density. |
+
+### 1.3 How-To Guides (Problem-Oriented / Runbooks & Procedures)
+
+| Document | Scope & Authority | When to Consult |
+|---|---|---|
+| [PWA-UPDATE-VERIFICATION.md](PWA-UPDATE-VERIFICATION.md) | Manual verification checklist for PWA service worker updates, pending offline sales across reload, and form draft recovery. | Pre-release testing, PWA deployment validation, or update debugging. |
+| [products-import-template.xlsx](products-import-template.xlsx) | Standard Excel spreadsheet format for merchant catalog import. | Testing or onboarding merchant inventory bulk imports. |
+
+### 1.4 Tutorials (Learning-Oriented / Activation & Onboarding)
+
+| Document | Scope & Authority | When to Consult |
+|---|---|---|
+| [specs/activation-onboarding.md](specs/activation-onboarding.md) | 4-step merchant onboarding walk (catalog prefill, first product, airplane-mode sale). | Refining activation rates and first-time merchant experience. |
+| [specs/coach-marks.md](specs/coach-marks.md) | Dismissible first-visit highlights guiding cashiers through POS, stock counting, and reports. | Designing contextual first-visit user guidance. |
 
 ---
 
-## 2. Governance
+## 2. Archive & Provenance
 
-The rules that govern this codebase live in `../AGENTS.md` and `.agents/rules/` at the repository
-root, not here. Two of them gate all other work:
+Historical build logs, resolved point-in-time boundary audits, and completed implementation blueprints are archived in [archive/](archive/README.md):
 
-- **The TRUST standard** (`.agents/rules/trust-standard.md`) is a gate, not a values statement.
-  Reliability outranks feature count, and an open reliability defect blocks new feature work.
-- **The zero-hardcoding law** (`.agents/rules/reusability-and-multi-client.md`) keeps the codebase
-  white-label. Brand names, currency symbols, and company copy resolve from config or environment,
-  never from literals in UI or logic.
+- [archive/ARCHITECTURE-AUDIT.md](archive/ARCHITECTURE-AUDIT.md) — 2026-10-07 architecture audit (ratified into ADR 0001).
+- [archive/SYNC-REPAIR-AUDIT.md](archive/SYNC-REPAIR-AUDIT.md) — 2026-10-07 sync defect repair audit (verified in test suites).
+- [archive/SCAFFOLD.md](archive/SCAFFOLD.md) — Initial August 2026 scaffold log.
+- [archive/SUSTAINABILITY-AND-EXPERIENCE-BLUEPRINT.md](archive/SUSTAINABILITY-AND-EXPERIENCE-BLUEPRINT.md) — Completed Phase 1–3 & §9/§11 blueprint.
+- [archive/BACKEND-SPLIT.md](archive/BACKEND-SPLIT.md) — Deployment topology scratchpad.
+- [archive/SYNC-DEPLOYMENT.md](archive/SYNC-DEPLOYMENT.md) — Historical deployment checklist.
+- [archive/ENVIRONMENT-MATRIX.md](archive/ENVIRONMENT-MATRIX.md) — Environment identity scratchpad.
 
-## 3. Directory Governance
+---
 
-- **Single Source of Truth:** `PRD.md` and `LAUNCH_SCOPE.md` govern product rules and scope.
-- **Implemented Specs:** Kept updated in `specs/README.md` with explicit test verification references.
-- **Zero Artifact Bloat:** Scratch research files are consolidated and removed once features transition into production code.
+## 3. Governance Laws
 
+Every human and automated agent working in this repository is strictly bound by:
+
+1. **The TRUST Standard** (`.agents/rules/trust-standard.md` & `PRD.md` §8.1): Reliability outranks feature count. Known open defects block new feature work.
+2. **The Zero-Hardcoding Law** (`.agents/rules/reusability-and-multi-client.md`): Brand names, business names, currency glyphs, and support copy must resolve from configuration, never from literals.
+3. **Single Source of Truth**: When documentation conflicts with code, resolve to the canonical living documents above and update test evidence.

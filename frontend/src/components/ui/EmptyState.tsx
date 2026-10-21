@@ -1,6 +1,8 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
-import { RippleButton, RippleLink } from "@/components/ui/Ripple";
+import { StateCard } from "@/components/ui/StateCard";
 
 interface EmptyStateProps {
   title: string;
@@ -32,52 +34,13 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
-      role="status"
-      className={`flex flex-1 w-full max-w-md mx-auto flex-col justify-between my-auto rounded-2xl depth-card p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
-        {Illustration ? (
-          <Illustration className="mb-4 h-22 w-22 sm:h-24 sm:w-24 text-brand-accent shrink-0" />
-        ) : (
-          Icon && (
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent shrink-0 depth-bubble">
-              <Icon size={28} className="text-brand-accent" aria-hidden />
-            </div>
-          )
-        )}
-
-        <p className="text-base sm:text-lg font-bold text-on-surface leading-snug">
-          {title}
-        </p>
-
-        <p className="mt-2 max-w-xs text-xs sm:text-sm text-on-surface-muted leading-relaxed">
-          {description}
-        </p>
-      </div>
-
-      {action && (
-        <div className="w-full pt-4 mt-auto">
-          {action.href ? (
-            <RippleLink
-              id={action.id}
-              href={action.href}
-              className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer text-center"
-            >
-              {action.label}
-            </RippleLink>
-          ) : (
-            <RippleButton
-              id={action.id}
-              type="button"
-              onClick={action.onClick}
-              className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-sm font-semibold text-brand-accent-contrast shadow-sm hover:opacity-95 active:scale-[0.98] transition-all inline-flex items-center justify-center cursor-pointer"
-            >
-              {action.label}
-            </RippleButton>
-          )}
-        </div>
-      )}
-    </div>
+    <StateCard
+      icon={Icon}
+      illustration={Illustration}
+      title={title}
+      description={description}
+      action={action}
+      className={className}
+    />
   );
 }

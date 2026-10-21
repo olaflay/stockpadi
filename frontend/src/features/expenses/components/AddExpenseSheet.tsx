@@ -536,7 +536,7 @@ export function AddExpenseSheet({
 
                       <div className="grid grid-cols-1 gap-2 pl-6 sm:grid-cols-2">
                         <label className="flex flex-col gap-0.5">
-                          <span className="text-[11px] text-on-surface-muted">Qty</span>
+                          <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Qty</span>
                           <TextInput
                             type="number"
                             min="1"
@@ -548,7 +548,7 @@ export function AddExpenseSheet({
                           />
                         </label>
                         <label className="flex flex-col gap-0.5">
-                          <span className="text-[11px] text-on-surface-muted">Unit Cost</span>
+                          <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Unit Cost</span>
                           <TextInput
                             type="number"
                             min="0"
@@ -563,7 +563,7 @@ export function AddExpenseSheet({
                       </div>
 
                       <div className="flex justify-end pl-6 pr-1 pt-0.5">
-                        <span className="text-[11px] text-on-surface-muted">
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
                           Subtotal: <strong className="text-on-surface">{formatCurrency(lineTotal)}</strong>
                         </span>
                       </div>

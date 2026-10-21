@@ -135,7 +135,7 @@ export function InfoTooltip({ text, ariaLabel = "More information", className = 
         <div
           ref={tooltipRef}
           role="tooltip"
-          className="fixed z-[9999] w-[220px] max-w-[calc(100vw-24px)] rounded-xl border border-border/80 bg-surface-container-highest p-2.5 text-[11px] font-normal text-on-surface shadow-[var(--shadow-elevation-3)] leading-relaxed select-text pointer-events-auto animate-fade-in"
+          className="fixed z-[9999] w-[220px] max-w-[calc(100vw-24px)] rounded-xl border border-border/80 bg-surface-container-highest p-2.5 text-[length:var(--font-size-caption)] font-normal text-on-surface shadow-[var(--shadow-elevation-3)] leading-relaxed select-text pointer-events-auto animate-fade-in"
           style={{
             top: `${coords.top}px`,
             left: `${coords.left}px`,

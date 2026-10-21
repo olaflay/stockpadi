@@ -80,7 +80,7 @@ function KpiCard({
         </p>
       </div>
       {actionLabel && (
-        <span className="mt-2 text-[11px] font-semibold text-brand-accent hover:underline flex items-center gap-0.5">
+        <span className="mt-2 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:underline flex items-center gap-0.5">
           {actionLabel}
         </span>
       )}

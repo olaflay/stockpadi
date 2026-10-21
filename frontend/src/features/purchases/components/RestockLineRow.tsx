@@ -154,11 +154,11 @@ export function RestockLineRow(props: {
       <div className="flex items-center justify-between text-[length:var(--font-size-caption)] text-on-surface-muted">
         <div>
           {line.unitCost > 0 && product.costPrice > 0 && line.unitCost !== product.costPrice ? (
-            <span className="text-[11px] text-brand-accent font-medium">
+            <span className="text-[length:var(--font-size-caption)] text-brand-accent font-medium">
               Cost restatement: {formatCurrency(product.costPrice)} → {formatCurrency(line.unitCost)}
             </span>
           ) : (
-            <span className="text-[11px]">
+            <span className="text-[length:var(--font-size-caption)]">
               Enter the unit cost from the supplier&apos;s invoice.
             </span>
           )}

@@ -54,7 +54,7 @@ export default function SettingsPage() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-base font-bold text-on-surface">{user.fullName || "My Account"}</p>
-            <span className="shrink-0 inline-flex items-center rounded-full bg-brand-container px-2 py-0.5 text-[10px] font-semibold text-on-brand-container uppercase tracking-wider">
+            <span className="shrink-0 inline-flex items-center rounded-full bg-brand-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-on-brand-container uppercase tracking-wider">
               {roleLabel}
             </span>
           </div>

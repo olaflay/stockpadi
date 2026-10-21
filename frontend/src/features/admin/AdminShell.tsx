@@ -40,11 +40,11 @@ export function AdminShell({ children }: AdminShellProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold tracking-tight text-on-surface">{branding.businessName}</span>
-                <span className="rounded-md bg-brand-accent/10 px-2 py-0.5 text-[11px] font-semibold text-brand-accent border border-brand-accent/20">
+                <span className="rounded-md bg-brand-accent/10 px-2 py-0.5 text-[length:var(--font-size-caption)] font-semibold text-brand-accent border border-brand-accent/20">
                   Super Admin
                 </span>
               </div>
-              <p className="flex items-center gap-1.5 text-[11px] text-on-surface-muted">
+              <p className="flex items-center gap-1.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
                 <span>Multi-Tenant Cluster</span>
               </p>
@@ -55,7 +55,7 @@ export function AdminShell({ children }: AdminShellProps) {
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden sm:flex flex-col items-end text-right">
               <span className="text-xs font-semibold text-on-surface">Platform Operator</span>
-              <span className="text-[11px] text-on-surface-muted font-mono truncate max-w-[150px]">
+              <span className="text-[length:var(--font-size-caption)] text-on-surface-muted font-mono truncate max-w-[150px]">
                 {currentUser.accountType === "ADMIN" ? "super_admin" : "admin"}
               </span>
             </div>

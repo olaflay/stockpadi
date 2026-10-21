@@ -250,13 +250,13 @@ export default function AdminBusinessDetailPage() {
               {/* Store ID with copy */}
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-on-surface-muted">
                 <span className="font-medium">Store UUID:</span>
-                <span className="font-mono text-on-surface bg-surface-container px-2 py-0.5 rounded text-[11px]">
+                <span className="font-mono text-on-surface bg-surface-container px-2 py-0.5 rounded text-[length:var(--font-size-caption)]">
                   {business.id}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyId}
-                  className="inline-flex items-center gap-1 text-[11px] text-brand-accent hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[length:var(--font-size-caption)] text-brand-accent hover:underline cursor-pointer"
                 >
                   {copiedId ? <Check size={12} /> : <Copy size={12} />}
                   <span>{copiedId ? "Copied" : "Copy"}</span>
@@ -292,7 +292,7 @@ export default function AdminBusinessDetailPage() {
 
             <div className="mt-4 flex flex-col gap-2.5">
               <div>
-                <span className="text-[11px] text-on-surface-muted uppercase tracking-wider font-semibold">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted uppercase tracking-wider font-semibold">
                   Full Name
                 </span>
                 <p className="text-sm font-semibold text-on-surface mt-0.5">
@@ -301,7 +301,7 @@ export default function AdminBusinessDetailPage() {
               </div>
 
               <div>
-                <span className="text-[11px] text-on-surface-muted uppercase tracking-wider font-semibold">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted uppercase tracking-wider font-semibold">
                   Role Privilege
                 </span>
                 <p className="text-xs font-mono text-on-surface mt-0.5">
@@ -311,10 +311,10 @@ export default function AdminBusinessDetailPage() {
 
               {business.owner_id && (
                 <div>
-                  <span className="text-[11px] text-on-surface-muted uppercase tracking-wider font-semibold">
+                  <span className="text-[length:var(--font-size-caption)] text-on-surface-muted uppercase tracking-wider font-semibold">
                     User UUID
                   </span>
-                  <p className="text-[11px] font-mono text-on-surface-muted truncate mt-0.5">
+                  <p className="text-[length:var(--font-size-caption)] font-mono text-on-surface-muted truncate mt-0.5">
                     {business.owner_id}
                   </p>
                 </div>
@@ -322,7 +322,7 @@ export default function AdminBusinessDetailPage() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[11px] text-on-surface-muted">
+          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
             Authenticated via Supabase Auth. Holds tenant admin privileges.
           </div>
         </div>
@@ -338,24 +338,24 @@ export default function AdminBusinessDetailPage() {
             <div className="mt-4 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-surface-container p-2.5">
                 <span className="text-lg font-bold text-on-surface">{business.branch_count ?? 0}</span>
-                <p className="text-[10px] text-on-surface-muted mt-0.5 font-medium">Branches</p>
+                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5 font-medium">Branches</p>
               </div>
 
               <div className="rounded-lg bg-surface-container p-2.5">
                 <span className="text-lg font-bold text-on-surface">{business.product_count ?? 0}</span>
-                <p className="text-[10px] text-on-surface-muted mt-0.5 font-medium">Products</p>
+                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5 font-medium">Products</p>
               </div>
 
               <div className="rounded-lg bg-surface-container p-2.5">
                 <span className="text-lg font-bold text-on-surface">{business.worker_count ?? 0}</span>
-                <p className="text-[10px] text-on-surface-muted mt-0.5 font-medium">Staff</p>
+                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5 font-medium">Staff</p>
               </div>
             </div>
 
             {/* Branch listing */}
             {business.branches && business.branches.length > 0 && (
               <div className="mt-4 flex flex-col gap-2">
-                <span className="text-[11px] text-on-surface-muted uppercase tracking-wider font-semibold">
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted uppercase tracking-wider font-semibold">
                   Branch Locations
                 </span>
                 <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
@@ -368,7 +368,7 @@ export default function AdminBusinessDetailPage() {
                         <MapPin size={12} className="text-brand-accent shrink-0" />
                         <span className="font-medium text-on-surface truncate">{b.name}</span>
                       </div>
-                      <span className="text-[10px] text-on-surface-muted font-mono shrink-0">
+                      <span className="text-[length:var(--font-size-caption)] text-on-surface-muted font-mono shrink-0">
                         {b.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
@@ -378,7 +378,7 @@ export default function AdminBusinessDetailPage() {
             )}
           </div>
 
-          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[11px] text-on-surface-muted">
+          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
             Independent stock & staff partitioning per branch.
           </div>
         </div>
@@ -417,7 +417,7 @@ export default function AdminBusinessDetailPage() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[11px] text-on-surface-muted">
+          <div className="mt-4 rounded-lg bg-surface-container p-2.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
             Strict row-level security isolates this tenant from all other shops.
           </div>
         </div>

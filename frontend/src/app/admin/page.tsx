@@ -298,7 +298,7 @@ export default function SuperAdminTenantsPage() {
             >
               <span>{tab.label}</span>
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                className={`rounded-full px-1.5 py-0.2 text-[length:var(--font-size-caption)] ${
                   statusFilter === tab.id
                     ? "bg-brand-accent-contrast/20 text-brand-accent-contrast"
                     : "bg-surface-container text-on-surface-muted"
@@ -362,7 +362,7 @@ export default function SuperAdminTenantsPage() {
 
                       {/* Status Badge */}
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold border ${
                           isVerified
                             ? "bg-success/10 text-success border-success/30"
                             : isSuspended
@@ -381,7 +381,7 @@ export default function SuperAdminTenantsPage() {
                       </span>
 
                       {/* Business Type Badge */}
-                      <span className="rounded-md bg-surface-container px-2 py-0.5 text-[10px] font-medium text-on-surface-muted uppercase tracking-wider">
+                      <span className="rounded-md bg-surface-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium text-on-surface-muted uppercase tracking-wider">
                         {tenant.business_type.replace("_", " ")}
                       </span>
                     </div>
@@ -402,7 +402,7 @@ export default function SuperAdminTenantsPage() {
                       <button
                         type="button"
                         onClick={(e) => handleCopyId(tenant.id, e)}
-                        className="inline-flex items-center gap-1 text-[11px] font-mono text-on-surface-muted hover:text-on-surface transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 text-[length:var(--font-size-caption)] font-mono text-on-surface-muted hover:text-on-surface transition-colors cursor-pointer"
                         title="Click to copy full ID"
                       >
                         {copiedId === tenant.id ? (

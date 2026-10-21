@@ -111,7 +111,7 @@ export function StepBusinessType({
                   {currentTemplate.sampleProducts.map((p) => (
                     <span
                       key={p.sku}
-                      className="inline-flex items-center gap-1 rounded-full bg-surface-container-highest px-2 py-0.5 text-[11px] font-medium text-on-surface"
+                      className="inline-flex items-center gap-1 rounded-full bg-surface-container-highest px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium text-on-surface"
                     >
                       <Package className="h-3 w-3 text-brand-accent" />
                       {p.name} (₦{p.sellPrice.toLocaleString()})

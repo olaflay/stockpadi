@@ -290,10 +290,10 @@ export function BrowseStep(props: {
           ) : (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-muted">
+                <h3 className="text-[length:var(--font-size-caption)] font-semibold uppercase tracking-wider text-on-surface-muted">
                   Scanned Products ({scannedProductIds.length})
                 </h3>
-                <span className="text-[11px] text-brand-accent font-medium">
+                <span className="text-[length:var(--font-size-caption)] text-brand-accent font-medium">
                   Tap + to bump quantity fast
                 </span>
               </div>
@@ -448,7 +448,11 @@ export function BrowseStep(props: {
       )}
 
       {filteredProducts.length === 0 ? (
-        <NoResultsState query={query} onClear={() => onQueryChange("")} />
+        <NoResultsState
+          query={query}
+          entityLabel="products"
+          onClear={() => onQueryChange("")}
+        />
       ) : (
         <div>
           <ul className="flex flex-col gap-2">

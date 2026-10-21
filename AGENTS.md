@@ -11,14 +11,16 @@ Offline-first inventory and point-of-sale PWA, built for retail businesses (1 to
 | File | What it is |
 |---|---|
 | `README.md` | Setup and day-to-day dev commands |
+| `docs/README.md` | Master documentation index organized by Diátaxis framework (Tutorials, How-To, Reference, Explanation) |
 | `docs/PRD.md` | The product requirements doc: users, journeys, functional/non-functional requirements, architecture, milestones. Section 8.1 carries the TRUST standard as a product requirement |
-| `docs/REBRANDING-PLAN.md` | Rebranding pointer; canonical zero-hardcoding and visual rules live in `.agents/rules/reusability-and-multi-client.md` and `design-system.md` |
-| `docs/SCAFFOLD.md` | Log of the initial scaffold: what was built, why, verification performed, known gaps |
 | `docs/LAUNCH_SCOPE.md` | The frozen Must / V1.1 / Future boundary, with every capability classified against real evidence. Read before starting any feature work |
 | `docs/COSTING-AND-PRICING.md` | The costing decision (how cost is calculated and snapshotted) and the customer pricing decision, with citations |
+| `docs/ROADMAP-AND-BACKLOG.md` | Single unified roadmap, commercial plan tiers (Free/Pro/Enterprise), architectural backlog ($0 R2 backups, hardware pilot, shift ledger), and AI safety constitution |
 | `docs/complete-improvement-audit.md` | Consolidated vetted master plan: what is kept, what gets built, what was rejected and why |
-| `docs/BUSINESS-MODEL-AND-ROADMAP.md` | Plan tiers, phased feature value, and scaling economics |
-| `docs/PENDING-TASKS-AND-RESEARCH.md` | Research & pending specs: $0 Cloudflare R2 backups, Stranded Outbox / Owner Reconciliation Queue, low-end Android field pilot |
+| `docs/adr/0001-canonical-application-flow.md` | Canonical application flow ADR: single-flight sync coordinator, same-origin Node API, Postgres authority |
+| `docs/CLIENT-SERVER-COMPATIBILITY.md` | API versioning contract (`X-Client-Version`, `X-Min-Client-Version`), outbox v1 schema, and compatibility log |
+| `docs/REBRANDING-PLAN.md` | Rebranding pointer; canonical zero-hardcoding and visual rules live in `.agents/rules/reusability-and-multi-client.md` and `design-system.md` |
+| `docs/archive/` | Historical point-in-time audits and logs (`SCAFFOLD.md`, `ARCHITECTURE-AUDIT.md`, `SYNC-REPAIR-AUDIT.md`, `SUSTAINABILITY-AND-EXPERIENCE-BLUEPRINT.md`) |
 | `questions.md` | Open findings and decisions still requiring the owner's answer. Unverified things live here rather than being smoothed over |
 
 ## Stack
