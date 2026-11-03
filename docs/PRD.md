@@ -68,24 +68,24 @@ A short onboarding step where the owner picks a business-type template. This set
 | Module | MVP scope | Deferred to V2+ |
 | --- | --- | --- |
 | Onboarding & Welcome | Business-type template selection, sample data seeding (products & stock) for immediate offline trial | Guided interactive walkthrough |
-| Dashboard | Per-branch and consolidated view, today's sales, profit estimate, low-stock count, unsynced indicator, contextual coach-marks | Business health score |
-| Alert Center | Consolidated feed for low-stock and expiring products, aggregated via layout badge | Push notifications for alerts |
-| Products | Name, SKU, barcode, category, brand, unit, cost/sell price, stock per branch | Product variants (size/color matrix) |
-| Bulk Operations | CSV import for products (auto-mapping categories and initial stock ledger), CSV exports for sales and products | Auto-scheduled exports |
-| Multi-store | Up to 6 branches, independent stock and staff per branch, consolidated owner-level reporting | Stock transfers between branches |
+| Dashboard | Per-branch and consolidated view, today's sales, profit estimate, low-stock count, unsynced indicator, contextual coach-marks | Owner-visible device/outbox health after privacy review |
+| Alert Center | Consolidated feed for low-stock and expiring products, aggregated via layout badge | Push notifications after pilot demand and permission/delivery testing |
+| Products | Name, SKU, barcode, category, brand, unit, cost/sell price, stock per branch | Product variants after catalogue and migration validation |
+| Bulk Operations | CSV import for products (auto-mapping categories and initial stock ledger), CSV exports for sales and products | Scheduled exports after access-control and recovery design |
+| Multi-store | Up to 6 branches, independent stock and staff per branch, consolidated owner-level reporting | Auditable stock transfers between branches |
 | Barcode scanning | Camera-based browser integration (`@zxing/browser`) across POS and Product views | Bluetooth scanner pairing |
-| Stock adjustments | Manual correction, mandatory reason code | Photo evidence attachment |
+| Stock adjustments | Manual correction, mandatory reason code | Photo evidence after storage/offline budget validation |
 | Purchases and suppliers | PO creation, receiving against a branch, supplier balance tracking | Three-way match (PO vs receipt vs invoice) |
-| Sales (POS) | Barcode/search checkout, discount, payment method tag (not live processing), hold/resume, void (online only) | Real card/wallet payment processing |
-| Receipts | On-screen digital receipt, WhatsApp direct share, built-in Print support (thermal/A4) | Custom receipt branding |
-| Customers | Contact info, running credit balance, printable statements | Loyalty points |
+| Sales (POS) | Barcode/search checkout, discount, payment method tag (not live processing), hold/resume, void (online only) | —; live payment processing is outside the locked PCI boundary |
+| Receipts | On-screen digital receipt, WhatsApp direct share, built-in Print support (thermal/A4) | Config-driven receipt/label layouts |
+| Customers | Contact info, running credit balance, printable statements | Loyalty discovery only after the documented paid-demand gate |
 | Expenses | Category, amount, note, per branch or business-wide | Recurring expense automation |
-| Reports | Daily/weekly/monthly, per-branch and consolidated, best/worst sellers, dynamic net profit margin calculation | Cashflow forecasting |
-| Settings | Business profile, branch management, staff and access, static Help & Support page | Multi-currency |
-| User management | Owner, Manager, Cashier, Inventory Staff, Accountant roles, scoped per branch; bottom navigation filtered to role permissions | Custom role builder |
-| Authentication | Email/password + OTP verification and Google OAuth for first setup (online required); PIN for daily unlock (offline capable); user picker shown on devices with existing local users; sessions expire after 24 hours | Biometric login |
+| Reports | Daily/weekly/monthly, per-branch and consolidated, best/worst sellers, dynamic net profit margin calculation | Data-gated advisory forecasting experiment only |
+| Settings | Business profile, branch management, staff and access, static Help & Support page | — |
+| User management | Owner, Manager, Cashier, Inventory Staff, Accountant roles, scoped per branch; bottom navigation filtered to role permissions | Cashier shifts after the staff/offline identity ADR |
+| Authentication | Email/password + OTP verification and Google OAuth for first setup (online required); PIN for daily unlock (offline capable); user picker shown on devices with existing local users; sessions expire after 24 hours | — |
 | Backup & Data | Full offline database backup/restore (JSON), CSV accounting exports | Point-in-time restore UI |
-| Sync | Full offline operation for all of the above except void/refund | Multi-device real-time collaboration indicators |
+| Sync | Full offline operation for all of the above except void/refund | Owner-visible device/outbox health after privacy review |
 
 ## 8. Non-Functional Requirements
 
@@ -158,13 +158,7 @@ graph TD
     PULL --> API
 ```
 
-> **Superseded:** the hosting narrative and diagram below (self-hosted VPS via Coolify) reflect the original research. Actual hosting is now Vercel (app) + Supabase Cloud (backend) — see `.agents/rules/hosting-and-deployment.md`. Kept here as the historical record of why VPS was the original recommendation.
-
-**Hosting decision.** Primary recommendation: self-hosted Supabase stack (Postgres, Auth, Realtime, Storage, Edge Functions) and the Next.js app, both deployed on a single VPS (Hetzner or DigitalOcean, 2GB RAM class) through Coolify for git-push deploys and automated backups. This was chosen after checking actual developer sentiment rather than defaulting to the managed-cloud option: when Supabase-alternative discussions on Reddit are sorted by votes, the consistent top recommendation is self-hosting on a cheap VPS rather than switching to a different managed platform,  and the full Supabase stack runs comfortably on a $10/month, 2GB RAM droplet.  This keeps the exact architecture already designed (same Postgres schema, same RLS roles, same Edge Function ledger logic), it changes only where it runs.
-
-Fallback, if ops time is the scarcer resource than money: Render, managed Postgres plus a web service instance, Postgres starting around $7/month with real backups and point-in-time recovery on higher tiers,  no server maintenance required.
-
-Considered and rejected: Vercel plus Supabase Cloud (the original default) was set aside mainly because of billing unpredictability at this workload size, not capability, bandwidth-driven bill spikes are a recurring, well-documented complaint  for a use case that doesn't need Vercel's edge-scaling strengths. PocketBase was considered and rejected because its SQLite foundation and simpler rule engine would require rebuilding the transactional ledger and RLS-based permission guarantees that Postgres already provides natively, not worth it to save a few dollars a month on a system handling another business's financial data.
+> **Historical note:** self-hosted VPS/Coolify and Render options were evaluated and rejected. The accepted topology is the Next.js app and Node API on Vercel with Supabase Cloud providing managed Postgres, Auth, Realtime and Storage. See `.agents/rules/hosting-and-deployment.md` and ADR 0001. Historical cost research belongs in `docs/archive/` and is not an alternate deployment plan.
 
 **Reusability for future deployments.** Business name/branding and the business-type defaults from Section 7.1 stay in configuration. A new client deployment simply signs up through the app, creating a new isolated `business_profile` within the shared multi-tenant infrastructure.
 
@@ -351,7 +345,7 @@ At 1 to 6 branches and an estimated 50-300 combined sales/day per business, this
 | Phase 1 | Single branch live, full MVP feature set, real transaction volume validated |
 | Phase 2 | Multi-branch rollout (up to 6 total), cross-branch reporting, staff permissions across locations |
 | Phase 3 | Hardware integrations, advanced analytics, client-specific refinements based on real usage |
-| Future | Real payment processing, loyalty, or a second client deployment reusing the same core |
+| Future | Qualified operational roadmap and explicitly gated experiments from `docs/LAUNCH_SCOPE.md`; no live payment processing under the current PCI boundary |
 
 ### 17.1 Phase 2: Multi-Branch & Cloud Sync Hardening
 
@@ -366,9 +360,9 @@ The focus shifts from the single-device offline core to the multi-tenant, multi-
 
 Polishing the physical retail experience and deepening the data value based on real usage.
 1. **Hardware Integrations:** Bluetooth ESC/POS printer support with custom receipt branding, and external Bluetooth barcode scanner pairing.
-2. **Advanced Analytics:** Cashflow forecasting, dead-stock identification, and dynamic reorder point suggestions.
+2. **Operational Analytics:** Dead-stock identification and deterministic reorder prompts; forecasting remains an evidence-gated experiment, not a committed feature.
 3. **Bulk Operations:** Full CSV export/import workflows for bulk price updates and inventory audits.
-4. **Client-Specific Refinements:** Custom dashboard widgets and workflow tweaks based on direct feedback from the Phase 1/2 pilot.
+4. **Pilot Refinements:** Config-bound workflow improvements based on repeated Phase 1/2 evidence; no client-specific hardcoding.
 
 ## 18. Risks & Mitigations
 
@@ -386,7 +380,13 @@ MVP validated when: all live branches retain daily usage past week 4, median off
 
 ## 20. Future Roadmap
 
-Real card/wallet payment processing (Flutterwave or Paystack, decision deferred until this client's actual transaction needs are clear), WhatsApp Business API for receipts and low-stock alerts, OCR invoice scanning for faster purchase entry, demand forecasting, and reuse of this core for a second client deployment on separate infrastructure.
+The qualified roadmap is operational: auditable inter-branch transfers, cashier shift/drawer control,
+device/outbox health, recoverable exports/backups, and pilot-validated hardware support. OCR receiving,
+consented WhatsApp Business messaging, loyalty, product variants, notifications, and advisory
+scenario planning are experiments with explicit entry and kill criteria, not commitments.
+Enterprise Voice Drafting, a read-only source-citing Operations Copilot, and platform passkeys may
+enter discovery only through `docs/specs/enterprise-safe-automation.md`. The removed roadmap items
+and re-entry rule are recorded in `docs/LAUNCH_SCOPE.md`.
 
 ## 21. Development Milestones
 
@@ -398,16 +398,7 @@ TypeScript strict mode throughout. Unit tests required for all `stock_movements`
 
 ## 23. Cost Analysis
 
-> **Superseded:** the self-hosted VPS/Coolify plan below was the original recommendation. Hosting was later moved to Vercel (app) + Supabase Cloud (backend) — see `.agents/rules/hosting-and-deployment.md` for the current, locked decision and why. This section is kept as the historical research record, not the current plan.
-
-| Item | Estimate |
-| --- | --- |
-| VPS (Hetzner or DigitalOcean, 2GB RAM) running self-hosted Supabase and the Next.js app via Coolify | Roughly $10-20/month, a comparable stack has been run on a $10/month 2GB droplet |
-| Coolify | Free, open source |
-| **Total, self-hosted (primary recommendation)** | **~$20-24/month** |
-| Fallback: Render, managed Postgres plus a web service instance | Postgres from ~$7/month, plus a web service tier,  roughly $20-34/month total, no ops burden |
-
-Figures are modeled from published 2026 rates and comparable real-world deployments cited above, not quoted guarantees. Confirm current pricing before committing.
+Current infrastructure cost planning must use the accepted Vercel + Supabase Cloud topology and current vendor quotes. Historical VPS/Coolify estimates are not operating assumptions. Support, monitoring, backup, restore-drill, messaging and payment-collection labour must be included before any gross-margin claim is used externally.
 
 ## 24. Appendix
 
@@ -419,7 +410,7 @@ Figures are modeled from published 2026 rates and comparable real-world deployme
 4. Stock and customer credit balance are delta-merged via an append-only ledger, never overwritten.
 5. Refunds and voids require an online connection.
 6. Payment method is recorded as a tag in MVP, not processed live.
-7. Hosting: originally self-hosted Supabase and Next.js on one VPS via Coolify, chosen over Vercel plus Supabase Cloud after checking real developer cost sentiment; Render as the zero-ops fallback. **Superseded** — current hosting is Vercel + Supabase Cloud, see `.agents/rules/hosting-and-deployment.md`.
+7. Hosting is Vercel for the Next.js app and Node API plus Supabase Cloud for managed backend services. See `.agents/rules/hosting-and-deployment.md`.
 8. PocketBase considered and rejected in favor of keeping Postgres's transactional and RLS guarantees for financial/stock data.
 9. **The TRUST standard (Section 8.1) is a product requirement and a gate.** Reliability outranks feature count, and an open reliability defect blocks new feature work. Full rule: `.agents/rules/trust-standard.md`.
 10. **Costing is moving weighted average cost, snapshotted immutably onto `sale_items` at the moment of sale.** Historical profit is never recomputed; existing sales with no snapshot stay NULL and are never backfilled, because backfilling fabricates a financial record. Derivation and citations: `docs/COSTING-AND-PRICING.md`.

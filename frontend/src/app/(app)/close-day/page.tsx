@@ -68,7 +68,7 @@ export default function CloseDayPage() {
       return {
         sales: user.accountType === "WORKER" ? (sales ?? []).filter((sale) => sale.createdByUserId === user.id) : (sales ?? []),
         products: user.accountType === "WORKER" ? [] : (products ?? []),
-        expenses: user.accountType === "WORKER" ? [] : (expenses ?? []),
+        expenses: user.accountType === "WORKER" ? [] : (expenses ?? []).filter((e) => !e.reversedAt),
         branches: branches ?? [],
         profile,
         error: null as string | null,

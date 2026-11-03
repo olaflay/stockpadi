@@ -2,6 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
+import type { CurrentUser } from "../use-current-user";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import { AuthProvider, AUTH_WATCHDOG_TIMEOUT_MS, CurrentUserContext } from "../AuthProvider";
 import { AUTH_SESSION_SYNC_KEY } from "../auth-session-sync";
 
@@ -33,7 +36,7 @@ vi.mock("@/lib/local-tenant", () => ({
 
 // Mock useLiveQuery
 type ResolvedState =
-  | { kind: "active"; user: any }
+  | { kind: "active"; user: CurrentUser }
   | { kind: "needs-login" }
   | { kind: "expired" }
   | { kind: "no-session" }
@@ -42,7 +45,7 @@ type ResolvedState =
 let mockLiveQueryResult: ResolvedState = undefined;
 
 vi.mock("dexie-react-hooks", () => ({
-  useLiveQuery: (fn: any, deps: any) => mockLiveQueryResult,
+  useLiveQuery: () => mockLiveQueryResult,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -65,6 +68,28 @@ describe("AuthProvider Fast-Path Hydration & Non-Destructive Storage Supervisor"
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+  });
+
+  it("hydrates the server skeleton with a cached session without replacing server markup", async () => {
+    const user = { id: "cached-owner", fullName: "Cached owner", accountType: "BUSINESS_OWNER" };
+    localStorage.setItem(AUTH_SESSION_SYNC_KEY, JSON.stringify({
+      version: 1, userId: user.id, user, expiresAt: new Date(Date.now() + 60000).toISOString(),
+    }));
+    const element = <AuthProvider><span>Cached workspace</span></AuthProvider>;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(element);
+    expect(container.textContent).not.toContain("Cached workspace");
+    document.body.appendChild(container);
+    const onRecoverableError = vi.fn();
+    let root: ReturnType<typeof hydrateRoot>;
+    try {
+      await act(async () => { root = hydrateRoot(container, element, { onRecoverableError }); });
+      expect(container.textContent).toContain("Cached workspace");
+      expect(onRecoverableError).not.toHaveBeenCalled();
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+    }
   });
 
   it("exports AUTH_WATCHDOG_TIMEOUT_MS as 4000", () => {
@@ -181,12 +206,11 @@ describe("AuthProvider Fast-Path Hydration & Non-Destructive Storage Supervisor"
 
     const originalLocation = window.location;
     const mockLocationReload = vi.fn();
-    delete (window as any).location;
-    (window as any).location = {
+    const locationSpy = vi.spyOn(window, "location", "get").mockReturnValue({
       ...originalLocation,
       reload: mockLocationReload,
       replace: vi.fn(),
-    };
+    });
 
     render(
       <AuthProvider>
@@ -205,11 +229,11 @@ describe("AuthProvider Fast-Path Hydration & Non-Destructive Storage Supervisor"
     expect(mockLocationReload).toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
 
-    (window as any).location = originalLocation;
+    locationSpy.mockRestore();
   });
 
   it("cancels watchdog and renders children when Dexie resolves active user within 4,000ms and syncs mirror", () => {
-    const activeUser = {
+    const activeUser: CurrentUser = {
       id: "user-1",
       fullName: "Test Owner",
       emailVerified: true,

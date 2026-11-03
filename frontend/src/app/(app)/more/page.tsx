@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -15,6 +15,7 @@ import {
   Store,
   FileSpreadsheet,
   ReceiptText,
+  Plus,
 } from "lucide-react";
 
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
@@ -25,6 +26,7 @@ import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { signOut } from "@/features/auth/logout";
+import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
 /**
  * The More Page — Streamlined operations & store management cockpit.
@@ -40,13 +42,7 @@ export default function MorePage() {
   const user = useCurrentUser();
   const branding = getBrandingConfig();
   const isOwnerOrAdmin = hasAccountType(user, ["BUSINESS_OWNER", "ADMIN"]);
-
-  // The More sheet is an overlay modal triggered from the BottomNav.
-  // Direct navigation to /more automatically redirects to /dashboard so
-  // users never land on a redundant detached /more page.
-  useEffect(() => {
-    router.replace("/dashboard");
-  }, [router]);
+  const [isOutflowOpen, setIsOutflowOpen] = useState(false);
 
   const businessProfile = useLiveQuery(
     () => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID),
@@ -70,9 +66,26 @@ export default function MorePage() {
     <div className="flex flex-col gap-6 pb-24">
       <ScreenHeader title="More" hideBack={true} />
 
+      {(hasCapability(user, "MANAGE_EXPENSES") || hasCapability(user, "RECEIVE_STOCK")) && (
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">
+            Quick actions
+          </h2>
+          <button
+            type="button"
+            onClick={() => setIsOutflowOpen(true)}
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast transition-opacity hover:opacity-95"
+          >
+            <Plus size={18} aria-hidden />
+            Record expense or delivery
+          </button>
+        </section>
+      )}
+
       {/* Store Identity & Profile Card */}
       <RippleLink
         href="/profile"
+        prefetch={false}
         className="flex items-center justify-between gap-3.5 rounded-2xl bg-surface-container px-4 py-3.5 text-left hover:bg-surface-container-high transition-colors active:scale-[0.99]"
       >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-container text-on-brand-container">
@@ -95,16 +108,17 @@ export default function MorePage() {
       {/* 1. Daily Cash & Relationships */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Daily Cash & Relationships
+          Money and contacts
         </h2>
         <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
           {hasCapability(user, "VIEW_CUSTOMERS") && (
             <SettingsRow
               icon={Users}
               tone="brand"
-              label="Contacts & Debtors"
+              label="Contacts and debtors"
               description="Customers, debtors owing you money, and wholesale suppliers"
               href="/contacts"
+              prefetch={false}
             />
           )}
 
@@ -112,9 +126,10 @@ export default function MorePage() {
             <SettingsRow
               icon={ReceiptText}
               tone="brand"
-              label="Sales & Receipts"
+              label="Sales and receipts"
               description="Past sales history and receipt reprinting"
               href="/sales"
+              prefetch={false}
             />
           )}
 
@@ -125,6 +140,7 @@ export default function MorePage() {
               label="Expenses"
               description="Record daily shop spending, bills, transport, and cash payouts"
               href="/expenses"
+              prefetch={false}
             />
           )}
 
@@ -132,9 +148,10 @@ export default function MorePage() {
             <SettingsRow
               icon={CalendarCheck}
               tone="brand"
-              label="Close Day"
+              label="Close day"
               description="End-of-day register settlement and cash drawer tally"
               href="/close-day"
+              prefetch={false}
             />
           )}
         </div>
@@ -143,7 +160,7 @@ export default function MorePage() {
       {/* 2. Inventory & Stock Tools */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Inventory & Stock Tools
+          Inventory tools
         </h2>
         <div className="flex flex-col divide-y divide-border/20 rounded-2xl bg-surface-container overflow-hidden">
           {hasCapability(user, "RECEIVE_STOCK") && (
@@ -153,6 +170,7 @@ export default function MorePage() {
               label="Stock"
               description="Record new inventory received from suppliers"
               href="/purchases"
+              prefetch={false}
             />
           )}
 
@@ -160,9 +178,10 @@ export default function MorePage() {
             <SettingsRow
               icon={ClipboardCheck}
               tone="neutral"
-              label="Stock Count"
+              label="Stock count"
               description="Count the stock on your shelves and compare it with your records"
               href="/stock-count"
+              prefetch={false}
             />
           )}
 
@@ -170,9 +189,10 @@ export default function MorePage() {
             <SettingsRow
               icon={FileSpreadsheet}
               tone="neutral"
-              label="Import / Export Catalog"
+              label="Product imports"
               description="Bulk upload or download products via Excel / CSV"
               href="/products/import"
+              prefetch={false}
             />
           )}
         </div>
@@ -181,24 +201,26 @@ export default function MorePage() {
       {/* 3. Store Management & System */}
       <section className="flex flex-col">
         <h2 className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-          Store & System
+          Store settings
         </h2>
         <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
           {isOwnerOrAdmin ? (
             <SettingsRow
               icon={Settings}
               tone="neutral"
-              label="Store & Staff Settings"
+              label="Store and staff settings"
               description="Receipt details, branches, staff accounts & system backup"
               href="/settings"
+              prefetch={false}
             />
           ) : (
             <SettingsRow
               icon={Settings}
               tone="neutral"
-              label="App Settings"
+              label="App settings"
               description="Display theme, help guides & about"
               href="/settings"
+              prefetch={false}
             />
           )}
         </div>
@@ -209,11 +231,13 @@ export default function MorePage() {
         type="button"
         onClick={handleLogout}
         className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-2xl bg-danger/10 px-4 py-3 text-sm font-semibold text-danger hover:bg-danger/15 active:scale-[0.99] transition-all"
-        title="Sign Out"
+        title="Sign out"
       >
         <LogOut size={16} aria-hidden />
-        <span>Sign Out</span>
+        <span>Sign out</span>
       </button>
+
+      <AddExpenseSheet isOpen={isOutflowOpen} onClose={() => setIsOutflowOpen(false)} />
     </div>
   );
 }

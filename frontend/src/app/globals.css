@@ -83,6 +83,7 @@
   --spacing-section: var(--space-section);
   --spacing-section-lg: var(--space-section-lg);
   --spacing-touch-target: var(--touch-target-min);
+  --spacing-connected-gap: var(--space-connected-gap);
 
   --radius-xs: var(--radius-xs);
   --radius-inline: var(--radius-inline);
@@ -94,6 +95,9 @@
   --radius-focus-block: var(--radius-focus-block);
   --radius-sheet: var(--radius-sheet);
   --radius-full: var(--radius-full);
+  --radius-segmented-start: var(--radius-segmented-start);
+  --radius-segmented-middle: var(--radius-segmented-middle);
+  --radius-segmented-end: var(--radius-segmented-end);
 
   --shadow-elevation-1: var(--elevation-1);
   --shadow-elevation-2: var(--elevation-2);
@@ -204,15 +208,15 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Eliminate browser scrollbar tracks on mobile from cutting in as side borders */
+/* Keep scrollbars discoverable. Hide them only on explicitly marked horizontal rails. */
 @media (max-width: 768px) {
-  * {
+  .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  *::-webkit-scrollbar {
+  .no-scrollbar::-webkit-scrollbar {
     display: none;
     width: 0px;
     height: 0px;
@@ -233,8 +237,16 @@ body {
   }
 }
 
-/* Global root canvas and body surface token bindings: prevents browser white leaks in safe areas and dynamic viewports */
-html,
+/* The root canvas is what an installed browser paints behind the home
+   indicator. Match it to the fixed bottom-navigation surface so the safe
+   area below the nav never becomes a light strip in dark mode. The body
+   stays on the page surface, preserving the normal content background. */
+html {
+  background-color: var(--color-surface-container);
+  color: var(--color-on-surface);
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background-color: var(--color-surface);
   color: var(--color-on-surface);
@@ -243,6 +255,22 @@ body {
 
 html {
   overflow-x: hidden;
+}
+
+/* Preserve compact visual chrome while expanding its interactive hit area to
+   the One UI 48px target. Use only where a 48px box would crowd a toolbar. */
+.touch-hitbox {
+  position: relative;
+}
+
+.touch-hitbox::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  transform: translate(-50%, -50%);
 }
 
 /* Typography & Numerals: Neue Helvetica for major number displays, prices, and stats */
@@ -279,7 +307,6 @@ html {
   overflow: hidden;
   background-color: var(--color-skeleton-bg, var(--color-surface-container));
   border: none;
-  backdrop-filter: blur(4px);
 }
 
 .animate-shimmer::after {
@@ -380,21 +407,32 @@ html {
   animation: toast-slide-up 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* M3 Bottom Sheet & Modal Deceleration Entrance */
+/* One UI / M3 bottom-sheet entrance. Keep the scrim and surface animations
+   independent so nested transforms cannot create a stagger on low-end phones. */
+@keyframes modal-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-modal-scrim-in {
+  animation: modal-scrim-in var(--motion-duration-medium) var(--easing-standard) both;
+}
+
 @keyframes sheet-up {
   from {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translate3d(0, 24px, 0);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 .animate-sheet-up {
-  animation: sheet-up var(--motion-duration-long) var(--easing-emphasized-decelerate) forwards;
+  animation: sheet-up var(--motion-duration-medium) var(--easing-emphasized-decelerate) both;
+  will-change: transform, opacity;
 }
 
 /* M3 Interactive State Layer */
@@ -504,6 +542,7 @@ input:-webkit-autofill:active {
 
 .depth-card-interactive:active {
   transform: scale(0.98);
+  background-color: var(--color-surface-container-highest);
   box-shadow: none;
 }
 

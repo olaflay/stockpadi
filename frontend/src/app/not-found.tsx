@@ -8,7 +8,7 @@ export default function NotFound() {
   const branding = getBrandingConfig();
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface p-4 sm:p-6">
+    <div className="flex min-h-dvh flex-col bg-surface p-4 sm:p-6">
       <main className="my-auto flex w-full flex-col self-center py-8">
         <StateCard
           icon={SearchX}

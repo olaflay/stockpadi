@@ -340,7 +340,9 @@ async function parseExcelFile(file: File): Promise<ImportResult> {
   const ExcelJS = (excelModule.default && typeof excelModule.default === "object" ? excelModule.default : excelModule) as typeof excelModule;
   const buffer = await file.arrayBuffer();
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  // Spreadsheet validation is authoring guidance; validateRawRows below is authoritative.
+  // Avoid expanding thousands of empty template validation cells during import.
+  await workbook.xlsx.load(buffer, { ignoreNodes: ["dataValidations"] });
   if (workbook.worksheets.length > PRODUCT_IMPORT_MAX_WORKSHEETS) return emptyResult([{ rowNum: 1, message: `This workbook has ${workbook.worksheets.length} worksheets. Use at most ${PRODUCT_IMPORT_MAX_WORKSHEETS}.` }]);
   const sheet = workbook.worksheets[0];
   if (!sheet) return emptyResult([{ rowNum: 1, message: "The Excel file has no worksheet to read from." }]);

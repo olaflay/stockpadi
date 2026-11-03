@@ -9,7 +9,7 @@ export default function OfflinePage() {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface p-4 sm:p-6">
+    <div className="flex min-h-dvh flex-col bg-surface p-4 sm:p-6">
       <ScreenHeader title="Offline" hideBack />
 
       <main className="my-auto flex w-full flex-col self-center py-8">

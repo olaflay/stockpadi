@@ -389,7 +389,6 @@ export default function ReconciliationPage() {
                 value={reconcileReason}
                 onChange={(e) => setReconcileReason(e.target.value)}
                 placeholder="e.g. Cash in drawer verified; manual counter sale registered"
-                autoFocus
               />
             </div>
 

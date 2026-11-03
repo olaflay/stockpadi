@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   containsTechnicalLeak,
-  extractErrorCode,
+
   isDisruptiveToCashier,
   resolveStatusMessage,
-  resolveSystemState,
+
   STATUS_DICTIONARY,
   TECHNICAL_LEAK_WORDS,
   type SyncSystemStateId,

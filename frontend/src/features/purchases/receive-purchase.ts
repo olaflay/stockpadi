@@ -6,6 +6,7 @@ import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
 import { withLocalBusinessId, withLocalBusinessIds } from "@/lib/local-tenant";
 import { assertHighRiskWriteAllowed } from "@/features/sync/sync-safety";
 import { assertCapability } from "@/features/auth/authorization";
+import { calculateMovingAverageCost } from "@/features/inventory/costing";
 
 export interface PurchaseLine {
   productId: string;
@@ -73,9 +74,34 @@ export async function receivePurchase(params: {
     createdByUserId: params.createdByUserId,
   }));
 
-  await withDatabaseClosedRecovery(() => db.transaction("rw", db.purchases, db.stockMovements, db.outbox, async () => {
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.purchases, db.stockMovements, db.products, db.outbox, async () => {
     const tenantPurchase = await withLocalBusinessId(purchase);
     await db.purchases.add(tenantPurchase);
+
+    // IAS 2 Moving Weighted Average Cost: update product costPrice atomically
+    for (const line of params.lines) {
+      const product = await db.products.get(line.productId);
+      if (product) {
+        const existingMovements = await db.stockMovements
+          .where("productId")
+          .equals(line.productId)
+          .toArray();
+        const currentStock = existingMovements.reduce((sum, m) => sum + m.quantityDelta, 0);
+
+        const newCostPrice = calculateMovingAverageCost({
+          currentStock,
+          currentCostPrice: product.costPrice,
+          restockQuantity: line.quantity,
+          restockUnitCost: line.unitCost,
+        });
+
+        await db.products.update(line.productId, {
+          costPrice: newCostPrice,
+          version: product.version + 1,
+          updatedAt: now,
+        });
+      }
+    }
     await db.stockMovements.bulkAdd(await withLocalBusinessIds(movements));
     await enqueueOutboxWrite(purchaseId, "purchase_receipt", tenantPurchase, now);
   }));

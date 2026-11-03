@@ -1,45 +1,71 @@
 "use client";
 
-import { useState } from "react";
-import { useDraft } from "@/hooks/use-draft";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useDraft, clearDraftStorage } from "@/hooks/use-draft";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Package, Search, UserPlus } from "lucide-react";
+import { Camera, Package, Search, UserPlus } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleButton } from "@/components/ui/Ripple";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
+import { type DateOption, resolveDateOptionIso } from "@/lib/date";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { addSupplier } from "@/features/purchases/add-supplier";
 import { receivePurchase, type PurchaseLine } from "@/features/purchases/receive-purchase";
 import { RestockLineRow } from "@/features/purchases/components/RestockLineRow";
 
+const BarcodeScanner = dynamic(
+  () => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner),
+  { ssr: false }
+);
+
 const inputClass =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] text-on-surface focus-visible:outline-none focus-visible:border-brand-accent focus-visible:ring-1 focus-visible:ring-brand-accent";
 
-export default function NewPurchasePage() {
+function NewPurchaseContent() {
   const user = useCurrentUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
 
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
   const suppliers = useLiveQuery(() => tenantArray(db.suppliers), [], []);
   const products = useLiveQuery(() => tenantArray(db.products.orderBy("name")), [], []);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
   const [branchId, setBranchId] = useDraft<string>("stockpadi-draft-restock-branch", "");
   const [supplierId, setSupplierId] = useDraft<string | null>("stockpadi-draft-restock-supplier", null);
+  const [dateOption, setDateOption] = useDraft<DateOption>("stockpadi-draft-restock-date-option", "today");
+  const [customDate, setCustomDate] = useDraft<string>("stockpadi-draft-restock-custom-date", todayStr);
+  const [lines, setLines, clearLinesDraft] = useDraft<Record<string, PurchaseLine>>("stockpadi-draft-restock-lines", {});
+
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showNewSupplierForm, setShowNewSupplierForm] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [lines, setLines, clearLinesDraft] = useDraft<Record<string, PurchaseLine>>("stockpadi-draft-restock-lines", {});
+  const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync incoming search query parameters (e.g. from AddExpenseSheet or deep links)
+  useEffect(() => {
+    const qBranch = searchParams.get("branchId");
+    if (qBranch) setBranchId(qBranch);
+    const qSupplier = searchParams.get("supplierId");
+    if (qSupplier) setSupplierId(qSupplier);
+    const qDate = searchParams.get("dateOption") as DateOption | null;
+    if (qDate && ["today", "yesterday", "custom"].includes(qDate)) setDateOption(qDate);
+    const qCustom = searchParams.get("customDate");
+    if (qCustom) setCustomDate(qCustom);
+  }, [searchParams, setBranchId, setSupplierId, setDateOption, setCustomDate]);
 
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
@@ -67,7 +93,7 @@ export default function NewPurchasePage() {
   const matchingProducts =
     productSearch.trim() && products
       ? products
-          .filter((p) => `${p.name} ${p.sku}`.toLowerCase().includes(productSearch.toLowerCase()))
+          .filter((p) => `${p.name} ${p.sku ?? ""} ${p.barcode ?? ""}`.toLowerCase().includes(productSearch.toLowerCase()))
           .slice(0, 6)
       : [];
 
@@ -104,6 +130,21 @@ export default function NewPurchasePage() {
     });
   }
 
+  function handleBarcodeResult(scannedCode: string) {
+    const code = scannedCode.trim().toLowerCase();
+    const matched = (products ?? []).find(
+      (p) =>
+        (p.barcode && p.barcode.toLowerCase() === code) ||
+        (p.sku && p.sku.toLowerCase() === code)
+    );
+    if (matched) {
+      addLine(matched.id, matched.costPrice || 0);
+      showToast(`Added ${matched.name}`, "success");
+    } else {
+      showToast(`No product matching barcode "${scannedCode}"`, "warning");
+    }
+  }
+
   async function handleAddSupplier() {
     const name = newSupplierName.trim();
     if (!name) return;
@@ -131,18 +172,20 @@ export default function NewPurchasePage() {
 
     setIsSubmitting(true);
     try {
+      const createdAtIso = resolveDateOptionIso(dateOption, customDate);
       await receivePurchase({
         branchId: effectiveBranchId,
         supplierId,
         lines: lineList,
         createdByUserId: user.id,
         actor: user,
+        createdAtIso,
       });
       showToast(`Delivery recorded: ${formatCurrency(total)}`, "success");
-      // Keep the last branch selected for the next delivery. Supplier selection
-      // is already persisted by useDraft; only line items are one-off data.
       setBranchId(effectiveBranchId);
       clearLinesDraft();
+      clearDraftStorage("stockpadi-draft-restock-lines");
+      setDateOption("today");
       router.replace("/purchases");
     } catch {
       showToast("Couldn't save the restock, try again.", "danger");
@@ -154,6 +197,55 @@ export default function NewPurchasePage() {
   return (
     <div className="flex flex-col gap-4">
       <ScreenHeader title="Receive delivery" backHref="/purchases" />
+
+      {/* Delivery Date Selection */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Delivery date *</span>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setDateOption("today")}
+            className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-3 text-xs sm:text-sm font-semibold transition-all border ${
+              dateOption === "today"
+                ? "bg-brand-accent text-brand-accent-contrast border-brand-accent shadow-sm"
+                : "bg-surface text-on-surface border-border hover:bg-surface-container"
+            }`}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setDateOption("yesterday")}
+            className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-3 text-xs sm:text-sm font-semibold transition-all border ${
+              dateOption === "yesterday"
+                ? "bg-brand-accent text-brand-accent-contrast border-brand-accent shadow-sm"
+                : "bg-surface text-on-surface border-border hover:bg-surface-container"
+            }`}
+          >
+            Yesterday
+          </button>
+          <button
+            type="button"
+            onClick={() => setDateOption("custom")}
+            className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-3 text-xs sm:text-sm font-semibold transition-all border ${
+              dateOption === "custom"
+                ? "bg-brand-accent text-brand-accent-contrast border-brand-accent shadow-sm"
+                : "bg-surface text-on-surface border-border hover:bg-surface-container"
+            }`}
+          >
+            Pick date…
+          </button>
+        </div>
+        {dateOption === "custom" && (
+          <input
+            type="date"
+            max={todayStr}
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+            className={`${inputClass} mt-1`}
+          />
+        )}
+      </div>
 
       {branches && branches.length > 1 && (
         <label className="flex flex-col gap-1">
@@ -169,6 +261,7 @@ export default function NewPurchasePage() {
         </label>
       )}
 
+      {/* Supplier Selection */}
       <div className="flex flex-col gap-2">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Supplier *</span>
 
@@ -309,6 +402,7 @@ export default function NewPurchasePage() {
         )}
       </div>
 
+      {/* Products & Barcode Scanning */}
       <div className="flex flex-col gap-2">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Products *</span>
 
@@ -333,19 +427,31 @@ export default function NewPurchasePage() {
           </div>
         ) : (
           <>
-            <div className="relative">
-              <Search
-                size={18}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search products to add (name or barcode)"
-                className={`${inputClass} w-full pl-10`}
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-muted"
+                  aria-hidden
+                />
+                <input
+                  type="search"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="Search product name or barcode…"
+                  className={`${inputClass} w-full pl-10`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScanning(true)}
+                className="flex min-h-[var(--touch-target-min)] shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-brand-accent/40 bg-brand-accent/10 px-3.5 text-[length:var(--font-size-body)] font-semibold text-brand-accent hover:bg-brand-accent/20 active:scale-95 transition-all"
+                aria-label="Scan barcode with camera"
+                title="Scan barcode with camera"
+              >
+                <Camera size={19} aria-hidden />
+                <span className="text-xs sm:text-sm font-semibold">Scan</span>
+              </button>
             </div>
 
             {productSearch.trim() && matchingProducts.length > 0 && (
@@ -402,6 +508,7 @@ export default function NewPurchasePage() {
         )}
       </div>
 
+      {/* Scanned / Added Lines List */}
       {lineList.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between">
@@ -435,6 +542,70 @@ export default function NewPurchasePage() {
         </div>
       )}
 
+      {/* Continuous Barcode Scanner with Interactive Split View */}
+      {isScanning && (
+        <BarcodeScanner
+          onResult={handleBarcodeResult}
+          onCancel={() => setIsScanning(false)}
+          bottomBar={
+            <div className="flex items-center justify-between gap-3 max-w-xl mx-auto w-full">
+              <div className="min-w-0">
+                <p className="text-xs text-on-surface-muted truncate">
+                  {itemCount} {itemCount === 1 ? "unit" : "units"} in delivery
+                </p>
+                <p className="font-number font-bold text-base text-on-surface truncate tabular-nums">
+                  {formatCurrency(total)}
+                </p>
+              </div>
+              <RippleButton
+                type="button"
+                onClick={() => setIsScanning(false)}
+                className="shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-5 py-2.5 text-xs font-semibold text-brand-accent-contrast shadow-sm hover:brightness-105 active:scale-95 transition-all"
+              >
+                Done Scanning
+              </RippleButton>
+            </div>
+          }
+        >
+          {lineList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-brand-accent/10 text-brand-accent flex items-center justify-center mb-2">
+                <Camera size={24} aria-hidden />
+              </div>
+              <p className="text-sm font-semibold text-on-surface">Ready to scan delivery</p>
+              <p className="text-xs text-on-surface-muted mt-1 max-w-xs">
+                Hold barcodes in the camera view above. Scanned items appear here with live steppers.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
+                  Delivery Items ({lineList.length})
+                </span>
+                <span className="text-xs text-brand-accent font-medium">
+                  Tap + to bump quantity
+                </span>
+              </div>
+              {lineList.map((line) => {
+                const product = products?.find((p) => p.id === line.productId);
+                if (!product) return null;
+                return (
+                  <RestockLineRow
+                    key={line.productId}
+                    line={line}
+                    product={product}
+                    onUpdate={updateLine}
+                    onRemove={removeLine}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </BarcodeScanner>
+      )}
+
+      {/* Sticky Bottom Actions Bar */}
       <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200">
         <div className="flex items-end justify-between gap-3">
           <div className="flex flex-col">
@@ -457,5 +628,21 @@ export default function NewPurchasePage() {
         </RippleButton>
       </div>
     </div>
+  );
+}
+
+export default function NewPurchasePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col gap-4 p-4">
+          <Skeleton className="h-12 w-full rounded-[var(--radius-control)]" />
+          <Skeleton className="h-28 w-full rounded-[var(--radius-card)]" />
+          <Skeleton className="h-44 w-full rounded-[var(--radius-card)]" />
+        </div>
+      }
+    >
+      <NewPurchaseContent />
+    </Suspense>
   );
 }

@@ -14,4 +14,4 @@ This is a real future roadmap item, not something to refuse outright. If asked t
 
 ## Subscription and hosting billing
 
-There is no in-app billing or subscription table. This is a single-tenant deployment, hosting costs are billed to the client outside the application, per `.agents/rules/hosting-and-deployment.md`. Do not add a `subscriptions` table or a billing UI, that belongs to a different product shape (see `.agents/rules/database-and-rls.md` on why the multi-tenant SaaS pattern doesn't apply here).
+Subscription packaging and collection are separate from payment processing at the till. This is a multi-tenant shared-database product as defined by `.agents/rules/database-and-rls.md`; every entitlement must be enforced at the authenticated server/database boundary, never only by hiding frontend controls. Do not add a billing provider, subscription schema, or collection UI until the commercial contract in the canonical roadmap is explicitly reconciled. Regardless of how the product subscription is collected, the POS continues to record customer payment methods only as tags and never handles raw card data.

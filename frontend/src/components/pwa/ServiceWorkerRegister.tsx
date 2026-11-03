@@ -1,7 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CLIENT_COMPATIBILITY_VERSION } from "@stockpadi/contracts/config";
 import { useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
@@ -16,7 +16,7 @@ const RELOAD_LOOP_KEY = "stockpadi-pwa-auto-reload-attempt-v1";
 
 /** Registers the versioned worker, updates in the background, and preserves UI drafts across reloads. */
 export function ServiceWorkerRegister() {
-  const router = useRouter();
+
   const syncPhase = useSyncRuntimePhase();
   const [fallbackVisible, setFallbackVisible] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("An app update is ready.");

@@ -28,7 +28,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const isSettingsActive = pathname.startsWith("/admin/settings");
 
   return (
-    <div className="min-h-screen w-full bg-surface text-on-surface flex flex-col selection:bg-brand-accent/20">
+    <div className="min-h-dvh w-full bg-surface text-on-surface flex flex-col selection:bg-brand-accent/20">
       {/* Platform Executive Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 sm:px-6 py-3.5">

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { setLocalBusinessId, clearLocalBusinessId, tenantArray } from "@/lib/local-tenant";
 import { completeSale } from "@/features/pos/complete-sale";
 import { drainOutbox, resetRetryBackoff } from "@/features/sync/drain-outbox";
-import { triggerSync, probeL4Connectivity } from "@/features/sync/SyncCoordinator";
+import { probeL4Connectivity } from "@/features/sync/SyncCoordinator";
 import { setDrainDebounceMs } from "@/features/sync/enqueue-outbox-write";
 import { getStockByProduct } from "@/features/inventory/product-insights";
 import { getStartOfTodayIso } from "@/lib/date";
@@ -74,7 +74,7 @@ describe("Offline-to-Online Synchronization Pipeline & Express Dashboard Read La
         headers: new Headers({ "x-build-version": "1.0.0" }),
         json: () =>
           Promise.resolve({
-            results: batch.map((item: any) => ({
+            results: batch.map((item: { client_id: string; mutation_id?: string }) => ({
               clientId: item.client_id,
               mutationId: item.mutation_id,
               status: "applied",
@@ -100,7 +100,7 @@ describe("Offline-to-Online Synchronization Pipeline & Express Dashboard Read La
       id: "current",
       userId: mockActor.id,
       deviceId: "device-pos-1",
-    } as any);
+    } as Parameters<typeof db.session.put>[0]);
 
     await db.localUsers.put({
       id: mockActor.id,
@@ -111,7 +111,7 @@ describe("Offline-to-Online Synchronization Pipeline & Express Dashboard Read La
       businessStatus: "verified",
       isActive: true,
       updatedAt: new Date().toISOString(),
-    } as any);
+    } as Parameters<typeof db.localUsers.put>[0]);
 
     // Seed product with 500 units in stock
     const testProduct: Product = {
@@ -349,7 +349,7 @@ describe("Offline-to-Online Synchronization Pipeline & Express Dashboard Read La
           headers: new Headers({ "x-build-version": "1.0.0" }),
           json: () =>
             Promise.resolve({
-              results: batch.map((item: any) => ({
+              results: batch.map((item: { client_id: string; mutation_id?: string }) => ({
                 clientId: item.client_id,
                 mutationId: item.mutation_id,
                 status: "applied",
@@ -417,7 +417,7 @@ describe("Offline-to-Online Synchronization Pipeline & Express Dashboard Read La
           headers: new Headers({ "x-build-version": "1.0.0" }),
           json: () =>
             Promise.resolve({
-              results: batch.map((item: any) => ({ clientId: item.client_id, status: "applied" })),
+              results: batch.map((item: { client_id: string; mutation_id?: string }) => ({ clientId: item.client_id, status: "applied" })),
             }),
         };
       }

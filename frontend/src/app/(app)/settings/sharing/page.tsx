@@ -9,8 +9,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import { normalizeNigerianPhone } from "@/lib/whatsapp";
-import { renderOwingMessage } from "@/lib/whatsapp";
+import { DEFAULT_OWING_MESSAGE_TEMPLATE, normalizeNigerianPhone, renderOwingMessage } from "@/lib/whatsapp";
 import { serverPatch } from "@/platform/api/backend-client";
 
 export default function SharingSettingsPage() {
@@ -96,7 +95,7 @@ export default function SharingSettingsPage() {
       <label className="flex flex-col gap-1">
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Owing message template</span>
         <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Use {"{{customerName}}"}, {"{{businessName}}"}, and {"{{amountOwed}}"}.</p>
-        <textarea value={templateInput ?? profile?.owingMessageTemplate ?? "Hi {{customerName}}, gentle reminder from {{businessName}}. Your balance is {{amountOwed}}. Please pay when convenient. Thank you."} onChange={(event) => setTemplateInput(event.target.value)} rows={4} className="rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2 text-[length:var(--font-size-body)] text-on-surface" />
+        <textarea value={templateInput ?? profile?.owingMessageTemplate ?? DEFAULT_OWING_MESSAGE_TEMPLATE} onChange={(event) => setTemplateInput(event.target.value)} rows={4} className="rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2 text-[length:var(--font-size-body)] text-on-surface" />
         <p className="rounded-[var(--radius-control)] bg-surface-container-low p-3 text-[length:var(--font-size-caption)] text-on-surface-muted">Preview: {renderOwingMessage(templateInput ?? profile?.owingMessageTemplate, { customerName: "Ada", businessName: profile?.name ?? "Your shop", amountOwed: "₦12,500" })}</p>
         <RippleButton type="button" onClick={saveTemplate} className="min-h-[var(--touch-target-min)] self-start rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast">Save template</RippleButton>
       </label>

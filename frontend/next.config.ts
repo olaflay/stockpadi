@@ -10,7 +10,7 @@ const configuredDevOrigins = (process.env.NEXT_PUBLIC_DEV_ORIGINS ?? "")
 
 // Browser requests stay same-origin. This value is the Next.js rewrite and
 // server-side upstream target; browser feature code still calls /api/*.
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim().replace(/\/+$/, "");
 const environmentValidation = validateRuntimeEnvironment(process.env, "frontend");
 if (process.env.NODE_ENV !== "test" && !environmentValidation.ok) {
   throw new Error(`Frontend environment validation failed: ${environmentValidation.errors.join("; ")}`);
@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ["localhost:3000", ...configuredDevOrigins],
   experimental: {
+    useOffline: true,
     optimizePackageImports: ["lucide-react", "dexie-react-hooks", "dexie"],
     staleTimes: {
       dynamic: 0,

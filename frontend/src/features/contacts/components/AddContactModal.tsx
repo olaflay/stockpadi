@@ -84,7 +84,7 @@ export function AddContactModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Add New Contact">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Add contact">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && (
           <div className="flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-xs text-danger">
@@ -107,7 +107,7 @@ export function AddContactModal({
         {/* Contact Type Chips */}
         <div>
           <label className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Contact Type
+            Contact type
           </label>
           <div className="mt-1.5 flex gap-2">
             {(
@@ -136,7 +136,7 @@ export function AddContactModal({
         {/* Full Name */}
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Full Name *
+            Full name *
           </span>
           <div className="relative">
             <User
@@ -151,7 +151,6 @@ export function AddContactModal({
               }}
               placeholder="e.g. Alhassan Danladi"
               className="pl-10"
-              autoFocus
               required
             />
           </div>
@@ -160,7 +159,7 @@ export function AddContactModal({
         {/* Phone Number */}
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-            Phone Number (Optional)
+            Phone number (optional)
           </span>
           <div className="relative">
             <Phone
@@ -195,7 +194,7 @@ export function AddContactModal({
             className="flex-1 rounded-xl bg-brand-accent px-4 py-2.5 text-sm font-semibold text-brand-accent-contrast disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
           >
             <Check size={16} />
-            <span>{saving ? "Saving..." : "Save Contact"}</span>
+            <span>{saving ? "Saving…" : "Save contact"}</span>
           </RippleButton>
         </div>
       </form>

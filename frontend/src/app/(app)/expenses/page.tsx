@@ -107,7 +107,7 @@ export default function ExpensesPage() {
       map.get(key)!.push(expense);
     }
     return Array.from(map.entries()).map(([monthKey, expenses]) => {
-      const outflow = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const outflow = expenses.filter((e) => !e.reversedAt).reduce((sum, e) => sum + e.amount, 0);
       return {
         monthKey,
         monthName: formatMonthYear(monthKey),
@@ -121,8 +121,8 @@ export default function ExpensesPage() {
 
   async function handleDelete(id: string) {
     try {
-      await deleteExpense(id);
-      showToast("Expense deleted", "success");
+      const res = await deleteExpense(id, user);
+      showToast(res.reversed ? "Expense reversed" : "Expense deleted", "success");
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Couldn't delete expense.",
@@ -252,8 +252,10 @@ export default function ExpensesPage() {
                         }`}
                         amount={expense.amount}
                         amountPrefix="−"
+                        status={expense.reversedAt ? "cancelled" : "completed"}
+                        statusLabel={expense.reversedAt ? "Reversed" : undefined}
                       />
-                      {canDelete && (
+                      {canDelete && !expense.reversedAt && (
                         <button
                           type="button"
                           onClick={() => setDeleteTarget({ id: expense.id, category: expense.category })}

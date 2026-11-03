@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Camera, PauseCircle } from "lucide-react";
+import { Camera, PauseCircle, X } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { feedbackAddToCart, feedbackScanSuccess, feedbackError } from "@/lib/feedback";
 
@@ -41,6 +42,7 @@ export function BrowseStep(props: {
   itemCount: number;
   total: number;
   onReviewCart: () => void;
+  onClearCart?: () => void;
   onGoToSettings: () => void;
   stockByProduct?: Record<string, number>;
   parkedSalesCount?: number;
@@ -62,6 +64,7 @@ export function BrowseStep(props: {
     itemCount,
     total,
     onReviewCart,
+    onClearCart,
     stockByProduct,
     parkedSalesCount = 0,
     onOpenParkedSales,
@@ -69,12 +72,9 @@ export function BrowseStep(props: {
 
   const router = useRouter();
   const { showToast } = useToast();
-  const { setSearchActive, setOverrideHidden } = useNavigation();
+  const { setSearchActive } = useNavigation();
   const isKeyboardOpen = useKeyboardOpen();
-
-  useEffect(() => {
-    setOverrideHidden(itemCount > 0);
-  }, [itemCount, setOverrideHidden]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     if (query.trim().length > 0) {
@@ -174,70 +174,67 @@ export function BrowseStep(props: {
       <h1 className="sr-only">Sell</h1>
 
       <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-1 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
-        <SearchBar
-          value={query}
-          onChange={(val) => {
-            onQueryChange(val);
-            setSearchActive(Boolean(val.trim()));
-          }}
-          onFocus={() => setSearchActive(true)}
-          onBlur={() => {
-            if (!query.trim()) setSearchActive(false);
-          }}
-          onKeyDown={(e) => {
-            // Enter → immediately add the first visible single-unit result.
-            // Dual-unit products are skipped: the cashier must still pick
-            // a unit, so Enter would guess wrong. H7: expert accelerator.
-            if (e.key === "Enter" && filteredProducts.length > 0) {
-              const first = filteredProducts[0];
-              if (!first.altUnitLabel) {
-                const { qty } = parsePosQuery(query);
-                handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
-                e.preventDefault();
-              }
-            }
-          }}
-          placeholder="Search shop..."
-          ariaLabel="Search products"
-          trailingAction={
-            <div className="flex items-center gap-1">
-              {itemCount > 0 && (
-                <span
-                  aria-live="polite"
-                  aria-label={`${itemCount} item${itemCount === 1 ? "" : "s"} in cart`}
-                  className="rounded-full bg-brand-container px-2 py-0.5 font-number text-[length:var(--font-size-caption)] font-semibold tabular-nums text-on-brand-container"
-                >
-                  ×{itemCount}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setScanning(true)}
-                aria-label="Scan barcode"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface active:scale-95 transition-colors"
-              >
-                <Camera size={18} aria-hidden />
-              </button>
-              {parkedSalesCount > 0 && (
-                <button
-                  type="button"
-                  onClick={onOpenParkedSales}
-                  aria-label={`Open ${parkedSalesCount} held sale${parkedSalesCount === 1 ? "" : "s"}`}
-                  title="Open held sales"
-                  className="flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-full bg-brand-container px-2 text-xs font-semibold tabular-nums text-on-brand-container transition-colors hover:opacity-90 active:scale-95 sm:min-w-0 sm:px-2.5"
-                >
-                  <PauseCircle size={15} strokeWidth={2.2} aria-hidden />
-                  <span className="hidden sm:inline">Held</span>
-                  <span>{parkedSalesCount}</span>
-                </button>
-              )}
+        <div className="flex items-center gap-2">
+          <div className="flex h-12 items-stretch gap-2 flex-1 min-w-0">
+            <div className="h-12 min-w-0 flex-1">
+              <SearchBar
+                value={query}
+                onChange={(val) => {
+                  onQueryChange(val);
+                  setSearchActive(Boolean(val.trim()));
+                }}
+                onFocus={() => setSearchActive(true)}
+                onBlur={() => {
+                  if (!query.trim()) setSearchActive(false);
+                }}
+                onKeyDown={(e) => {
+                  // Enter → immediately add the first visible single-unit result.
+                  // Dual-unit products are skipped: the cashier must still pick
+                  // a unit, so Enter would guess wrong. H7: expert accelerator.
+                  if (e.key === "Enter" && filteredProducts.length > 0) {
+                    const first = filteredProducts[0];
+                    if (!first.altUnitLabel) {
+                      const { qty } = parsePosQuery(query);
+                      handleFreshAdd(first.id, first.sellPrice, first.unitLabel, 1, qty);
+                      e.preventDefault();
+                    }
+                  }
+                }}
+                placeholder="Search shop..."
+                ariaLabel="Search products"
+                shape="standalone"
+              />
             </div>
-          }
-        />
+            <button
+              type="button"
+              onClick={() => setScanning(true)}
+              aria-label="Scan barcode"
+              title="Scan barcode"
+              className="flex h-12 w-12 min-h-12 min-w-12 self-stretch shrink-0 touch-manipulation items-center justify-center rounded-[var(--radius-control)] bg-brand-container text-on-brand-container hover:bg-brand-container/80 active:scale-95 transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+            >
+              <Camera size={19} aria-hidden />
+            </button>
+          </div>
+
+          {parkedSalesCount > 0 && (
+            <button
+              type="button"
+              onClick={onOpenParkedSales}
+              aria-label={`Open ${parkedSalesCount} held sale${parkedSalesCount === 1 ? "" : "s"}`}
+              title="Open held sales"
+              className="flex h-12 min-h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-surface-container-high px-3 text-xs font-semibold tabular-nums text-on-surface transition-all hover:bg-surface-container-highest active:scale-95 touch-manipulation sm:min-w-0"
+            >
+              <PauseCircle size={16} strokeWidth={2.2} className="text-brand-accent" aria-hidden />
+              <span className="hidden sm:inline">Held</span>
+              <span className="font-bold">{parkedSalesCount}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {scanning && (
         <BarcodeScanner
+          backLabel="Back to sale"
           onResult={(res) => {
             const match = allProducts.find((p) => p.barcode === res);
             if (match) {
@@ -263,7 +260,7 @@ export function BrowseStep(props: {
                 <p className="text-xs text-on-surface-muted truncate">
                   {itemCount} {itemCount === 1 ? "item" : "items"} in cart
                 </p>
-                <p className="font-number font-bold text-base text-on-surface truncate">
+                <p className="font-number font-bold text-base text-on-surface truncate tabular-nums">
                   {formatCurrency(total)}
                 </p>
               </div>
@@ -312,7 +309,7 @@ export function BrowseStep(props: {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-on-surface truncate">{product.name}</p>
-                      <p className="text-xs font-number text-brand-accent mt-0.5">
+                      <p className="text-xs font-number font-semibold text-brand-accent mt-0.5 tabular-nums">
                         {formatCurrency(product.sellPrice)} <span className="text-on-surface-muted font-sans font-normal">/ {product.unitLabel}</span>
                       </p>
                     </div>
@@ -341,7 +338,7 @@ export function BrowseStep(props: {
           <button
             type="button"
             onClick={() => onSelectCategory(null)}
-            className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-medium transition-colors flex items-center ${
+            className={`min-h-[38px] shrink-0 rounded-full px-4 text-xs font-medium transition-all flex items-center touch-manipulation active:scale-95 select-none ${
               selectedCategoryId === null
                 ? "bg-brand-accent text-brand-accent-contrast font-semibold"
                 : "bg-surface-container hover:bg-surface-container-high text-on-surface"
@@ -368,7 +365,7 @@ export function BrowseStep(props: {
                 onSelectCategory(cat.id);
                 markCategoryUsed(cat.id);
               }}
-              className={`h-8 shrink-0 rounded-full px-3.5 text-xs font-medium transition-colors flex items-center ${
+              className={`min-h-[38px] shrink-0 rounded-full px-4 text-xs font-medium transition-all flex items-center touch-manipulation active:scale-95 select-none ${
                 selectedCategoryId === cat.id
                   ? "bg-brand-accent text-brand-accent-contrast font-semibold"
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
@@ -409,7 +406,7 @@ export function BrowseStep(props: {
                         : handleBestSellerAdd(product)
                     }
                     aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
-                    className={`flex w-36 flex-col items-start gap-1 rounded-[var(--radius-card)] px-3 py-2.5 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
+                    className={`flex w-36 min-h-[58px] flex-col items-start gap-1 rounded-[var(--radius-card)] px-3 py-2.5 text-left transition-all active:scale-[0.97] touch-manipulation select-none disabled:opacity-50 ${
                       isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container hover:bg-surface-container-high"
                     }`}
                   >
@@ -484,113 +481,129 @@ export function BrowseStep(props: {
             return (
             <li key={product.id}>
               {product.altUnitLabel && product.altUnitConversionFactor && product.altUnitSellPrice !== null ? (
-                /* Dual-unit row: base unit pill + alt unit pill */
+                /* Dual-unit (wholesale) card: Product name and stock on top, wholesale unit buttons placed underneath */
                 <div
                   id={idx === 0 ? "tour-pos-item" : undefined}
-                  className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 rounded-[var(--radius-card)] bg-surface-container-high px-4 py-3"
+                  className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-high px-4 py-3 transition-colors"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate text-[length:var(--font-size-body-lg)] text-on-surface">
+                  {/* Top row: full-width product name and stock status */}
+                  <div className="flex items-start justify-between gap-2 w-full min-w-0">
+                    <span className="text-[length:var(--font-size-body-lg)] font-medium text-on-surface leading-snug break-words">
                       {product.name}
                     </span>
-                    {isOutOfStock ? (
-                      <span className="shrink-0 rounded-full bg-danger-container px-2 py-0.5 text-xs font-semibold text-on-danger-container">
-                        Out of stock
-                      </span>
-                    ) : isLowStock ? (
-                      <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
-                        {stock} left
-                      </span>
-                    ) : isUntracked ? (
-                      <span className="shrink-0 text-xs text-on-surface-muted">
-                        Not tracked
-                      </span>
-                    ) : null}
+                    <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
+                      {isOutOfStock ? (
+                        <span className="shrink-0 rounded-full bg-danger-container/80 text-on-danger-container px-2 py-0.5 text-[11px] font-semibold border border-danger/25">
+                          Out of stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="shrink-0 rounded-full bg-warning-container/80 text-on-warning-container px-2 py-0.5 text-[11px] font-semibold tabular-nums font-number border border-warning/25">
+                          Low · {stock} left
+                        </span>
+                      ) : isUntracked ? (
+                        <span className="shrink-0 text-[11px] text-on-surface-muted">
+                          Not tracked
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[11px] text-on-surface-muted font-number tabular-nums">
+                          {stock} on shelf
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Base unit — inline stepper if already in cart */}
-                  {baseQty > 0 ? (
-                    <InlineStepper
-                      qty={baseQty}
-                      label={`${product.name} (${product.unitLabel})`}
-                      onDecrement={() => onDecrementLine(baseKey)}
-                      onIncrement={() => onIncrementLine(baseKey)}
-                      incrementDisabled={!canAddBase}
-                      onIncrementBlocked={() =>
-                        showToast(
-                          `Only ${stock} of "${product.name}" available in stock.`,
-                          "warning",
-                          {
-                            label: "Restock",
-                            onClick: () => router.push("/purchases/new"),
-                          }
-                        )
-                      }
-                    />
-                  ) : (
-                    <RippleButton
-                      type="button"
-                      onClick={() =>
-                        isOutOfStock
-                          ? handleOutOfStockAttempt(product)
-                          : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
-                      }
-                      aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
-                        isOutOfStock
-                          ? "border border-danger/40 bg-danger/5 text-danger hover:bg-danger/10"
-                          : "bg-surface-container text-on-surface hover:bg-surface-container-high"
-                      }`}
-                    >
-                      {product.unitLabel} · {formatCurrency(product.sellPrice)}
-                    </RippleButton>
-                  )}
+                  {/* Bottom row: wholesale unit buttons placed underneath, smaller in height */}
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {/* Base unit — inline stepper if already in cart */}
+                    {baseQty > 0 ? (
+                      <InlineStepper
+                        qty={baseQty}
+                        label={`${product.name} (${product.unitLabel})`}
+                        onDecrement={() => onDecrementLine(baseKey)}
+                        onIncrement={() => onIncrementLine(baseKey)}
+                        incrementDisabled={!canAddBase}
+                        size="sm"
+                        onIncrementBlocked={() =>
+                          showToast(
+                            `Only ${stock} of "${product.name}" available in stock.`,
+                            "warning",
+                            {
+                              label: "Restock",
+                              onClick: () => router.push("/purchases/new"),
+                            }
+                          )
+                        }
+                      />
+                    ) : (
+                      <RippleButton
+                        type="button"
+                        onClick={() =>
+                          isOutOfStock
+                            ? handleOutOfStockAttempt(product)
+                            : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
+                        }
+                        aria-label={`Add ${product.name} (${product.unitLabel}) for ${formatCurrency(product.sellPrice)} to cart`}
+                        className={`shrink-0 min-h-[34px] sm:min-h-[36px] rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 touch-manipulation select-none disabled:opacity-50 flex items-center gap-1.5 border border-border/60 ${
+                          isOutOfStock
+                            ? "border-danger/40 bg-danger/5 text-danger hover:bg-danger/10"
+                            : "bg-surface-container text-on-surface hover:bg-surface-container-highest"
+                        }`}
+                      >
+                        <span className="font-medium">{product.unitLabel}</span>
+                        <span className="text-on-surface-muted/60">·</span>
+                        <span className="font-number tabular-nums font-bold">{formatCurrency(product.sellPrice)}</span>
+                      </RippleButton>
+                    )}
 
-                  {/* Alt unit — inline stepper if already in cart */}
-                  {altQty > 0 ? (
-                    <InlineStepper
-                      qty={altQty}
-                      label={`${product.name} (${product.altUnitLabel})`}
-                      onDecrement={() => onDecrementLine(altKey!)}
-                      onIncrement={() => onIncrementLine(altKey!)}
-                      incrementDisabled={!canAddAlt}
-                      onIncrementBlocked={() =>
-                        showToast(
-                          `Only ${stock} left. Needs ${altFactor} for another ${product.altUnitLabel}.`,
-                          "warning",
-                          {
-                            label: "Restock",
-                            onClick: () => router.push("/purchases/new"),
-                          }
-                        )
-                      }
-                    />
-                  ) : (
-                    <RippleButton
-                      type="button"
-                      onClick={() =>
-                        isOutOfStock || (stock !== undefined && stock < (product.altUnitConversionFactor ?? 1))
-                          ? showToast(
-                              `Not enough stock for a ${product.altUnitLabel}: only ${stock ?? 0} in stock.`,
-                              "warning",
-                              {
-                                label: "Restock",
-                                onClick: () => router.push("/purchases/new"),
-                              }
-                            )
-                          : handleFreshAdd(
-                              product.id,
-                              product.altUnitSellPrice!,
-                              product.altUnitLabel!,
-                              product.altUnitConversionFactor!
-                            )
-                      }
-                      aria-label={`Add ${product.name} (${product.altUnitLabel}) for ${formatCurrency(product.altUnitSellPrice)} to cart`}
-                      className="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface transition-[background-color,transform] active:scale-[0.98] hover:bg-surface-container-high disabled:opacity-50"
-                    >
-                      {product.altUnitLabel} · {formatCurrency(product.altUnitSellPrice)}
-                    </RippleButton>
-                  )}
+                    {/* Alt unit — inline stepper if already in cart */}
+                    {altQty > 0 ? (
+                      <InlineStepper
+                        qty={altQty}
+                        label={`${product.name} (${product.altUnitLabel})`}
+                        onDecrement={() => onDecrementLine(altKey!)}
+                        onIncrement={() => onIncrementLine(altKey!)}
+                        incrementDisabled={!canAddAlt}
+                        size="sm"
+                        onIncrementBlocked={() =>
+                          showToast(
+                            `Only ${stock} left. Needs ${altFactor} for another ${product.altUnitLabel}.`,
+                            "warning",
+                            {
+                              label: "Restock",
+                              onClick: () => router.push("/purchases/new"),
+                            }
+                          )
+                        }
+                      />
+                    ) : (
+                      <RippleButton
+                        type="button"
+                        onClick={() =>
+                          isOutOfStock || (stock !== undefined && stock < (product.altUnitConversionFactor ?? 1))
+                            ? showToast(
+                                `Not enough stock for a ${product.altUnitLabel}: only ${stock ?? 0} in stock.`,
+                                "warning",
+                                {
+                                  label: "Restock",
+                                  onClick: () => router.push("/purchases/new"),
+                                }
+                              )
+                            : handleFreshAdd(
+                                product.id,
+                                product.altUnitSellPrice!,
+                                product.altUnitLabel!,
+                                product.altUnitConversionFactor!
+                              )
+                        }
+                        aria-label={`Add ${product.name} (${product.altUnitLabel}) for ${formatCurrency(product.altUnitSellPrice)} to cart`}
+                        className="shrink-0 min-h-[34px] sm:min-h-[36px] rounded-full bg-surface-container border border-border/60 px-3 py-1 text-xs font-semibold text-on-surface transition-all active:scale-95 touch-manipulation select-none hover:bg-surface-container-highest disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <span className="font-medium">{product.altUnitLabel} ({product.altUnitConversionFactor})</span>
+                        <span className="text-on-surface-muted/60">·</span>
+                        <span className="font-number tabular-nums font-bold">{formatCurrency(product.altUnitSellPrice)}</span>
+                      </RippleButton>
+                    )}
+                  </div>
                 </div>
               ) : (
                 /* Single-unit row: tap-to-add OR inline stepper when in cart */
@@ -630,7 +643,7 @@ export function BrowseStep(props: {
                         : handleFreshAdd(product.id, product.sellPrice, product.unitLabel, 1)
                     }
                     aria-label={`Add ${product.name} for ${formatCurrency(product.sellPrice)} to cart`}
-                    className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.98] disabled:opacity-50 ${
+                    className={`flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-[var(--radius-card)] px-4 py-3 text-left transition-all active:scale-[0.98] touch-manipulation select-none disabled:opacity-50 ${
                       isOutOfStock ? "bg-danger-container text-on-danger-container" : "bg-surface-container-high hover:bg-surface-container-highest"
                     }`}
                   >
@@ -643,7 +656,7 @@ export function BrowseStep(props: {
                           Out of stock
                         </span>
                       ) : isLowStock ? (
-                        <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold text-on-warning-container">
+                        <span className="shrink-0 rounded-full bg-warning-container px-2 py-0.5 text-xs font-semibold tabular-nums font-number text-on-warning-container">
                           {stock} left
                         </span>
                       ) : isUntracked ? (
@@ -652,7 +665,7 @@ export function BrowseStep(props: {
                         </span>
                       ) : null}
                     </div>
-                    <span className={`shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${isOutOfStock ? "text-on-surface-muted line-through" : "text-on-surface"}`}>
+                    <span className={`shrink-0 font-number text-[length:var(--font-size-body)] font-bold tabular-nums ${isOutOfStock ? "text-on-surface-muted line-through" : "text-on-surface"}`}>
                       {formatCurrency(product.sellPrice)}
                     </span>
                   </RippleButton>
@@ -672,21 +685,53 @@ export function BrowseStep(props: {
 
       {itemCount > 0 && (
         <div
-          className={`sticky bottom-0 z-30 mt-auto -mx-gutter sm:-mx-gutter-lg items-center justify-between gap-3 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200 animate-step-in ${
+          className={`sticky bottom-0 z-30 mt-auto -mx-gutter sm:-mx-gutter-lg items-center justify-between gap-2.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-2 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] transition-all duration-200 animate-step-in ${
             isKeyboardOpen ? "hidden pointer-events-none" : "flex"
           }`}
         >
-          <span className="text-[length:var(--font-size-body)] font-medium text-on-surface">
-            {itemCount} item{itemCount === 1 ? "" : "s"} · <span key={total} className="animate-count-pop font-number font-semibold tabular-nums">{formatCurrency(total)}</span>
-          </span>
+          {onClearCart && (
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              aria-label="Cancel and clear all selected items"
+              title="Cancel sale"
+              className="flex h-10 w-10 min-h-10 min-w-10 shrink-0 touch-manipulation items-center justify-center rounded-[var(--radius-control)] bg-danger-container text-on-danger-container transition-all hover:bg-danger-container/80 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
+
+          <div className="flex flex-col min-w-0 flex-1 justify-center">
+            <span className="truncate text-xs font-medium text-on-surface-muted">
+              {itemCount} item{itemCount === 1 ? "" : "s"} selected
+            </span>
+            <span key={total} className="animate-count-pop font-number font-bold text-base tabular-nums text-on-surface">
+              {formatCurrency(total)}
+            </span>
+          </div>
+
           <RippleButton
             id="tour-pos-cart"
             type="button"
             onClick={onReviewCart}
-            className="flex min-h-[var(--touch-target-min)] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast transition-[opacity,transform] active:scale-[0.98] hover:opacity-95 shadow-sm"
+            className="flex min-h-[44px] sm:min-h-[48px] items-center shrink-0 rounded-[var(--radius-control)] bg-brand-accent px-4 sm:px-5 text-sm sm:text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast transition-all active:scale-[0.98] touch-manipulation hover:opacity-95 shadow-xs"
           >
             Review cart →
           </RippleButton>
+
+          <ConfirmDialog
+            isOpen={showClearConfirm}
+            onClose={() => setShowClearConfirm(false)}
+            onConfirm={() => {
+              onClearCart?.();
+              setShowClearConfirm(false);
+              showToast("Selection cleared.", "neutral");
+            }}
+            title="Cancel current sale?"
+            description="All selected items will be removed from this order."
+            confirmLabel="Clear sale"
+            variant="danger"
+          />
         </div>
       )}
     </div>
@@ -706,6 +751,7 @@ function InlineStepper({
   disabled = false,
   incrementDisabled = false,
   onIncrementBlocked,
+  size = "default",
 }: {
   qty: number;
   label: string;
@@ -714,21 +760,29 @@ function InlineStepper({
   disabled?: boolean;
   incrementDisabled?: boolean;
   onIncrementBlocked?: () => void;
+  size?: "default" | "sm";
 }) {
+  const isSm = size === "sm";
   return (
-    <div className="flex items-center gap-1 shrink-0">
+    <div className={`flex items-center ${isSm ? "gap-1" : "gap-1.5"} shrink-0 select-none`}>
       <button
         type="button"
         onClick={onDecrement}
         disabled={disabled}
         aria-label={`Decrease ${label} quantity`}
-        className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full bg-surface-container text-on-surface font-semibold text-[length:var(--font-size-title)] transition-[background-color,transform] active:scale-95 hover:bg-surface-container-high disabled:opacity-50"
+        className={`flex items-center justify-center rounded-full bg-surface-container text-on-surface font-bold transition-all active:scale-90 touch-manipulation hover:bg-surface-container-high disabled:opacity-50 ${
+          isSm
+            ? "h-8 w-8 min-h-[32px] min-w-[32px] text-base"
+            : "h-[var(--touch-target-min)] w-[var(--touch-target-min)] min-h-[44px] min-w-[44px] text-[length:var(--font-size-title)]"
+        }`}
       >
         −
       </button>
       <span
         key={qty}
-        className="animate-count-pop w-6 text-center font-number font-semibold tabular-nums text-[length:var(--font-size-body)] text-brand-accent"
+        className={`animate-count-pop text-center font-number font-bold tabular-nums text-brand-accent select-none ${
+          isSm ? "w-6 text-sm" : "w-7 text-[length:var(--font-size-body-lg)]"
+        }`}
         aria-live="polite"
         aria-label={`${label} quantity: ${qty}`}
       >
@@ -745,10 +799,14 @@ function InlineStepper({
         }}
         disabled={disabled}
         aria-label={`Increase ${label} quantity`}
-        className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-all ${
+        className={`flex items-center justify-center rounded-full font-bold transition-all touch-manipulation ${
+          isSm
+            ? "h-8 w-8 min-h-[32px] min-w-[32px] text-base"
+            : "h-[var(--touch-target-min)] w-[var(--touch-target-min)] min-h-[44px] min-w-[44px] text-[length:var(--font-size-title)]"
+        } ${
           incrementDisabled
             ? "border border-border bg-surface-container text-on-surface-muted opacity-60 cursor-not-allowed"
-            : "bg-brand-accent text-brand-accent-contrast hover:opacity-90 active:scale-95"
+            : "bg-brand-accent text-brand-accent-contrast hover:opacity-90 active:scale-90 shadow-2xs"
         }`}
       >
         +

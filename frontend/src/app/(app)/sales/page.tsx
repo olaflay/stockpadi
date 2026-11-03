@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { FilterDropdownBar, type FilterGroup } from "@/components/ui/FilterDropdownBar";
+import { SearchBar } from "@/components/ui/SearchBar";
+import { NoResultsState } from "@/components/ui/NoResultsState";
 import { MonthGroupHeader } from "@/components/ui/MonthGroupHeader";
 import { TransactionItemRow, type TransactionStatus } from "@/components/ui/TransactionItemRow";
 import { FAB } from "@/components/ui/FAB";
@@ -36,6 +38,7 @@ export default function SalesPage() {
   const router = useRouter();
   const [period, setPeriod] = useState<SalesPeriod>("month");
   const [paymentFilter, setPaymentFilter] = useState<SalesPaymentFilter>("all");
+  const [query, setQuery] = useState("");
 
   const result = useLiveQuery(async () => {
     try {
@@ -69,6 +72,18 @@ export default function SalesPage() {
           return false;
         }
 
+        const normalizedQuery = query.trim().toLowerCase();
+        if (normalizedQuery) {
+          const searchable = [
+            sale.id,
+            sale.id.slice(0, 8),
+            sale.clientId,
+            sale.createdByName ?? "",
+            ...sale.items.map((item) => item.productNameSnapshot ?? ""),
+          ].join(" ").toLowerCase();
+          if (!searchable.includes(normalizedQuery)) return false;
+        }
+
         // Payment method filter
         if (paymentFilter !== "all") {
           const hasMethod = sale.payments.some((p) => p.method === paymentFilter);
@@ -78,7 +93,7 @@ export default function SalesPage() {
         return true;
       }) ?? []
     );
-  }, [result?.sales, user.accountType, user.id, user.branchIds, paymentFilter, canViewBranchSales]);
+  }, [result?.sales, user.accountType, user.id, user.branchIds, paymentFilter, canViewBranchSales, query]);
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -202,21 +217,37 @@ export default function SalesPage() {
     <div className="flex flex-col gap-3 pb-12">
       <ScreenHeader title="Sales history" action={reportsAction} />
 
-      {/* Top Filter Dropdown Bar with Expanding Pill Tray */}
-      <FilterDropdownBar filters={filterGroups} ariaLabel="Filter sales by date and payment method" />
+      <div className="sticky top-0 z-20 -mx-gutter border-b border-border/30 bg-surface/95 px-gutter pb-2.5 pt-1 sm:-mx-gutter-lg sm:px-gutter-lg supports-[backdrop-filter:blur(1px)]:backdrop-blur-sm">
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Search receipts or products"
+          ariaLabel="Search sales by receipt, product, or cashier"
+          shape="standalone"
+        />
+        <FilterDropdownBar
+          filters={filterGroups}
+          ariaLabel="Filter sales by date and payment method"
+          className="mt-2"
+        />
+      </div>
 
       {visibleSales.length === 0 ? (
         <div className="py-12">
-          <EmptyState
-            icon={Receipt}
-            title="No sales found"
-            description="No sales recorded for this period."
-            action={
-              hasCapability(user, "POS_SELL")
-                ? { label: "Make a sale", onClick: () => router.push("/pos") }
-                : undefined
-            }
-          />
+          {query.trim() ? (
+            <NoResultsState query={query.trim()} entityLabel="sales" onClear={() => setQuery("")} />
+          ) : (
+            <EmptyState
+              icon={Receipt}
+              title="No sales found"
+              description="No sales recorded for this period."
+              action={
+                hasCapability(user, "POS_SELL")
+                  ? { label: "Make a sale", onClick: () => router.push("/pos") }
+                  : undefined
+              }
+            />
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-6">

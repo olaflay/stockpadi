@@ -7,7 +7,7 @@ import { SYNC_REQUIRED_MAX_AGE_MS, SYNC_REQUIRED_QUEUE_THRESHOLD } from "@/confi
  * make the app unusable. View and sync remain available; high-risk writes are
  * paused until the queue is brought down. */
 export const HIGH_RISK_SYNC_ENTITY_TYPES = new Set<SyncEntityType>([
-  "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt", "credit_payment", "expense",
+  "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt", "credit_payment", "expense", "expense_reversal",
 ]);
 const UNSYNCED_STATUSES = new Set(["pending", "syncing", "blocked", "failed", "conflict"]);
 

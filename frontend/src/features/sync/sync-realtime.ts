@@ -41,6 +41,7 @@ function saleFromRealtime(event: SyncSaleRealtimeEvent): import("@/types/sale").
     voidedAt: null,
     items: sale.items.map((item) => ({
       productId: item.productId,
+      productNameSnapshot: item.productNameSnapshot,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       discount: item.discount,

@@ -696,7 +696,19 @@ async function applyProducts(records: unknown[], businessId: string): Promise<nu
 async function applyExpenses(records: unknown[], businessId: string): Promise<number> {
   const protectedIds = await pendingIds(businessId, "expense");
   const expenses = (records as Array<Record<string, unknown>>).filter((expense) => !protectedIds.has(String(expense.id)));
-  await db.expenses.bulkPut(expenses.map((expense) => ({ id: expense.id as string, businessId, branchId: (expense.branch_id as string) || null, category: (expense.category as string) || "general", amount: Number(expense.amount ?? 0), note: (expense.note as string) || null, createdAtLocal: (expense.created_at as string) || new Date().toISOString(), createdByUserId: (expense.created_by_user_id as string) || "server-sync" } as Expense)));
+  await db.expenses.bulkPut(expenses.map((expense) => ({
+    id: expense.id as string,
+    businessId,
+    branchId: (expense.branch_id as string) || null,
+    category: (expense.category as string) || "general",
+    amount: Number(expense.amount ?? 0),
+    note: (expense.note as string) || null,
+    createdAtLocal: (expense.created_at as string) || new Date().toISOString(),
+    createdByUserId: (expense.created_by_user_id as string) || "server-sync",
+    reversedAt: (expense.reversed_at as string) || null,
+    reversedByUserId: (expense.reversed_by_user_id as string) || null,
+    reversalReason: (expense.reversal_reason as string) || null,
+  } as Expense)));
   return expenses.length;
 }
 
@@ -715,6 +727,7 @@ async function applySales(records: unknown[], businessId: string): Promise<numbe
     subtotal: Number(sale.subtotal ?? 0), discount: Number(sale.discount ?? 0), total: Number(sale.total ?? 0), payments: (sale.payments as Array<{ method: string; amount: number; tendered_amount?: number; note?: string }> ?? []).map((payment) => ({ method: payment.method as Sale["payments"][0]["method"], amount: Number(payment.amount), ...(payment.tendered_amount !== undefined ? { tenderedAmount: Number(payment.tendered_amount) } : {}), ...(payment.note !== undefined ? { note: payment.note } : {}) })),
     items: (sale.items as Array<Record<string, unknown>> ?? []).map((item) => ({
       productId: (item.product_id as string) || "",
+      productNameSnapshot: typeof item.product_name_snapshot === "string" ? item.product_name_snapshot : null,
       quantity: Number(item.quantity ?? 0),
       unitPrice: Number(item.unit_price ?? 0),
       discount: Number(item.discount ?? 0),

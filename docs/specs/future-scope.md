@@ -3,7 +3,7 @@
 | | |
 | --- | --- |
 | Status | DRAFT for SPEC gate |
-| Features | Master audit rows 12, 14, 15, 16, 17 |
+| Features | Master audit rows 12, 14, 15, 16 |
 | Rule | These are P2 because each adds a network dependency, device API, or hardware surface (perf doctrine §2.7.4). Specced now so the design is decided before the budget gate opens. |
 
 ---
@@ -39,14 +39,6 @@
 **Decisions:** Settings → Print → "Pair 58mm printer" (device memory in localStorage, reconnects automatically); receipt/label payloads rendered to ESC/POS bytes (a small `escpos` encoder — dependency, ask-first); prints receipts after sales ("Print" outline button beside "New Sale"), labels from the customizer (row 12); Android Chrome only for v1 (Web Bluetooth support); graceful fallback to WhatsApp share when unsupported.
 
 **Verification:** pair → print a real receipt on a 58mm printer; reconnect on app reopen; unsupported browser shows the WhatsApp fallback.
-
-## 17. Multi-currency (P2)
-
-**Objective:** record sales in USD (diaspora customers, cross-border trade) alongside NGN, with a config-driven rate.
-
-**Decisions:** config-only for now (the audit already notes `currency: "NGN"` on the business profile); P2 adds: per-sale currency tag (NGN/USD), a saved rate per transaction (never a live-rate fetch — that's the network dependency; the owner types today's rate), reports convert to the home currency. **No live-rate API, no automatic conversion** — the rate is owner-confirmed at sale time.
-
-**Verification:** a USD sale records with its rate; reports show both; the ledger stays in home currency (movements converted at the stored rate).
 
 ## 18. Order source tag (future queue — cut from P1 by the engineer vet, 2026-08-25)
 

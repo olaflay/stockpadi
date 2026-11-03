@@ -42,23 +42,24 @@
 
 **Verification:** sale saves with the chosen source; report filters by source; offline sale keeps the source and syncs.
 
-## 5. Wholesale pricing (P1)
+## 5. Wholesale pricing (Future discovery; not approved)
 
-**Objective:** per-product wholesale price + a Retail/Wholesale toggle chip in checkout; wholesale price is per pack unit (consumes units-model).
+**Promotion gate:** validate a distinct wholesale workflow with paying merchants. Multi-unit pack/carton sales remain independent and do not require this feature.
+
+**Possible objective after promotion:** per-product wholesale price plus an explicit checkout price mode, with immutable sale-line price snapshots.
 
 **Decisions:** `Product.wholesalePrice` (nullable); checkout chip toggles Retail ↔ Wholesale when a wholesale price exists (chip hidden otherwise — minimal); wholesale qty uses the pack unit when units are set; reports show retail vs wholesale split.
 
 **Verification:** toggle flips line totals; stock movement math unchanged (same base units); products without wholesale price show no chip.
 
-## 6. Ledger → P&L + Balance Sheet (P1)
+## 6. Ledger → P&L (P1)
 
-**Objective:** one profit report in plain language, computed from the ledger: revenue − cost of goods sold − expenses, per period; plus the balance-sheet view.
+**Objective:** one profit report in plain language, computed from immutable sale-line cost snapshots: revenue − cost of goods sold − expenses, per period. A balance sheet is out of scope until a complete accounting subledger exists.
 
 **Decisions:**
 - New Reports tab section; period filter (today / this week / this month / custom).
 - **COGS = weighted average, not latest cost** (financial-expert-audit §1): running WAC from `stock_movements` at sale time — the single cost field misstates profit whenever purchase prices change.
 - P&L shape: Revenue (net of refunds/voids) → − COGS (WAC) = Gross profit → − Operating expenses (categorized) = Net profit. **Owner draws never appear in expenses** (§4 of the financial audit) — they reduce equity.
-- Balance sheet (same feature, one toggle): Assets = cash in drawer + receivables (debtors) + inventory at WAC; Liabilities = payables (suppliers) + deposits held + VAT owed; Equity = assets − liabilities by construction.
 - Zero stored balances (always derived); number drill-downs (tap revenue → the sales list); non-accountant labels ("What you sold", "What it cost you", "What you spent", "Profit", "What the shop owns", "What the shop owes").
 - Missing cost prices are flagged (links to alerts banner) — a P&L with gaps is a warning, not a number.
 
@@ -258,5 +259,5 @@
 
 - Every feature passes the perf doctrine (§2.7): local compute or static assets, no network on the critical path, ≤5MB.
 - Every screen/sheet keeps one primary button, chips for single-choice, plain copy, AA tokens.
-- Every migration (source field, returnable fields, wholesale price) is ask-first and defaults to non-breaking.
+- Every promoted migration (source field, returnable fields, or a future wholesale price) is ask-first and defaults to non-breaking.
 - Nothing here creates a new bottom-nav tab or a dead end.

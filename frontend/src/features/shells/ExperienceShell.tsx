@@ -20,6 +20,10 @@ import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { AlertBadge } from "@/components/ui/AlertBadge";
 
+import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
+import { TooltipProvider } from "@/components/ui/TooltipContext";
+import { KeyboardScrollHandler } from "@/components/ui/KeyboardScrollHandler";
+
 type Shell = "business" | "work";
 
 /**
@@ -45,6 +49,7 @@ const WORKER_NAV = [
 ] as const;
 
 function ShellContent({ shell, children }: { shell: Shell; children: React.ReactNode }) {
+  const { isNavVisible } = useNavigation();
   const pathname = usePathname();
   const router = useRouter();
   const user = useCurrentUser();
@@ -64,10 +69,10 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <SyncEngine />
         <BannerStrip />
         <SideDrawer />
-        <main className="min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-32 w-full max-w-xl md:max-w-2xl mx-auto">
+        <main className={`min-h-0 min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 w-full max-w-xl md:max-w-2xl mx-auto ${isNavVisible ? "pb-32" : "pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"}`}>
           {children}
         </main>
-        <nav
+        {isNavVisible && <nav
           data-bottom-nav
           aria-label={`${shell} navigation`}
           className="fixed bottom-0 left-0 right-0 z-[var(--z-bottom-nav)] flex border-t border-border/40 bg-surface-container gpu-layer transition-transform duration-200 after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface-container after:pointer-events-none"
@@ -108,7 +113,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
               </Link>
             );
           })}
-        </nav>
+        </nav>}
       </div>
     </DrawerProvider>
   );
@@ -117,7 +122,12 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
 export function ExperienceShell({ shell, children }: { shell: Shell; children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ShellContent shell={shell}>{children}</ShellContent>
+      <NavigationProvider>
+        <TooltipProvider>
+          <KeyboardScrollHandler />
+          <ShellContent shell={shell}>{children}</ShellContent>
+        </TooltipProvider>
+      </NavigationProvider>
     </AuthProvider>
   );
 }

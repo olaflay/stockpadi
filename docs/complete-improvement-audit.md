@@ -2,6 +2,8 @@
 
 *One document. All research folded in and vetted. Every feature judged: KEEP / REJECT / REMOVE. Every competitor button and arrangement noted, then amplified through a Google Photos / Google Drive / Metro minimalism lens. Compiled 2026-08-25. Supersedes the loose 58-item audit; research evidence docs remain in `docs/` for citation.*
 
+> **2026-11-01 re-vetting notice:** The mobile/PWA, feasibility, and five-year conclusions in `MOBILE-PWA-FUTURE-PROOFING.md` supersede this document wherever they conflict. In particular: reliability gates precede new features; sheets are task-shaped rather than universal; wholesale, loyalty, generic AI, bank-SMS “verification,” financing, and physical-device performance claims stay deferred/rejected until their stated evidence gates pass.
+
 ---
 
 ## 1. What we are (the vetting filter — every feature is judged against this)
@@ -92,8 +94,8 @@ The design tokens in `tokens.css` already enforce most of this; the doctrine abo
 | 2j | **Contacts hub (Settings)** | ONE section: search + type filter chips (All / Customers / Debtors / Suppliers) with count badges; unified list (customers with credit balances, suppliers from purchases, debtors sorted by amount owed); **FAB at the bottom** to save a new number (name + number + type) | Every relationship in one place; retention (debtor book) + linking doctrine (§2.6) | P1 |
 | 2k | **First-visit walkthrough (per-page coach marks)** | On first visit to a page, highlight 2–4 key elements with a one-line function label **above or below** the element (user's exact ask). Dismissible (X), quiet progress dots, seen-flag per page in localStorage, re-triggerable from Help ("Show me around"). `prefers-reduced-motion` → static outline, no pulse. Keep the 8-step GuidedTour for first-run | LazyWeb-verified pattern (strong coverage 0.636: Character AI tooltip modal, DuckDuckGo 2/4 tour, Four Seasons overlay, Google Maps contextual tip); pure client-side, zero network | P1 |
 | 3 | **"Who owes you" card** | ONE card on the dashboard: top 3 debtors + total; ONE action per row: WhatsApp remind | The debtor book is the retention hook (R&P §4.3; figobooks §A) | P1 |
-| 5 | **Wholesale pricing** | Product gets a wholesale price; checkout gets a Retail/Wholesale toggle chip | Half of the units complaint — "sell as retail or wholesale from one pool" (R&P §1.1-D); Prokip ships it | P1 |
-| 6 | **Ledger → P&L + balance sheet** | One report: profit, per period, from the ledger. Non-accountant language | SimpleBks's core, trivially ours (study §1; playbook Tier 1) | P1 |
+| 5 | **Wholesale pricing discovery** | Validate merchant demand separately from multi-unit pack/carton support | Future experiment; not a launch or P1 commitment | future |
+| 6 | **Ledger → P&L** | One profit report, per period, using immutable WAC sale-line snapshots | Feasible from current ledger; no balance-sheet claim without a complete accounting subledger | P1 |
 | 7 | **Alerts banner (absorbs books-health)** | ONE quiet banner on Home: "2 items low · 3 missing cost price · 1 day unclosed · 2 uncategorized expenses · review" — tap = filtered list | Low-stock + integrity + the hygiene counts from the accountant's weekly routine (financial audit §8), merged into one banner | P1 |
 | 8 | **Accent themes + dark mode** | Settings picker, 4–5 accent colors + dark toggle; theme pre-render already exists | FigoBooks's delight feature, cheap on our tokens (figobooks §8) | P1 |
 | 9 | **Credit recovery** | On each credit sale: ONE "Remind" button → WhatsApp/SMS with balance | Turns our credit ledger into the retention engine (R&P §4.4) | P1 |
@@ -104,7 +106,6 @@ The design tokens in `tokens.css` already enforce most of this; the doctrine abo
 | 14 | **Aging debtors** | Reports → one 30/60/90 table | Nobody has it (figobooks §8) | P2 |
 | 15 | **Bill-payment commissions** | One settings toggle + one ledger movement type; needs an aggregator partner | Tracepos revenue pattern (tracepos-deep) | P2 |
 | 16 | **Web Bluetooth thermal printing** | Settings → Print → "Pair 58mm printer" (navigator.bluetooth) | Beats FigoBooks's companion app (figobooks §8) | P2 |
-| 17 | **Multi-currency** | Config value only, no UI work (already config-driven) | Bumpa paywalls it at Growth+; ours is free (bumpa-deep §7) | P2 |
 
 ## 4.5 Build method — the technical vetting (sheet / page / future)
 
@@ -112,10 +113,10 @@ Every vetted feature classified by how it's built, judged on one axis: **does it
 
 | Method | Features | Why |
 | --- | --- | --- |
-| **Bottom sheet (modal)** | Add product · Add expense · Add purchase · Add customer · Record payment · New staff · Close day · Settings edits (business/branches/WhatsApp/help) · source-tag chip · wholesale toggle · credit-payment picker · **unsaved-changes confirm sheet** | Already in the JS bundle → zero route load, zero re-render, instant. The default for any single-purpose form (§2.7.1) |
+| **Bottom sheet (modal)** | Short, contextual, reversible actions that fit above the keyboard and do not require deep links or draft recovery | Chosen by task shape. Long, financial, multi-step, shareable or draft-bearing workflows remain routes. |
 | **Page** | POS · Inventory · Sales history + detail · Reports · Settings · Staff list · Customers · **Stock count (compact list + inline expandable form, §4-2f)** · Onboarding (3 screens) | Full screens that earn the navigation: high-frequency destinations, guided flows, or share targets |
 | **Local-first fast** (Dexie compute, no network) | Units model · debtor card + aging · alerts banner · PIN lock · themes · WhatsApp/SMS links (`wa.me`) · P&L from ledger · returnable assets · receipt/label print (browser) · **per-page coach marks (§4-2k)** · **contacts hub (§4-2j)** · **brand icon + OG image (static assets, §4-2h)** | All pure local computation or static files — zero budget impact |
-| **FUTURE SCOPE** (network/backend/heavy — not now) | Admin activation queue (needs backend endpoint + operator UI) · bill-payment commissions (aggregator + backend) · multi-currency rates (backend/API) · Web Bluetooth printing (device APIs) · per-screen LazyWeb report redesigns | Each adds a network dependency or heavy surface — gated by §2.7.4 until it can prove budget + speed |
+| **FUTURE SCOPE** (network/backend/heavy — not now) | Admin activation queue (needs backend endpoint + operator UI) · bill-payment commissions (aggregator + backend) · Web Bluetooth printing (device APIs) · per-screen LazyWeb report redesigns | Each adds a network dependency or heavy surface — gated by §2.7.4 until it can prove budget + speed |
 
 **Search placement (final):** Home jump-search, POS search, Inventory filter — three Dexie-local fields, nowhere else (§2.7.2).
 
@@ -129,7 +130,7 @@ Reviewed 2026-08-25 with the installed `accounting` skill (whawkinsiv/solo-found
 | **Close-day cash equation** | expected = opening float + cash received (per method) − cash expenses − payouts; variance = counted − expected. The most-endorsed review asks for per-method end-of-day totals — the equation delivers them | close-day | P0 |
 | **Deposits = liabilities** | Returnable-asset deposits are NOT revenue (owed back on return); sale revenue = goods only, deposit = liability line | returnable assets (quick-wins §10) | P1 |
 | **Owner draws ≠ expenses** | Money the owner takes from the till is a draw → equity, never operating expenses, or profit is a lie | close-day + expenses | P1 |
-| **P&L shape + Balance Sheet** | revenue (net) − WAC COGS = gross; − categorized expenses = net. Balance sheet: assets (cash + receivables + inventory at WAC) − liabilities (payables + deposits + VAT) = equity. Both derive from the ledger; the banker's report | P&L spec (quick-wins §6) | P1 |
+| **P&L shape** | revenue (net) − snapshotted WAC COGS = gross; − categorized expenses = net. Do not claim a balance sheet until a complete accounting subledger exists. | P&L spec (quick-wins §6) | P1 |
 | **VAT = liability rule** | If the future VAT toggle ships: VAT collected is owed to FIRS, never revenue; excluded from P&L | future-scope | P2 |
 | **Books-health → merged into the alerts banner** | the accountant's weekly routine counts (unclosed days, missing cost prices, uncategorized expenses) became the banner's items — one surface, not a second card (engineer-vetted merge) | alerts banner (row 7) | — |
 
@@ -176,7 +177,7 @@ Every researched feature was re-vetted against the product sentence (offline-fir
 | ABC analysis (I2) | P1 | **Demoted → P2** | Analysis depth; reorder points + days-of-cover are the needed part, ABC is the polish on top |
 | Books-health card | P1 | **Merged → alerts banner** | Duplicated the banner (low stock + missing cost already there); the hygiene counts (unclosed days, uncategorized) became banner items — one surface |
 
-**Kept, after the vet (each earned its place):** units, activation onboarding + admin queue, nav re-map, strategic search, hub + linking, stock-count redesign, unsaved-changes guard, brand icon/OG, role screens, contacts hub, coach marks, who-owes-you, wholesale, P&L + balance sheet, alerts banner, themes, credit recovery, PIN lock, sync queue, WAC COGS, close-day equation, deposits-as-liability, owner draws, VAT rule, cash-flow report, product profits, at-risk customers, reorder points, transfer confirmation, accountant export, supplier lead time, void/refund reversal, denomination counter, expense categories, runway.
+**Kept now:** units, activation onboarding, nav/search/hub improvements, stock-count reliability, unsaved-changes guard, configuration-driven brand assets, role screens, contacts, debtor recovery, P&L from immutable snapshots, alerts, themes, sync visibility, refund/void correctness and export. **Gated:** wholesale, shifts/PIN, transfers, supplier advice, forecasting, loyalty and hardware integrations remain discovery or experiments until the evidence gates in `MOBILE-PWA-FUTURE-PROOFING.md` pass.
 
 ## 5. VETTED — REJECT (researched but NOT worth adding; each with the reason)
 
@@ -188,7 +189,7 @@ Every researched feature was re-vetted against the product sentence (offline-fir
 | Loyalty points, three-way match | SimpleBks, PRD-deferred | Already deferred; keep deferred. A points system is a marketing feature, not a ledger feature. |
 | Hardware printer bundle (₦55k) | FigoBooks | Valid GTM for them; we'd rather ship Web Bluetooth (feature 16) than inventory hardware. WATCH. |
 | "AI agent for MSMEs" positioning | FigoBooks/Thrive Media | Positioning, not product. Reject generic marketing; all practical retail AI proposals live in [ROADMAP-AND-BACKLOG.md §5](ROADMAP-AND-BACKLOG.md#5-ai--automation-innovation-roadmap). |
-| Per-product-tier pricing (free 5 products) | Tracepos | One price, unlimited users/locations. Tier-by-catalog-size is the anti-pattern we beat. |
+| Per-product-tier pricing (free 5 products) | Tracepos | No final alternative is claimed here; plan limits remain an owner decision and require server enforcement. |
 | Full M3 dynamic color / multi-hue theming | M3 spec | One brand accent is the product. 5 accent themes max (feature 8). |
 | Legacy browser polyfills | FigoBooks | WATCH only — add if Android 8 WebView actually breaks. |
 
@@ -210,7 +211,7 @@ Honest note: the current product is lean. There is nothing large to cut — the 
 
 | Pattern (from) | Their version | Our amplified, minimal version |
 | --- | --- | --- |
-| Bottom-sheet forms (FigoBooks) | Drawer with drag handle + X close | All create/edit forms are bottom sheets; 3 visible fields, rest behind "More" |
+| Bottom-sheet forms (FigoBooks) | Drawer with drag handle + X close | Use only for short reversible tasks; keep critical, long and draft-bearing work on routes |
 | Payment state chips (FigoBooks) | Paid / Part paid / Unpaid chips | Same chips in our checkout — already split-payment capable |
 | Sale-saved actions (FigoBooks) | Print Receipt (outline) + New Sale (solid) | Exactly one solid button (New Sale), one outline (Print) — the minimal pair |
 | Multi-scan scanner (FigoBooks) | Camera stays open; drawer shows added item; Scan More / Done | Same: the drawer never blocks the next scan; Done = commit to cart |
@@ -220,7 +221,7 @@ Honest note: the current product is lean. There is nothing large to cut — the 
 | Source tagging (Bumpa) | Channel labels across their whole flow | ONE chip at checkout (feature 4); channel report |
 | Total inventory value (Bumpa) | A stat | ONE dashboard card computed from the ledger (no drift) |
 | SMS payment request (Bumpa) | Request payment for unpaid orders | ONE "Remind" button on credit sales (feature 9) |
-| Retail/wholesale toggle (Prokip) | Global checkout toggle | Per-product wholesale price + ONE toggle chip (feature 5) |
+| Retail/wholesale toggle (Prokip) | Global checkout toggle | Discovery only; multi-unit pack/carton support does not depend on wholesale pricing |
 | Returnable assets (Tracepos) | Crates/kegs/pallets + deposits | Deposit field on the product, returns from the ledger (feature 10) |
 | WhatsApp support (InkeepX/Tracepos) | Chat links | ONE "Help" row that opens WhatsApp with business context pre-filled |
 | Search-first chrome (Google Drive) | A search bar, not menus | POS and Products ARE a search box; flat icon toolbar (doctrine §2.4) |
@@ -229,8 +230,8 @@ Honest note: the current product is lean. There is nothing large to cut — the 
 ## 8. Sequence (what gets built, in order)
 
 1. **P0:** Units model · Activation + trust onboarding (airplane-mode proof + export promise).
-2. **P1:** Admin activation queue · nav re-map · strategic search · hub dashboard + linking · stock-count compact redesign · unsaved-changes confirm · brand icon/OG · role-based screens · contacts hub · coach-mark walkthrough · "Who owes you" card · source tag · wholesale toggle · ledger P&L · alerts banner · themes · credit recovery · returnable assets · PIN lock · sync queue.
-3. **P2:** label customizer · aging debtors · bill payments · Web Bluetooth · multi-currency config.
+2. **P1 after TRUST gates:** activation reliability · navigation/search/hub cleanup · stock-count and unsaved-change safety · role screens · contacts/debtor recovery · ledger P&L · alerts · sync visibility.
+3. **Gated experiments:** wholesale, returnable assets, staff PIN/shifts, transfers, label/hardware integration, loyalty and multicurrency. Promotion requires the evidence in `MOBILE-PWA-FUTURE-PROOFING.md`.
 4. **Never:** everything in §5.
 
 Each item enters the normal gate (spec → plan → build → verify, per `company-os/`), with the minimalism doctrine + performance doctrine (§2.7) applied at spec time, not after.

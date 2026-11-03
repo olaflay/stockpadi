@@ -55,7 +55,7 @@ export function meetsPasswordPolicy(password: string): boolean {
 
 export const SYNC_ENTITY_TYPES = [
   "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt",
-  "customer", "product", "credit_payment", "expense", "supplier", "branch", "category",
+  "customer", "product", "credit_payment", "expense", "expense_reversal", "supplier", "branch", "category",
 ] as const;
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];
 
@@ -71,6 +71,7 @@ export const SYNC_SALE_EVENT = "sale_committed" as const;
 
 export interface SyncSaleRealtimeItem {
   productId: string;
+  productNameSnapshot: string | null;
   quantity: number;
   unitPrice: number;
   discount: number;

@@ -52,14 +52,7 @@ function PosPageContent() {
   const [step, setStep] = useState<"browse" | "cart" | "payment">("browse");
   const { setOverrideHidden } = useNavigation();
 
-  useEffect(() => {
-    if (step === "cart" || step === "payment") {
-      setOverrideHidden(true);
-      return () => setOverrideHidden(false);
-    } else {
-      setOverrideHidden(false);
-    }
-  }, [step, setOverrideHidden]);
+  
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 80);
@@ -71,6 +64,12 @@ function PosPageContent() {
   const cart = useCart();
   const payment = useSplitPayment(cart.total);
   const [parkedSales, setParkedSales] = useState<ParkedSale[]>(() => getParkedSales(user.businessId));
+
+  useEffect(() => {
+    const shouldHideNav = step === "cart" || step === "payment" || cart.itemCount > 0;
+    setOverrideHidden(shouldHideNav);
+    return () => setOverrideHidden(false);
+  }, [step, cart.itemCount, setOverrideHidden]);
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
@@ -427,6 +426,7 @@ function PosPageContent() {
         itemCount={cart.itemCount}
         total={cart.total}
         onReviewCart={() => setStep("cart")}
+        onClearCart={cart.clearCart}
         parkedSalesCount={parkedSales.length}
         onOpenParkedSales={() => setShowParkedSales(true)}
         onGoToSettings={() => router.push("/settings/branches")}

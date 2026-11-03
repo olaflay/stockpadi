@@ -99,6 +99,30 @@ describe("BLOCKER B3: sale_items cost snapshot immutability", () => {
     expect(items.rows[0].product_version).toBe(1);
   });
 
+  it("keeps the sale-time product label after the catalogue product is renamed", async () => {
+    const payload = makeSalePayload({
+      items: [{
+        productId: tenant.productId,
+        productNameSnapshot: "Original shelf label",
+        quantity: 10,
+        unitPrice: 150,
+        discount: 0,
+        unitLabel: "piece",
+        conversionFactor: 1,
+        movementClientId: crypto.randomUUID(),
+        unitCost: 100,
+      }],
+    });
+    await applySale(payload);
+    await pg.query(`update products set name = 'Renamed catalogue product' where id = $1`, [tenant.productId]);
+
+    const items = await pg.query<{ product_name_snapshot: string | null }>(
+      `select product_name_snapshot from sale_items where sale_id = $1`,
+      [payload.id],
+    );
+    expect(items.rows[0].product_name_snapshot).toBe("Original shelf label");
+  });
+
   it("accepts out-of-band cost (> ±10%) and flags it as out_of_band without silent substitution", async () => {
     // Current product cost is 200. Client reports 150 (outside 180..220 band).
     const payload = makeSalePayload({

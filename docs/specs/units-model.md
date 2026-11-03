@@ -26,7 +26,7 @@ Sell a product in more than one unit, all deducting from ONE stock pool, with no
 1. One stock pool in **base units** (the smallest sellable unit, usually piece). All `stock_movements` stay in base units; unit is a display/sale-layer concept only. Ledger integrity untouched.
 2. Two new product fields: `sellUnit` (label, e.g. "Piece", "Carton", "Bag") and `piecesPerUnit` (integer ≥ 1, default 1). The existing `unitId` field is retired (replaced by this simpler pair).
 3. A product can have **two sell units**: its base unit (piece) and one pack unit (carton/bag/crate) with a conversion factor. No arbitrary multi-unit trees (a tree is the trap; two is enough for 99% of retail).
-4. Wholesale pricing (row 5, P1) interacts: the wholesale price is per pack unit. This spec defines the units; the wholesale spec consumes them.
+4. Multi-unit pack/carton pricing is independent of wholesale customer segmentation. A future wholesale experiment may consume this unit model only after its own promotion gate.
 
 ## 4. Module map
 
@@ -45,7 +45,7 @@ Build order: `units-schema` → `units-checkout` → `units-inventory`.
 3. **Unit chip:** per cart line, a chip toggles Piece ↔ Pack. Default = the product's default sell unit. Switching recalculates the line total instantly; quantity input is in the selected unit.
 4. **Display:** inventory and stock-count show "X trays + Y pieces" when both are non-zero, else the single unit ("106 pieces" or "8 trays").
 5. **Defaults:** existing products migrate with `sellUnit="Piece"`, `piecesPerUnit=1` — zero behavior change until an owner sets a factor.
-6. **Cost price:** cost is per base unit; pack price = base × factor (or an explicit pack sell price if wholesale row 5 is present).
+6. **Cost price:** cost is per base unit; pack sell price is derived from the configured pack price or base price × factor. No separate wholesale workflow is required.
 
 ## 6. Data & boundaries
 

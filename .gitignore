@@ -46,6 +46,7 @@ next-env.d.ts
 .cache/
 .claude/settings.local.json
 .playwright-mcp/
+.firecrawl/
 
 # Next.js & AI tool generated files
 **/CLAUDE.md

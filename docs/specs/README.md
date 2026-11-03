@@ -38,4 +38,4 @@ The production specification index for StockPadi. Features follow the engineerin
 | Aging debtors 30/60/90 | 14 | [future-scope.md](future-scope.md) §14 — P2, ships with P&L |
 | Bill-payment commissions | 15 | [future-scope.md](future-scope.md) §15 — P2, gated on aggregator contract |
 | Web Bluetooth thermal printing | 16 | [future-scope.md](future-scope.md) §16 — P2, gated on hardware validation |
-| Multi-currency | 17 | [future-scope.md](future-scope.md) §17 — P2, manual owner exchange rate |
+| Enterprise-safe automation and identity | — | [enterprise-safe-automation.md](enterprise-safe-automation.md) — discovery only, human-confirmed/read-only designs |

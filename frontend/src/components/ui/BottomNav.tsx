@@ -136,7 +136,7 @@ export function BottomNav() {
                 type="button"
                 id={`tour-nav-${item.label.toLowerCase()}`}
                 onClick={() => setIsMoreOpen((prev) => !prev)}
-                className={`flex min-h-[42px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
+                className={`flex min-h-[var(--touch-target-min)] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                   isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
                 }`}
                 aria-expanded={isMoreOpen}
@@ -161,7 +161,7 @@ export function BottomNav() {
               href={item.href}
               id={`tour-nav-${item.label.toLowerCase()}`}
               prefetch={true}
-              className={`flex min-h-[42px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
+              className={`flex min-h-[var(--touch-target-min)] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                 isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
               }`}
               aria-current={isActive ? "page" : undefined}

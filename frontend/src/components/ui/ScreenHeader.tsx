@@ -89,7 +89,7 @@ export function ScreenHeader({
   }
 
   const backAffordanceClass =
-    "flex h-12 w-12 shrink-0 -ml-2 items-center justify-center rounded-full text-on-surface hover:bg-surface-container active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent";
+    "flex h-12 w-12 min-h-[48px] min-w-[48px] shrink-0 -ml-2 items-center justify-center rounded-full text-on-surface hover:bg-surface-container active:scale-[0.98] active:bg-surface-container-high transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent";
 
   return (
     <div className={`flex items-center gap-2 sm:gap-2.5 ${className ?? "mb-3.5 sm:mb-4 min-h-[48px]"}`}>
@@ -102,7 +102,7 @@ export function ScreenHeader({
         <ChevronLeft size={24} aria-hidden />
       </button>
 
-      <h1 className="min-w-0 flex-1 truncate text-xl sm:text-2xl font-bold tracking-tight text-on-surface leading-tight">
+      <h1 className="min-w-0 flex-1 truncate text-[length:var(--font-size-title-lg)] font-bold tracking-tight text-on-surface leading-tight">
         {title}
       </h1>
 

@@ -34,6 +34,12 @@ export type CostFlag = "out_of_band" | "backfilled" | "negative_stock" | "provis
 
 export interface SaleItem {
   productId: string;
+  /**
+   * The product label as it was shown at sale time. NULL means this is a
+   * historical record created before receipt labels were snapshotted; never
+   * infer or backfill it from today's catalogue.
+   */
+  productNameSnapshot?: string | null;
   /** Quantity in whichever unit was sold (unitLabel), not necessarily the product's base unit. */
   quantity: number;
   unitPrice: number;

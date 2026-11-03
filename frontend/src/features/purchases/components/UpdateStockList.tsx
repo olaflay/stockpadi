@@ -97,6 +97,7 @@ export function UpdateStockList({
                       type="number"
                       min="0"
                       step="0.01"
+                      inputMode="decimal"
                       value={row.sellPrice}
                       onChange={(event) => updateRow(product, { sellPrice: event.target.value })}
                       className={inputClass}

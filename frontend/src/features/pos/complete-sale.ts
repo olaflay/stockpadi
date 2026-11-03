@@ -82,6 +82,7 @@ export async function completeSale(params: {
     const itemDiscount = line.discount && line.discount > 0 ? Number(line.discount.toFixed(2)) : 0;
     return {
       productId: line.productId,
+      productNameSnapshot: prod?.name ?? null,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       discount: itemDiscount,

@@ -94,7 +94,7 @@ export function ConfirmDialog({
     >
       {/* Scrim / Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/60 transition-opacity"
         onClick={isBusy ? undefined : onClose}
         aria-hidden="true"
       />

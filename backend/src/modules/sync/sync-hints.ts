@@ -134,6 +134,7 @@ export function buildCommittedSaleEvent(
     if (!movement) return null;
     items.push({
       productId,
+      productNameSnapshot: nullableString(row.product_name_snapshot),
       quantity,
       unitPrice,
       discount: itemDiscount,
@@ -313,7 +314,7 @@ export async function publishCommittedSaleEvents(
   try {
     const [salesResult, itemsResult, paymentsResult, stockResult, creditResult] = await Promise.all([
       db.from("sales").select("id, client_id, business_id, branch_id, customer_id, subtotal, discount, total, created_at_local, created_at, created_by_user_id, voided_at").eq("business_id", businessId).in("id", ids),
-      db.from("sale_items").select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids),
+      db.from("sale_items").select("sale_id, product_id, product_name_snapshot, quantity, unit_price, discount, unit_label, unit_conversion_factor, unit_cost, cost_basis, product_version, cost_flags").in("sale_id", ids),
       db.from("sale_payments").select("sale_id, method, amount, tendered_amount, note").in("sale_id", ids),
       db.from("stock_movements").select("id, client_id, business_id, branch_id, product_id, quantity_delta, source, source_reference_id, reason_code, created_at_local, created_at, created_by_user_id").eq("business_id", businessId).eq("source", "sale").in("source_reference_id", ids),
       db.from("customer_credit_movements").select("id, client_id, business_id, customer_id, amount_delta, source_reference_id, note, created_at_local, created_at, created_by_user_id").eq("business_id", businessId).in("source_reference_id", ids),

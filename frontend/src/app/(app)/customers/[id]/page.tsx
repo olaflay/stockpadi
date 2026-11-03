@@ -2,11 +2,11 @@
 
 import { use, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { MessageCircle, Printer } from "lucide-react";
+import { FileImage, FileText, MessageCircle, Share2 } from "lucide-react";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { getCustomerCreditBalance } from "@/features/customers/credit";
 import { recordCreditPayment } from "@/features/customers/record-payment";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { buildWhatsAppUrl, renderOwingMessage } from "@/lib/whatsapp";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -21,6 +21,7 @@ import { formatCurrency } from "@/lib/format";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
 import { getBrandingConfig } from "@/config/branding";
 import type { LocalCustomer, CustomerCreditMovement } from "@/lib/db";
+import { shareCreditStatementImage, shareCreditStatementPdf } from "@/features/customers/credit-statement-share";
 
 
 interface PageProps {
@@ -37,6 +38,8 @@ export default function CustomerDetailPage({ params }: PageProps) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharing, setSharing] = useState<"pdf" | "image" | null>(null);
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const result = useLiveQuery(async () => {
@@ -125,17 +128,44 @@ export default function CustomerDetailPage({ params }: PageProps) {
   function handleRemind() {
     if (!customer) return;
     const shopName = profile?.name ?? getBrandingConfig().businessName;
-    const message = `Hi ${customer.name}, gentle reminder from ${shopName}. Your balance is ${formatCurrency(Math.max(balance ?? 0, 0))}. Please pay when convenient. Thank you.`;
+    const message = renderOwingMessage(profile?.owingMessageTemplate, {
+      customerName: customer.name,
+      businessName: shopName,
+      amountOwed: formatCurrency(Math.max(balance ?? 0, 0)),
+    });
     window.open(buildWhatsAppUrl(customer.phone, message), "_blank", "noopener,noreferrer");
+  }
+
+  async function handleShareStatement(kind: "pdf" | "image") {
+    if (!customer) return;
+    setSharing(kind);
+    try {
+      const statement = {
+        businessName: profile?.name ?? getBrandingConfig().businessName,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        balance,
+        generatedAt: new Date(),
+        movements,
+      };
+      const outcome = kind === "pdf" ? await shareCreditStatementPdf(statement) : await shareCreditStatementImage(statement);
+      showToast(outcome === "shared" ? "Statement shared" : "Statement downloaded", "success");
+      setShareOpen(false);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      showToast("We couldn't prepare the statement. Try again.", "danger");
+    } finally {
+      setSharing(null);
+    }
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title={customer.name} backHref="/customers" />
+      <ScreenHeader title={customer.name} backHref="/contacts" />
 
-      <div className="rounded-[var(--radius-focus-block)] bg-surface-container p-5 text-center">
+      <div className="rounded-[var(--radius-focus-block)] border border-credit/20 bg-credit-container p-5 text-center">
         <p className="text-[length:var(--font-size-label)] text-on-surface-muted">Balance owed</p>
-        <p className="mt-1 font-number text-[length:var(--font-size-display)] font-semibold tabular-nums text-on-surface">
+        <p className="mt-1 font-number text-[length:var(--font-size-display)] font-bold tabular-nums text-on-credit-container">
           {formatCurrency(Math.max(balance, 0))}
         </p>
         {customer.phone && <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{customer.phone}</p>}
@@ -165,14 +195,28 @@ export default function CustomerDetailPage({ params }: PageProps) {
         </div>
         <button
           type="button"
-          onClick={() => window.print()}
-          aria-label={`Print credit statement for ${customer.name}`}
+          onClick={() => setShareOpen(true)}
+          aria-label={`Share debt statement for ${customer.name}`}
           className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border px-4 text-[length:var(--font-size-body)] text-on-surface hover:bg-surface-container transition-colors"
         >
-          <Printer size={18} aria-hidden />
-          Print statement
+          <Share2 size={18} aria-hidden />
+          Share statement
         </button>
       </div>
+
+      <Modal isOpen={shareOpen} onClose={() => setShareOpen(false)} title="Share debt statement" variant="sheet">
+        <div className="flex flex-col gap-3">
+          <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
+            Choose a format. On supported phones, the share menu will open; otherwise the file will download.
+          </p>
+          <RippleButton type="button" onClick={() => handleShareStatement("pdf")} disabled={sharing !== null} className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-credit px-4 font-semibold text-on-credit disabled:opacity-50">
+            <FileText size={18} aria-hidden />{sharing === "pdf" ? "Preparing…" : "Share PDF"}
+          </RippleButton>
+          <RippleButton type="button" onClick={() => handleShareStatement("image")} disabled={sharing !== null} className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-credit/30 bg-credit-container px-4 font-semibold text-on-credit-container disabled:opacity-50">
+            <FileImage size={18} aria-hidden />{sharing === "image" ? "Preparing…" : "Share image"}
+          </RippleButton>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={recording}
@@ -195,7 +239,6 @@ export default function CustomerDetailPage({ params }: PageProps) {
               onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
               placeholder={`e.g. ${Math.max(balance, 0)}`}
               inputMode="decimal"
-              autoFocus
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -238,10 +281,9 @@ export default function CustomerDetailPage({ params }: PageProps) {
                   </div>
                   <p
                     className={`shrink-0 font-number text-[length:var(--font-size-body)] font-medium tabular-nums ${
-                      movement.amountDelta > 0 ? "text-on-surface" : "text-success"
+                      movement.amountDelta > 0 ? "text-credit" : "text-success"
                     }`}
                   >
-                    {movement.amountDelta > 0 ? "+" : ""}
                     {formatCurrency(movement.amountDelta)}
                   </p>
                 </>

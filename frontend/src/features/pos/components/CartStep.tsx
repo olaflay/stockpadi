@@ -88,7 +88,7 @@ export function CartStep(props: {
             <button
               type="button"
               onClick={onParkSale}
-              className="min-h-[var(--touch-target-min)] flex items-center px-2 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-on-surface-muted font-medium hover:bg-surface-container transition-colors"
+              className="min-h-[var(--touch-target-min)] flex items-center px-3 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-on-surface-muted font-medium hover:bg-surface-container active:scale-95 touch-manipulation select-none transition-all"
             >
               Hold cart
             </button>
@@ -97,7 +97,7 @@ export function CartStep(props: {
             type="button"
             onClick={() => setShowClearConfirm(true)}
             aria-label="Clear all items from cart"
-            className="min-h-[var(--touch-target-min)] flex items-center px-2 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-danger font-medium hover:bg-danger/5 transition-colors"
+            className="min-h-[var(--touch-target-min)] flex items-center px-3 rounded-[var(--radius-control)] text-[length:var(--font-size-caption)] text-danger font-medium hover:bg-danger/5 active:scale-95 touch-manipulation select-none transition-all"
           >
             Clear cart
           </button>
@@ -130,15 +130,15 @@ export function CartStep(props: {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-on-surface">{product.name}</p>
                   <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    {formatCurrency(line.unitPrice)} / {line.unitLabel}
+                    <span className="font-number tabular-nums font-medium">{formatCurrency(line.unitPrice)}</span> / {line.unitLabel}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 select-none">
                   <button
                     type="button"
                     onClick={() => onDecrement(key)}
-                    className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-colors ${
+                    className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] min-h-[44px] min-w-[44px] items-center justify-center rounded-full font-bold text-[length:var(--font-size-title)] transition-all active:scale-90 touch-manipulation ${
                       isOverStock
                         ? "bg-danger/15 text-danger hover:bg-danger/25"
                         : "bg-surface-container text-on-surface hover:bg-surface-container-high"
@@ -147,7 +147,7 @@ export function CartStep(props: {
                   >
                     −
                   </button>
-                  <span className="w-6 text-center font-medium text-on-surface">{line.quantity}</span>
+                  <span className="w-7 text-center font-number font-bold text-[length:var(--font-size-body-lg)] tabular-nums text-on-surface select-none">{line.quantity}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -156,7 +156,7 @@ export function CartStep(props: {
                       }
                     }}
                     disabled={!canIncrement}
-                    className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-full font-semibold text-[length:var(--font-size-title)] transition-colors ${
+                    className={`flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] min-h-[44px] min-w-[44px] items-center justify-center rounded-full font-bold text-[length:var(--font-size-title)] transition-all active:scale-90 touch-manipulation ${
                       !canIncrement
                         ? "bg-surface-container/40 text-on-surface-muted opacity-40 cursor-not-allowed"
                         : isOverStock
@@ -174,28 +174,30 @@ export function CartStep(props: {
               {isOverStock && (
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-danger/20 pt-2 text-xs">
                   <span className="font-semibold text-danger">
-                    {stock <= 0 ? "Out of stock on shelf" : `Only ${stock} in stock (requested ${requestedBase})`}
+                    {stock <= 0 ? "Out of stock on shelf" : (
+                      <>Only <span className="font-number tabular-nums font-bold">{stock}</span> in stock (requested <span className="font-number tabular-nums font-bold">{requestedBase}</span>)</>
+                    )}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 select-none">
                     {stock > 0 && maxAvailableQty > 0 && onSetQuantity && (
                       <button
                         type="button"
                         onClick={() => onSetQuantity(key, maxAvailableQty)}
-                        className="rounded bg-danger/10 px-2.5 py-1 font-bold text-danger hover:bg-danger/20 transition-colors"
+                        className="min-h-[36px] rounded bg-danger/10 px-3 py-1 font-bold text-danger hover:bg-danger/20 active:scale-95 touch-manipulation transition-all"
                       >
-                        Adjust to {maxAvailableQty}
+                        Adjust to <span className="font-number tabular-nums">{maxAvailableQty}</span>
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => (onRemoveLine ? onRemoveLine(key) : onDecrement(key))}
-                      className="text-danger font-medium underline hover:opacity-80 transition-opacity"
+                      className="min-h-[36px] inline-flex items-center text-danger font-medium underline hover:opacity-80 active:scale-95 touch-manipulation transition-all"
                     >
                       Remove
                     </button>
                     <Link
                       href="/purchases/new"
-                      className="text-brand-accent font-semibold underline hover:opacity-80 transition-opacity"
+                      className="min-h-[36px] inline-flex items-center text-brand-accent font-semibold underline hover:opacity-80 active:scale-95 touch-manipulation transition-all"
                     >
                       Restock
                     </Link>
@@ -208,7 +210,7 @@ export function CartStep(props: {
       </ul>
 
       <div
-        className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200"
+        className="sticky bottom-0 z-20 mt-auto flex flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] transition-all duration-200"
       >
         {hasOutOfStockItem && (
           <div className="rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger flex items-center justify-between">
@@ -271,14 +273,14 @@ export function CartStep(props: {
         )}
 
         <div className="flex items-center justify-between gap-3 font-semibold text-on-surface">
-          <span>Total</span>
-          <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums">{formatCurrency(total)}</span>
+          <span className="text-[length:var(--font-size-body-lg)]">Total</span>
+          <span className="font-number text-[length:var(--font-size-title-lg)] font-bold tabular-nums text-on-surface">{formatCurrency(total)}</span>
         </div>
         <RippleButton
           type="button"
           onClick={onContinueToPayment}
           disabled={cartLines.length === 0 || hasOutOfStockItem || !isStockResolved}
-          className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+          className="min-h-[var(--touch-target-min)] min-h-[48px] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 active:scale-[0.98] touch-manipulation transition-all shadow-xs"
         >
           Continue to payment
         </RippleButton>
@@ -302,6 +304,7 @@ export function CartStep(props: {
               <input
                 id="cart-discount-input"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max={subtotal}
                 step="50"
@@ -318,9 +321,9 @@ export function CartStep(props: {
                   key={amt}
                   type="button"
                   onClick={() => setDiscountInput(String(amt))}
-                  className="rounded-[var(--radius-control)] bg-surface-container px-3 py-1.5 text-xs font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+                  className="min-h-[40px] rounded-[var(--radius-control)] bg-surface-container px-3.5 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-high active:scale-95 touch-manipulation font-number tabular-nums transition-all"
                 >
-                  ₦{amt}
+                  {formatCurrency(amt)}
                 </button>
               ))}
             </div>

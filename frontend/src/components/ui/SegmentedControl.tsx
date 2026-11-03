@@ -11,7 +11,7 @@ interface SegmentedControlProps {
   options: SegmentedControlOption[];
   selected: string;
   onChange: (value: string) => void;
-  /** "compact" = 36px height (inline filters), "default" = 40px (section tabs) */
+  /** Compact changes spacing while preserving a 44px accessible touch target. */
   size?: "compact" | "default";
   /** Accessible label for the group */
   ariaLabel?: string;
@@ -38,7 +38,7 @@ export function SegmentedControl({
   size = "default",
   ariaLabel = "View options",
 }: SegmentedControlProps) {
-  const heightClass = size === "compact" ? "min-h-[36px]" : "min-h-[40px]";
+  const heightClass = size === "compact" ? "min-h-[44px]" : "min-h-[48px]";
 
   return (
     <div

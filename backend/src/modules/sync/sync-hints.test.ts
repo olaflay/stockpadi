@@ -99,6 +99,7 @@ describe("buildCommittedSaleEvent", () => {
     sale_id: "sale-a",
     product_id: "product-a",
     quantity: 2,
+    product_name_snapshot: "Recorded product label",
     unit_price: 50,
     discount: 0,
     unit_label: "unit",
@@ -133,7 +134,7 @@ describe("buildCommittedSaleEvent", () => {
       sale: {
         id: "sale-a",
         total: 100,
-        items: [{ productId: "product-a", quantity: 2, unitCost: 20 }],
+        items: [{ productId: "product-a", productNameSnapshot: "Recorded product label", quantity: 2, unitCost: 20 }],
         payments: [{ method: "cash", amount: 100 }],
         stockMovements: [{ id: "movement-a", quantityDelta: -2 }],
       },
@@ -157,7 +158,7 @@ describe("publishCommittedSaleEvents", () => {
         created_at: "2026-10-09T10:00:01.000Z", created_by_user_id: "worker-a", voided_at: null,
       }],
       sale_items: [{
-        sale_id: "sale-a", product_id: "product-a", quantity: 2, unit_price: 50, discount: 0,
+        sale_id: "sale-a", product_id: "product-a", product_name_snapshot: "Recorded product label", quantity: 2, unit_price: 50, discount: 0,
         unit_label: "unit", unit_conversion_factor: 1, unit_cost: 20, cost_basis: "snapshot",
         product_version: 1, cost_flags: [],
       }],

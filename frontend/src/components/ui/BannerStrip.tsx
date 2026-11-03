@@ -112,7 +112,7 @@ export function BannerStrip() {
               type="button"
               onClick={handleDismissNotifications}
               aria-label="Dismiss"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-on-surface-muted hover:bg-on-surface/10"
+              className="touch-hitbox flex h-6 w-6 items-center justify-center rounded-full text-on-surface-muted hover:bg-on-surface/10"
             >
               <X size={12} />
             </button>

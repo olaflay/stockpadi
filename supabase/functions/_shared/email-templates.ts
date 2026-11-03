@@ -24,8 +24,8 @@ export interface BrandEmailConfig {
 
 export function getBrandConfig(): BrandEmailConfig {
   return {
-    name: Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "OjaPadi",
-    displayName: Deno.env.get("BUSINESS_DISPLAY_NAME") || "OjàPadi",
+    name: Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "",
+    displayName: Deno.env.get("BUSINESS_DISPLAY_NAME") || Deno.env.get("BUSINESS_NAME") || Deno.env.get("PLATFORM_NAME") || "",
     primaryColor: Deno.env.get("BRAND_COLOR") || "#0B7A55",
     accentColor: Deno.env.get("BRAND_ACCENT") || "#F59E0B",
   };

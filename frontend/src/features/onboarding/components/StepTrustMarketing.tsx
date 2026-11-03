@@ -33,7 +33,7 @@ export function StepTrustMarketing({
           Your shop, on your phone.
         </h1>
         <p className="mt-1 text-[length:var(--font-size-body)] text-on-surface-muted max-w-xs">
-          Works with no network. Your records stay on this phone. Export them any time.
+          After setup, core sales keep working during an outage. Pending work stays visible until it is saved online.
         </p>
 
         {/* Marketing Trust Badges */}
@@ -41,13 +41,13 @@ export function StepTrustMarketing({
           <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] bg-surface-container p-2.5 text-center">
             <WifiOff className="h-4 w-4 text-brand-accent" />
             <span className="mt-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface">
-              100% Offline
+              Offline-first
             </span>
           </div>
           <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] bg-surface-container p-2.5 text-center">
             <ShieldCheck className="h-4 w-4 text-brand-accent" />
             <span className="mt-1.5 text-[length:var(--font-size-caption)] font-medium text-on-surface">
-              Zero Lockout
+              Visible sync
             </span>
           </div>
           <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] bg-surface-container p-2.5 text-center">
@@ -75,7 +75,6 @@ export function StepTrustMarketing({
               }
             }}
             placeholder="e.g. Adaeze General Store"
-            autoFocus
             autoCapitalize="words"
           />
         </label>

@@ -202,7 +202,7 @@ export function CategoryAutocomplete({
               type="button"
               onClick={handleClear}
               aria-label="Clear category input"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-90 transition-all focus:outline-none"
+              className="touch-hitbox flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
             >
               <X size={15} aria-hidden />
             </button>
@@ -212,7 +212,7 @@ export function CategoryAutocomplete({
             type="button"
             onClick={handleToggleDropdown}
             aria-label={isOpen ? "Close categories list" : "Browse all categories"}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-90 transition-all focus:outline-none"
+            className="touch-hitbox flex h-8 w-8 items-center justify-center rounded-full text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
           >
             <ChevronDown
               size={16}

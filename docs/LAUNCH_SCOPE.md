@@ -223,16 +223,56 @@ anywhere in `frontend/src`. Additionally, static `public/llms.txt` shadowed dyna
 
 ---
 
-# 🟢 Future — explicitly not in launch
+# 🟢 Future — vetted, explicitly not in launch
 
-Dedicated wholesale business workflows (wholesale tier pricing, wholesale customer credit terms,
-mini-wholesale bulk order desk — retail shops use standard multi-unit pack/carton pricing via
-`altUnitSellPrice`, but specialized wholesale business features are strictly future scope),
-AI copilot, advanced forecasting, supplier marketplace, advanced integrations, loyalty points,
-OCR invoice scanning, WhatsApp Business API, cashflow forecasting, stock transfers between
-branches, biometric login, multi-currency, live card/wallet processing, product variants, photo
-evidence on stock adjustments, push notifications, custom receipt branding, custom role builder,
-auto-scheduled exports, business health score, multi-device realtime collaboration indicators.
+The future queue was commercially and technically re-vetted on 2026-11-02. A retained item must
+serve at least one TRUST promise, fit the 1–6 branch retail customer, preserve the offline/ledger/PCI
+boundaries, and have either direct operational value or a measurable discovery gate.
+
+**Qualified operational roadmap:**
+
+- Pending/accepted stock transfers between branches with attributable append-only events.
+- Cashier shifts, opening float, denomination count, drawer variance, and handover evidence after
+  the staff/offline identity ADR is accepted.
+- Owner-visible device/outbox health, authenticated audit/accounting export, and automated encrypted
+  off-site backups with rehearsed restore.
+- Product variants, photo evidence on stock adjustments, low-stock push notifications, custom
+  receipt/label layouts, and scheduled exports — each only after pilot demand and its storage,
+  permission, offline, and performance budget are documented.
+- Hardware pilots for Web Bluetooth thermal printing and external barcode scanners with a fully
+  supported browser fallback.
+
+**Qualified experiments, not roadmap commitments:**
+
+- OCR receiving drafts only at at least 95% required-field accuracy on representative merchant
+  documents, with mandatory human review and no autonomous ledger write.
+- Consented WhatsApp Business workflows only after message cost, opt-in, delivery failure, and
+  data-retention behaviour are accepted.
+- Loyalty only after core retention is healthy and at least 10 paying merchants rank it among their
+  top three unmet needs.
+- Forecasting or anomaly review only after data-completeness and false-positive thresholds are met;
+  output remains advisory and shows confidence/provenance.
+- Enterprise Voice Drafting: push-to-talk may create an editable cart/search draft, but never commit
+  a cart, price, sale, payment, stock movement, or customer balance. It requires explicit line-level
+  confirmation, a complete audit trail, a non-voice fallback, representative Nigerian accent/noise
+  testing, and the acceptance gates in `docs/specs/enterprise-safe-automation.md`.
+- A read-only Operations Copilot may explain existing reports and retrieve attributable records. It
+  must cite the exact source records, expose uncertainty, enforce server-side role permissions, and
+  have no mutation tools. Scenario planning must be labelled hypothetical and never presented as a
+  forecasted financial fact.
+- Passkeys may improve online sign-in after device/browser validation. The app stores no biometric
+  data; the platform authenticator performs local user verification. Offline PIN remains the
+  documented shared-device unlock path.
+
+**Removed from the product roadmap:** dedicated wholesale workflows, supplier marketplace,
+unspecified “advanced integrations”, multi-currency, live card/wallet processing, custom role
+builder, business health score, and generic multi-device “collaboration indicators”. Unsafe forms
+of a generic write-capable AI copilot, unlabelled cashflow prediction, stored biometric identity,
+and voice that acts without confirmation also remain prohibited; only the bounded enterprise-safe
+successors above may enter discovery. The removed items are either outside the target segment,
+commercially unvalidated, or conflict with the current offline, PCI, and TRUST boundaries. Re-entry
+requires new merchant evidence and a written scope decision; renaming one does not bypass this
+decision.
 
 **Pulling any of these into launch requires a written decision naming what is being delayed in
 exchange.** Per `.agents/rules/trust-standard.md`, a known reliability defect that is open and

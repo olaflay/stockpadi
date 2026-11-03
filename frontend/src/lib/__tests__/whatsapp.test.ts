@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppUrl, normalizeNigerianPhone } from "@/lib/whatsapp";
+import { buildWhatsAppUrl, DEFAULT_OWING_MESSAGE_TEMPLATE, normalizeNigerianPhone, renderOwingMessage } from "@/lib/whatsapp";
 
 describe("normalizeNigerianPhone", () => {
   it("converts a leading-zero local number to E.164 digits", () => {
@@ -39,5 +39,20 @@ describe("buildWhatsAppUrl", () => {
 
   it("URL-encodes the message", () => {
     expect(buildWhatsAppUrl(null, "Sales: ₦1,000")).toBe(`https://wa.me/?text=${encodeURIComponent("Sales: ₦1,000")}`);
+  });
+});
+
+describe("renderOwingMessage", () => {
+  it("uses one clear default and fills only the debtor-specific values", () => {
+    const message = renderOwingMessage(undefined, {
+      customerName: "Ada",
+      businessName: "Configured shop",
+      amountOwed: "₦12,500",
+    });
+    expect(DEFAULT_OWING_MESSAGE_TEMPLATE).toContain("{{amountOwed}}");
+    expect(message).toContain("Ada");
+    expect(message).toContain("Configured shop");
+    expect(message).toContain("₦12,500");
+    expect(message).toContain("current outstanding balance");
   });
 });

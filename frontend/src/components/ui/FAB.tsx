@@ -24,8 +24,8 @@ export function FAB({ href, onClick, label, id, size = "md", extended = false, c
   }[size];
 
   const commonClass = extended
-    ? "fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 right-5 sm:right-6 z-40 flex h-14 min-w-[5rem] px-5 items-center justify-center gap-2.5 rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all"
-    : `fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 right-5 sm:right-6 z-40 flex ${sizeClasses} items-center justify-center rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] active:shadow-[var(--shadow-elevation-1)] active:scale-95 transition-all`;
+    ? "fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-5 z-[var(--z-fab)] flex h-14 min-w-[5rem] touch-manipulation items-center justify-center gap-2.5 rounded-2xl bg-brand-accent px-5 text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] transition-[transform,box-shadow,filter] duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] motion-reduce:transition-none active:scale-[0.98] active:brightness-95 active:shadow-[var(--shadow-elevation-1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 sm:right-6"
+    : `fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-5 z-[var(--z-fab)] flex ${sizeClasses} touch-manipulation items-center justify-center rounded-2xl bg-brand-accent text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] transition-[transform,box-shadow,filter] duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] motion-reduce:transition-none active:scale-[0.98] active:brightness-95 active:shadow-[var(--shadow-elevation-1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 sm:right-6`;
 
   const content = (
     <>

@@ -71,21 +71,37 @@ try {
 `;
 
 const EARLY_THEME_STYLE = `
-  html, body {
+  html {
+    background-color: #eff2f3;
+    color: #14181a;
+  }
+  body {
     background-color: #ffffff;
     color: #14181a;
   }
   @media (prefers-color-scheme: dark) {
-    html, body {
+    html {
+      background-color: #1c2022;
+      color: #e7ebec;
+    }
+    body {
       background-color: #121516;
       color: #e7ebec;
     }
   }
-  :root[data-theme="light"], :root[data-theme="light"] body {
+  :root[data-theme="light"] {
+    background-color: #eff2f3 !important;
+    color: #14181a !important;
+  }
+  :root[data-theme="light"] body {
     background-color: #ffffff !important;
     color: #14181a !important;
   }
-  :root[data-theme="dark"], :root[data-theme="dark"] body {
+  :root[data-theme="dark"] {
+    background-color: #1c2022 !important;
+    color: #e7ebec !important;
+  }
+  :root[data-theme="dark"] body {
     background-color: #121516 !important;
     color: #e7ebec !important;
   }
@@ -139,7 +155,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: branding.businessName }],
   applicationName: branding.businessName,
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: branding.logoUrl ?? "/icon.svg", type: "image/svg+xml" },
@@ -220,7 +236,7 @@ const JSON_LD_SCHEMA = {
   },
   description: "Offline-first point of sale and inventory management software for retail businesses.",
   featureList: [
-    "100% Offline Point of Sale",
+    "Offline-first point of sale after setup",
     "Multi-Unit Stock & Inventory Tracking",
     "Customer Credit & Debt Book",
     "Daily Cash Drawer & Transfer Balancing",

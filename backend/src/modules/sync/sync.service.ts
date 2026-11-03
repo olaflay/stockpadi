@@ -17,6 +17,7 @@ const RPC_BY_ENTITY: Record<SyncEntityType, string> = {
   product: "sync_apply_product",
   credit_payment: "sync_apply_credit_payment",
   expense: "sync_apply_expense",
+  expense_reversal: "sync_apply_expense_reversal",
   supplier: "sync_apply_supplier",
   branch: "sync_apply_branch",
   category: "sync_apply_category",
@@ -30,6 +31,7 @@ const WORKER_CAPABILITY_BY_ENTITY: Record<SyncEntityType, Capability> = {
   customer: "CREATE_CUSTOMERS",
   credit_payment: "RECORD_REPAYMENT",
   expense: "MANAGE_EXPENSES",
+  expense_reversal: "MANAGE_EXPENSES",
   product: "MANAGE_PRODUCTS",
   category: "MANAGE_PRODUCTS",
   supplier: "RECEIVE_STOCK",
@@ -37,7 +39,7 @@ const WORKER_CAPABILITY_BY_ENTITY: Record<SyncEntityType, Capability> = {
 };
 
 const IMMUTABLE_EVENTS = new Set<SyncEntityType>([
-  "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt", "credit_payment", "expense",
+  "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt", "credit_payment", "expense", "expense_reversal",
 ]);
 
 interface SyncBatchItem {

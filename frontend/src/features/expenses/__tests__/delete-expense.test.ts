@@ -33,14 +33,15 @@ describe("deleteExpense", () => {
     expect(inOutbox).toBeDefined();
     expect(inOutbox?.status).toBe("pending");
 
-    // Deleting should succeed and remove both
-    await deleteExpense(expense.id);
+    // Deleting should succeed and remove both atomically
+    const result = await deleteExpense(expense.id, OWNER);
+    expect(result).toEqual({ reversed: false, deleted: true });
 
     expect(await db.expenses.get(expense.id)).toBeUndefined();
     expect(await db.outbox.where("clientId").equals(expense.id).first()).toBeUndefined();
   });
 
-  it("blocks silent local-only delete if the expense has already synced", async () => {
+  it("applies immutable accounting reversal if the expense has already synced", async () => {
     const expenseId = crypto.randomUUID();
     // Insert an expense directly into db as if it arrived from a sync pull (no pending outbox)
     await db.expenses.add({
@@ -53,11 +54,40 @@ describe("deleteExpense", () => {
       createdByUserId: OWNER.id,
     });
 
-    await expect(deleteExpense(expenseId)).rejects.toThrow(
-      /already synced to the cloud/i
-    );
+    // Deleting should NOT throw or silently drop the row; it applies an immutable reversal
+    const result = await deleteExpense(expenseId, OWNER, "Duplicate entry correction");
+    expect(result).toEqual({ reversed: true, deleted: false });
 
-    // Record should still be in db
-    expect(await db.expenses.get(expenseId)).toBeDefined();
+    // Record must still exist in db for audit integrity, but with reversedAt set
+    const inDb = await db.expenses.get(expenseId);
+    expect(inDb).toBeDefined();
+    expect(inDb?.reversedAt).toBeDefined();
+    expect(inDb?.reversedByUserId).toBe(OWNER.id);
+    expect(inDb?.reversalReason).toBe("Duplicate entry correction");
+
+    // Outbox should contain the expense_reversal mutation
+    const outboxItem = await db.outbox.where("type").equals("expense_reversal").first();
+    expect(outboxItem).toBeDefined();
+    expect(outboxItem?.status).toBe("pending");
+    expect((outboxItem?.payload as Record<string, unknown>)?.expenseId).toBe(expenseId);
+  });
+
+  it("rejects attempt to reverse an already reversed expense", async () => {
+    const expenseId = crypto.randomUUID();
+    await db.expenses.add({
+      id: expenseId,
+      branchId: "b-1",
+      category: "Transport",
+      amount: 1000,
+      note: null,
+      createdAtLocal: new Date().toISOString(),
+      createdByUserId: OWNER.id,
+    });
+
+    await deleteExpense(expenseId, OWNER);
+
+    await expect(deleteExpense(expenseId, OWNER)).rejects.toThrow(
+      /already been reversed/i
+    );
   });
 });

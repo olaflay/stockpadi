@@ -62,7 +62,7 @@ export default function BusinessSettingsPage() {
     (businessTypeId !== null && businessTypeId !== profile.businessTypeId);
 
   async function handleSave() {
-    if (!profile) return;
+    if (!profile || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const nextName = (name ?? profile.name).trim() || profile.name;
@@ -71,6 +71,8 @@ export default function BusinessSettingsPage() {
       await serverPatch("/api/business/profile", { name: nextName, businessTypeId: nextType });
       await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { name: nextName, businessTypeId: nextType });
       showToast("Business profile updated", "success");
+    } catch {
+      showToast(navigator.onLine ? "Couldn’t save your business details. Try again." : "Connect to the internet to save your business details.", "danger");
     } finally {
       setIsSubmitting(false);
     }

@@ -127,7 +127,8 @@ export function computeCogs(sales: Sale[], _products?: Product[], refunds: SaleR
  */
 export function computeNetProfit(grossProfit: number | null, expenses: Expense[]): number | null {
   if (grossProfit === null) return null;
-  return grossProfit - expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const activeExpenses = expenses.filter((e) => !e.reversedAt);
+  return grossProfit - activeExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 }
 
 /**
@@ -154,7 +155,8 @@ export function computeNetCashFlow(
   const cashRefundsTotal = refunds.reduce((sum, refund) => sum + refund.payments
     .filter((payment) => payment.method !== "credit")
     .reduce((paymentSum, payment) => paymentSum + payment.amount, 0), 0);
-  const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const activeExpenses = expenses.filter((e) => !e.reversedAt);
+  const expensesTotal = activeExpenses.reduce((sum, e) => sum + e.amount, 0);
   const purchasesTotal = purchases.reduce((sum, p) => sum + purchaseTotal(p), 0);
 
   return cashSalesTotal - cashRefundsTotal - expensesTotal - purchasesTotal + creditCollected;

@@ -95,7 +95,7 @@ export function M3SegmentedButton<T extends string>(props: M3SegmentedButtonProp
               aria-pressed={isMulti ? isSelected : undefined}
               disabled={option.disabled}
               onClick={() => handleSelect(option.value)}
-              className={`flex-1 flex items-center justify-center rounded-full px-2.5 font-medium transition-all duration-150 active:scale-[0.98] ${heightClass} ${
+              className={`flex-1 flex items-center justify-center rounded-full px-2.5 font-medium transition-all duration-150 active:scale-[0.98] touch-manipulation select-none ${heightClass} ${
                 option.disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
               } ${
                 isSelected

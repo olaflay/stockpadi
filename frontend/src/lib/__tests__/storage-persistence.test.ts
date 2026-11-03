@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attemptEmergencyCacheEviction,
   ensureStoragePersistence,
   handleStorageQuotaFailure,
   isQuotaExceededError,
-  StorageQuotaExceededError,
+
 } from "../storage-persistence";
 import { PWA_STORAGE_QUOTA_EXCEEDED_EVENT } from "../pwa-update-events";
 

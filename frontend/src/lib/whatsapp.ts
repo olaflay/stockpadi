@@ -41,7 +41,11 @@ export function buildWhatsAppUrl(phone: string | null | undefined, message: stri
   return normalized ? `https://wa.me/${normalized}?text=${text}` : `https://wa.me/?text=${text}`;
 }
 
+/** The single default used by contacts, customer details, and Sharing settings. */
+export const DEFAULT_OWING_MESSAGE_TEMPLATE =
+  "Hello {{customerName}}, this is {{businessName}}. Your current outstanding balance is {{amountOwed}}. Please pay when convenient. Thank you.";
+
 export function renderOwingMessage(template: string | undefined, values: { customerName: string; businessName: string; amountOwed: string }): string {
-  const source = template?.trim() || "Hi {{customerName}}, gentle reminder from {{businessName}}. Your balance is {{amountOwed}}. Please pay when convenient. Thank you.";
+  const source = template?.trim() || DEFAULT_OWING_MESSAGE_TEMPLATE;
   return source.replaceAll("{{customerName}}", values.customerName).replaceAll("{{businessName}}", values.businessName).replaceAll("{{amountOwed}}", values.amountOwed);
 }

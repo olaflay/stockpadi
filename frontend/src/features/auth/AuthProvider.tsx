@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useEffect, useRef, useState } from "react";
+import { createContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, SESSION_SINGLETON_ID } from "@/lib/db";
@@ -17,6 +17,8 @@ import {
   type FastPathAuthSession,
 } from "@/features/auth/auth-session-sync";
 import { ensureStoragePersistence } from "@/lib/storage-persistence";
+
+const subscribeToHydration = () => () => {};
 
 export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
@@ -46,7 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const sessionRefreshed = useRef(false);
   const [watchdogTripped, setWatchdogTripped] = useState(false);
-  const [fastPathSession, setFastPathSession] = useState<FastPathAuthSession | null>(() =>
+  // Keep server markup and the first hydration render identical, then use the cache.
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+  const [fastPathSession] = useState<FastPathAuthSession | null>(() =>
     readFastPathAuthSession()
   );
 
@@ -98,30 +102,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (resolved.kind === "active") {
       writeFastPathAuthSession(resolved.user, sessionExpiryFromNow());
-      setFastPathSession((prev) =>
-        prev?.user.id === resolved.user.id && prev.expiresAt === sessionExpiryFromNow()
-          ? prev
-          : {
-              version: 1,
-              userId: resolved.user.id,
-              expiresAt: sessionExpiryFromNow(),
-              user: resolved.user,
-              cachedAt: new Date().toISOString(),
-            }
-      );
+
     } else if (
       resolved.kind === "expired" ||
       resolved.kind === "no-session" ||
       resolved.kind === "needs-login"
     ) {
       clearFastPathAuthSession();
-      setFastPathSession(null);
+
     }
   }, [resolved]);
 
   // Determine active user across Tier 1 (fast-path) and Tier 2 (Dexie live query)
   const activeUser: CurrentUser | null =
-    resolved?.kind === "active"
+    !hydrated ? null : resolved?.kind === "active"
       ? resolved.user
       : (!resolved && fastPathSession ? fastPathSession.user : null);
 
@@ -168,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Storage delays are NEVER treated as authentication failures.
   useEffect(() => {
     if (activeUser) {
-      setWatchdogTripped(false);
+
       return;
     }
 

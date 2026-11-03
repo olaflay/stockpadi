@@ -1,6 +1,6 @@
 # Performance and Scalability Standards
 
-This document establishes the architecture and coding conventions for maintaining instant rendering speed (sub-50ms transitions, sub-5ms rendering times) when handling large data sets (e.g., 5,000+ products, sales history, and expense ledgers) in our offline-first PWA.
+This document establishes architecture and coding conventions for keeping local interactions responsive with large data sets (for example, 5,000+ products). Synthetic sub-50ms query/write checks are CI regression signals, not proof of transition, render, cold-launch, memory, radio, or storage performance on a target phone. Installed-device readiness uses the separate PRD budget and named-hardware field evidence.
 
 ## Core Rules
 

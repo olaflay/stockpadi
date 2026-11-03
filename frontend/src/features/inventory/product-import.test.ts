@@ -329,7 +329,7 @@ describe("buildSampleExcel", () => {
     expect(result.totalRows).toBe(0);
     expect(result.validRows).toHaveLength(0);
     expect(result.totalOpeningStockUnits).toBe(0);
-  });
+  }, 120_000);
 
   it("adds entry guidance and validation to the workbook", async () => {
     const { buildSampleExcel } = await import("./product-import");

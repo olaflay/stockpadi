@@ -147,7 +147,7 @@ export function CheckoutContainer(props: {
 
   return (
     <div
-      className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-1.5 animate-step-in"
+      className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-1.5 animate-step-in touch-pan-y"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -165,21 +165,21 @@ export function CheckoutContainer(props: {
             options={segmentOptions}
             value={activeTab}
             onChange={(val) => setActiveTab(val as "cart" | "payment")}
-            size="compact"
+            size="default"
             ariaLabel="Checkout step tabs"
           />
         </div>
       </div>
 
       {/* Horizontally-Segmented Carousel Panes */}
-      <div className="relative min-h-0 min-w-0 flex-1 w-full max-w-full overflow-hidden">
+      <div className="relative min-h-0 min-w-0 flex-1 w-full max-w-full overflow-clip">
         <div
           className={`flex h-full w-[200%] max-w-none min-w-0 transition-transform duration-300 ease-out will-change-transform ${
             activeTab === "cart" ? "translate-x-0" : "-translate-x-1/2"
           }`}
         >
           {/* Left Pane: Cart */}
-          <div className="h-full w-1/2 min-w-0 shrink-0 pr-1 overflow-y-auto">
+          <div inert={activeTab !== "cart"} aria-hidden={activeTab !== "cart"} className="h-full w-1/2 min-w-0 shrink-0 pr-1 overflow-x-hidden overflow-y-auto overscroll-contain">
             <CartStep
               cartLines={props.cartLines}
               products={props.products}
@@ -202,7 +202,7 @@ export function CheckoutContainer(props: {
           </div>
 
           {/* Right Pane: Payment */}
-          <div className="h-full w-1/2 min-w-0 shrink-0 pl-1 overflow-y-auto">
+          <div inert={activeTab !== "payment"} aria-hidden={activeTab !== "payment"} className="h-full w-1/2 min-w-0 shrink-0 pl-1 overflow-x-hidden overflow-y-auto overscroll-contain">
             <PaymentStep
               itemCount={props.itemCount}
               subtotal={props.subtotal}

@@ -67,6 +67,17 @@ describe("FilterDropdownBar", () => {
 
     expect(onChange).toHaveBeenCalledWith("cash");
   });
+
+  it("keeps a compact tray constrained to the mobile viewport", () => {
+    render(<FilterDropdownBar filters={[mockFilters[0]]} size="compact" />);
+    fireEvent.click(screen.getByRole("button", { name: /all payment methods/i }));
+
+    expect(screen.getByRole("listbox")).toHaveClass(
+      "absolute",
+      "right-0",
+      "w-[min(20rem,calc(100vw-2rem))]",
+    );
+  });
 });
 
 describe("MonthGroupHeader", () => {

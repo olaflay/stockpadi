@@ -39,6 +39,18 @@ describe("InstallBanner", () => {
     expect(screen.getByRole("button", { name: /^install$/i })).toBeInTheDocument();
   });
 
+  it("uses the design-system minimum touch target for dismissal", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1"
+    );
+
+    render(<InstallBanner />);
+    expect(screen.getByRole("button", { name: /dismiss install prompt/i })).toHaveClass(
+      "min-h-[var(--touch-target-min)]",
+      "min-w-[var(--touch-target-min)]",
+    );
+  });
+
   it("renders iOS instructions when running on iOS Safari in browser mode", () => {
     // Mock userAgent to iPhone
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue(

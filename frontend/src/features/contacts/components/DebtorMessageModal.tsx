@@ -5,9 +5,10 @@ import { Check, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { RippleButton } from "@/components/ui/Ripple";
 import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
-import { renderOwingMessage } from "@/lib/whatsapp";
+import { DEFAULT_OWING_MESSAGE_TEMPLATE, renderOwingMessage } from "@/lib/whatsapp";
 import { useToast } from "@/components/ui/Toast";
 import { serverPatch } from "@/platform/api/backend-client";
+import { formatCurrency } from "@/lib/format";
 
 interface DebtorMessageModalProps {
   isOpen: boolean;
@@ -15,9 +16,6 @@ interface DebtorMessageModalProps {
   currentTemplate?: string;
   businessName: string;
 }
-
-const DEFAULT_TEMPLATE =
-  "Hi {{customerName}}, gentle reminder from {{businessName}}. Your outstanding balance is {{amountOwed}}. Please pay when convenient. Thank you.";
 
 function DebtorMessageForm({
   onClose,
@@ -45,7 +43,7 @@ function DebtorMessageForm({
 
     try {
       setSaving(true);
-      // Save locally to Dexie IndexedDB immediately (works 100% offline)
+      // Save locally immediately; remote synchronization remains visible and retryable.
       await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, {
         owingMessageTemplate: trimmed,
       });
@@ -79,7 +77,7 @@ function DebtorMessageForm({
   const samplePreview = renderOwingMessage(template, {
     customerName: "Ada Okafor",
     businessName: businessName || "Your Store",
-    amountOwed: "₦15,000",
+    amountOwed: formatCurrency(15000),
   });
 
   return (
@@ -97,7 +95,7 @@ function DebtorMessageForm({
           value={template}
           onChange={(e) => setTemplate(e.target.value)}
           rows={4}
-          placeholder={DEFAULT_TEMPLATE}
+          placeholder={DEFAULT_OWING_MESSAGE_TEMPLATE}
           className="w-full rounded-2xl border border-border/40 bg-surface-container-low p-3.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-brand-accent/20 resize-none transition-all"
         />
       </label>
@@ -179,7 +177,7 @@ export function DebtorMessageModal({
       <DebtorMessageForm
         key={`${isOpen}-${currentTemplate}`}
         onClose={onClose}
-        initialTemplate={currentTemplate?.trim() || DEFAULT_TEMPLATE}
+        initialTemplate={currentTemplate?.trim() || DEFAULT_OWING_MESSAGE_TEMPLATE}
         businessName={businessName}
       />
     </Modal>

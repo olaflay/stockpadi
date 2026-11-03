@@ -9,8 +9,8 @@ export interface StoragePersistenceStatus {
 
 /**
  * Checks and requests persistent storage quota from the browser.
- * On Chromium Android, persistent storage prevents the OS Low Memory/Storage Janitor
- * from automatically evicting IndexedDB and local-first ledger data under disk pressure (<100MB).
+ * Where supported, persistent storage reduces the risk of automatic browser eviction.
+ * It cannot protect against user-cleared data, device loss, every browser policy, or a full disk.
  */
 export async function ensureStoragePersistence(): Promise<StoragePersistenceStatus> {
   if (typeof navigator === "undefined" || !navigator.storage) {
@@ -112,7 +112,7 @@ export async function attemptEmergencyCacheEviction(): Promise<boolean> {
 /**
  * Evaluates storage and triggers emergency cleanup and notifications if quota is exhausted.
  */
-export async function handleStorageQuotaFailure(error: unknown): Promise<void> {
+export const handleStorageQuotaFailure: (error: unknown) => Promise<void> = async () => {
   let remainingBytes: number | undefined;
   try {
     const status = await ensureStoragePersistence();
@@ -123,4 +123,4 @@ export async function handleStorageQuotaFailure(error: unknown): Promise<void> {
 
   await attemptEmergencyCacheEviction();
   notifyPwaStorageQuotaExceeded({ remainingBytes });
-}
+};

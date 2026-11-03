@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title="Settings" hideBack={true} />
       <p className="-mt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
         Set up your store once, then keep access, data, and support in one place.
       </p>

@@ -58,7 +58,11 @@ export async function addExpense(params: {
  * Deletion of an expense that has already synced to the server is blocked because there is no
  * deletion sync pipeline for expenses yet.
  */
-export async function deleteExpense(id: string): Promise<void> {
+export async function deleteExpense(
+  id: string,
+  actor?: CurrentUser,
+  reversalReason: string = "User requested expense reversal"
+): Promise<{ reversed: boolean; deleted: boolean }> {
   const pendingOutbox = await db.outbox
     .where("clientId")
     .equals(id)
@@ -69,8 +73,45 @@ export async function deleteExpense(id: string): Promise<void> {
       await db.expenses.delete(id);
       await db.outbox.delete(pendingOutbox.clientId);
     }));
-    return;
+    return { reversed: false, deleted: true };
   }
 
-  throw new Error("This expense has already synced to the cloud. Cloud deletion is not supported.");
+  // Record has already synced (or arrived from cloud). Execute immutable reversal.
+  const expense = await db.expenses.get(id);
+  if (!expense) {
+    throw new Error("Expense not found.");
+  }
+  if (expense.reversedAt) {
+    throw new Error("This expense has already been reversed.");
+  }
+
+  if (actor) {
+    assertCapability(actor, "MANAGE_EXPENSES");
+  }
+  await assertHighRiskWriteAllowed("expense_reversal");
+
+  const now = new Date().toISOString();
+  const reversalPayload = {
+    expenseId: id,
+    reversedAt: now,
+    reversedByUserId: actor?.id ?? expense.createdByUserId,
+    reversalReason: reversalReason.trim() || "User requested expense reversal",
+  };
+
+  const reversalMutationId = crypto.randomUUID();
+
+  await withDatabaseClosedRecovery(() => db.transaction("rw", db.expenses, db.outbox, async () => {
+    await db.expenses.update(id, {
+      reversedAt: now,
+      reversedByUserId: reversalPayload.reversedByUserId,
+      reversalReason: reversalPayload.reversalReason,
+    });
+    const tenantPayload = await withLocalBusinessId({
+      id: reversalMutationId,
+      ...reversalPayload,
+    });
+    await enqueueOutboxWrite(reversalMutationId, "expense_reversal", tenantPayload, now);
+  }));
+
+  return { reversed: true, deleted: false };
 }

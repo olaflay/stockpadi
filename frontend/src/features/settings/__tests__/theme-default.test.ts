@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, useContext } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_THEME, ThemeContext, ThemeProvider } from "@/features/settings/ThemeProvider";
@@ -53,22 +53,21 @@ describe("Theme Default for New Users", () => {
     meta.setAttribute("content", "#ffffff");
     document.head.appendChild(meta);
 
-    let setThemeFn: (theme: any) => void = () => {};
     function SwitcherProbe() {
       const ctx = useContext(ThemeContext);
-      if (ctx) setThemeFn = ctx.setTheme;
-      return createElement("span", null, ctx?.theme);
+
+      return createElement("button", { onClick: () => ctx?.setTheme(ctx.theme === "dark" ? "light" : "dark") }, ctx?.theme);
     }
 
     render(createElement(ThemeProvider, null, createElement(SwitcherProbe)));
 
     // Switch to dark mode
-    setThemeFn("dark");
+    fireEvent.click(screen.getByRole("button"));
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     expect(meta.getAttribute("content")).toBe("#1c2022");
 
     // Switch to light mode
-    setThemeFn("light");
+    fireEvent.click(screen.getByRole("button"));
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     expect(meta.getAttribute("content")).toBe("#eff2f3");
 

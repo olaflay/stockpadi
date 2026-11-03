@@ -26,6 +26,7 @@ const NavigationContext = createContext<NavigationContextType>({
  */
 const DELICATE_FORM_FLOWS = [
   "/products/new",
+  "/settings/business",
   "/expenses/new",
   "/purchases/new",
   "/staff/new",
@@ -36,7 +37,9 @@ const DELICATE_FORM_FLOWS = [
 
 export function isNavAllowedOnRoute(pathname: string): boolean {
   if (!pathname) return false;
-  return !DELICATE_FORM_FLOWS.some((flow) => pathname === flow || pathname.startsWith(`${flow}/`));
+  const route = pathname.replace(/^\/(business|work)(?=\/|$)/, "") || "/dashboard";
+  if (/^\/products\/[^/]+$/.test(route) && route !== "/products/import") return false;
+  return !DELICATE_FORM_FLOWS.some((flow) => route === flow || route.startsWith(`${flow}/`));
 }
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {

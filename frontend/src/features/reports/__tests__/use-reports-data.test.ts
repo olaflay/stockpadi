@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { setLocalBusinessId } from "@/lib/local-tenant";
-import { useReportsData } from "@/features/reports/use-reports-data";
+import { getReportSummaryPath, useReportsData } from "@/features/reports/use-reports-data";
 import { LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
+import { getPeriodBoundsIso } from "@/lib/date";
 import type { Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { Expense } from "@/types/expense";
@@ -116,6 +117,22 @@ describe("useReportsData", () => {
     expect(result.current.periodSales).toHaveLength(1);
     expect(result.current.periodExpensesTotal).toBe(500);
     expect(result.current.periodPurchasesTotal).toBe(5 * 800);
+  });
+
+  it("uses the selected custom date range for the server reconciliation", () => {
+    const path = getReportSummaryPath(
+      "custom",
+      { start: "2026-10-03", end: "2026-10-05" },
+      new Date("2026-11-02T10:00:00.000Z"),
+    );
+    const params = new URLSearchParams(path.split("?")[1]);
+
+    const expected = getPeriodBoundsIso("custom", new Date("2026-11-02T10:00:00.000Z"), {
+      start: "2026-10-03",
+      end: "2026-10-05",
+    });
+    expect(params.get("from")).toBe(expected.start);
+    expect(params.get("to")).toBe(expected.end);
   });
 
   it("excludes voided sales from periodSales", async () => {

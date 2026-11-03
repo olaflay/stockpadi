@@ -7,6 +7,7 @@ import {
   resolveEffectiveTheme,
   syncSystemThemeColor,
 } from "../ThemeProvider";
+import manifest from "@/app/manifest";
 
 describe("Bottom Navigation Safe Area & Dynamic Theme Synchronization", () => {
   let metaTag: HTMLMetaElement;
@@ -114,13 +115,24 @@ describe("Bottom Navigation Safe Area & Dynamic Theme Synchronization", () => {
     expect(chinSection).not.toContain("bg-surface\"");
   });
 
-  it("asserts manifest.json standalone theme properties align with surfaceContainer chrome color", () => {
-    const manifestPath = path.resolve(__dirname, "../../../../public/manifest.json");
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+  it("keeps app content above the passive safe-area blanket", () => {
+    const layoutPath = path.resolve(__dirname, "../../../app/(app)/layout.tsx");
+    const layoutContent = fs.readFileSync(layoutPath, "utf-8");
 
-    expect(manifest.display).toBe("standalone");
-    expect(manifest.theme_color).toBe(THEME_CHROME_COLORS.light);
-    expect(manifest.background_color).toBe(THEME_CHROME_COLORS.light);
+    // Checkout panes animate with transforms, which create a stacking context.
+    // The passive chin must stay behind that context so it can never cover a
+    // cart or payment CTA in either theme.
+    expect(layoutContent).toContain("relative z-20 min-h-0");
+    expect(layoutContent).toContain("pointer-events-none z-0 bg-surface-container");
+  });
+
+  it("generates accessible standalone manifest properties from configuration", () => {
+    const generated = manifest();
+
+    expect(generated.display).toBe("standalone");
+    expect(generated.theme_color).toBe(THEME_CHROME_COLORS.light);
+    expect(generated.background_color).toBe(THEME_CHROME_COLORS.light);
+    expect(generated.orientation).toBeUndefined();
   });
 });
 

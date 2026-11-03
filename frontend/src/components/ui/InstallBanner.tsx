@@ -163,7 +163,7 @@ export function InstallBanner() {
               type="button"
               onClick={handleDismiss}
               aria-label="Dismiss install prompt"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-brand-accent-contrast hover:bg-brand-accent-contrast/15 transition-colors"
+              className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-full text-brand-accent-contrast hover:bg-brand-accent-contrast/15 transition-colors"
             >
               <X size={15} />
             </button>

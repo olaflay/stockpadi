@@ -2,8 +2,8 @@
 
 import { use, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { MessageCircle, Download, Ban, RotateCcw } from "lucide-react";
-import { db, BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
+import { Share2, Ban, RotateCcw, MoreVertical } from "lucide-react";
+import { db } from "@/lib/db";
 import type { LocalCustomer, LocalUser } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -19,12 +19,8 @@ import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReceiptIllustration } from "@/components/illustrations";
-import { WhatsAppReceiptModal } from "@/components/pos/WhatsAppReceiptModal";
-import { PdfReceiptDownloadModal } from "@/components/pos/PdfReceiptDownloadModal";
-import { getBrandingConfig } from "@/config/branding";
 import type { PaymentMethod, Sale } from "@/types/sale";
-import type { Product } from "@/types/product";
-import { tenantArray, tenantGet } from "@/lib/local-tenant";
+import { tenantGet } from "@/lib/local-tenant";
 
 const CAN_VOID_SALE = BUSINESS_MANAGEMENT_ACCOUNT_TYPES;
 
@@ -63,12 +59,9 @@ export default function SaleDetailPage({ params }: PageProps) {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [clientRefundId] = useState(() => crypto.randomUUID());
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [showPdfModal, setShowPdfModal] = useState(false);
-  const branding = getBrandingConfig();
+  const [showMoreActions, setShowMoreActions] = useState(false);
 
   const sale = useLiveQuery(async () => (await tenantGet<Sale>(db.sales, id)) ?? null, [id]);
-  const products = useLiveQuery(() => tenantArray<Product>(db.products), [], []);
   const customer = useLiveQuery(
     async () => (sale?.customerId ? tenantGet<LocalCustomer>(db.customers, sale.customerId) : undefined),
     [sale?.customerId]
@@ -78,7 +71,6 @@ export default function SaleDetailPage({ params }: PageProps) {
     [sale?.createdByUserId],
   );
   const outboxEntry = useLiveQuery(() => tenantGet<{ status?: string }>(db.outbox, id), [id]);
-  const businessProfile = useLiveQuery(() => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID), [], undefined);
 
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) {
     return (
@@ -128,12 +120,6 @@ export default function SaleDetailPage({ params }: PageProps) {
     : outboxEntry.status === "failed"
       ? "Needs attention"
       : "Saving…";
-
-  function shareReceipt() {
-    setShowWhatsAppModal(true);
-  }
-
-
 
   function handleVoid() {
     if (!sale || sale.voidedAt) return;
@@ -221,7 +207,6 @@ export default function SaleDetailPage({ params }: PageProps) {
           {sale.items && sale.items.length > 0 ? (
             <ul className="flex flex-col gap-2">
               {sale.items.map((item, index) => {
-                const product = products?.find((p) => p.id === item.productId);
                 return (
                   <li key={index} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-3">
                     <div className="min-w-0 flex-1">
@@ -230,7 +215,7 @@ export default function SaleDetailPage({ params }: PageProps) {
                           href={`/products/${item.productId}`}
                           className="inline-block hover:underline hover:text-brand-accent"
                         >
-                          {product?.name ?? "Unknown product"}
+                          {item.productNameSnapshot ?? "Product name unavailable"}
                         </RippleLink>
                       </p>
                       <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
@@ -288,48 +273,56 @@ export default function SaleDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex flex-col gap-2 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] print:hidden transition-all duration-200">
-        <RippleButton
-          type="button"
-          onClick={shareReceipt}
-          className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+      <div className="sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex gap-2 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] print:hidden transition-all duration-200">
+        <RippleLink
+          href={`/sales/${sale.id}/share`}
+          className="flex min-h-[var(--touch-target-min)] min-w-0 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
         >
-          <MessageCircle size={18} aria-hidden />
-          Share receipt on WhatsApp
-        </RippleButton>
-        <RippleButton
-          type="button"
-          onClick={() => setShowPdfModal(true)}
-          className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-5 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-        >
-          <Download size={18} aria-hidden />
-          Download PDF receipt
-        </RippleButton>
+          <Share2 size={18} aria-hidden />
+          Share receipt
+        </RippleLink>
         {!sale.voidedAt && hasAccountType(user, CAN_VOID_SALE) && (
-          <div className="flex gap-2 w-full">
+          <RippleButton
+            type="button"
+            onClick={() => setShowMoreActions(true)}
+            aria-label="More sale actions"
+            className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface px-3 text-on-surface hover:bg-surface-container transition-colors"
+          >
+            <MoreVertical size={20} aria-hidden />
+          </RippleButton>
+        )}
+      </div>
+
+      {showMoreActions && (
+        <Modal isOpen={showMoreActions} onClose={() => setShowMoreActions(false)} title="Sale actions" variant="sheet" maxWidth="max-w-md">
+          <div className="flex flex-col gap-2">
+            {!sale.voidedAt && hasAccountType(user, CAN_VOID_SALE) && (
+              <>
             <RippleButton
               type="button"
-              onClick={() => setShowRefundModal(true)}
+              onClick={() => { setShowMoreActions(false); setShowRefundModal(true); }}
               disabled={refunding || voiding || !isOnline}
               title={!isOnline ? "Refunding a sale requires an internet connection" : undefined}
-              className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-warning/30 bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-warning hover:bg-warning/5 disabled:opacity-50 transition-colors"
+              className="flex min-h-[var(--touch-target-min)] w-full items-center gap-3 rounded-[var(--radius-control)] border border-warning/30 bg-surface px-4 text-left text-[length:var(--font-size-body)] font-medium text-warning hover:bg-warning/5 disabled:opacity-50 transition-colors"
             >
               <RotateCcw size={18} aria-hidden />
               {isOnline ? "Refund sale" : "Refund (needs internet)"}
             </RippleButton>
             <RippleButton
               type="button"
-              onClick={handleVoid}
+              onClick={() => { setShowMoreActions(false); handleVoid(); }}
               disabled={voiding || refunding || !isOnline}
               title={!isOnline ? "Voiding a sale requires an internet connection" : undefined}
-              className="flex min-h-[var(--touch-target-min)] flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-danger/30 bg-surface px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 disabled:opacity-50 transition-colors"
+              className="flex min-h-[var(--touch-target-min)] w-full items-center gap-3 rounded-[var(--radius-control)] border border-danger/30 bg-surface px-4 text-left text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 disabled:opacity-50 transition-colors"
             >
               <Ban size={18} aria-hidden />
               {voiding ? "Voiding…" : isOnline ? "Void sale" : "Void (needs internet)"}
             </RippleButton>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        </Modal>
+      )}
 
       {showRefundModal && (
         <Modal
@@ -379,52 +372,6 @@ export default function SaleDetailPage({ params }: PageProps) {
             </div>
           </div>
         </Modal>
-      )}
-
-      {showWhatsAppModal && (
-        <WhatsAppReceiptModal
-          sale={sale}
-          products={products ?? []}
-          customer={customer}
-          businessName={businessProfile?.name ?? "Receipt"}
-          onClose={() => setShowWhatsAppModal(false)}
-        />
-      )}
-
-      {showPdfModal && (
-        <PdfReceiptDownloadModal
-          isOpen={showPdfModal}
-          onClose={() => setShowPdfModal(false)}
-          initialData={{
-            businessName: businessProfile?.name || branding.businessName,
-            branchName: sale.branchId ? "Main Branch" : undefined,
-            receiptNumber: sale.id.slice(0, 8).toUpperCase(),
-            dateStr: new Date(sale.createdAt).toLocaleString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            cashierName: user.fullName || "Attendant",
-            customerName: customer?.name || undefined,
-            customerPhone: customer?.phone || undefined,
-            items: (sale.items ?? []).map((item) => {
-              const product = products?.find((p) => p.id === item.productId);
-              return {
-                name: product?.name || "Item",
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.quantity * item.unitPrice - (item.discount || 0),
-              };
-            }),
-            subtotal: sale.subtotal,
-            discount: sale.discount,
-            total: sale.total,
-            payments: sale.payments,
-            footerNote: "Thank you for your patronage! Goods sold in good condition are not returnable.",
-          }}
-        />
       )}
 
       <ConfirmDialog

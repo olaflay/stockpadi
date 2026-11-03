@@ -24,11 +24,11 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { RippleButton } from "@/components/ui/Ripple";
-import { FAB } from "@/components/ui/FAB";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FAB } from "@/components/ui/FAB";
 import { useNavigation } from "@/components/ui/NavigationContext";
 import { writeProductEditOffline } from "@/features/inventory/product-offline-write";
 import { formatCurrency } from "@/lib/format";
@@ -48,10 +48,17 @@ const FILTER_LABELS: Record<ProductFilter, string> = {
   archived: "Archived",
 };
 
+const STATUS_BADGE_STYLES: Record<string, { badge: string; dot: string }> = {
+  out: { badge: "bg-danger-container/70 text-on-danger-container border border-danger/25", dot: "bg-danger" },
+  low: { badge: "bg-warning-container/70 text-on-warning-container border border-warning/25", dot: "bg-warning" },
+  ok: { badge: "bg-surface-container text-on-surface-muted border border-border/40", dot: "bg-outline" },
+};
+const DEFAULT_STATUS_BADGE = { badge: "bg-surface-container text-on-surface-muted border border-border/40", dot: "bg-outline" };
+
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const { setSearchActive } = useNavigation();
+  const { isKeyboardVisible, isSearchActive, setSearchActive } = useNavigation();
 
   useEffect(() => {
     if (query.trim().length > 0) {
@@ -66,6 +73,7 @@ export default function ProductsPage() {
   const user = useCurrentUser();
   const canViewProducts = hasCapability(user, "VIEW_PRODUCTS");
   const canEditProducts = hasCapability(user, "MANAGE_PRODUCTS");
+  const isOwner = user.accountType === "BUSINESS_OWNER" || user.role === "owner";
   const stockBranchScope = user.accountType === "WORKER" ? (user.branchIds ?? []) : null;
   const stockBranchKey = stockBranchScope?.join(",") ?? "all";
   const [visibleLimit, setVisibleLimit] = useState(50);
@@ -82,6 +90,7 @@ export default function ProductsPage() {
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const { showToast } = useToast();
   const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
+  const categoryMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c.name])), [categories]);
 
   const debouncedQuery = useDebounce(query, 120);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -112,8 +121,15 @@ export default function ProductsPage() {
         setMenuOpen(false);
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [menuOpen]);
 
   const toggleSelect = useCallback((id: string) => {
@@ -225,6 +241,16 @@ export default function ProductsPage() {
     return [...exact, ...suggestions];
   }, [byFilter, deferredQuery]);
 
+  const isAllSelected = filtered.length > 0 && selectedIds.size === filtered.length;
+
+  const handleToggleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  }, [isAllSelected, filtered]);
+
   // Ledger-derived current stock for a product (see getStockByProduct above).
   // `undefined` is preserved rather than collapsed to 0: a product created
   // with a blank starting stock has no ledger row, which is an absence of
@@ -249,7 +275,11 @@ export default function ProductsPage() {
     const qty = stockFor(product);
     if (qty === undefined) return stockStatusLabel("untracked");
     if (qty <= 0) return stockStatusLabel("out");
-    return `${qty.toLocaleString()} ${qty === 1 ? "unit" : "units"}`;
+    const status = statusFor(product);
+    if (status === "low") {
+      return `Low · ${qty} left`;
+    }
+    return `${qty.toLocaleString()} in stock`;
   };
 
   useEffect(() => {
@@ -338,59 +368,81 @@ export default function ProductsPage() {
     );
   }
 
-
-
   return (
     <div className="overflow-x-clip">
       <ScreenHeader title="Products" hideBack={true} />
 
-      {canEditProducts && (
-        <div className="mb-3 grid grid-cols-2 gap-2" aria-label="Add products">
-          <Link
-            href="/products/new"
-            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-3 text-center text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
+      {/* Sticky Search Bar Container */}
+      <div className="sticky top-0 z-20 -mx-gutter mb-2.5 bg-surface/95 px-gutter pb-2.5 pt-1 sm:-mx-gutter-lg sm:px-gutter-lg supports-[backdrop-filter:blur(1px)]:backdrop-blur-sm">
+        <div className="flex h-12 items-stretch gap-2">
+          <div className="h-12 min-w-0 flex-1">
+            <SearchBar
+              value={query}
+              onChange={(val) => {
+                setQuery(val);
+                setScannedBarcode(null);
+                setSearchActive(Boolean(val.trim()));
+              }}
+              onFocus={() => setSearchActive(true)}
+              onBlur={() => {
+                if (!query.trim()) setSearchActive(false);
+              }}
+              placeholder="Search"
+              ariaLabel="Search by name, SKU, or barcode"
+              shape="standalone"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            aria-label="Scan barcode to search"
+            title="Scan barcode to search"
+            className="flex h-12 w-12 min-h-12 min-w-12 self-stretch shrink-0 touch-manipulation items-center justify-center rounded-[var(--radius-control)] bg-brand-container text-on-brand-container hover:bg-brand-container/80 active:scale-95 transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
           >
-            <Plus size={17} aria-hidden />
-            Add product
-          </Link>
-          <Link
-            href="/products/import"
-            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent/10 px-3 text-center text-[length:var(--font-size-body)] font-medium text-brand-accent hover:bg-brand-accent/15 transition-colors"
-          >
-            <Upload size={17} aria-hidden />
-            Import products
-          </Link>
+            <Camera size={19} aria-hidden />
+          </button>
+          {canEditProducts && (
+            <div ref={menuRef} className="relative h-12 min-h-12 w-12 min-w-12 self-stretch shrink-0">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-controls="product-actions-menu"
+                aria-label="Manage products"
+                className="flex h-12 w-12 min-h-12 min-w-12 self-stretch touch-manipulation items-center justify-center rounded-[var(--radius-control)] bg-surface-container-high text-on-surface hover:bg-surface-container-highest active:scale-95 transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+              >
+                <MoreVertical size={20} aria-hidden />
+              </button>
+              {menuOpen && (
+                <div
+                  id="product-actions-menu"
+                  role="menu"
+                  aria-label="Product actions"
+                  className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-[var(--radius-card)] bg-surface-container-high py-1 shadow-[var(--shadow-elevation-2)] animate-step-in"
+                >
+                  <Link href="/products/import" role="menuitem" onClick={() => setMenuOpen(false)} className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors">
+                    <Upload size={16} aria-hidden />
+                    Import products
+                  </Link>
+                  <Link href="/purchases" role="menuitem" onClick={() => setMenuOpen(false)} className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors">
+                    <Truck size={16} aria-hidden />
+                    Restocks
+                  </Link>
+                  <button type="button" role="menuitem" onClick={() => { setDeleteMode(true); setMenuOpen(false); }} className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-colors">
+                    <Archive size={16} aria-hidden />
+                    Select products to archive
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-
-      <div className="sticky top-0 z-20 -mx-gutter sm:-mx-gutter-lg mb-3 bg-surface px-gutter sm:px-gutter-lg pb-3 pt-1">
-        <SearchBar
-          value={query}
-          onChange={(val) => {
-            setQuery(val);
-            setScannedBarcode(null);
-            setSearchActive(Boolean(val.trim()));
-          }}
-          onFocus={() => setSearchActive(true)}
-          onBlur={() => {
-            if (!query.trim()) setSearchActive(false);
-          }}
-          placeholder="Search by name, SKU, or barcode"
-          trailingAction={
-            <button
-              type="button"
-              onClick={() => setScanning(true)}
-              aria-label="Scan barcode to search"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-muted hover:bg-surface-container hover:text-on-surface active:scale-95 transition-colors"
-            >
-              <Camera size={18} aria-hidden />
-            </button>
-          }
-        />
       </div>
 
       {scanning && (
         <BarcodeScanner
+          backLabel="Back to products"
           onResult={(res) => {
             setQuery(res);
             setScannedBarcode(res);
@@ -400,62 +452,32 @@ export default function ProductsPage() {
         />
       )}
 
-      <p className="mb-2 text-[length:var(--font-size-caption)] text-on-surface-muted">
-        {result.products.length.toLocaleString()} of {PRODUCT_CAP.toLocaleString()} products used
-      </p>
-
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex flex-1 gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+      {/* Filter Chips Bar (Full Width, uncluttered) */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex flex-1 gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {(Object.keys(FILTER_LABELS) as ProductFilter[]).map((key) => (
             <Chip
               key={key}
               variant="filter"
               selected={filter === key}
               onClick={() => setFilter(key)}
+              className="text-xs min-h-[28px] py-0.5 px-2.5"
             >
               {FILTER_LABELS[key]}
             </Chip>
           ))}
         </div>
+      </div>
 
-        {canEditProducts && (
-          <div ref={menuRef} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              aria-label="More product actions"
-              className="flex h-[var(--touch-target-min)] w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
-            >
-              <MoreVertical size={18} aria-hidden />
-            </button>
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-elevation-2)] animate-step-in"
-              >
-                <Link
-                  href="/purchases"
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-                >
-                  <Truck size={16} aria-hidden />
-                  Restocks
-                </Link>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => { setDeleteMode(true); setMenuOpen(false); }}
-                  className="flex min-h-[var(--touch-target-min)] w-full items-center gap-2 px-4 text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 transition-colors"
-                >
-                  <Archive size={16} aria-hidden />
-                  Select products to archive
-                </button>
-              </div>
-            )}
-          </div>
+      {/* Catalog Capacity Metadata Caption */}
+      <div className="mb-2.5 flex items-center justify-between px-0.5 text-[length:var(--font-size-caption)] text-on-surface-muted">
+        <span className="font-number tabular-nums">
+          {result.products.length.toLocaleString()} of {PRODUCT_CAP.toLocaleString()} products
+        </span>
+        {filter !== "all" && (
+          <span className="font-medium text-on-surface-muted">
+            Filter: {FILTER_LABELS[filter]} ({filtered.length})
+          </span>
         )}
       </div>
 
@@ -505,7 +527,7 @@ export default function ProductsPage() {
                     : "Your branch is set up and ready. Add products to start tracking inventory and ringing up sales."
               }
               action={
-                filter === "all"
+                filter === "all" && canEditProducts
                   ? {
                     label: "Add product",
                     href: "/products/new",
@@ -528,7 +550,7 @@ export default function ProductsPage() {
                       toggleSelect(product.id);
                     }}
                     className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-all ${selectedIds.has(product.id)
-                        ? "bg-brand-container text-on-brand-container"
+                        ? "bg-surface-container-high text-on-surface"
                         : ""
                       }`}
                   >
@@ -575,9 +597,9 @@ export default function ProductsPage() {
                         <p className="truncate text-[length:var(--font-size-body-lg)] font-bold text-on-surface">
                           {product.name}
                         </p>
-                        {categories?.find((c) => c.id === product.categoryId)?.name && (
+                        {product.categoryId && categoryMap.get(product.categoryId) && (
                           <span className="shrink-0 text-[length:var(--font-size-caption)] text-on-surface-muted bg-surface-container-high px-2 py-0.5 rounded-full font-medium">
-                            {categories.find((c) => c.id === product.categoryId)?.name}
+                            {categoryMap.get(product.categoryId)}
                           </span>
                         )}
                       </div>
@@ -586,7 +608,7 @@ export default function ProductsPage() {
                         <span className="font-number font-bold text-[length:var(--font-size-body)] tabular-nums text-on-surface">
                           {formatCurrency(product.sellPrice)}
                         </span>
-                        {product.costPrice > 0 && (
+                        {isOwner && product.costPrice > 0 && (
                           <span className="text-xs text-on-surface-muted font-number tabular-nums">
                             Cost {formatCurrency(product.costPrice)}{" "}
                             {product.sellPrice > product.costPrice ? (
@@ -599,47 +621,48 @@ export default function ProductsPage() {
                       </div>
 
                       <div className="mt-0.5 flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-semibold ${
-                            statusFor(product) === "out"
-                              ? "bg-danger-container text-on-danger-container"
-                              : statusFor(product) === "low"
-                              ? "bg-warning-container text-on-warning-container"
-                              : statusFor(product) === "ok"
-                              ? "bg-success-container text-on-success-container"
-                              : "bg-surface-container-high text-on-surface-muted"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              statusFor(product) === "out"
-                                ? "bg-danger"
-                                : statusFor(product) === "low"
-                                ? "bg-warning"
-                                : statusFor(product) === "ok"
-                                ? "bg-success"
-                                : "bg-outline"
-                            }`}
-                            aria-hidden
-                          />
-                          <span>{stockTextFor(product)}</span>
-                        </span>
+                        {(() => {
+                          const status = statusFor(product);
+                          const badge = STATUS_BADGE_STYLES[status] ?? DEFAULT_STATUS_BADGE;
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.badge}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} aria-hidden />
+                              <span>{stockTextFor(product)}</span>
+                            </span>
+                          );
+                        })()}
+                        {result?.bestSellerIds.has(product.id) && (
+                          <span className="inline-flex items-center rounded-full bg-surface-container text-on-surface-muted border border-border/40 px-2 py-0.5 text-[11px] font-semibold">
+                            Fast seller
+                          </span>
+                        )}
                         {filter === "expiring" && product.expiryDate && (
-                          <span className="text-[length:var(--font-size-caption)] text-danger font-medium">
+                          <span className="text-[11px] text-danger font-medium">
                             Expires {product.expiryDate}
                           </span>
                         )}
                       </div>
                     </RippleLink>
 
-                    {/* 1-tap quick Sell button */}
-                    <RippleLink
-                      href={`/pos?add=${product.id}`}
-                      className="shrink-0 flex h-8 items-center justify-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all"
-                      aria-label={`Sell ${product.name}`}
+                    <div
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        cancelLongPress();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 flex items-center justify-center pl-1"
                     >
-                      <span>+ Sell</span>
-                    </RippleLink>
+                      <RippleLink
+                        href={`/pos?add=${product.id}`}
+                        className="flex min-h-[var(--touch-target-min)] min-w-[52px] items-center justify-center gap-1.5 rounded-full bg-surface-container text-on-surface border border-border/60 hover:bg-surface-container-high active:scale-95 px-3.5 text-xs font-bold transition-all shadow-xs"
+                        aria-label={`Sell ${product.name}`}
+                      >
+                        <Plus size={15} aria-hidden />
+                        <span>Sell</span>
+                      </RippleLink>
+                    </div>
                   </div>
                 )}
               </li>
@@ -653,42 +676,57 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Batch archive/restore floating action bar */}
+      {canEditProducts &&
+        filtered.length > 0 &&
+        result.products.length < PRODUCT_CAP &&
+        !deleteMode &&
+        !scanning &&
+        !menuOpen &&
+        !showBulkConfirm &&
+        !isKeyboardVisible &&
+        !isSearchActive && (
+          <FAB href="/products/new" label="Add product" id="products-add-fab" size="md">
+            <Plus size={24} aria-hidden />
+          </FAB>
+        )}
+
+      {/* Batch archive/restore floating action bar with Select All */}
       {deleteMode && (
-        <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-40 flex max-w-xl md:max-w-2xl items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
-          <button
-            type="button"
-            onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}
-            className="flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-3 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-          >
-            <X size={16} aria-hidden />
-            Cancel
-          </button>
-          <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-            {selectedIds.size} selected
+        <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] md:bottom-8 left-3 right-3 sm:left-0 sm:right-0 sm:mx-auto z-40 flex max-w-xl md:max-w-2xl items-center justify-between gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-elevated animate-step-in">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setDeleteMode(false); setSelectedIds(new Set()); }}
+              className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-control)] px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
+            >
+              <X size={16} aria-hidden />
+              <span>Cancel</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleSelectAll}
+              className="flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-control)] px-2.5 text-xs font-semibold text-brand-accent hover:bg-brand-accent/10 transition-colors"
+            >
+              {isAllSelected ? "Deselect all" : "Select all"}
+            </button>
+          </div>
+
+          <span className="text-xs font-number tabular-nums text-on-surface-muted truncate">
+            {selectedIds.size} of {filtered.length} selected
           </span>
+
           <RippleButton
             type="button"
             onClick={handleArchiveSelected}
             disabled={selectedIds.size === 0}
-            className={`flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[length:var(--font-size-body)] font-medium disabled:opacity-50 hover:opacity-95 transition-opacity ${
+            className={`flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-control)] px-4 text-xs font-semibold disabled:opacity-50 hover:opacity-95 transition-opacity ${
               filter === "archived" ? "bg-brand-accent text-on-brand" : "bg-danger text-on-danger"
             }`}
           >
             {filter === "archived" ? <RotateCcw size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
-            {filter === "archived" ? "Restore" : "Archive"}
+            <span>{filter === "archived" ? "Restore" : "Archive"}</span>
           </RippleButton>
         </div>
-      )}
-
-      {canEditProducts && !deleteMode && (
-        <FAB
-          id="tour-add-product"
-          href="/products/new"
-          label="Add product"
-        >
-          <Plus size={26} aria-hidden />
-        </FAB>
       )}
 
       <ConfirmDialog

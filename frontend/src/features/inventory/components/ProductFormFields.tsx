@@ -167,6 +167,7 @@ export function ProductCoreFields({
 
       {scanning && (
         <BarcodeScanner
+          backLabel="Back to product"
           onResult={(res) => {
             setValue("barcode", res, { shouldDirty: true, shouldValidate: true });
             setScanning(false);
@@ -187,7 +188,7 @@ export function ProductCoreFields({
             step="0.01"
             inputMode="decimal"
             {...register("costPrice")}
-            placeholder="₦0.00"
+            placeholder="0.00"
             hasError={Boolean(errors.costPrice)}
             errorId="field-error-cost-price"
           />
@@ -205,7 +206,7 @@ export function ProductCoreFields({
             step="0.01"
             inputMode="decimal"
             {...register("sellPrice")}
-            placeholder="₦0.00"
+            placeholder="0.00"
             hasError={Boolean(errors.sellPrice)}
             errorId="field-error-sell-price"
           />
@@ -353,6 +354,7 @@ export function ProductUnitConversionFields({
                     type="number"
                     min="0"
                     step="0.01"
+                    inputMode="decimal"
                     {...register("altUnitConversionFactor")}
                     placeholder="e.g. 24"
                     hasError={Boolean(errors.altUnitConversionFactor)}
@@ -370,6 +372,7 @@ export function ProductUnitConversionFields({
                     type="number"
                     min="0"
                     step="0.01"
+                    inputMode="decimal"
                     {...register("altUnitSellPrice")}
                     placeholder="0.00"
                     hasError={Boolean(errors.altUnitSellPrice)}
@@ -392,11 +395,13 @@ export function ProductExpiryFields({
   errors,
   control,
   expiryTracking,
+  autoFocusExpiryDate = true,
 }: {
   register: UseFormRegister<ProductFormInput>;
   errors: FieldErrors<ProductFormInput>;
   control: Control<ProductFormInput, unknown, ProductFormValues>;
   expiryTracking: ProductFormInput["expiryTracking"];
+  autoFocusExpiryDate?: boolean;
 }) {
   return (
     <>
@@ -424,7 +429,7 @@ export function ProductExpiryFields({
               <ShortDateInput
                 value={field.value ?? ""}
                 onChange={field.onChange}
-                autoFocus={true}
+                autoFocus={autoFocusExpiryDate}
               />
             )}
           />

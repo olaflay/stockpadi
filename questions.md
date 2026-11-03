@@ -314,6 +314,18 @@ All 7 previously partial capabilities in `docs/LAUNCH_SCOPE.md` have been harden
 
 ## 5. Remaining Open Decisions & Questions
 
+### Q11. Canonical tenant and billing statement
+- **Conflict:** `.agents/rules/payment-and-pci-scope.md` describes a single-tenant product with no subscriptions, while `AGENTS.md`, `.agents/rules/database-and-rls.md`, the PRD, and runtime architecture define multi-tenant SaaS.
+- **Proposed smallest correction:** keep the payment-method-as-tag/zero-card-data boundary, but update the stale tenancy and billing wording to match the locked multi-tenant architecture. Owner confirmation is required because both documents present themselves as governing rules.
+
+### Q12. Canonical hosting statement
+- **Conflict:** `docs/PRD.md` contains historical text rejecting Vercel/Supabase, while `AGENTS.md` locks Next.js on Vercel plus Supabase Cloud.
+- **Proposed smallest correction:** mark the PRD passage superseded and point it to ADR 0001 and the hosting rule. Do not change the deployed architecture.
+
+### Q13. Real-platform and device release evidence
+- **Gap:** PGlite policy tests and Node/Dexie benchmarks are useful regression evidence but do not satisfy TRUST Promise 8 or the physical 2 GB Android gate.
+- **Required decision:** name the ephemeral/staging PostgreSQL/Supabase environment and target devices for the RLS, restore, accessibility, keyboard, process-death, low-storage, and intermittent-network test matrix.
+
 ### Q8. Stranded Outbox Policy for Damaged/Lost Offline Hardware — RESOLVED & CLOSED
 - **Decision:** Auto-purging offline sales violates Trust Promises 1 & 2. Outbox mutations are preserved and surfaced to the **Owner Reconciliation Queue** (`/settings/data/reconciliation`).
 - **Fix & Implementation:**

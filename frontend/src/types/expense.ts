@@ -24,4 +24,7 @@ export interface Expense {
   note: string | null;
   createdAtLocal: string;
   createdByUserId: string;
+  reversedAt?: string | null;
+  reversedByUserId?: string | null;
+  reversalReason?: string | null;
 }

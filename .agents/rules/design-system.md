@@ -42,6 +42,22 @@ Icon color: see `src/components/ui/icon-tone.ts`. Every icon outside BottomNav c
 
 Tap feedback: `src/components/ui/Ripple.tsx` (`RippleButton`/`RippleLink`) is the default for a tappable card or list row — Settings, Dashboard, Products, Sales, Staff, and POS's product rows use it. A plain `<button>`/`<Link>` for a card is a gap to close, not a second accepted style.
 
+## Connected & Segmented Component Groups (M3 Shape Morphing Standard)
+
+When grouping controls together horizontally into a unified visual cluster (e.g. SearchBar paired with barcode camera scanner and multi-action menu buttons, or segmented mode switches):
+
+1. **Hairline Spacing (`--space-connected-gap: 2px`)**: Sibling items in a connected cluster must never overlap with negative margins (`-space-x-px`) or use arbitrary pixel values. They sit separated by the tokenized hairline spacing `--space-connected-gap: 2px` (or `gap-[var(--space-connected-gap)]`).
+2. **Context-Aware Curvature**:
+   - **Exterior sides** (outer ends of the cluster with no adjacent sibling) preserve the standard control corner radius: `--radius-control` (12px / 0.75rem).
+   - **Interior sides** (sides facing an adjacent sibling) are flat (`border-radius: 0`).
+   - **Conditional Sibling Awareness**: If a trailing or leading sibling is conditionally unmounted (e.g. a cashier role without product-edit privileges omitting the 3-dots menu), the newly outermost element must dynamically switch to an exterior radius (`rounded-segmented-end`), never leaving a flat edge facing empty space.
+3. **Responsive Active & Focus Shape Morphing**:
+   - When any connected item in the cluster is pressed (`:active`) or receives focus (`:focus-visible`, `:focus-within`), its flat corners dynamically morph into the full `--radius-control` (12px / 0.75rem) and it elevates (`z-index: 10` or `20`).
+   - This provides immediate physical clarity and tactile feedback, popping the active control out of the cluster so its focus rings and touch feedback are never clipped by sibling borders.
+   - Morphing transitions strictly follow the tokenized motion curve: `transition: border-radius var(--motion-duration-short) var(--easing-standard)`. On release or blur, the item smoothly morphs back to its flat connected edge.
+4. **Zero-Hardcoding Law**:
+   - Use `.rounded-segmented-start`, `.rounded-segmented-middle`, and `.rounded-segmented-end` helper classes or the token variables `--radius-segmented-start`, `--radius-segmented-middle`, `--radius-segmented-end`, and `--space-connected-gap`. Never hardcode pixel values in components.
+
 ## UX writing standard (locked)
 
 All user-facing copy follows **UN Plain Language Guidelines** and **Microsoft Style Guide** principles. This ensures clarity for Nigerian retail users and international audiences alike.

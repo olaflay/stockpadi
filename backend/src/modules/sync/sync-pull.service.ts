@@ -256,7 +256,7 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
       if (!ids.length) return [];
       if (context.accountType === "WORKER") {
         const { data: items, error: itemsError } = await db.from("sale_items")
-          .select("sale_id, product_id, quantity, unit_price, discount, unit_label, unit_conversion_factor")
+          .select("sale_id, product_id, product_name_snapshot, quantity, unit_price, discount, unit_label, unit_conversion_factor")
           .in("sale_id", ids);
         if (itemsError) throw new HttpError(500, "SALES_LOAD_FAILED", itemsError.message);
         return items ?? [];
@@ -266,7 +266,7 @@ export async function pullSession(db: SupabaseClient, actor: User, requestedCurs
         {
           table: "sale_items",
           baseColumns: ["sale_id", "product_id", "quantity", "unit_price", "discount", "unit_label", "unit_conversion_factor"],
-          evolutionaryColumns: ["unit_cost", "cost_basis", "product_version", "cost_flags"],
+          evolutionaryColumns: ["product_name_snapshot", "unit_cost", "cost_basis", "product_version", "cost_flags"],
         }
       ).catch((err) => {
         throw new HttpError(500, "SALES_LOAD_FAILED", err.message ?? "Could not load sale items");

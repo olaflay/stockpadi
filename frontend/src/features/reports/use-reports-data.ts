@@ -11,7 +11,7 @@ import type { StockMovement } from "@/types/stock-movement";
 import type { SaleRefund } from "@/types/sale-refund";
 import { serverGet, NetworkUnavailableError, BackendConfigurationError } from "@/platform/api/backend-client";
 import { tenantArray } from "@/lib/local-tenant";
-import { getPeriodStartIso, getPeriodBoundsIso, type ReportPeriod } from "@/lib/date";
+import { getPeriodBoundsIso, type ReportPeriod } from "@/lib/date";
 
 export type Period = ReportPeriod;
 
@@ -53,6 +53,17 @@ export interface DayOfWeekStat {
   day: string;
   count: number;
   total: number;
+}
+
+/** Shared with tests so local and remote report ranges cannot drift. */
+export function getReportSummaryPath(
+  period: Period,
+  customRange?: { start: string; end: string },
+  referenceDate = new Date(),
+): string {
+  const bounds = getPeriodBoundsIso(period, referenceDate, customRange);
+  const end = bounds.end ?? referenceDate.toISOString();
+  return `/api/reports/summary?from=${encodeURIComponent(bounds.start)}&to=${encodeURIComponent(end)}`;
 }
 
 interface LocalReportData {
@@ -198,9 +209,9 @@ export function useReportsData(initialPeriod: Period = "today") {
       if (typeof navigator !== "undefined" && !navigator.onLine) return;
 
       try {
-        const start = getPeriodStartIso(period);
+        // Keep remote reconciliation within the exact range selected locally.
         const remote = await serverGet<ReportResponse>(
-          `/api/reports/summary?from=${encodeURIComponent(start)}&to=${encodeURIComponent(new Date().toISOString())}`
+          getReportSummaryPath(period, customRange)
         );
 
         if (cancelledRef.current) return;
@@ -338,7 +349,7 @@ export function useReportsData(initialPeriod: Period = "today") {
     return () => {
       cancelledRef.current = true;
     };
-  }, [period]);
+  }, [period, customRange]);
 
   /* ---- Smooth transition: retain cached result during period switches to avoid skeleton flashing ---- */
   const [cachedResult, setCachedResult] = useState<LocalReportData | undefined>(undefined);
@@ -354,7 +365,7 @@ export function useReportsData(initialPeriod: Period = "today") {
   const lowStockProducts = products.filter((product: Product) => lowStockIds.has(product.id));
 
   const periodSales: Sale[] = result && !result.error ? result.sales.filter((sale: Sale) => !sale.voidedAt) : [];
-  const periodExpenses: Expense[] = result && !result.error ? result.expenses : [];
+  const periodExpenses: Expense[] = result && !result.error ? result.expenses.filter((e: Expense) => !e.reversedAt) : [];
   const periodExpensesTotal = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
   const periodPurchases: Purchase[] = result && !result.error ? result.purchases : [];
   const periodPurchasesTotal = periodPurchases.reduce(

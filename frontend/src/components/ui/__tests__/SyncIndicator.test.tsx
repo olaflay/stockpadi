@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { SyncIndicator } from "../SyncIndicator";
 import { TECHNICAL_LEAK_WORDS } from "@/features/sync/statusMessages";
 
@@ -57,7 +57,8 @@ vi.mock("@/components/ui/Toast", () => ({
 }));
 
 vi.mock("dexie-react-hooks", () => ({
-  useLiveQuery: (fn: any, deps: any, initial: any) => {
+  useLiveQuery: (...args: unknown[]) => {
+    const initial = args[2];
     // If it's diagnosing pull failure
     if (initial && Array.isArray(initial)) {
       return mockState.pullFailure ? [{ entity: "products", success: false }] : [];
@@ -134,7 +135,7 @@ describe("SyncIndicator - Zero-Jargon & Ambient Demotion Verification", () => {
     mockState.failedCount = 0;
     mockState.pullFailure = true;
 
-    const { container } = render(<SyncIndicator compact variant="contrast" />);
+    render(<SyncIndicator compact variant="contrast" />);
 
     // Must NOT render warning badge or text
     expect(screen.queryByText(/needs attention/i)).not.toBeInTheDocument();

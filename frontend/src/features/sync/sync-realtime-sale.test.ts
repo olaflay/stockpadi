@@ -67,6 +67,7 @@ function committedSaleEvent(): SyncSaleRealtimeEvent {
       voidedAt: null,
       items: [{
         productId: "product-a",
+        productNameSnapshot: "Recorded product label",
         quantity: 2,
         unitPrice: 50,
         discount: 0,

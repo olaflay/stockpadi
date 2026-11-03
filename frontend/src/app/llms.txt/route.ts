@@ -10,7 +10,7 @@ export async function GET() {
 > ${branding.businessName} is an offline-first point of sale (POS) and inventory management web application built for retail businesses (groceries, pharmacies, electronics, and general retail stores).
 
 ## Key Features
-- 100% Offline Point of Sale: Record sales, handle split payments, and calculate change without internet connection.
+- Offline-first point of sale: after setup, record sales, handle split payments, and calculate change without an active connection; synchronization and documented online-only operations reconnect later.
 - Ledger-Based Inventory: Stock quantities and customer debt balances are calculated strictly from an append-only transaction ledger (stock_movements).
 - Multi-Unit Support: Sell products by base unit or alt unit with automatic stock conversions.
 - Customer Credit & Debt Ledger: Keep track of customer debt balances, partial repayments, and credit limits.

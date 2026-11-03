@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { setLocalBusinessId, clearLocalBusinessId } from "@/lib/local-tenant";
-import { drainOutbox, SALE_FAST_LANE_TIMEOUT_MS, DEFAULT_PUSH_TIMEOUT_MS } from "@/features/sync/drain-outbox";
+import { drainOutbox, SALE_FAST_LANE_TIMEOUT_MS } from "@/features/sync/drain-outbox";
 import { runSyncCycle } from "@/features/sync/SyncCoordinator";
 import { getSyncRuntimePhase, setSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 import { NetworkUnavailableError } from "@/platform/api/backend-client";
@@ -73,7 +73,7 @@ describe("Sync Timeout and UI Unfreeze Protection", () => {
       unitLabel: "carton",
       version: 1,
       archived: false,
-    } as any);
+    } as Parameters<typeof db.products.put>[0]);
 
     await db.sales.put({
       id: saleId,
@@ -243,12 +243,12 @@ describe("Sync Timeout and UI Unfreeze Protection", () => {
     ]);
 
     let pushCount = 0;
-    serverPost.mockImplementation(async (path: string, body: any) => {
+    serverPost.mockImplementation(async (path: string, body: { batch?: Array<{ client_id: string; mutation_id?: string }> }) => {
       if (path === "/api/sync/push") {
         pushCount += 1;
         await new Promise((resolve) => setTimeout(resolve, 30));
         return {
-          results: (body.batch ?? []).map((item: any) => ({
+          results: (body.batch ?? []).map((item: { client_id: string; mutation_id?: string }) => ({
             clientId: item.client_id,
             mutationId: item.mutation_id,
             status: "applied",

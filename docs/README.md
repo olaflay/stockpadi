@@ -42,6 +42,8 @@ Structured in accordance with the **Diátaxis Documentation Framework** (Tutoria
 | [ROADMAP-AND-BACKLOG.md](ROADMAP-AND-BACKLOG.md) | **Master product roadmap, commercial subscription tiers (Free/Pro/Enterprise), architectural backlog, and AI constitution.** | Reviewing upcoming sprints, Cloudflare R2 backup spec, cashier shift sessions, or AI automation. |
 | [CLIENT-SERVER-COMPATIBILITY.md](CLIENT-SERVER-COMPATIBILITY.md) | API versioning contract (`X-Client-Version`, `X-Min-Client-Version`), outbox schema v1, and rolling migration changelog. | Modifying API request/response payloads or outbox schemas. |
 | [REBRANDING-PLAN.md](REBRANDING-PLAN.md) | Master rebrand specification and pointer to the zero-hardcoding law (`.agents/rules/reusability-and-multi-client.md`). | Adding any UI copy, brand token, or forkable configuration. |
+| [RESEARCH-POS-UX-AND-OPERATIONS-2026-11.md](RESEARCH-POS-UX-AND-OPERATIONS-2026-11.md) | Current competitor, complaint, and workflow research translated into scoped product actions. | Prioritising POS UX, inventory workflow, offline clarity, or operational roadmap changes. |
+| [COUNTER-RESEARCH-OPERATIONAL-UX-SOLUTIONS-2026-11.md](COUNTER-RESEARCH-OPERATIONAL-UX-SOLUTIONS-2026-11.md) | Counter-research, independent judge verdict, and evidence for standardized operational UX solutions. | Challenging a proposed remedy or extending the expense/delivery outcome pilot. |
 | [specs/](specs/README.md) | Active feature specification index: Units Model, Contacts Hub, Hub Dashboard, and Stock Count redesign. | Implementing specced roadmap features. |
 
 ### 1.2 Explanation (Understanding-Oriented / Architecture & Principles)

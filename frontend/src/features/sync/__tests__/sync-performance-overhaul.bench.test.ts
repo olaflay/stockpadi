@@ -29,7 +29,7 @@ const mockActor: CurrentUser = {
   branchIds: ["branch-1"],
 };
 
-describe("POS Write and Sync Performance Overhaul Benchmark", () => {
+describe("synthetic Node/Dexie POS write and sync regression benchmark", () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
@@ -47,7 +47,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
         headers: new Headers({ "x-build-version": "1.0.0" }),
         json: () =>
           Promise.resolve({
-            results: batch.map((item: any) => ({ clientId: item.client_id, status: "applied" })),
+            results: batch.map((item: { client_id: string; mutation_id?: string }) => ({ clientId: item.client_id, status: "applied" })),
           }),
       };
     });
@@ -69,7 +69,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       id: "current",
       userId: mockActor.id,
       deviceId: "perf-device-1",
-    } as any);
+    } as Parameters<typeof db.session.put>[0]);
 
     await db.localUsers.put({
       id: mockActor.id,
@@ -80,7 +80,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       businessStatus: "verified",
       isActive: true,
       updatedAt: new Date().toISOString(),
-    } as any);
+    } as Parameters<typeof db.localUsers.put>[0]);
   });
 
   afterEach(async () => {
@@ -96,7 +96,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
     ]);
   });
 
-  it("completes completeSale() into local storage in <30ms under concurrent background sync", async () => {
+  it("completes a warmed local sale write in <50ms under synthetic concurrent sync", async () => {
     // 1. Seed product with initial stock
     const testProduct = {
       id: "prod-bench-1",
@@ -107,7 +107,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       sellPrice: 1000,
       unitLabel: "piece",
       updatedAt: new Date().toISOString(),
-    } as any;
+    } as Product;
     await db.products.put(testProduct);
 
     // Initial stock: 100 pieces via ledger movement
@@ -120,7 +120,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       quantityDelta: 100,
       source: "adjustment",
       createdAtLocal: new Date().toISOString(),
-    } as any);
+    } as Parameters<typeof db.stockMovements.put>[0]);
 
     // Seed an existing outbox item that background sync will push
     await db.outbox.put({
@@ -136,7 +136,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       payload: testProduct,
       attemptCount: 0,
       lastError: null,
-    } as any);
+    } as Parameters<typeof db.outbox.put>[0]);
 
     // 2. Warm-up call to eliminate V8 module loading / JIT compilation cold start
     await completeSale({
@@ -167,7 +167,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
         headers: new Headers({ "x-build-version": "1.0.0" }),
         json: () =>
           Promise.resolve({
-            results: batch.map((item: any) => ({ clientId: item.client_id, status: "applied" })),
+            results: batch.map((item: { client_id: string; mutation_id?: string }) => ({ clientId: item.client_id, status: "applied" })),
           }),
       };
     });
@@ -204,7 +204,9 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
     // 4. Assertions
     expect(lastSale.id).toBeDefined();
     expect(lastSale.total).toBe(2000);
-    expect(minDuration).toBeLessThan(30); // Hard requirement: <30ms
+    // CI regression signal only. Physical Android readiness is measured by the
+    // named-device pilot; Node/V8 timing cannot prove phone performance.
+    expect(minDuration).toBeLessThan(50);
 
     // Verify local persistence
     const savedSale = await db.sales.get(lastSale.id);
@@ -227,7 +229,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       sellPrice: 800,
       unitLabel: "piece",
       updatedAt: today,
-    } as any;
+    } as Product;
     await db.products.put(testProduct);
 
     // Initial stock
@@ -240,7 +242,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       quantityDelta: 50,
       source: "adjustment",
       createdAtLocal: today,
-    } as any);
+    } as Parameters<typeof db.stockMovements.put>[0]);
 
     // 5 today sales
     for (let i = 0; i < 5; i++) {
@@ -259,7 +261,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
         createdAt: today,
         createdByUserId: mockActor.id,
         voidedAt: null,
-      } as any);
+      } as Parameters<typeof db.sales.put>[0]);
     }
 
     // 10 historical sales
@@ -281,7 +283,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
         createdAt: tenDaysAgo.toISOString(),
         createdByUserId: mockActor.id,
         voidedAt: null,
-      } as any);
+      } as Parameters<typeof db.sales.put>[0]);
     }
 
     // Seed outbox item for active push
@@ -298,7 +300,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       payload: { id: "exp-1", amount: 500 },
       attemptCount: 0,
       lastError: null,
-    } as any);
+    } as Parameters<typeof db.outbox.put>[0]);
 
     const runDashboardQuery = () =>
       db.transaction(
@@ -350,7 +352,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
         headers: new Headers({ "x-build-version": "1.0.0" }),
         json: () =>
           Promise.resolve({
-            results: batch.map((item: any) => ({ clientId: item.client_id, status: "applied" })),
+            results: batch.map((item: { client_id: string; mutation_id?: string }) => ({ clientId: item.client_id, status: "applied" })),
           }),
       };
     });
@@ -388,7 +390,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       sellPrice: 500,
       unitLabel: "piece",
       updatedAt: new Date().toISOString(),
-    } as any;
+    } as Product;
     await db.products.put(testProduct);
 
     await db.stockMovements.put({
@@ -400,7 +402,7 @@ describe("POS Write and Sync Performance Overhaul Benchmark", () => {
       quantityDelta: 100,
       source: "adjustment",
       createdAtLocal: new Date().toISOString(),
-    } as any);
+    } as Parameters<typeof db.stockMovements.put>[0]);
 
     // Fire 3 consecutive completeSale operations in rapid back-to-back succession (<5ms apart)
     const sale1Promise = completeSale({

@@ -29,6 +29,7 @@ import { signOut } from "@/features/auth/logout";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useIsStandalone, openInstallPrompt } from "@/lib/pwa-install";
 import { Download } from "lucide-react";
+import { acquireOverlayScrollLock } from "@/components/ui/overlay-scroll-lock";
 
 interface NavItem {
   label: string;
@@ -96,14 +97,8 @@ export function SideDrawer() {
 
   // Lock body scroll when drawer is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    if (!isOpen) return;
+    return acquireOverlayScrollLock();
   }, [isOpen]);
 
   /**
@@ -112,10 +107,10 @@ export function SideDrawer() {
    */
   const sections: DrawerSection[] = [
     {
-      title: "Daily Operations",
+      title: "Daily operations",
       items: [
         {
-          label: "Sales History",
+          label: "Sales history",
           href: "/sales",
           icon: ReceiptText,
           capability: "VIEW_OWN_SALES",
@@ -133,7 +128,7 @@ export function SideDrawer() {
           capability: "RECEIVE_STOCK",
         },
         {
-          label: "Close Day Register",
+          label: "Close day",
           href: "/close-day",
           icon: CalendarCheck,
           capability: "SUBMIT_RECONCILIATION",
@@ -141,16 +136,16 @@ export function SideDrawer() {
       ],
     },
     {
-      title: "People & Contacts",
+      title: "People",
       items: [
         {
-          label: "Contacts & Debtors",
+          label: "Contacts and debtors",
           href: "/contacts",
           icon: Users,
           capability: "VIEW_CUSTOMERS",
         },
         {
-          label: "Staff & Permissions",
+          label: "Staff and permissions",
           href: "/staff",
           icon: UserCheck,
           ownerOnly: true,
@@ -158,27 +153,27 @@ export function SideDrawer() {
       ],
     },
     {
-      title: "Business & Settings",
+      title: "Business tools",
       items: [
         {
-          label: "Business Profile",
+          label: "Business profile",
           href: "/profile",
           icon: Store,
         },
         {
-          label: "Import / Export Catalog",
+          label: "Product imports",
           href: "/products/import",
           icon: FileSpreadsheet,
           capability: "MANAGE_PRODUCTS",
         },
         {
-          label: "Backup & Offline Storage",
+          label: "Backup and offline data",
           href: "/settings/data",
           icon: Database,
           ownerOnly: true,
         },
         {
-          label: "App Settings",
+          label: "Settings",
           href: "/settings",
           icon: Settings,
         },
@@ -200,7 +195,7 @@ export function SideDrawer() {
       {/* Slide-out Drawer Panel (M3 / Material UI specification, 60fps GPU accelerated) */}
       <aside
         ref={drawerRef}
-        className={`fixed inset-y-0 top-0 bottom-0 left-0 z-[var(--z-drawer)] flex h-dvh max-h-dvh min-h-0 w-[310px] max-w-[85vw] flex-col bg-surface shadow-2xl gpu-layer transition-transform duration-[280ms] will-change-transform ${
+        className={`fixed inset-y-0 top-0 bottom-0 left-0 z-[var(--z-drawer)] flex h-dvh max-h-dvh min-h-0 w-[310px] max-w-[85vw] flex-col bg-surface shadow-2xl transition-transform duration-[280ms] ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{
@@ -238,7 +233,7 @@ export function SideDrawer() {
             type="button"
             onClick={closeDrawer}
             aria-label="Close navigation drawer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all shrink-0 ml-2"
+            className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all shrink-0 ml-2"
           >
             <X size={18} aria-hidden />
           </button>
@@ -303,7 +298,7 @@ export function SideDrawer() {
               className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-brand-accent bg-brand-accent/10 hover:bg-brand-accent/15 active:scale-[0.99] transition-all w-full text-left"
             >
               <Download size={16} className="text-brand-accent shrink-0" aria-hidden />
-              <span>Install App on Device</span>
+              <span>Install app on this device</span>
             </button>
           )}
 
@@ -313,7 +308,7 @@ export function SideDrawer() {
             className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
           >
             <HelpCircle size={16} className="text-on-surface-muted" aria-hidden />
-            <span>Help & Support</span>
+            <span>Help and support</span>
           </Link>
 
           <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3.5 py-2">
@@ -328,15 +323,15 @@ export function SideDrawer() {
               await signOut();
             }}
             className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/15 active:scale-[0.98] transition-all"
-            title="Sign Out"
-            aria-label="Sign Out"
+            title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut size={14} aria-hidden />
-            <span>Sign Out</span>
+            <span>Sign out</span>
           </button>
 
           <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted pt-0.5">
-            {branding.businessName} • Offline-First Retail
+            {branding.businessName} • Offline-first retail
           </p>
         </div>
       </aside>

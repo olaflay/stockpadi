@@ -149,7 +149,13 @@ export function EditProductForm({
           altUnitLabel={altUnitLabel}
         />
 
-        <ProductExpiryFields register={register} errors={errors} control={control} expiryTracking={expiryTracking} />
+        <ProductExpiryFields
+          register={register}
+          errors={errors}
+          control={control}
+          expiryTracking={expiryTracking}
+          autoFocusExpiryDate={false}
+        />
 
         <div className="mt-4">
           <button

@@ -246,14 +246,14 @@ export function PaymentStep(props: {
             <span className="text-[length:var(--font-size-body)] text-on-surface-muted">
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </span>
-            <span className="font-number text-[length:var(--font-size-title)] font-semibold tabular-nums text-on-surface">
+            <span className="font-number text-[length:var(--font-size-title-lg)] font-bold tabular-nums text-on-surface">
               {formatCurrency(total)}
             </span>
           </div>
           {discount !== undefined && discount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs border-t border-border/40 pt-1.5 text-on-surface-muted">
-              <span className="min-w-0">Subtotal {formatCurrency(subtotal ?? total)}</span>
-              <span className="shrink-0 whitespace-nowrap text-brand-accent font-medium">−{formatCurrency(discount)} discount</span>
+              <span className="min-w-0">Subtotal <span className="font-number tabular-nums font-medium">{formatCurrency(subtotal ?? total)}</span></span>
+              <span className="shrink-0 whitespace-nowrap text-brand-accent font-semibold font-number tabular-nums">−{formatCurrency(discount)} discount</span>
             </div>
           )}
         </div>
@@ -272,7 +272,7 @@ export function PaymentStep(props: {
                         type="button"
                         onClick={() => onUpdatePaymentMethod(index, method)}
                         aria-pressed={isSelected}
-                        className={`min-h-[36px] px-3 rounded-xl text-xs font-semibold transition-all border ${
+                        className={`min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all border touch-manipulation active:scale-95 select-none ${
                           isSelected
                             ? `${METHOD_ACTIVE_STYLES[method] ?? "bg-brand-accent text-on-brand border-brand-accent"} shadow-xs font-bold`
                             : "bg-surface text-on-surface border-border/40 hover:bg-surface-container"
@@ -299,15 +299,22 @@ export function PaymentStep(props: {
                 <span className="text-xs text-on-surface-muted shrink-0">Amount</span>
                 <input
                   type="number"
+                  inputMode="decimal"
                   aria-label={`Payment amount ${index + 1}`}
                   min="0"
                   step="0.01"
                   value={payment.amount}
-                  onChange={(event) => onUpdatePaymentAmount(index, event.target.valueAsNumber)}
+                  onChange={(event) => {
+                    const nextAmount = Number(event.target.value);
+                    onUpdatePaymentAmount(
+                      index,
+                      event.target.value === "" || !Number.isFinite(nextAmount) ? 0 : nextAmount
+                    );
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") (e.target as HTMLElement).blur();
                   }}
-                  className="min-h-[var(--touch-target-min)] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body)] font-number font-semibold text-on-surface outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+                  className="min-h-[var(--touch-target-min)] min-h-[44px] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body-lg)] font-number font-bold text-on-surface tabular-nums outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                 />
               </div>
               {/* Bank transfer audit metadata: provider chips + sender/session ID,
@@ -381,7 +388,7 @@ export function PaymentStep(props: {
               <button
                 type="button"
                 onClick={onAddPaymentLine}
-                className="min-h-[var(--touch-target-min)] text-[length:var(--font-size-caption)] font-medium text-brand-accent"
+                className="min-h-[var(--touch-target-min)] min-h-[44px] flex items-center text-[length:var(--font-size-caption)] font-semibold text-brand-accent active:scale-95 touch-manipulation select-none"
               >
                 + Split across another method
               </button>
@@ -392,7 +399,11 @@ export function PaymentStep(props: {
                   remaining > 0 ? "text-warning" : "text-danger"
                 }`}
               >
-                {remaining > 0 ? `Remaining ${formatCurrency(remaining)}` : `Over by ${formatCurrency(-remaining)}`}
+                {remaining > 0 ? (
+                  <>Remaining <span className="font-number tabular-nums font-bold">{formatCurrency(remaining)}</span></>
+                ) : (
+                  <>Over by <span className="font-number tabular-nums font-bold">{formatCurrency(-remaining)}</span></>
+                )}
               </span>
             )}
           </div>
@@ -416,7 +427,7 @@ export function PaymentStep(props: {
                     variant="filter"
                     selected={active}
                     onClick={() => applyTendered(chip.value)}
-                    className="font-number tabular-nums"
+                    className="font-number tabular-nums min-h-[40px] active:scale-95 touch-manipulation"
                   >
                     {chip.label}
                   </Chip>
@@ -427,16 +438,16 @@ export function PaymentStep(props: {
                   <button
                     type="button"
                     onClick={() => applyTendered(tenderedAmount + 500)}
-                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums hover:bg-surface-container-high"
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-semibold text-on-surface transition-all px-3.5 font-number tabular-nums hover:bg-surface-container-high active:scale-95 touch-manipulation select-none"
                   >
-                    +₦500
+                    +{formatCurrency(500)}
                   </button>
                   <button
                     type="button"
                     onClick={() => applyTendered(tenderedAmount + 1000)}
-                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-medium text-on-surface transition-colors px-3 font-number tabular-nums hover:bg-surface-container-high"
+                    className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container text-[length:var(--font-size-caption)] font-semibold text-on-surface transition-all px-3.5 font-number tabular-nums hover:bg-surface-container-high active:scale-95 touch-manipulation select-none"
                   >
-                    +₦1,000
+                    +{formatCurrency(1000)}
                   </button>
                 </>
               )}
@@ -453,20 +464,20 @@ export function PaymentStep(props: {
               onKeyDown={(e) => {
                 if (e.key === "Enter") (e.target as HTMLElement).blur();
               }}
-              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body)] text-on-surface tabular-nums outline-none focus:ring-2 focus:ring-brand-accent/20"
+              className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface-container px-3 text-[length:var(--font-size-body-lg)] font-number font-bold text-on-surface tabular-nums outline-none focus:ring-2 focus:ring-brand-accent/20"
             />
             {tenderedAmount > 0 && (
               <div className="flex items-center justify-between">
                 {insufficientCash ? (
                   <span className="text-[length:var(--font-size-body)] font-medium text-danger">
-                    Not enough. Need {formatCurrency(total - tenderedAmount)} more.
+                    Not enough. Need <span className="font-number tabular-nums font-bold">{formatCurrency(total - tenderedAmount)}</span> more.
                   </span>
                 ) : changeDue > 0 ? (
-                  <div className="flex w-full flex-col items-center gap-0.5 rounded-[var(--radius-control)] bg-success-container px-3 py-3">
-                    <span className="text-[length:var(--font-size-caption)] font-medium uppercase tracking-wide text-on-success-container">
+                  <div className="flex w-full flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] bg-success-container border border-success/30 px-3 py-3.5 shadow-xs">
+                    <span className="text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-on-success-container">
                       Change to return
                     </span>
-                    <span className="font-number text-[length:var(--font-size-title-lg)] font-bold tabular-nums text-on-success-container">
+                    <span className="font-number text-2xl sm:text-3xl font-black tabular-nums text-on-success-container">
                       {formatCurrency(changeDue)}
                     </span>
                   </div>
@@ -483,7 +494,7 @@ export function PaymentStep(props: {
         {hasCreditLine && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-low p-3">
             <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-              Customer owing {formatCurrency(creditAmount)} · add them here
+              Customer owing <span className="font-number tabular-nums font-semibold">{formatCurrency(creditAmount)}</span> · add them here
             </span>
 
             {creditCustomerId ? (
@@ -648,7 +659,7 @@ export function PaymentStep(props: {
       </div>
 
       <div
-        className={`sticky bottom-0 z-20 mt-auto -mx-gutter sm:-mx-gutter-lg flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-1.5 pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] transition-all duration-200 ${
+        className={`sticky bottom-0 z-20 mt-auto flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] transition-all duration-200 ${
           isKeyboardOpen ? "hidden pointer-events-none" : "flex"
         }`}
       >
@@ -662,7 +673,7 @@ export function PaymentStep(props: {
             (hasCreditLine && (!creditCustomerId || !creditCustomerHasPhone)) ||
             insufficientCash
           }
-          className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 transition-opacity"
+          className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast disabled:opacity-50 hover:opacity-95 active:scale-[0.98] touch-manipulation transition-all shadow-xs"
         >
           {isSubmitting ? "Completing sale…" : "Complete sale"}
         </RippleButton>

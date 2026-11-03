@@ -5,6 +5,39 @@
  */
 
 export type ReportPeriod = "today" | "yesterday" | "week" | "month" | "all_time" | "custom";
+export type DateOption = "today" | "yesterday" | "custom";
+
+/**
+ * Resolves an ISO 8601 timestamp from a user date selection ("today" | "yesterday" | "custom").
+ * Preserves the current local time of day while safely mapping the calendar date.
+ */
+export function resolveDateOptionIso(
+  dateOption: DateOption,
+  customDate?: string,
+  referenceDate = new Date()
+): string {
+  if (dateOption === "yesterday") {
+    const yesterday = new Date(referenceDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString();
+  }
+  if (dateOption === "custom" && customDate) {
+    const [year, month, day] = customDate.split("-").map(Number);
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      const target = new Date(
+        year,
+        month - 1,
+        day,
+        referenceDate.getHours(),
+        referenceDate.getMinutes(),
+        referenceDate.getSeconds(),
+        referenceDate.getMilliseconds()
+      );
+      return target.toISOString();
+    }
+  }
+  return referenceDate.toISOString();
+}
 
 /**
  * Returns the ISO 8601 UTC timestamp representing 00:00:00.000 local time today.

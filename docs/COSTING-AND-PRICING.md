@@ -313,7 +313,7 @@ integrity as a headline.** They compete on reports, loyalty, WhatsApp, FIRS rece
 The correctness problem we are solving is unclaimed ground, which makes it a premium opportunity
 rather than a checkbox.
 
-## 2.3 Recommended pricing
+## 2.3 Proposed pricing for owner validation
 
 FX **₦1,550/USD** for base planning rate.
 
@@ -321,9 +321,9 @@ FX **₦1,550/USD** for base planning rate.
 >
 > **Decision (2026-10-01):** The owner confirmed: *"Let's do a free tier for now."*
 >
-> **Reconciled plan structure across documents:**
+> **Proposed plan structure (not yet an entitlement contract):**
 > - **Free Tier (₦0 / Forever):** 1 branch, up to 75 products, core offline POS, credit/debt tracking. Zero risk for new shops to onboard and build daily trust. Runs local-first on IndexedDB at virtually $0.00/month cloud cost.
-> - **Starter / Pro (₦5,000 / month / ₦50,000 annual):** 1 branch, unlimited products & barcodes, staff logins with role permissions, net profit reporting. (~$3.23/mo or $32.25/yr at ₦1,550/USD).
+> - **Starter / Pro (proposed ₦5,000 / month / ₦50,000 annual):** branch, product and staff limits require an explicit owner decision before server enforcement.
 > - **Growth / Enterprise (₦12,000–₦15,000 / month):** Up to 6 branches, immutable cost snapshots, audit exports, inter-branch stock visibility, and branch P&L rollups. (~$7.74–$9.68/mo at ₦1,550/USD).
 >
 > **Unit economics of the free tier:**
@@ -335,9 +335,9 @@ FX **₦1,550/USD** for base planning rate.
 | **USD (@ ₦1,550)** | $0 | **$3.23 / mo** | **$7.74–$9.68 / mo** |
 | **Annual (Naira)** | — | **₦50,000** (2 months free) | **₦120,000–₦150,000** (2 months free) |
 | **Annual (USD)** | — | **$32.25 / yr** | **$77.42–$96.77 / yr** |
-| Branches | 1 | 1 (up to 3 in roadmap) | up to 6 |
-| Products | 75 | 1,000 (unlimited in roadmap) | unlimited |
-| Staff | 1 cashier | unlimited | unlimited |
+| Branches | 1 | Owner decision required | proposed up to 6 |
+| Products | 75 | Owner decision required | Owner decision required |
+| Staff | 1 cashier | Owner decision required | Owner decision required |
 | POS + offline-first sync | yes | yes | yes |
 | Append-only stock ledger | yes | yes | yes |
 | Credit sales | yes | yes | yes |

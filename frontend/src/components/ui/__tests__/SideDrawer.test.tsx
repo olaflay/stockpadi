@@ -56,30 +56,31 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     cleanup();
   });
 
-  it("renders Material UI standard section groupings: Daily Operations, People & Contacts, Business & Settings", () => {
+  it("renders concise task-based navigation groups", () => {
     render(<SideDrawer />);
 
-    expect(screen.getByText("Daily Operations")).toBeInTheDocument();
-    expect(screen.getByText("People & Contacts")).toBeInTheDocument();
-    expect(screen.getByText("Business & Settings")).toBeInTheDocument();
+    expect(screen.getByText("Daily operations")).toBeInTheDocument();
+    expect(screen.getByText("People")).toBeInTheDocument();
+    expect(screen.getByText("Business tools")).toBeInTheDocument();
 
     // Check core operations
-    expect(screen.getByText("Sales History")).toBeInTheDocument();
+    expect(screen.getByText("Sales history")).toBeInTheDocument();
     expect(screen.getByText("Expenses")).toBeInTheDocument();
-    expect(screen.getByText("Close Day Register")).toBeInTheDocument();
-    expect(screen.getByText("Contacts & Debtors")).toBeInTheDocument();
+    expect(screen.getByText("Close day")).toBeInTheDocument();
+    expect(screen.getByText("Contacts and debtors")).toBeInTheDocument();
     expect(screen.getByText("Stock")).toBeInTheDocument();
 
     // Check management
-    expect(screen.getByText("Business Profile")).toBeInTheDocument();
-    expect(screen.getByText("Staff & Permissions")).toBeInTheDocument();
+    expect(screen.getByText("Business profile")).toBeInTheDocument();
+    expect(screen.getByText("Staff and permissions")).toBeInTheDocument();
+    expect(screen.getByText("Product imports")).toBeInTheDocument();
 
     // Check footer
-    expect(screen.getByText("Help & Support")).toBeInTheDocument();
-    expect(screen.getByText("Sign Out")).toBeInTheDocument();
+    expect(screen.getByText("Help and support")).toBeInTheDocument();
+    expect(screen.getByText("Sign out")).toBeInTheDocument();
   });
 
-  it("hides owner-only sections like Staff & Permissions for workers", () => {
+  it("hides owner-only sections like staff permissions for workers", () => {
     currentUser = {
       id: "worker-1",
       fullName: "Cashier Staff",
@@ -90,8 +91,8 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
 
     render(<SideDrawer />);
 
-    expect(screen.queryByText("Staff & Permissions")).not.toBeInTheDocument();
-    expect(screen.queryByText("Backup & Offline Storage")).not.toBeInTheDocument();
+    expect(screen.queryByText("Staff and permissions")).not.toBeInTheDocument();
+    expect(screen.queryByText("Backup and offline data")).not.toBeInTheDocument();
   });
 
   it("keeps the drawer above bottom navigation and its footer in the mobile safe area", () => {
@@ -101,6 +102,6 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     expect(drawer.className).toContain("z-[var(--z-drawer)]");
     expect(drawer.className).toContain("h-dvh");
     expect(drawer.className).toContain("max-h-dvh");
-    expect(screen.getByText("Sign Out").parentElement?.parentElement?.className).toContain("safe-area-inset-bottom");
+    expect(screen.getByText("Sign out").parentElement?.parentElement?.className).toContain("safe-area-inset-bottom");
   });
 });

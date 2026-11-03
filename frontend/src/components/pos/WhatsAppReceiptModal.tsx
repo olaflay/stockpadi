@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import { Copy, Check, MessageCircle } from "lucide-react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Modal } from "@/components/ui/Modal";
 import { RippleButton } from "@/components/ui/Ripple";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/format";
-import { getCustomerCreditBalance } from "@/features/customers/credit";
-import { getBrandingConfig } from "@/config/branding";
 import type { Sale } from "@/types/sale";
 import type { Product } from "@/types/product";
 import type { LocalCustomer } from "@/lib/db";
@@ -22,9 +19,9 @@ interface WhatsAppReceiptModalProps {
 }
 
 /**
- * WhatsApp receipt preview modal: shows the formatted receipt text
- * with a live phone number field, customer credit debt balance integration,
- * reminder toggle, and one-tap send/copy.
+ * A shareable customer copy of the recorded transaction. Account balances
+ * deliberately do not appear here: they are live ledger values, not values
+ * recorded on this sale.
  */
 export function WhatsAppReceiptModal({
   sale,
@@ -34,19 +31,7 @@ export function WhatsAppReceiptModal({
   onClose,
 }: WhatsAppReceiptModalProps) {
   const [phone, setPhone] = useState(customer?.phone ?? "");
-  const [includeDebt, setIncludeDebt] = useState(true);
   const [copied, setCopied] = useState(false);
-
-  // Live debt balance for linked customer
-  const customerDebtBalance = useLiveQuery(
-    async () => {
-      if (!customer?.id) return 0;
-      const bal = await getCustomerCreditBalance(customer.id);
-      return Math.max(bal, 0);
-    },
-    [customer?.id],
-    0
-  );
 
   const saleDate = new Date(sale.createdAtLocal);
   const dateStr = saleDate.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
@@ -55,7 +40,7 @@ export function WhatsAppReceiptModal({
   const lineItems = sale.items.map((item) => {
     const product = products.find((p) => p.id === item.productId);
     const total = item.quantity * item.unitPrice - item.discount;
-    return `▸ ${item.quantity} ${item.unitLabel} × ${product?.name ?? "Item"}  ${formatCurrency(total)}`;
+    return `▸ ${item.quantity} ${item.unitLabel} × ${item.productNameSnapshot ?? product?.name ?? "Product name unavailable"}  ${formatCurrency(total)}`;
   });
 
   const paymentLine = sale.payments
@@ -81,11 +66,6 @@ export function WhatsAppReceiptModal({
     })
     .join("\n");
 
-  const debtSummarySection =
-    includeDebt && customerDebtBalance > 0
-      ? `\n\n━━━━━━━━━━━━━━━━━━━━━━\n*CUSTOMER ACCOUNT SUMMARY*\nOutstanding Balance: *${formatCurrency(customerDebtBalance)}*`
-      : "";
-
   const previewText =
     `*${businessName}*\n` +
     `Receipt ${receiptId}\n` +
@@ -93,9 +73,7 @@ export function WhatsAppReceiptModal({
     `${lineItems.join("\n")}\n\n` +
     `*TOTAL: ${formatCurrency(sale.total)}*\n\n` +
     `Payment:\n${paymentLine}` +
-    `${debtSummarySection}\n\n` +
-    `Thank you for your business.\n` +
-    `Powered by ${getBrandingConfig().businessName}`;
+    `\n\nThank you for your business.`;
 
   function handleSend() {
     const trimmed = phone.trim();
@@ -124,24 +102,6 @@ export function WhatsAppReceiptModal({
       maxWidth="max-w-md"
     >
       <div className="flex flex-col gap-3.5">
-        {/* Customer debt alert banner with toggle */}
-        {customerDebtBalance > 0 && (
-          <div className="rounded-[var(--radius-control)] border border-warning/40 bg-warning-container/30 p-3 text-xs text-on-warning-container">
-            <p className="font-semibold text-warning">
-              Customer has an outstanding balance of {formatCurrency(customerDebtBalance)}
-            </p>
-            <label className="mt-2 flex items-center gap-2 cursor-pointer font-medium select-none text-on-surface">
-              <input
-                type="checkbox"
-                checked={includeDebt}
-                onChange={(e) => setIncludeDebt(e.target.checked)}
-                className="h-4 w-4 rounded border-border accent-brand-accent"
-              />
-              <span>Include balance reminder in message</span>
-            </label>
-          </div>
-        )}
-
         {/* Phone number input */}
         <label className="flex flex-col gap-1">
           <span className="text-[length:var(--font-size-label)] text-on-surface-muted font-medium">

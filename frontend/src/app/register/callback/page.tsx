@@ -147,7 +147,6 @@ export default function RegisterCallbackPage() {
               value={businessName}
               onChange={(event) => setBusinessName(event.target.value)}
               placeholder="e.g. Kola Provisions"
-              autoFocus
             />
           </label>
         </div>

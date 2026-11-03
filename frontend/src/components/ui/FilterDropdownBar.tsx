@@ -22,6 +22,7 @@ export interface FilterDropdownBarProps {
   filters: FilterGroup[];
   className?: string;
   ariaLabel?: string;
+  size?: "compact" | "default";
 }
 
 /**
@@ -38,6 +39,7 @@ export function FilterDropdownBar({
   filters,
   className = "",
   ariaLabel = "Filter transactions",
+  size = "default",
 }: FilterDropdownBarProps) {
   const [openFilterId, setOpenFilterId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,7 @@ export function FilterDropdownBar({
   const activeGroup = filters.find((f) => f.id === openFilterId);
 
   return (
-    <div ref={containerRef} className={`flex flex-col gap-2.5 ${className}`} aria-label={ariaLabel}>
+    <div ref={containerRef} className={`relative flex flex-col gap-2.5 ${className}`} aria-label={ariaLabel}>
       {/* Top Filter Buttons Row */}
       <div className="flex items-center gap-2 overflow-x-auto pb-0.5 no-scrollbar">
         {filters.map((group) => {
@@ -86,7 +88,7 @@ export function FilterDropdownBar({
               onClick={() => setOpenFilterId(isOpen ? null : group.id)}
               aria-expanded={isOpen}
               aria-haspopup="listbox"
-              className={`min-h-[38px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-control)] text-xs font-medium transition-all duration-150 shrink-0 ${
+              className={`${size === "compact" ? "h-11 min-h-11 px-2.5" : "h-12 min-h-12 px-3.5"} flex items-center gap-1.5 rounded-[var(--radius-control)] text-xs font-medium transition-all duration-150 shrink-0 ${
                 isOpen || isNonDefault
                   ? "border border-brand-accent/40 bg-brand-accent/10 text-brand-accent-active font-semibold shadow-xs"
                   : "border border-border/40 bg-surface-container text-on-surface hover:bg-surface-container-high"
@@ -108,7 +110,7 @@ export function FilterDropdownBar({
         <div
           role="listbox"
           aria-label={activeGroup.label}
-          className="rounded-2xl border border-border/30 bg-surface-container-low p-3 shadow-sm animate-step-in"
+          className={`${size === "compact" ? "absolute right-0 top-[calc(100%+0.5rem)] z-[30] w-[min(20rem,calc(100vw-2rem))]" : ""} rounded-2xl border border-border/30 bg-surface-container-low p-3 shadow-sm animate-step-in`}
         >
           <div className="flex flex-wrap gap-2">
             {activeGroup.options.map((option) => {

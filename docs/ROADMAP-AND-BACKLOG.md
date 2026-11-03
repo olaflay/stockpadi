@@ -4,6 +4,37 @@
 > **Status:** Living Master Document (Diátaxis Reference & Planning)  
 > **Governing Standards:** Bound by `docs/PRD.md`, `docs/LAUNCH_SCOPE.md`, and the 10 TRUST Promises (`.agents/rules/trust-standard.md`).
 
+> **2026-11-01 evidence correction:** `docs/MOBILE-PWA-FUTURE-PROOFING.md` is the current mobile/PWA feasibility review. Physical-device performance, deployed PostgreSQL RLS isolation, and backup restoration remain open release gates. Sections below that call synthetic or PGlite evidence “100% verified” are historical overclaims and must not be used as launch evidence until reconciled.
+
+---
+
+## How to use this roadmap
+
+This document answers four different questions without mixing them:
+
+1. **Can the current product launch?** See Section 1 and Queue 0.
+2. **What is next after release evidence closes?** See Queue 1.
+3. **What may enter planning later?** See Queues 2 and 3.
+4. **What is explicitly excluded?** See Queue 4.
+
+`docs/LAUNCH_SCOPE.md` remains authoritative for the frozen Must/V1.1/Future boundary. This roadmap
+may add sequencing and gates, but cannot silently promote an item into launch.
+
+### Status vocabulary
+
+| Status | Meaning |
+| --- | --- |
+| **Release gate** | Required evidence before pilot expansion; not optional feature work |
+| **Approved next** | Qualified work that may start after higher-priority reliability gates close |
+| **Discovery** | Problem is credible, but architecture or identity decisions are unresolved |
+| **Experiment** | May run only after its written entry metrics, safety controls, and kill criteria pass |
+| **Removed** | Not part of the roadmap; re-entry requires new merchant evidence and a written tradeoff |
+
+### Precedence
+
+Queue order is mandatory: **release evidence → operational reliability → multi-branch controls →
+validated experiments**. A known unowned reliability defect stops lower queues.
+
 ---
 
 ## 1. Verified Monorepo Baseline
@@ -12,10 +43,10 @@ Before scheduling new feature work or commercial expansions, all work is gated a
 
 | Dimension | Baseline Status | Authoritative Verification Source |
 |---|---|---|
-| **23 Launch Must-Haves** | **100% VERIFIED** | [LAUNCH_SCOPE.md](LAUNCH_SCOPE.md) |
-| **All 9 Launch Blockers (B1–B9)** | **CLOSED & VERIFIED** | [LAUNCH_SCOPE.md](LAUNCH_SCOPE.md) |
+| **23 Launch Must-Haves** | **Automated coverage; release gates open** | [LAUNCH_SCOPE.md](LAUNCH_SCOPE.md) and `pwa_audit_report.md` |
+| **All 9 Recorded Launch Blockers (B1–B9)** | **Code-closed; release evidence incomplete** | Real PostgreSQL RLS, restore rehearsal, and physical-device pilot remain open |
 | **Automated Test Suite** | **0 Failures** | Vitest & PGlite across `frontend/`, `backend/`, `supabase/` |
-| **Synthetic 2G & Low-RAM Benchmark** | **VERIFIED** | `frontend/src/features/performance/__tests__/synthetic-profile.test.ts` (<80MB heap footprint under 5,000 items, sub-15ms catalog query) |
+| **Synthetic 2G & Low-RAM Benchmark** | **Synthetic regression evidence only** | `frontend/src/features/performance/__tests__/synthetic-profile.test.ts`; does not model Android memory, GPU, radio, storage eviction, or process death |
 | **Owner Reconciliation Queue** | **CLOSED & VERIFIED** | `frontend/src/app/(app)/settings/data/reconciliation/page.tsx` |
 | **Costing Invariants (WAC)** | **IMMUTABLY LOCKED** | [COSTING-AND-PRICING.md](COSTING-AND-PRICING.md) (IAS 2 compliant, moving weighted average) |
 
@@ -25,71 +56,99 @@ Before scheduling new feature work or commercial expansions, all work is gated a
 
 The commercial strategy targets lower- and mid-scale Nigerian retail merchants (1 to 6 branches) across grocery, pharmacy, electronics, and general retail.
 
-### 2.1 The 3 Subscription Tiers
+### 2.1 Proposed subscription tiers — not yet an entitlement contract
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 🟢 1. FREE PLAN (₦0 / Forever)                                  │
-│    • 1 Branch / Shop with up to 75 products                     │
-│    • 100% Offline POS with instant WhatsApp receipts            │
-│    • Customer debt tracking (kandirita / book)                  │
-│    • Self-healing local synchronization                         │
-│    • Zero barrier to adoption                                   │
-├─────────────────────────────────────────────────────────────────┤
-│ 🔵 2. PRO PLAN (₦5,000 / month)                                 │
-│    • Unlimited products & barcode scanning                      │
-│    • Up to 3 branches (independent stock per branch)            │
-│    • Role-based Cashier vs. Manager vs. Owner logins            │
-│    • Real Net Profit & Loss (moving weighted average cost)      │
-│    • Stock audit trail & discrepancy alerts                     │
-│    • 1-tap WhatsApp debt reminders                              │
-├─────────────────────────────────────────────────────────────────┤
-│ 🟣 3. ENTERPRISE (₦15,000 / month)                              │
-│    • Up to 6 branches on a consolidated owner command center    │
-│    • Custom logo & store branding on receipts                   │
-│    • Inter-branch stock transfers & digital waybills            │
-│    • Automated supplier restocking & purchase orders            │
-│    • Priority VIP support                                       │
-└─────────────────────────────────────────────────────────────────┘
-```
+Prices and limits below are hypotheses for validation. They must not be enforced or advertised as final until the owner resolves the open commercial decision and server-side downgrade/offline behaviour is specified.
+
+No price, product cap, staff cap, or branch entitlement is final. The current landing page therefore offers pilot access rather than advertising conflicting Free/Pro/Enterprise contracts. Promotion requires an owner-approved entitlement table plus server-side enforcement, offline grace behaviour, owner export access, and downgrade tests.
 
 ### 2.2 Server Infrastructure Costs & Scale Economics
 
-The multi-tenant shared PostgreSQL architecture guarantees minimal incremental operational expenditure per onboarded merchant:
-
-| Growth Stage | Merchant Count | Monthly Cloud OpEx | Monthly Revenue Run-Rate | Gross Margin |
-|---|---|---|---|---|
-| **Pilot / Launch** | Up to 150 Shops | **$0 / month** (Free tier Supabase + Vercel) | ₦0 – ₦250,000 / mo | **100% Free Pilot** |
-| **Phase 1** | 1,000 Shops (250 paid) | **~$75 / month** (₦112,500) | **₦1,250,000 / month** | **91%** |
-| **Phase 2** | 10,000 Shops (3,000 paid) | **~$540 / month** (₦810,000) | **₦21,200,000 / month** | **96%** |
-| **Phase 3** | 100,000 Shops (30,000 paid) | **~$4,350 / month** (₦6.5M) | **₦200,000,000+ / month** | **97%** |
+Infrastructure-only projections are not gross-margin evidence. Before scale, refresh vendor pricing and include backup/restore, monitoring, messaging, payment collection, onboarding, support and founder labour at replacement cost. Cohort conversion and retention—not hypothetical merchant counts—control commercial promotion.
 
 ---
 
-## 3. Phased Feature Roadmap
+## 3. Ordered delivery queues
 
-### 3.1 Phase 1: Core Launch Must-Haves (Complete)
-- 100% offline-first sales terminal with cart holding & fast barcode search.
-- Append-only stock movements and customer credit movements.
-- Moving weighted average cost calculation snapshotted at time of sale.
-- Multi-channel Close Day reconciliation (Cash, POS slip, Transfer, Drawer balance).
-- Same-origin Node API synchronization gateway (`/api/sync/push`, `/api/sync/pull`).
+### Queue 0 — close release evidence
 
-### 3.2 Phase 2: Pro Tier & Operations Security (Next Up / V1.1)
-1. **Multi-Branch Real-Time Overview**: Remote monitoring of sales and stock levels across up to 3 branches without traveling.
-2. **Cashier vs. Owner Role Enforcement**: Cashiers strictly limited to POS and stock queries; margin views, cost prices, and historical records locked to Owner/Manager.
-3. **Automated P&L Reporting**: Instant calculation: $\text{Net Profit} = \text{Revenue} - \text{COGS (WAC)} - \text{Expenses}$.
-4. **Anti-Theft Stock Movement Inspector**: Comprehensive audit log view showing timestamp, user ID, reason, and quantity change for every item.
-5. **Low-Stock & Expiry Notification Triggers**: Visual alerts when high-velocity items reach reorder thresholds or perishables approach expiry.
-6. **1-Tap WhatsApp Debt Recovery**: Formatted debt collection template messages sent directly to debtors from customer ledger.
-7. **Accounting CSV/Excel Data Export**: 1-click export of sales, expenses, and inventory ledgers for tax and bank documentation.
+These are release gates, not feature candidates.
 
-### 3.3 Phase 3: Enterprise Tier & Network Multipliers
-1. **Inter-Branch Stock Transfers**: Formal digital waybills to move stock from central store/depot to satellite shops with dual-party sign-off.
-2. **Custom Receipt Whitelabeling**: Merchant store logo, physical address, return policy, and promotional footer on printed and digital receipts.
-3. **Supplier Restock Orders**: Automated generation of supplier purchase orders upon reaching minimum stock floors.
-4. **Customer Loyalty Points**: Configurable point accumulation engine redeemable on future visits.
-5. **Working Capital Inventory Credit Link**: Pre-qualified inventory financing recommendations based on verified on-chain sales history (earning 1.5%–2.5% origination fee).
+| Work | Exit evidence | TRUST |
+| --- | --- | --- |
+| Physical low-end Android pilot | Named 2 GB device completes the offline sale, process-kill recovery, reconnect and close-day protocol | 1, 2, 6, 9 |
+| Deployed PostgreSQL RLS isolation | Real tenant A/B read/write/count tests pass against deployed policies | 8 |
+| Backup restoration | Production-format snapshot restores successfully within the accepted RPO/RTO | 7 |
+| Full clean-checkout verification | Test, typecheck and lint pass from a clean checkout | 1–10 |
+
+### Queue 1 — V1.1 reliability and owner control
+
+This queue mirrors the canonical V1.1 boundary in `docs/LAUNCH_SCOPE.md`.
+
+| Work | Status | Required gate | TRUST |
+| --- | --- | --- | --- |
+| OTP and offline PIN unlock | Approved next | Staff identity, revocation and shared-device behaviour accepted | 5, 8, 9 |
+| Barcode scanner and receipt-render automated tests | Approved next | Hardware/browser fixtures identified | 1, 9 |
+| Cost variance and provisional accounting | Approved next | Accounting treatment and immutable snapshot tests accepted | 4 |
+| Authenticated full audit-trail export | Approved next | Authorization, tenant isolation and export audit tests pass | 5, 7, 8 |
+| Device/outbox health warning | Approved next | Privacy review; only app version, last sync and oldest pending age retained | 1, 6, 7 |
+
+The physical-device item formerly listed as V1.1 is promoted to Queue 0 because the current launch
+sign-off explicitly requires it before pilot expansion.
+
+### Queue 2 — operational growth
+
+| Work | Status | Entry gate | TRUST |
+| --- | --- | --- | --- |
+| Multi-branch overview and branch-scoped permissions | Approved next | Queue 0 closed; real RLS evidence exists | 8, 9 |
+| Deterministic P&L and stock-movement inspector | Approved next | Historical WAC and actor attribution tests pass | 3, 4, 5 |
+| Cashier shifts and drawer handover | Discovery | Staff/offline identity ADR accepted | 4, 5, 9 |
+| Inter-branch stock transfers | Discovery | Pending/accepted append-only event model and dual-party authorization accepted | 3, 5, 6, 8 |
+| Supplier reorder drafts | Discovery | Reorder inputs are complete; merchant confirms before order creation | 3, 9 |
+| Config-driven receipt and label layouts | Approved next | White-label boundary and print regression suite pass | 9 |
+| Encrypted off-site backups and scheduled owner exports | Approved next | Restore rehearsal, secrets rotation and authorization design pass | 7, 8 |
+
+### Queue 3 — measurable experiments
+
+Nothing here is a delivery promise. Every item needs a pilot cohort, success metric, safety controls,
+and kill criterion before architecture work.
+
+| Experiment | Entry gate | Kill condition |
+| --- | --- | --- |
+| Product variants | Repeated pilot catalogue need plus migration/performance design | Adds checkout ambiguity or fails 5,000-product budget |
+| Photo evidence for adjustments | Merchant demand plus offline compression/storage budget | Upload backlog harms sync or evidence cannot be access-controlled |
+| Push notifications | Opt-in demand plus permission/delivery reliability tests | In-app alert performs as well or notification delivery is unreliable |
+| OCR receiving draft | ≥95% required-field accuracy on representative documents | Any autonomous write or unacceptable correction rate |
+| Consented WhatsApp Business workflow | Accepted cost, consent, retention and failure model | Opt-out/consent failure or unsustainable message economics |
+| Loyalty | Core retention healthy and ≥10 paying merchants rank it top-three | No measurable repeat-purchase lift |
+| Enterprise Voice Drafting | Gates in `docs/specs/enterprise-safe-automation.md` | Any unconfirmed mutation or failure to beat touch search |
+| Read-only Operations Copilot | 100% numeric citation and authorization isolation | Any mutation path, cross-tenant leak or uncited financial claim |
+| Scenario planner | Explicit owner assumptions and deterministic engine | Users interpret scenarios as recorded facts |
+| Platform passkeys | Recovery/revocation and target-device validation | Shared-device access becomes less reliable than PIN |
+
+### Queue 4 — removed or prohibited
+
+| Item | Decision |
+| --- | --- |
+| Wholesale workflows, supplier marketplace, multi-currency | Removed: outside the validated 1–6 branch retail problem |
+| Unspecified “advanced integrations”, custom role builder, business health score | Removed: vague or unjustified complexity without an acceptance test |
+| Live card/wallet processing | Prohibited under the locked payment-tag and PCI boundary |
+| Generic realtime collaboration indicators | Removed; replaced by specific owner-visible device/outbox health |
+| Write-capable generic AI, autonomous financial writes | Prohibited by TRUST 10 |
+| Stored biometric identity, continuous listening, voice-triggered checkout | Prohibited; safe successors are passkeys and confirmed voice drafts |
+| Computer-vision shelf audit and LLM payment/transfer verification | Permanently rejected for hardware cost or financial hallucination risk |
+
+### Portfolio evidence
+
+**High confidence:** transfers, inventory history, exports, employee access, and shift/cash controls
+appear in the project's merchant requirements and current shipped-product documentation from
+[Loyverse](https://loyverse.com/features) and
+[Storeflow](https://www.storeflowng.com/features/).
+
+**Medium confidence:** variants, notifications, loyalty, OCR, WhatsApp automation and hardware
+integrations exist in the market but lack this product's paid-demand or representative pilot
+evidence. They therefore remain experiments. `docs/MOBILE-PWA-FUTURE-PROOFING.md` independently
+supports prioritising operational reliability and rejecting generic AI.
 
 ---
 
@@ -128,7 +187,7 @@ These vetted technical initiatives address real-world physical constraints in em
   - `frontend/src/app/(app)/settings/data/reconciliation/page.tsx` implements the Owner Review Queue for permanent conflicts or data discrepancies.
   - Emergency Outbox Export mechanism allows exporting raw un-synced operations as encrypted JSON or QR streams to transfer to a backup phone.
 - **Pending V1.1 Extension**:
-  - [ ] Schema migration for `device_heartbeats` table in Supabase to track last sync timestamp, battery health, and pending outbox depth per register.
+  - [ ] Privacy-reviewed device health record containing only app version, last successful sync, and oldest pending outbox age. No battery or employee-surveillance data.
   - [ ] Owner Dashboard notification banner: alert owner when any till has not checked in for >48 hours with pending un-synced revenue.
 
 ### 4.3 Backlog Task 3: Physical Low-End Android Hardware Field Pilot
@@ -140,33 +199,16 @@ These vetted technical initiatives address real-world physical constraints in em
 - **Field Pilot Protocol**:
   1. Service worker install & cold start under airplane mode (<3s launch budget).
   2. 50 consecutive POS sales recorded in airplane mode with cart holds and line discounts.
-  3. Forced process kill / RAM flush; instant cold launch verification (<50ms).
+  3. Forced process kill / RAM flush; cached usable POS verification against the <3s named-device budget.
   4. 2G signal restoration: monitor atomic batch drain via `sync_apply_batch` without HTTP timeouts.
   5. Close-day drawer variance validation against physical cash count.
 
-### 4.4 Backlog Task 4: Cashier Shift Sessions & Cash Drawer Ledger
+### 4.4 Discovery: Cashier Shift Sessions & Cash Drawer Ledger
 - **Objective**: Support multi-cashier shared tablets with explicit shift handover balancing.
 - **Mathematical Invariant**:
   $$\text{Expected Cash} = \text{Opening Float} + \text{Cash Sales} + \text{Credit Recoveries} - \text{Cash Expenses}$$
   $$\text{Drawer Variance} = \text{Actual Counted Cash} - \text{Expected Cash}$$
-- **Data Model Specification**:
-  ```sql
-  create table cashier_shifts (
-    id uuid primary key default gen_random_uuid(),
-    business_id uuid not null references businesses(id),
-    branch_id uuid not null references branches(id),
-    cashier_id uuid not null references local_users(id),
-    device_id text not null,
-    opened_at timestamptz not null default now(),
-    closed_at timestamptz,
-    opening_float_kobo bigint not null,
-    expected_cash_kobo bigint,
-    counted_cash_kobo bigint,
-    variance_kobo bigint,
-    closing_note text,
-    status text not null default 'OPEN' check (status in ('OPEN', 'CLOSED', 'AUDITED'))
-  );
-  ```
+- **Gate before any schema:** define the canonical staff actor, offline authorization, revocation, device binding, recovery and audit model in an accepted ADR. The earlier `local_users` proposal referenced no canonical table and is withdrawn.
 - **Execution Checklist**:
   - [ ] Add `cashier_shifts` migration with tenant RLS isolation.
   - [ ] Implement Rapid 4-digit PIN Switch on POS header (switch active cashier without full Supabase Auth logout).
@@ -174,12 +216,12 @@ These vetted technical initiatives address real-world physical constraints in em
 
 ---
 
-## 5. AI & Automation Innovation Roadmap
+## 5. Automation experiments — no generic AI product roadmap
 
 All artificial intelligence and automated features are governed strictly by **TRUST Promise 10** (*"AI will never silently invent financial truth or execute sensitive actions without authorization"*).
 
 ### 5.1 The Safety Constitution: "AI Proposes, Human Disposes" (Poka-Yoke)
-1. **Toil Automation**: AI handles manual transcription, receipt OCR, logistics cost proration, and anomaly detection.
+1. **Narrow Toil Automation**: A model may draft receipt/waybill transcription only after its experiment gate passes; logistics cost proration remains deterministic.
 2. **Mandatory Merchant Confirmation**: AI outputs exclusively to an editable review sheet (Samsung One UI Bottom Sheet). The merchant inspects, edits any item, and confirms with a single tap.
 3. **Deterministic Ledger Boundary**: AI never writes directly to database ledger tables (`stock_movements`, `sales`, `payments`, `expenses`). It submits strictly validated payloads through standard application APIs.
 
@@ -187,36 +229,20 @@ All artificial intelligence and automated features are governed strictly by **TR
 
 | Capability | Market Name | Computational Primitive | Rationale |
 |---|---|---|---|
-| **Waybill & Landed Cost** | "Smart Invoice OCR" | Hybrid: Cloud VLM + Local Pro-Rata Math | Vision model extracts line items; deterministic math prorates freight/haulage. |
-| **Bank Transfer Verification** | "Instant Payment Match" | 100% Deterministic Regex + Cart Matcher | Sub-millisecond matching of SMS/bank alerts against open cart totals. Zero LLM cost/latency. |
+| **Waybill & Landed Cost Draft** | "Smart Invoice OCR" | Conditional cloud extraction + local pro-rata math | Experiment only at ≥95% required-field accuracy; merchant confirms every field and deterministic math prorates freight/haulage. |
 | **Inflation Margin Shield** | "Price Protection AI" | Deterministic Branch Arithmetic | Flags products where current selling price yields <10% margin against new replacement cost. |
 | **WhatsApp Debt Assistant** | "Smart Debt Collector" | Parameterized String Template | Structured templates prevent tone drift or incorrect money figures. |
-| **Loss Prevention Analytics** | "Anti-Theft AI" | Statistical Outlier Engine (Z-Score) | Standard deviation analysis on stock adjustment and void logs. |
-| **Rush-Hour Voice Tally** | "Voice-Assisted POS" | Speech-to-Intent (ASR) | **Deferred to V3**; noisy market environments require high ASR accuracy. |
+| **Neutral Anomaly Review** | "Loss Review" | Statistical outlier rules | Experiment only after a low false-positive threshold is defined; never labels an employee as dishonest. |
+| **Enterprise Voice Drafting** | "Voice-Assisted POS" | Push-to-talk speech-to-draft | Experiment only: constrained vocabulary, visible transcript and matched lines, explicit confirmation, no direct ledger write, privacy disclosure, and full non-voice fallback. |
 | **CV Camera Shelf Auditor** | "Camera Shelf Auditor" | Object Detection Network | **Permanently Rejected**; high compute, messy informal display stalls low-end phones. |
 
-### 5.3 5-Year Innovation Portfolio (2026–2031)
+### 5.3 Portfolio rule
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 2026 (Launch & V1.1)                                                        │
-│ • Deterministic Transfer Matching (Regex + SMS alert parser)                │
-│ • Inflation Margin Realignment flag on purchase receipt                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2027 (V2: Commercial Expansion)                                             │
-│ • Hybrid Waybill OCR & Conversational Landed Cost Engine (Alabaru / Keke)   │
-│ • Statistical Loss Prevention Anomaly Detector (Z-scores on voids/skips)    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2028–2029 (V2.5 – V3: Intelligence at Scale)                                │
-│ • Merchant WhatsApp Copilot (Conversational daily digest & low stock alerts)│
-│ • Multi-branch predictive demand forecasting                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ PERMANENTLY REJECTED                                                        │
-│ ❌ Autonomous financial writes (Violates TRUST Promise 10)                  │
-│ ❌ CV Shelf Object Detection (Prohibitive hardware & cognitive load)        │
-│ ❌ LLM-based transfer slip verification (High latency & hallucination risk) │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+There is no date-led AI portfolio. Narrow experiments enter only after the operational roadmap is
+reliable and their documented evidence gate passes. Write-capable generic AI, autonomous financial
+writes, computer-vision shelf audit, and LLM transfer verification are not roadmap items. Voice and
+operations assistance may proceed only through the bounded enterprise-safe designs in
+`docs/specs/enterprise-safe-automation.md`.
 
 ---
 

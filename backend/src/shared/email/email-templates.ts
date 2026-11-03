@@ -25,8 +25,8 @@ export interface BrandEmailConfig {
 
 export function getBrandConfig(): BrandEmailConfig {
   return {
-    name: process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "OjaPadi",
-    displayName: process.env.BUSINESS_DISPLAY_NAME || "OjàPadi",
+    name: process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "",
+    displayName: process.env.BUSINESS_DISPLAY_NAME || process.env.BUSINESS_NAME || process.env.PLATFORM_NAME || "",
     primaryColor: process.env.BRAND_COLOR || "#0B7A55",
     accentColor: process.env.BRAND_ACCENT || "#F59E0B",
   };

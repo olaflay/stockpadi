@@ -250,12 +250,29 @@ export function ReportsBody({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* 1. Header Toolbar: Dropdown Filter Bar matching Sales page & Text-Only SegmentedControl */}
-      <div className="flex flex-col gap-2.5">
-        <FilterDropdownBar
-          filters={filterGroups}
-          ariaLabel="Filter report period"
-        />
+      {/* Compact report-type and period controls keep the data above the fold. */}
+      <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <SegmentedControl
+              options={[
+                { value: "overview", label: "Overview" },
+                { value: "sales", label: "Sales" },
+                { value: "inventory", label: "Stock" },
+              ]}
+              selected={activeTab}
+              onChange={(val) => setActiveTab(val as "overview" | "sales" | "inventory")}
+              size="compact"
+              ariaLabel="Report type"
+            />
+          </div>
+          <FilterDropdownBar
+            filters={filterGroups}
+            ariaLabel="Filter report period"
+            size="compact"
+            className="shrink-0"
+          />
+        </div>
 
         {period === "custom" && onSelectCustomRange && (
           <div className="flex items-center gap-2 pt-1 animate-step-in">
@@ -291,18 +308,6 @@ export function ReportsBody({
             </label>
           </div>
         )}
-
-        <SegmentedControl
-          options={[
-            { value: "overview", label: "Overview" },
-            { value: "sales", label: "Daily Sales" },
-            { value: "inventory", label: "Stock & Shelves" },
-          ]}
-          selected={activeTab}
-          onChange={(val) => setActiveTab(val as "overview" | "sales" | "inventory")}
-          size="default"
-          ariaLabel="Report views"
-        />
       </div>
 
       {/* ==================== TAB 1: OVERVIEW ==================== */}
@@ -312,8 +317,8 @@ export function ReportsBody({
           <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                <span>Total Sales ({PERIOD_LABELS[period]?.toLowerCase()})</span>
-                <InfoTooltip text="Total gross revenue recorded across all branches during this period." />
+                <span>Net sales ({PERIOD_LABELS[period]?.toLowerCase()})</span>
+                <InfoTooltip text="Sales recorded less refunds in this period." />
               </span>
               <PerformancePill
                 tone={periodSales.length > 0 ? "success" : "neutral"}
@@ -339,13 +344,13 @@ export function ReportsBody({
                 <div className="flex items-center gap-2">
                   <BarChart2 size={16} className="text-brand-accent" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                    <span>Weekly Sales Flow</span>
-                    <InfoTooltip text="Daily comparison of sales revenue. Tap any day column to jump to that day's receipts." />
+                    <span>Sales by weekday</span>
+                    <InfoTooltip text="Net sales grouped by weekday in this period. Tap a day to see its receipts." />
                   </h3>
                 </div>
                 {peakDay && (
                   <span className="text-[length:var(--font-size-caption)] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    Peak: {peakDay.day}
+                    Busiest: {peakDay.day}
                   </span>
                 )}
               </div>
@@ -401,7 +406,7 @@ export function ReportsBody({
             </section>
           )}
 
-          {/* Clean Profit (Compressible Card) */}
+          {/* Net profit (expandable breakdown) */}
           <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
             <button
               type="button"
@@ -411,11 +416,11 @@ export function ReportsBody({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                    <span>Clean Profit</span>
+                    <span>Net profit</span>
                     <InfoTooltip text="Sales revenue minus product cost (what you paid) and shop operational expenses." />
                   </p>
                   <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Sales minus product cost and shop expenses
+                    Sales less product cost and shop expenses
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -457,7 +462,7 @@ export function ReportsBody({
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border/20 font-bold">
-                  <span className="text-on-surface">Clean Profit</span>
+                  <span className="text-on-surface">Net profit</span>
                   <span
                     className={`font-number tabular-nums ${
                       periodNetProfit !== null && periodNetProfit >= 0 ? "text-success" : "text-danger"
@@ -480,7 +485,7 @@ export function ReportsBody({
             )}
           </div>
 
-          {/* Money in Hand / Cash Flow (Compressible Card) */}
+          {/* Net cash movement (expandable breakdown) */}
           <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
             <button
               type="button"
@@ -490,11 +495,11 @@ export function ReportsBody({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                    <span>Money in Hand (Cash Flow)</span>
-                    <InfoTooltip text="Actual physical cash and transfers collected in your till minus money paid out for restocks and expenses." />
+                    <span>Net cash movement</span>
+                    <InfoTooltip text="Cash and transfers received, less money paid for restocks and expenses." />
                   </p>
                   <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Real cash collected minus shop cash spent
+                    Cash and transfers received less shop cash spent
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -536,7 +541,7 @@ export function ReportsBody({
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border/20 font-bold">
-                  <span className="text-on-surface">Net cash in hand</span>
+                  <span className="text-on-surface">Net cash movement</span>
                   <span
                     className={`font-number tabular-nums ${
                       periodNetCashFlow >= 0 ? "text-success" : "text-danger"
@@ -669,7 +674,7 @@ export function ReportsBody({
                         </span>
                       </div>
                       <div>
-                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Clean Profit</span>
+                        <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Net profit</span>
                         <p
                           className={`font-number font-bold text-sm tabular-nums ${
                             isProfitPositive ? "text-success" : "text-danger"

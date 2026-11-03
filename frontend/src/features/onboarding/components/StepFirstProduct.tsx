@@ -5,6 +5,7 @@ import { BUSINESS_TYPE_TEMPLATES } from "@/config/business-types";
 import { TextInput } from "@/components/ui/TextInput";
 import { RippleButton } from "@/components/ui/Ripple";
 import { TrendingUp, Sparkles } from "lucide-react";
+import { formatCurrency, formatCurrencyLabel } from "@/lib/format";
 
 interface StepFirstProductProps {
   firstProduct: FirstProductDraft;
@@ -85,7 +86,6 @@ export function StepFirstProduct({
               onChangeFirstProduct({ ...firstProduct, name: e.target.value })
             }
             placeholder="e.g. Crate of Eggs or 1L Milk"
-            autoFocus
           />
         </label>
 
@@ -93,10 +93,12 @@ export function StepFirstProduct({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-left">
             <span className="text-[length:var(--font-size-label)] font-medium text-on-surface">
-              Cost price (₦)
+              Cost price ({formatCurrencyLabel()})
             </span>
             <TextInput
               type="number"
+              inputMode="decimal"
+              enterKeyHint="next"
               value={firstProduct.costPrice === "" ? "" : firstProduct.costPrice}
               onChange={(e) => {
                 const val = e.target.value === "" ? "" : Number(e.target.value);
@@ -108,10 +110,12 @@ export function StepFirstProduct({
 
           <label className="flex flex-col gap-1 text-left">
             <span className="text-[length:var(--font-size-label)] font-medium text-on-surface">
-              Selling price (₦)
+              Selling price ({formatCurrencyLabel()})
             </span>
             <TextInput
               type="number"
+              inputMode="decimal"
+              enterKeyHint="done"
               value={firstProduct.sellPrice === "" ? "" : firstProduct.sellPrice}
               onChange={(e) => {
                 const val = e.target.value === "" ? "" : Number(e.target.value);
@@ -141,7 +145,7 @@ export function StepFirstProduct({
               <TrendingUp className="h-4 w-4 text-brand-accent" />
               <span>
                 {profit >= 0 ? "Profit per unit:" : "Loss per unit:"}{" "}
-                <strong>₦{Math.abs(profit).toLocaleString()}</strong>
+                <strong>{formatCurrency(Math.abs(profit))}</strong>
               </span>
             </div>
             <span className="rounded-full bg-surface-container-highest px-2 py-0.5 font-bold">

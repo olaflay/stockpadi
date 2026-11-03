@@ -51,6 +51,7 @@ export const PROTECTED_LEDGER_ENTITY_TYPES: ReadonlySet<SyncEntityType> = new Se
   "stock_adjustment",
   "purchase_receipt",
   "expense",
+  "expense_reversal",
   "credit_payment",
 ]);
 

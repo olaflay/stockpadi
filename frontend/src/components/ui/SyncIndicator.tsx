@@ -11,7 +11,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { runSyncCycle } from "@/features/sync/SyncEngine";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import { setSyncRuntimePhase, useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
-import { useCurrentUserOptional } from "@/features/auth/use-current-user";
+
 
 const CLOUD_HEALTH_MAX_AGE_MS = 90_000;
 const MANUAL_SYNC_COOLDOWN_MS = 15_000;
@@ -35,7 +35,7 @@ export function SyncIndicator({
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const isOnline = useOnlineStatus();
-  const user = useCurrentUserOptional();
+
   const router = useRouter();
   const runtimePhase = useSyncRuntimePhase();
   const pullDiagnostics = useLiveQuery(async () => {

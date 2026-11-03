@@ -12,6 +12,7 @@ import { LegacyShellGuard } from "@/features/shells/LegacyShellGuard";
 import { KeyboardScrollHandler } from "@/components/ui/KeyboardScrollHandler";
 import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
 import { TooltipProvider } from "@/components/ui/TooltipContext";
+import { OfflineNavigationGuard } from "@/components/ui/OfflineNavigationGuard";
 
 function AppShellBody({ children }: { children: React.ReactNode }) {
   const { isNavVisible } = useNavigation();
@@ -21,10 +22,11 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
       <TopStoreHeader />
       <SyncEngine />
       <GuidedTour />
+      <OfflineNavigationGuard />
       <BannerStrip />
       <SideDrawer />
       <main
-        className={`min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-2 sm:pt-2.5 w-full max-w-xl md:max-w-2xl mx-auto transition-[padding] duration-200 ${
+        className={`relative z-20 min-h-0 min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-2 sm:pt-2.5 w-full max-w-xl md:max-w-2xl mx-auto transition-[padding] duration-200 ${
           isNavVisible ? "pb-18 sm:pb-20" : "pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"
         }`}
       >
@@ -33,7 +35,7 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
       {/* Global safe-area bottom blanket: guarantees every subpage, form, and wizard blankets the curved chin */}
       <div
         aria-hidden
-        className="fixed bottom-0 inset-x-0 pointer-events-none z-10 bg-surface-container"
+        className="fixed bottom-0 inset-x-0 pointer-events-none z-0 bg-surface-container"
         style={{
           height: "max(16px, env(safe-area-inset-bottom, 16px))",
         }}

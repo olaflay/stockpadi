@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { fetchStaffAudit, type StaffAuditItem } from "@/features/auth/manage-staff-client";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -26,7 +27,15 @@ export default function StaffAuditPage() {
   const user = useCurrentUser();
 
   const [logs, setLogs] = useState<StaffAuditItem[] | undefined>();
-  useEffect(() => { fetchStaffAudit().then((result) => setLogs(result.logs)).catch(() => setLogs([])); }, []);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    fetchStaffAudit()
+      .then((result) => { if (active) setLogs(result.logs); })
+      .catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [attempt]);
 
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
@@ -36,6 +45,8 @@ export default function StaffAuditPage() {
       </div>
     );
   }
+
+  if (loadError) return <ErrorState message="Couldn’t load the audit log." onRetry={() => { setLoadError(false); setAttempt((value) => value + 1); }} />;
 
   if (logs === undefined) {
     return (

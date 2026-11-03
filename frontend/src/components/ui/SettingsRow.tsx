@@ -15,6 +15,7 @@ interface SettingsRowProps {
   className?: string;
   href?: string;
   onClick?: () => void;
+  prefetch?: boolean;
 }
 
 /**
@@ -31,6 +32,7 @@ export function SettingsRow({
   className = "",
   href,
   onClick,
+  prefetch,
 }: SettingsRowProps) {
   const innerContent = (
     <>
@@ -56,7 +58,7 @@ export function SettingsRow({
 
   if (href) {
     return (
-      <RippleLink href={href} className={baseClassName}>
+      <RippleLink href={href} prefetch={prefetch} className={baseClassName}>
         {innerContent}
       </RippleLink>
     );
