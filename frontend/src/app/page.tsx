@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DatabaseZap } from "lucide-react";
 import { StateCard } from "@/components/ui/StateCard";
@@ -8,62 +8,67 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { getBrandingConfig } from "@/config/branding";
 import { recoverStartupWorkspace, resolveStartupDestination, withStartupTimeout } from "@/features/auth/startup-route";
 
-type StartupState = "opening" | "failed" | "recovering" | "blocked";
+type StartupState = "opening" | "recovering" | "blocked";
+
+const HYDRATION_WATCHDOG = `
+  window.__stockpadiStartupHydrated = false;
+  window.setTimeout(function () {
+    if (window.__stockpadiStartupHydrated) return;
+    var loading = document.querySelector('[data-startup-loading]');
+    var recovery = document.querySelector('[data-startup-static-recovery]');
+    if (loading) loading.setAttribute('hidden', '');
+    if (recovery) recovery.removeAttribute('hidden');
+  }, 7000);
+`;
 
 /** Routes into onboarding or straight to the dashboard based on local state, no network round trip. */
 export default function Home() {
   const router = useRouter();
   const branding = getBrandingConfig();
   const [startupState, setStartupState] = useState<StartupState>("opening");
-  const attemptRef = useRef(0);
   const startupBeganRef = useRef(false);
 
-  const startRouting = useCallback(() => {
-    const attempt = ++attemptRef.current;
-    void withStartupTimeout(resolveStartupDestination()).then(
-      (destination) => {
-        if (attempt === attemptRef.current) router.replace(destination);
-      },
-      (error) => {
-        if (attempt !== attemptRef.current) return;
-        console.error("[StartupRoute] Could not read local app state:", error);
-        setStartupState("failed");
-      },
-    );
-  }, [router]);
+  useEffect(() => {
+    (window as typeof window & { __stockpadiStartupHydrated?: boolean }).__stockpadiStartupHydrated = true;
+    if (startupBeganRef.current) return;
+    startupBeganRef.current = true;
+    let cancelled = false;
 
-  const repairLocalWorkspace = useCallback(() => {
-    const attempt = ++attemptRef.current;
-    setStartupState("recovering");
-    void recoverStartupWorkspace().then((recovered) => {
-      if (attempt !== attemptRef.current) return;
+    const openWorkspace = async () => {
+      try {
+        const destination = await withStartupTimeout(resolveStartupDestination());
+        if (!cancelled) router.replace(destination);
+        return;
+      } catch (error) {
+        console.error("[StartupRoute] Could not read local app state:", error);
+      }
+
+      if (cancelled) return;
+      setStartupState("recovering");
+      const recovered = await recoverStartupWorkspace();
+      if (cancelled) return;
       if (!recovered) {
         setStartupState("blocked");
         return;
       }
-      setStartupState("opening");
-      startRouting();
-    });
-  }, [startRouting]);
 
-  useEffect(() => {
-    if (startupBeganRef.current) return;
-    startupBeganRef.current = true;
-    startRouting();
-  }, [startRouting]);
+      try {
+        const destination = await withStartupTimeout(resolveStartupDestination());
+        if (!cancelled) router.replace(destination);
+      } catch (error) {
+        console.error("[StartupRoute] Recovery completed but local routing still failed:", error);
+        if (!cancelled) setStartupState("blocked");
+      }
+    };
+
+    void openWorkspace();
+    return () => { cancelled = true; };
+  }, [router]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface px-6 py-8 text-center">
-      {startupState === "failed" ? (
-        <StateCard
-          icon={DatabaseZap}
-          tone="warning"
-          title="Your saved workspace did not open"
-          description="The app could not reach the saved records on this device. Repairing the connection will not delete them."
-          action={{ label: "Repair and continue", onClick: repairLocalWorkspace }}
-          secondaryAction={{ label: "Open recovery help", onClick: () => router.replace("/offline") }}
-        />
-      ) : startupState === "blocked" ? (
+      <script dangerouslySetInnerHTML={{ __html: HYDRATION_WATCHDOG }} />
+      {startupState === "blocked" ? (
         <StateCard
           icon={DatabaseZap}
           tone="warning"
@@ -73,7 +78,7 @@ export default function Home() {
           secondaryAction={{ label: "Open recovery help", onClick: () => router.replace("/offline") }}
         />
       ) : (
-        <section className="w-full max-w-sm" aria-live="polite" aria-label={`Opening ${branding.businessName}`}>
+        <section data-startup-loading className="w-full max-w-sm" aria-live="polite" aria-label={`Opening ${branding.businessName}`}>
           <div className="mx-auto mb-6 size-14 rounded-full bg-brand-accent/10" />
           <h1 className="text-title-lg font-bold text-on-surface">{branding.businessName}</h1>
           <p className="mt-2 text-body text-on-surface-muted">
@@ -85,6 +90,25 @@ export default function Home() {
           </div>
         </section>
       )}
+      <section
+        data-startup-static-recovery
+        hidden
+        className="w-full max-w-sm rounded-[var(--radius-card)] bg-surface-container p-6 text-center shadow-[var(--shadow-elevation-2)]"
+      >
+        <DatabaseZap className="mx-auto size-8 text-warning" aria-hidden />
+        <h2 className="mt-4 text-title-lg font-bold text-on-surface">The app did not finish opening</h2>
+        <p className="mt-2 text-body text-on-surface-muted">The saved screen loaded without the app controls. Your records remain on this device.</p>
+        <div className="mt-6 grid gap-2">
+          <a className="rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 font-semibold text-brand-accent-contrast" href="/offline.html">
+            Open offline recovery
+          </a>
+          {/* Deliberately native: this recovery path must work when Next/React chunks fail to hydrate. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="rounded-[var(--radius-control)] px-5 py-3 font-semibold text-on-surface" href="/">
+            Reload app
+          </a>
+        </div>
+      </section>
     </main>
   );
 }

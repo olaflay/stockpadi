@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 import { db } from "@/lib/db";
 
@@ -49,7 +49,7 @@ describe("ServiceWorkerRegister", () => {
     vi.clearAllMocks();
   });
 
-  it("registers with cache bypass and activates an update without waiting for the cart draft", async () => {
+  it("keeps an installed update waiting until the operator chooses to activate it", async () => {
     await db.outbox.put({
       clientId: "pwa-update-pending-sale",
       mutationId: "pwa-update-pending-sale",
@@ -78,6 +78,9 @@ describe("ServiceWorkerRegister", () => {
     updateFound?.();
     workerStateChange?.();
 
+    expect(worker.postMessage).not.toHaveBeenCalled();
+    state.phase = "syncing";
+    fireEvent.click(await screen.findByRole("button", { name: "Update now" }));
     await waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" }));
     expect(sessionStorage.getItem("stockpadi-cart")).toContain("product-1");
     expect(await db.outbox.get("pwa-update-pending-sale")).toMatchObject({ status: "pending", idempotencyKey: "pwa-update-pending-sale" });

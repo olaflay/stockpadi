@@ -49,7 +49,9 @@ const serwist = new Serwist({
   // A waiting worker is activated by the page only at a safe point or after
   // the user chooses to update. The outbox itself remains in IndexedDB.
   skipWaiting: false,
-  clientsClaim: true,
+  // Do not make a new worker control a document loaded by the previous build.
+  // That document can still reference the previous build's hashed chunks.
+  clientsClaim: false,
   navigationPreload: true,
   runtimeCaching: [
     {
@@ -103,16 +105,24 @@ if (typeof self.addEventListener === "function") self.addEventListener("activate
   const activateEvent = event as Event & { waitUntil?: (promise: Promise<unknown>) => void };
   if (!activateEvent.waitUntil || typeof caches === "undefined") return;
   activateEvent.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys
+    caches.keys().then((keys) => {
+      // Keep one prior runtime generation. It is the escape hatch for a
+      // cached document whose hashed chunks were loaded by the previous
+      // worker immediately before this activation. Older generations remain
+      // bounded while the current and immediately previous shells stay atomic.
+      const priorNavigation = keys.filter((key) => key.startsWith("stockpadi-navigation-") && key !== NAVIGATION_CACHE).at(-1);
+      const priorStatic = keys.filter((key) => key.startsWith("stockpadi-static-") && key !== STATIC_CACHE).at(-1);
+      const retained = new Set([priorNavigation, priorStatic].filter((key): key is string => Boolean(key)));
+      return Promise.all(keys
         .filter((key) => {
           const isCurrent = key === NAVIGATION_CACHE || key === STATIC_CACHE || key.startsWith(`${SERVICE_WORKER_CACHE_ID}-`);
           const isOwnedVersionedCache = key.startsWith("stockpadi-navigation-") || key.startsWith("stockpadi-static-") || key.startsWith("stockpadi-");
           const isLegacySerwistCache = key === `serwist-precache-v2-${self.registration.scope}`;
-          return !isCurrent && (isOwnedVersionedCache || LEGACY_APP_CACHES.has(key) || isLegacySerwistCache);
+          return !isCurrent && !retained.has(key) && (isOwnedVersionedCache || LEGACY_APP_CACHES.has(key) || isLegacySerwistCache);
         })
         .map((key) => caches.delete(key)),
-    )),
+      );
+    }),
   );
 });
 

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
@@ -29,13 +29,22 @@ describe("startup recovery screen", () => {
     consoleError.mockRestore();
   });
 
-  it("replaces an indefinite loading screen with recovery actions when local storage stalls or fails", async () => {
+  it("automatically repairs local startup without asking the operator to retry", async () => {
     resolveStartupDestination.mockRejectedValue(new Error("LOCAL_WORKSPACE_TIMEOUT"));
+    recoverStartupWorkspace.mockResolvedValue(false);
     render(<Home />);
 
-    expect(await screen.findByText("Your saved workspace did not open")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Repair and continue" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open recovery help" })).toBeInTheDocument();
+    await waitFor(() => expect(recoverStartupWorkspace).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("button", { name: "Repair and continue" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Another app tab is still using saved data")).toBeInTheDocument();
+  });
+
+  it("ships a recovery link in the document even before React startup completes", () => {
+    resolveStartupDestination.mockReturnValue(new Promise(() => undefined));
+    render(<Home />);
+
+    expect(screen.getByRole("link", { name: "Open offline recovery", hidden: true })).toHaveAttribute("href", "/offline.html");
+    expect(screen.getByRole("link", { name: "Reload app", hidden: true })).toHaveAttribute("href", "/");
   });
 
   it("performs recovery before rerouting instead of repeating the timeout loop", async () => {
@@ -43,10 +52,7 @@ describe("startup recovery screen", () => {
     recoverStartupWorkspace.mockResolvedValue(true);
     render(<Home />);
 
-    const repair = await screen.findByRole("button", { name: "Repair and continue" });
-    fireEvent.click(repair);
-
-    expect(recoverStartupWorkspace).toHaveBeenCalledOnce();
+    await waitFor(() => expect(recoverStartupWorkspace).toHaveBeenCalledOnce());
     await waitFor(() => expect(resolveStartupDestination.mock.calls.length).toBeGreaterThanOrEqual(2));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
   });
@@ -55,8 +61,6 @@ describe("startup recovery screen", () => {
     resolveStartupDestination.mockRejectedValue(new Error("LOCAL_WORKSPACE_TIMEOUT"));
     recoverStartupWorkspace.mockResolvedValue(false);
     render(<Home />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Repair and continue" }));
 
     expect(await screen.findByText("Another app tab is still using saved data")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Repair and continue" })).not.toBeInTheDocument();

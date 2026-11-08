@@ -46,7 +46,7 @@ describe("Service Worker configuration (sw.ts)", () => {
   it("configures Serwist with precache, navigation preload, and lifecycle flags", () => {
     expect(capturedConfig).toBeDefined();
     expect(capturedConfig?.skipWaiting).toBe(false);
-    expect(capturedConfig?.clientsClaim).toBe(true);
+    expect(capturedConfig?.clientsClaim).toBe(false);
     expect(capturedConfig?.navigationPreload).toBe(true);
     expect(capturedConfig?.precacheEntries).toEqual(["/offline", "/favicon.ico"]);
     expect(mockAddEventListeners).toHaveBeenCalledOnce();
@@ -97,12 +97,16 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(entry.matcher({ request: { destination: "image" } })).toBe(false);
   });
 
-  it("removes old versioned navigation caches during activation", async () => {
+  it("retains one prior shell generation and removes older runtime caches during activation", async () => {
     const deleted: string[] = [];
     vi.stubGlobal("caches", {
       keys: vi.fn().mockResolvedValue([
         "stockpadi-navigation-local",
+        "stockpadi-navigation-older-build",
         "stockpadi-navigation-old-build",
+        "stockpadi-static-local",
+        "stockpadi-static-older-build",
+        "stockpadi-static-old-build",
         "other-cache",
       ]),
       delete: vi.fn().mockImplementation(async (key: string) => {
@@ -117,6 +121,6 @@ describe("Service Worker configuration (sw.ts)", () => {
     activate?.({ waitUntil } as unknown as Event);
     await waitUntil.mock.results[0]?.value;
 
-    expect(deleted).toEqual(["stockpadi-navigation-old-build"]);
+    expect(deleted).toEqual(["stockpadi-navigation-older-build", "stockpadi-static-older-build"]);
   });
 });

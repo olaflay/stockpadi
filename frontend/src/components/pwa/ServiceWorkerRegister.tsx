@@ -78,13 +78,6 @@ export function ServiceWorkerRegister() {
     reloadTimer.current = window.setTimeout(checkSafeMoment, 0);
   }, [persistDraftsAndReload, showFallback]);
 
-  const activateWaitingWorker = useCallback(() => {
-    const waiting = registrationRef.current?.waiting;
-    if (!waiting || activationRequested.current) return;
-    activationRequested.current = true;
-    waiting.postMessage({ type: "SKIP_WAITING" });
-  }, []);
-
   const refreshCurrentData = useCallback(() => {
     if (typeof navigator !== "undefined" && navigator.onLine) {
       void ensureBackendBuildCompatibility(true);
@@ -110,7 +103,7 @@ export function ServiceWorkerRegister() {
       const onStateChange = () => {
         if (disposed.current || worker.state !== "installed" || !navigator.serviceWorker.controller) return;
         activationRequested.current = false;
-        activateWaitingWorker();
+        showFallback("An app update is ready.");
       };
       worker.addEventListener("statechange", onStateChange);
       onStateChange();
@@ -125,7 +118,7 @@ export function ServiceWorkerRegister() {
       hadController.current = Boolean(navigator.serviceWorker.controller);
       registration.addEventListener("updatefound", onUpdateFound);
       if (registration.installing) watchInstallingWorker(registration.installing);
-      if (registration.waiting && hadController.current) activateWaitingWorker();
+      if (registration.waiting && hadController.current) showFallback("An app update is ready.");
       return registration;
     };
     const ensureRegistration = (): Promise<ServiceWorkerRegistration> => {
@@ -143,7 +136,7 @@ export function ServiceWorkerRegister() {
           const registration = await ensureRegistration();
           await registration.update();
           observeUpdateSuccess();
-          if (registration.waiting && hadController.current) activateWaitingWorker();
+          if (registration.waiting && hadController.current) showFallback("An app update is ready.");
         } catch (error) {
           reportUpdateFailure(error);
         }
@@ -244,7 +237,7 @@ export function ServiceWorkerRegister() {
       registrationRef.current?.removeEventListener("updatefound", onUpdateFound);
       registrationRef.current = null;
     };
-  }, [activateWaitingWorker, refreshCurrentData, scheduleSafeReload, showFallback]);
+  }, [refreshCurrentData, scheduleSafeReload, showFallback]);
 
   const updateNow = async () => {
     setFallbackVisible(false);

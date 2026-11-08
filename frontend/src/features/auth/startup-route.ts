@@ -1,7 +1,9 @@
 import { db, BUSINESS_PROFILE_SINGLETON_ID, recoverDatabaseConnection, SESSION_SINGLETON_ID } from "@/lib/db";
 import { removeLegacyTestUser } from "@/features/auth/legacy-cleanup";
 
-export const STARTUP_ROUTE_TIMEOUT_MS = 5_000;
+// Local IndexedDB startup should be near-instant. Three seconds is the PRD's
+// cold-start ceiling and triggers automatic repair rather than user action.
+export const STARTUP_ROUTE_TIMEOUT_MS = 3_000;
 
 export type StartupDestination = "/admin" | "/verify-email" | "/dashboard" | "/onboarding" | "/login?force=true";
 
