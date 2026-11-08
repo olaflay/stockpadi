@@ -453,6 +453,52 @@ class StockPadiDB extends Dexie {
 export const db = new StockPadiDB();
 
 let databaseBlocked = false;
+const DATABASE_RELEASE_CHANNEL = "stockpadi-database-lifecycle";
+const DATABASE_RELEASE_STORAGE_KEY = "stockpadi:release-database";
+
+function closeLocalDatabaseConnection(): void {
+  if (!db.isOpen()) return;
+  try {
+    db.close({ disableAutoOpen: false });
+  } catch {
+    // Best effort: the caller still performs a bounded reopen and reports failure.
+  }
+}
+
+function installDatabaseReleaseListener(): void {
+  if (typeof window === "undefined") return;
+
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel(DATABASE_RELEASE_CHANNEL);
+    channel.addEventListener("message", (event) => {
+      if (event.data === "release") closeLocalDatabaseConnection();
+    });
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === DATABASE_RELEASE_STORAGE_KEY) closeLocalDatabaseConnection();
+  });
+}
+
+installDatabaseReleaseListener();
+
+/** Ask every current same-origin tab to release IndexedDB before a recovery reopen. */
+export function requestDatabaseRelease(): void {
+  closeLocalDatabaseConnection();
+  if (typeof window === "undefined") return;
+
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel(DATABASE_RELEASE_CHANNEL);
+    channel.postMessage("release");
+    channel.close();
+  }
+
+  try {
+    localStorage.setItem(DATABASE_RELEASE_STORAGE_KEY, `${Date.now()}:${crypto.randomUUID()}`);
+  } catch {
+    // BroadcastChannel is preferred; storage can be unavailable in private modes.
+  }
+}
 
 // Dexie normally closes its old connection on versionchange. Keep that
 // behavior explicit and surface a safe update prompt; no local stores or rows
@@ -489,17 +535,39 @@ export function isDatabaseBlocked(): boolean {
 }
 
 /** Gracefully recovers a closed or stalled Dexie IndexedDB connection. */
-export async function recoverDatabaseConnection(): Promise<boolean> {
+export async function recoverDatabaseConnection(timeoutMs = 5_000): Promise<boolean> {
+  requestDatabaseRelease();
+  // Give other tabs one task turn to process the release request before reopen.
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+
+  let timedOut = false;
+  let timeoutId: number | undefined;
   try {
-    if (db.isOpen()) {
-      db.close({ disableAutoOpen: false });
-    }
-    await db.open();
+    const opening = db.open();
+    opening.then(() => {
+      // Native IndexedDB opens cannot be cancelled. If this request succeeds
+      // after our timeout, close its late connection so it cannot block a
+      // later upgrade or recovery attempt.
+      if (timedOut) closeLocalDatabaseConnection();
+    }).catch(() => undefined);
+
+    await Promise.race([
+      opening,
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          timedOut = true;
+          reject(new Error("DATABASE_RECOVERY_TIMEOUT"));
+        }, timeoutMs);
+      }),
+    ]);
     databaseBlocked = false;
     return true;
   } catch (err) {
     console.warn("[Dexie] Database recovery attempt failed:", err);
+    closeLocalDatabaseConnection();
     return false;
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
   }
 }
 
