@@ -964,4 +964,3 @@ The research tasks in section 19 feed these packages: R1, R2 and R19 before WP6;
 - Retail metrics: fitsmallbusiness.com, koronapos.com, lifelongpos.com, cleverence.com, rackbeat.com.
 - OWASP Top 10 for LLM applications (recalled from memory; verify against the current list).
 - Sections 15 to 20 also draw on general software and data engineering practice, not on a single source.
-
