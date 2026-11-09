@@ -97,6 +97,33 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(entry.matcher({ request: { destination: "image" } })).toBe(false);
   });
 
+  it("warms requested offline documents from the active worker", async () => {
+    const put = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("caches", {
+      open: vi.fn().mockResolvedValue({ put }),
+      keys: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(true),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>cached</html>", {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    })));
+    const waitUntil = vi.fn((promise: Promise<unknown>) => promise);
+    const message = workerListeners.get("message");
+    expect(message).toBeDefined();
+
+    message?.({
+      data: { type: "CACHE_OFFLINE_ROUTES", routes: ["/dashboard", "/pos", "https://evil.example"] },
+      waitUntil,
+    } as unknown as Event);
+    expect(waitUntil).toHaveBeenCalledOnce();
+    await waitUntil.mock.results[0]?.value;
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(put).toHaveBeenCalledWith("/dashboard", expect.any(Response));
+    expect(put).toHaveBeenCalledWith("/pos", expect.any(Response));
+  });
+
   it("retains one prior shell generation and removes older runtime caches during activation", async () => {
     const deleted: string[] = [];
     vi.stubGlobal("caches", {

@@ -3,6 +3,8 @@ import { supabaseAdmin } from "../../shared/supabase/client.js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { issueVerificationCode } from "../auth/email-verification.service.js";
 import { validateRegistration, type RegistrationRequest } from "./business.schema.js";
+import { sendEmail } from "../../shared/email/mailer.js";
+import { renderNewSignupAdminEmail } from "../../shared/email/email-templates.js";
 
 export async function registerBusiness(request: RegistrationRequest, authenticatedUser?: User) {
   const db = supabaseAdmin();
@@ -11,7 +13,8 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (!request.businessName || !request.businessTypeId) throw new HttpError(400, "INVALID_BODY", "Business details are required");
     const existing = await db.from("users").select("id").eq("id", authenticatedUser.id).maybeSingle();
     if (existing.error) throw new HttpError(500, "PROFILE_LOOKUP_FAILED", existing.error.message);
-    if (!existing.data) {
+    const newlyProvisioned = !existing.data;
+    if (newlyProvisioned) {
       const result = await provision(db, authenticatedUser.id, authenticatedUser.user_metadata?.full_name ?? authenticatedUser.email?.split("@")[0] ?? "Owner", request.businessName, request.businessTypeId);
       if (result.error) throw new HttpError(500, "PROVISIONING_FAILED", result.error.message);
       const verified = await db.from("users").update({ email_verified: true }).eq("id", authenticatedUser.id);
@@ -21,6 +24,15 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     if (!businessId) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The OAuth business account was not provisioned.");
     const branch = await findDefaultBranch(db, businessId);
     const businessStatus = await findBusinessStatus(db, businessId);
+    if (newlyProvisioned) {
+      await notifyAdminOfSignup({
+        ownerName: authenticatedUser.user_metadata?.full_name ?? authenticatedUser.email?.split("@")[0] ?? "Owner",
+        ownerEmail: authenticatedUser.email ?? "",
+        storeName: request.businessName,
+        businessType: request.businessTypeId,
+        businessId,
+      });
+    }
     return {
       userId: authenticatedUser.id,
       businessId,
@@ -48,6 +60,13 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
   const businessId = await findBusinessId(db, created.data.user.id);
   if (!businessId) throw new HttpError(500, "PROVISIONING_LOOKUP_FAILED", "The business account was not provisioned.");
   const branch = await findDefaultBranch(db, businessId);
+  const adminNotificationSent = await notifyAdminOfSignup({
+    ownerName: request.fullName!,
+    ownerEmail: request.email!,
+    storeName: request.businessName!,
+    businessType: request.businessTypeId!,
+    businessId,
+  });
   return {
     userId: created.data.user.id,
     businessId,
@@ -56,7 +75,23 @@ export async function registerBusiness(request: RegistrationRequest, authenticat
     businessStatus: "pending",
     emailVerified: false,
     verificationEmailSent: verification.emailSent,
+    adminNotificationSent,
   };
+}
+
+async function notifyAdminOfSignup(input: Parameters<typeof renderNewSignupAdminEmail>[0]): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim();
+  if (!adminEmail) {
+    console.error("New-signup admin notification skipped: ADMIN_EMAIL is not configured");
+    return false;
+  }
+  try {
+    await sendEmail({ to: adminEmail, ...renderNewSignupAdminEmail(input) });
+    return true;
+  } catch (error) {
+    console.error("New-signup admin notification failed", error instanceof Error ? error.message : "unknown error");
+    return false;
+  }
 }
 
 export function registrationCreationError(error: { code?: string; message: string }) {

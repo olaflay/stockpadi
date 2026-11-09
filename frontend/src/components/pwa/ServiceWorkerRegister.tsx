@@ -9,6 +9,7 @@ import { ensureBackendBuildCompatibility } from "@/features/sync/build-compatibi
 import { PWA_DATA_REFRESH_EVENT, PWA_DATABASE_BLOCKED_EVENT, PWA_DATABASE_READY_EVENT, PWA_UPDATE_REQUIRED_EVENT } from "@/lib/pwa-update-events";
 import { beginPwaCriticalActivity, hasPwaCriticalActivity } from "@/lib/pwa-update-activity";
 import { persistFormDraftsForReload, restoreFormDraftsAfterReload } from "@/lib/pwa-reload-drafts";
+import { OFFLINE_WARM_ROUTES } from "@/lib/offline-routes";
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const MAX_SAFE_WAIT_MS = 7_500;
@@ -119,6 +120,7 @@ export function ServiceWorkerRegister() {
       registration.addEventListener("updatefound", onUpdateFound);
       if (registration.installing) watchInstallingWorker(registration.installing);
       if (registration.waiting && hadController.current) showFallback("An app update is ready.");
+      registration.active?.postMessage({ type: "CACHE_OFFLINE_ROUTES", routes: OFFLINE_WARM_ROUTES });
       return registration;
     };
     const ensureRegistration = (): Promise<ServiceWorkerRegistration> => {

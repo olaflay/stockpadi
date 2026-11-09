@@ -85,7 +85,7 @@ function isSubPage(pathname: string): boolean {
 
 /**
  * TopStoreHeader — Authoritative green top app bar.
- * Houses the drawer menu or back navigation affordance, dynamic page title, and sync status.
+ * Houses navigation, the page title, and a compact save/connection indicator.
  * Unifies mobile navigation hierarchy and eliminates redundant secondary headers.
  */
 export function TopStoreHeader() {
@@ -147,7 +147,7 @@ export function TopStoreHeader() {
           </h1>
         </div>
 
-        {/* Right: Sync Indicator & Alerts */}
+        {/* Right: compact save state and actionable business alerts. */}
         <div className="flex items-center gap-1.5 shrink-0">
           <SyncIndicator compact variant="contrast" />
           {alertCount > 0 && (

@@ -331,7 +331,8 @@ export function resolveSystemState(
     return "UNKNOWN_ERROR";
   }
 
-  // 4. Safety backpressure limit (>= 100 unsaved rows older than 48 hours)
+  // 4. Safety backpressure: a material queue stalled for 24 hours, or the
+  // absolute 1,000-row circuit breaker, requires an owner-assisted save.
   if (context.safetyRequired) return "SAFETY_BACKPRESSURE_LIMIT";
 
   // 5. Explicit offline state

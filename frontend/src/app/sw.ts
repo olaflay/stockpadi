@@ -99,6 +99,36 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
+// Warm authenticated offline routes from the active worker itself. This also
+// works immediately after first installation, before the current page is
+// controlled; page-level fetch warming does not.
+if (typeof self.addEventListener === "function") self.addEventListener("message", (event: Event) => {
+  const messageEvent = event as MessageEvent<{ type?: string; routes?: unknown }> & {
+    waitUntil?: (promise: Promise<unknown>) => void;
+  };
+  if (messageEvent.data?.type !== "CACHE_OFFLINE_ROUTES" || !Array.isArray(messageEvent.data.routes)) return;
+  const routes = messageEvent.data.routes.filter((route): route is string =>
+    typeof route === "string" && route.startsWith("/") && !route.startsWith("//")
+  );
+  const work = caches.open(NAVIGATION_CACHE).then(async (cache) => {
+    for (const route of routes) {
+      try {
+        const routeUrl = new URL(route, self.registration.scope).toString();
+        const response = await fetch(new Request(routeUrl, {
+          headers: { Accept: "text/html" },
+          credentials: "same-origin",
+        }));
+        if (response.ok && response.headers.get("content-type")?.includes("text/html")) {
+          await cache.put(route, response.clone());
+        }
+      } catch {
+        // Keep previously cached routes; the next online app visit retries.
+      }
+    }
+  });
+  messageEvent.waitUntil?.(work);
+});
+
 // Clean up only Cache Storage entries owned by this app. IndexedDB (including
 // every domain table and pending outbox operation) is never touched here.
 if (typeof self.addEventListener === "function") self.addEventListener("activate", (event: Event) => {

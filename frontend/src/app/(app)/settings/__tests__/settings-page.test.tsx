@@ -86,8 +86,8 @@ describe("SettingsPage component", () => {
 
     // Data & Support sections
     expect(screen.getByText("Data & Sharing")).toBeDefined();
-    expect(screen.getByText("Backup & offline data")).toBeDefined();
-    expect(screen.getByText("Sync health")).toBeDefined();
+    expect(screen.getByText("Backup & data")).toBeDefined();
+    expect(screen.queryByText("Sync health")).toBeNull();
     expect(screen.getByText("Help & Support")).toBeDefined();
     expect(screen.getByText("App Walkthrough")).toBeDefined();
   });

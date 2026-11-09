@@ -1,13 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { queueSyncHints } from "../sync/sync-hints.js";
+import { sendEmail } from "../../shared/email/mailer.js";
+import { renderWelcomeEmail } from "../../shared/email/email-templates.js";
 
 export async function listBusinesses(db: SupabaseClient, actorId?: string) {
   const businesses = await db.from("business_profile").select("id, name, business_type, currency, is_active, status, created_at").order("created_at", { ascending: false });
   if (businesses.error) throw new HttpError(500, "QUERY_FAILED", businesses.error.message);
-  const owners = await db.from("users").select("business_id, full_name").eq("account_type", "BUSINESS_OWNER");
+  const owners = await db.from("users").select("id, business_id, full_name").eq("account_type", "BUSINESS_OWNER");
   if (owners.error) throw new HttpError(500, "QUERY_FAILED", owners.error.message);
-  const result = (businesses.data ?? []).map((business) => ({ ...business, owner_name: owners.data?.find((owner) => owner.business_id === business.id)?.full_name ?? "Unknown Owner" }));
+  const authUsers = await listAllAuthUsers(db);
+  const result = (businesses.data ?? []).map((business) => {
+    const owner = owners.data?.find((candidate) => candidate.business_id === business.id);
+    return {
+      ...business,
+      owner_name: owner?.full_name ?? "Unknown Owner",
+      owner_email: owner ? authUsers.get(owner.id)?.email ?? null : null,
+    };
+  });
   if (actorId) {
     await writePlatformAudit(db, actorId, "list_businesses", "business_profile", null, null, { count: result.length });
   }
@@ -26,10 +36,12 @@ export async function getBusiness(db: SupabaseClient, actorId: string, businessI
 
   await writePlatformAudit(db, actorId, "get_business", "business_profile", businessId, businessId);
 
+  const authOwner = owner.data?.id ? await db.auth.admin.getUserById(owner.data.id) : null;
   return {
     ...result.data,
     owner_name: owner.data?.full_name ?? "Unknown Owner",
     owner_id: owner.data?.id ?? null,
+    owner_email: authOwner?.data.user?.email ?? null,
     branches: branches.data ?? [],
     branch_count: branches.data?.length ?? 0,
     product_count: productsCount.count ?? 0,
@@ -81,6 +93,33 @@ export async function setBusinessStatus(db: SupabaseClient, actorId: string, bus
     throw new HttpError(500, "UPDATE_FAILED", rpcResult.error.message);
   }
   await queueSyncHints(businessId, [null]);
+}
+
+export async function sendBusinessApprovalEmail(db: SupabaseClient, businessId: string): Promise<boolean> {
+  const business = await db.from("business_profile").select("name").eq("id", businessId).maybeSingle();
+  const owner = await db.from("users").select("id, full_name").eq("business_id", businessId).eq("account_type", "BUSINESS_OWNER").maybeSingle();
+  if (business.error || owner.error || !business.data || !owner.data) return false;
+  const authOwner = await db.auth.admin.getUserById(owner.data.id);
+  const email = authOwner.data.user?.email;
+  if (authOwner.error || !email) return false;
+  try {
+    await sendEmail({ to: email, ...renderWelcomeEmail(owner.data.full_name, business.data.name) });
+    return true;
+  } catch (error) {
+    console.error("Approval welcome email delivery failed", error instanceof Error ? error.message : "unknown error");
+    return false;
+  }
+}
+
+async function listAllAuthUsers(db: SupabaseClient) {
+  const users = new Map<string, { email?: string }>();
+  for (let page = 1; ; page++) {
+    const result = await db.auth.admin.listUsers({ page, perPage: 1000 });
+    if (result.error) throw new HttpError(500, "AUTH_QUERY_FAILED", result.error.message);
+    for (const user of result.data.users) users.set(user.id, { email: user.email });
+    if (result.data.users.length < 1000) break;
+  }
+  return users;
 }
 
 export async function writePlatformAudit(

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ExternalLink,
   Users,
+  Mail,
   Copy,
   Check,
 } from "lucide-react";
@@ -86,15 +87,17 @@ export default function SuperAdminTenantsPage() {
     setTogglingId(tenantId);
     try {
       const newStatus = !currentStatus;
-      await callBackend("platform-api", {
+      const result = await callBackend<{ welcomeEmailSent?: boolean }>("platform-api", {
         action: "set_business_status",
         businessId: tenantId,
         status: newStatus ? "verified" : "suspended",
       });
 
       showToast(
-        `Store ${newStatus ? "activated" : "suspended"} successfully.`,
-        newStatus ? "success" : "warning"
+        newStatus && !result.welcomeEmailSent
+          ? "Store activated, but the welcome email could not be sent. Check email configuration and retry activation."
+          : `Store ${newStatus ? "activated and welcome email sent" : "suspended"} successfully.`,
+        newStatus && !result.welcomeEmailSent ? "warning" : newStatus ? "success" : "warning"
       );
 
       setTenants((prev) =>
@@ -116,14 +119,16 @@ export default function SuperAdminTenantsPage() {
     e.stopPropagation();
     setApprovingId(tenantId);
     try {
-      await callBackend("platform-api", {
+      const result = await callBackend<{ welcomeEmailSent?: boolean }>("platform-api", {
         action: "set_business_status",
         businessId: tenantId,
         status: "verified",
       });
       showToast(
-        "Store approved. The owner can continue after email verification.",
-        "success"
+        result.welcomeEmailSent
+          ? "Store approved and the welcome email was sent."
+          : "Store approved, but the welcome email could not be sent. Check email configuration and retry approval.",
+        result.welcomeEmailSent ? "success" : "warning"
       );
       setTenants((prev) =>
         prev.map((t) =>
@@ -164,6 +169,7 @@ export default function SuperAdminTenantsPage() {
       const matchesSearch =
         t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.owner_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.business_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.id.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -392,6 +398,16 @@ export default function SuperAdminTenantsPage() {
                         <Users size={12} className="text-on-surface-muted" />
                         <span className="font-medium">{tenant.owner_name || "Unknown Owner"}</span>
                       </span>
+
+                      {tenant.owner_email && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 break-all">
+                            <Mail size={12} aria-hidden />
+                            {tenant.owner_email}
+                          </span>
+                        </>
+                      )}
 
                       <span>•</span>
 

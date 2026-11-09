@@ -31,6 +31,7 @@ describe("worker stock alerts", () => {
     await db.inventoryStock.clear();
     await db.stockMovements.clear();
     await db.outbox.clear();
+    await db.customerCreditMovements.clear();
 
     await db.products.bulkPut([
       product("product-branch-a", "Branch A item"),
@@ -63,6 +64,40 @@ describe("worker stock alerts", () => {
         updatedAt: new Date().toISOString(),
       },
     ]);
+  });
+
+  it("keeps an actionable customer-credit alert active until the ledger balance is cleared", async () => {
+    await db.customerCreditMovements.add({
+      id: "credit-1",
+      businessId: "test-business",
+      clientId: "credit-1",
+      customerId: "customer-1",
+      amountDelta: 2500,
+      sourceReferenceId: "sale-1",
+      createdAtLocal: new Date().toISOString(),
+      createdByUserId: "owner-1",
+    });
+
+    await expect(getAlerts(0)).resolves.toContainEqual(expect.objectContaining({
+      id: "customer-credit-active",
+      type: "customer_credit",
+      href: "/contacts?tab=debtors",
+    }));
+
+    await db.customerCreditMovements.add({
+      id: "credit-2",
+      businessId: "test-business",
+      clientId: "credit-2",
+      customerId: "customer-1",
+      amountDelta: -2500,
+      sourceReferenceId: "payment-1",
+      createdAtLocal: new Date().toISOString(),
+      createdByUserId: "owner-1",
+    });
+
+    await expect(getAlerts(0)).resolves.not.toContainEqual(expect.objectContaining({
+      id: "customer-credit-active",
+    }));
   });
 
   it("shows only low-stock warnings for a worker's assigned branches", async () => {

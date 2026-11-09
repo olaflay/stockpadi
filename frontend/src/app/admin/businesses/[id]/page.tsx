@@ -42,6 +42,7 @@ interface BusinessDetail {
   updated_at?: string;
   owner_name?: string;
   owner_id?: string | null;
+  owner_email?: string | null;
   branches?: BranchDetail[];
   branch_count?: number;
   product_count?: number;
@@ -104,13 +105,18 @@ export default function AdminBusinessDetailPage() {
     setToggling(true);
     const newStatus = !business.is_active;
     try {
-      await callBackend("platform-api", {
+      const result = await callBackend<{ welcomeEmailSent?: boolean }>("platform-api", {
         action: "set_business_status",
         businessId: business.id,
         status: newStatus ? "verified" : "suspended",
       });
 
-      showToast(`Store ${newStatus ? "activated" : "suspended"} successfully.`, newStatus ? "success" : "warning");
+      showToast(
+        newStatus && !result.welcomeEmailSent
+          ? "Store activated, but the welcome email could not be sent. Check email configuration and retry activation."
+          : `Store ${newStatus ? "activated and welcome email sent" : "suspended"} successfully.`,
+        newStatus && !result.welcomeEmailSent ? "warning" : newStatus ? "success" : "warning"
+      );
       setBusiness((prev) =>
         prev
           ? {
@@ -297,6 +303,15 @@ export default function AdminBusinessDetailPage() {
                 </span>
                 <p className="text-sm font-semibold text-on-surface mt-0.5">
                   {business.owner_name || "Unknown Owner"}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[length:var(--font-size-caption)] text-on-surface-muted uppercase tracking-wider font-semibold">
+                  Email
+                </span>
+                <p className="text-sm text-on-surface mt-0.5 break-all">
+                  {business.owner_email || "Not available"}
                 </p>
               </div>
 

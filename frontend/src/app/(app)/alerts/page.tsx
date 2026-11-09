@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { useAlertCenter } from "@/features/alerts/use-alert-center";
-import { Bell, AlertTriangle, CloudOff, PackageMinus } from "lucide-react";
+import { Bell, AlertTriangle, CloudOff, PackageMinus, HandCoins } from "lucide-react";
 import type { AlertType } from "@/features/alerts/get-alerts";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
@@ -16,11 +16,12 @@ const ALERT_ICONS: Record<AlertType, React.ElementType> = {
   low_stock: PackageMinus,
   expiring: AlertTriangle,
   unsynced: CloudOff,
+  customer_credit: HandCoins,
 };
 
 export default function AlertsPage() {
   const user = useCurrentUser();
-  const { alerts, isLoading, error, acknowledgeAlert } = useAlertCenter();
+  const { alerts, isLoading, error } = useAlertCenter();
 
   if (!hasCapability(user, "VIEW_ALERTS")) {
     return <PermissionDenied requiredCapabilities={["VIEW_ALERTS"]} />;
@@ -58,7 +59,6 @@ export default function AlertsPage() {
                 <li key={alert.id}>
                   <RippleLink
                     href={alert.href}
-                    onClick={() => acknowledgeAlert(alert.id)}
                     className="flex items-start gap-4 rounded-[var(--radius-card)] bg-surface-container p-4 hover:bg-surface-container-high active:scale-[0.99] transition-all"
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent">

@@ -1,7 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { HttpError } from "../../shared/errors/http-error.js";
 import { sendEmail } from "../../shared/email/mailer.js";
-import { renderVerificationEmail, renderWelcomeEmail } from "../../shared/email/email-templates.js";
+import { renderVerificationEmail } from "../../shared/email/email-templates.js";
 
 const CODE_TTL_MS = 30 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -97,13 +97,5 @@ export async function verifyEmailCode(db: SupabaseClient, actor: User, submitted
   }
   const { error: updateError } = await db.from("users").update({ email_verified: true, email_verification_code_hash: null, email_verification_expires_at: null, email_verification_attempts: 0 }).eq("id", actor.id);
   if (updateError) throw new HttpError(500, "UPDATE_FAILED", "Could not confirm verification");
-  const { data: business } = await db.from("business_profile").select("name").eq("id", profile.business_id).maybeSingle();
-
-  const welcomeRendered = renderWelcomeEmail(profile.full_name, business?.name ?? "your store");
-  try {
-    await sendEmail({ to: actor.email ?? "", ...welcomeRendered });
-  } catch (error) {
-    console.error("Welcome email delivery failed", error instanceof Error ? error.message : "unknown error");
-  }
   return { status: "verified" };
 }

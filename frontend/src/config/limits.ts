@@ -24,3 +24,9 @@ export const PRODUCT_IMPORT_MAX_WORKSHEETS = 3;
  * queue that needs operator attention. Tune per client here, not in screens. */
 export const SYNC_REQUIRED_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const SYNC_REQUIRED_QUEUE_THRESHOLD = 100;
+
+/** Absolute circuit breaker sized above two very busy offline trading days for
+ * the target 1–6 branch merchant. This is not a storage limit: it prevents an
+ * unnoticed runaway queue from growing without bound. Existing rows remain
+ * readable/exportable and are never discarded. */
+export const SYNC_REQUIRED_ABSOLUTE_QUEUE_LIMIT = 1_000;

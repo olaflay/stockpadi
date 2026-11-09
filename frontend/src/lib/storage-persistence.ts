@@ -91,14 +91,20 @@ export async function attemptEmergencyCacheEviction(): Promise<boolean> {
   try {
     const keys = await caches.keys();
     let freedAny = false;
-    // Evict older caches, dynamic images or legacy caches if present
+    const currentVersion = process.env.NEXT_PUBLIC_BUILD_VERSION ?? "local";
+    const currentNavigationCache = `stockpadi-navigation-${currentVersion}`;
+    const currentStaticCache = `stockpadi-static-${currentVersion}`;
+
+    // Only remove obsolete, app-owned runtime generations. Never delete the
+    // current navigation/static caches or any Serwist precache: doing so while
+    // handling a quota error can turn a recoverable full-disk condition into
+    // an app that cannot start offline. The worker's activation cleanup owns
+    // precache lifecycle because it knows which document/chunk generations
+    // must remain atomic.
     for (const key of keys) {
-      if (
-        key.includes("image") ||
-        key.includes("navigation") ||
-        key.includes("legacy") ||
-        key.includes("precache")
-      ) {
+      const obsoleteNavigation = key.startsWith("stockpadi-navigation-") && key !== currentNavigationCache;
+      const obsoleteStatic = key.startsWith("stockpadi-static-") && key !== currentStaticCache;
+      if (obsoleteNavigation || obsoleteStatic) {
         await caches.delete(key);
         freedAny = true;
       }

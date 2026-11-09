@@ -1,7 +1,7 @@
 import { HttpError } from "../../shared/errors/http-error.js";
 import { resolveAccountContext } from "../accounts/account-context.js";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
-import { getBusiness, getSystemStats, listBusinesses, setBusinessStatus, writePlatformAudit } from "./admin.repository.js";
+import { getBusiness, getSystemStats, listBusinesses, sendBusinessApprovalEmail, setBusinessStatus, writePlatformAudit } from "./admin.repository.js";
 import { publishPlatformBroadcast } from "../broadcasts/broadcast.service.js";
 import { listPlatformBroadcasts } from "../broadcasts/broadcast.repository.js";
 import type { AdminRequest } from "./admin.schema.js";
@@ -17,7 +17,10 @@ export async function executeAdminOperation(db: SupabaseClient, actor: User, req
   if (request.action === "set_business_status") {
     if (!request.businessId || !request.status) throw new HttpError(400, "INVALID_BODY", "businessId and status are required");
     await setBusinessStatus(db, actor.id, request.businessId, request.status);
-    return { status: "ok" };
+    const welcomeEmailSent = request.status === "verified"
+      ? await sendBusinessApprovalEmail(db, request.businessId)
+      : undefined;
+    return { status: "ok", welcomeEmailSent };
   }
   if (request.action === "list_broadcasts") {
     const broadcasts = await listPlatformBroadcasts(db);

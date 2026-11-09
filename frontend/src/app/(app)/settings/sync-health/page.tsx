@@ -36,6 +36,7 @@ import { getBrandingConfig } from "@/config/branding";
 import { getSyncDebugSnapshot } from "@/features/sync/sync-observability";
 import { formatCurrency } from "@/lib/format";
 import { resolveMerchantBackupStatus } from "./backup-status-utils";
+import { ensureStoragePersistence, type StoragePersistenceStatus } from "@/lib/storage-persistence";
 
 export default function SyncHealthPage() {
   const user = useCurrentUser();
@@ -44,7 +45,7 @@ export default function SyncHealthPage() {
   const [busy, setBusy] = useState(false);
   const [copiedSupportInfo, setCopiedSupportInfo] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
-  const [storagePersisted, setStoragePersisted] = useState<boolean | null>(null);
+  const [storageStatus, setStorageStatus] = useState<StoragePersistenceStatus | null>(null);
   const [pendingConflictResolution, setPendingConflictResolution] = useState<{
     item: SyncQueueItem;
     mode: "cloud" | "local";
@@ -55,27 +56,12 @@ export default function SyncHealthPage() {
   const businessId = user.businessId;
   const branchDependency = user.branchIds?.join("|");
 
-  // Evaluate browser storage persistence lease
+  // Use the same storage probe as startup and quota recovery so diagnostics do
+  // not disagree with the protection the app actually requested.
   useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.storage?.persisted) {
-      navigator.storage
-        .persisted()
-        .then(async (persisted) => {
-          if (!persisted && navigator.storage?.persist) {
-            try {
-              const granted = await navigator.storage.persist();
-              setStoragePersisted(granted);
-            } catch {
-              setStoragePersisted(false);
-            }
-          } else {
-            setStoragePersisted(persisted);
-          }
-        })
-        .catch(() => {
-          setStoragePersisted(true);
-        });
-    }
+    void ensureStoragePersistence().then(setStorageStatus).catch(() => {
+      setStorageStatus({ persisted: false });
+    });
   }, []);
 
   const snapshot = useLiveQuery(async () => {
@@ -223,7 +209,7 @@ export default function SyncHealthPage() {
     hasConflicts: snapshot.conflicts.length > 0,
     lastSavedAt: snapshot.state?.lastSuccessfulPushAt || snapshot.state?.lastCompletePullAt,
     isBusy: busy,
-    storagePersisted,
+    storagePersisted: storageStatus?.persisted ?? null,
     quarantinedCount: snapshot.quarantinedCount,
     ledgerSumMatches: snapshot.ledgerSumMatches,
   });
@@ -249,7 +235,10 @@ export default function SyncHealthPage() {
           cloudError: cloudError ?? null,
         },
         storageDurability: {
-          persisted: storagePersisted,
+          persisted: storageStatus?.persisted ?? null,
+          usageBytes: storageStatus?.usageBytes ?? null,
+          quotaBytes: storageStatus?.quotaBytes ?? null,
+          remainingBytes: storageStatus?.remainingBytes ?? null,
         },
         account: {
           accountType: user.accountType,

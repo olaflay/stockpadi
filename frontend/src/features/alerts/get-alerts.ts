@@ -8,8 +8,9 @@ import {
   EXPIRY_ALERT_WINDOW_DAYS,
   type StockBranchScope,
 } from "@/features/inventory/product-insights";
+import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 
-export type AlertType = "low_stock" | "expiring" | "unsynced";
+export type AlertType = "low_stock" | "expiring" | "unsynced" | "customer_credit";
 
 export interface Alert {
   id: string;
@@ -48,6 +49,20 @@ export async function getAlerts(unsyncedCount: number, options: AlertQueryOption
       description: `${unsyncedCount} change${unsyncedCount === 1 ? "" : "s"} are saved here and will upload when possible.`,
       href: "/settings/data",
     });
+  }
+
+  if (!lowStockOnly) {
+    const balances = await getAllCustomerCreditBalances();
+    const debtorCount = [...balances.values()].filter((balance) => balance > 0).length;
+    if (debtorCount > 0) {
+      alerts.push({
+        id: "customer-credit-active",
+        type: "customer_credit",
+        title: "Customers owing",
+        description: `${debtorCount} customer${debtorCount === 1 ? "" : "s"} still ${debtorCount === 1 ? "owes" : "owe"} money. Review balances or send a reminder.`,
+        href: "/contacts?tab=debtors",
+      });
+    }
   }
 
   const [products, stockByProduct] = await Promise.all([
@@ -107,7 +122,7 @@ export async function getAlerts(unsyncedCount: number, options: AlertQueryOption
  */
 export async function getAlertCounts(
   unsyncedCount: number,
-  acknowledgedIds?: Set<string>,
+  _acknowledgedIds?: Set<string>,
   options: AlertQueryOptions = {},
 ): Promise<number> {
   const branchScope = options.branchScope ?? null;
@@ -131,8 +146,12 @@ export async function getAlertCounts(
     : detectedLowStockIds;
 
   let count = 0;
-  if (!lowStockOnly && unsyncedCount > 0 && !acknowledgedIds?.has("unsynced-outbox")) count++;
-  for (const id of lowStockIds) if (!acknowledgedIds?.has(`low-stock-${id}`)) count++;
-  for (const id of expiringIds) if (!acknowledgedIds?.has(`expiring-${id}`)) count++;
+  if (!lowStockOnly && unsyncedCount > 0) count++;
+  if (!lowStockOnly) {
+    const balances = await getAllCustomerCreditBalances();
+    if ([...balances.values()].some((balance) => balance > 0)) count++;
+  }
+  count += lowStockIds.size;
+  count += expiringIds.size;
   return count;
 }

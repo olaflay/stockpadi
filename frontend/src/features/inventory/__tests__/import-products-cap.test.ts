@@ -11,6 +11,7 @@ vi.mock("@/config/limits", () => ({
   PRODUCT_CAP_WARN_AT: 4,
   SYNC_REQUIRED_MAX_AGE_MS: 24 * 60 * 60 * 1000,
   SYNC_REQUIRED_QUEUE_THRESHOLD: 100,
+  SYNC_REQUIRED_ABSOLUTE_QUEUE_LIMIT: 1_000,
 }));
 
 const OWNER: CurrentUser = { id: "user-1", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" };

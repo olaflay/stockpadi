@@ -84,7 +84,10 @@ export function useAlertCenter() {
   // undefined distinctly means "still loading" — do not collapse it into an
   // empty array, or the page can never distinguish loading from caught up.
   const alerts = result?.alerts;
-  const activeAlerts = (alerts || []).filter((a) => !acknowledgedIds.has(a.id));
+  // Operational alerts remain visible until their underlying condition is
+  // resolved. Opening an alert must not permanently hide a recurring debt or
+  // low-stock condition on this device.
+  const activeAlerts = alerts || [];
 
   const acknowledgeAlert = (id: string) => {
     const next = new Set(acknowledgedIds);

@@ -357,15 +357,16 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
   const brand = getBrandConfig();
   const safeName = escapeHtml(fullName);
   const safeStore = escapeHtml(storeName);
-  const subject = `Your ${brand.displayName} store is ready!`;
+  const subject = `Your ${brand.displayName} store is approved`;
   const dashboardUrl = `${getFrontendUrl()}/dashboard`;
 
-  const text = `Hi ${fullName},\n\nCongratulations! Your email is verified and ${storeName} is ready to use.\n\nYou can now log in to add inventory, set up staff accounts, and process sales.\n\nWelcome aboard!`;
+  const text = `Hi ${fullName},\n\nThank you for choosing ${brand.displayName}. ${storeName} has been approved.\n\nSign in to continue to your dashboard. If your email is not yet verified, you will be asked to complete that security step first.\n\nWelcome aboard!`;
 
   const bodyHtml = `
-    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">Welcome to ${escapeHtml(brand.displayName)}!</h2>
+    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">Your store is approved</h2>
     <p>Hi <strong>${safeName}</strong>,</p>
-    <p>Your email is verified and your store <strong>${safeStore}</strong> is now active and ready for business.</p>
+    <p>Thank you for choosing ${escapeHtml(brand.displayName)}. Your store <strong>${safeStore}</strong> has been approved.</p>
+    <p>Sign in to continue. If your email is not yet verified, you will be asked to complete that security step before the dashboard opens.</p>
 
     <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0; color: #166534;">
       <strong style="font-size: 15px;">Store Setup Checklist:</strong>
@@ -386,6 +387,32 @@ export function renderWelcomeEmail(fullName: string, storeName: string): Rendere
     text,
     html: baseTemplate(subject, bodyHtml),
   };
+}
+
+/** Platform-admin notification after a new owner/store has been provisioned. */
+export function renderNewSignupAdminEmail(input: {
+  ownerName: string;
+  ownerEmail: string;
+  storeName: string;
+  businessType: string;
+  businessId: string;
+}): RenderedEmail {
+  const brand = getBrandConfig();
+  const adminUrl = `${getFrontendUrl()}/admin/businesses/${encodeURIComponent(input.businessId)}`;
+  const subject = `New ${brand.displayName} store awaiting approval`;
+  const text = `A new store is awaiting approval.\n\nStore: ${input.storeName}\nOwner: ${input.ownerName}\nEmail: ${input.ownerEmail}\nBusiness type: ${input.businessType}\n\nReview: ${adminUrl}`;
+  const bodyHtml = `
+    <h2 style="margin-top:0; color:#0f172a; font-size:20px;">New store awaiting approval</h2>
+    <p>A new owner completed signup and is waiting for platform review.</p>
+    <div class="credential-box">
+      <div class="credential-row"><strong>Store:</strong> ${escapeHtml(input.storeName)}</div>
+      <div class="credential-row"><strong>Owner:</strong> ${escapeHtml(input.ownerName)}</div>
+      <div class="credential-row"><strong>Email:</strong> ${escapeHtml(input.ownerEmail)}</div>
+      <div class="credential-row"><strong>Business type:</strong> ${escapeHtml(input.businessType)}</div>
+    </div>
+    <p style="text-align:center;"><a href="${adminUrl}" class="btn">Review signup &rarr;</a></p>
+  `;
+  return { subject, text, html: baseTemplate(subject, bodyHtml) };
 }
 
 /** Worker Invite Notification Email: no password (shared out-of-band by the owner). */

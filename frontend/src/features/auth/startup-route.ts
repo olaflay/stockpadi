@@ -7,6 +7,22 @@ export const STARTUP_ROUTE_TIMEOUT_MS = 3_000;
 
 export type StartupDestination = "/admin" | "/verify-email" | "/dashboard" | "/onboarding" | "/login?force=true";
 
+export function openStartupDestination(
+  destination: StartupDestination,
+  replace: (href: string) => void,
+  offline = typeof navigator !== "undefined" && !navigator.onLine,
+  nativeReplace = (href: string) => window.location.replace(href),
+) {
+  // Next client navigation requests an RSC payload. On a cold offline launch
+  // that request can remain unresolved and strand the loading screen. A
+  // native navigation lets the service worker serve the warmed HTML shell.
+  if (offline) {
+    nativeReplace(destination);
+    return;
+  }
+  replace(destination);
+}
+
 interface StartupRouteStore {
   removeLegacyUser: () => Promise<void>;
   getSession: () => Promise<{ userId: string; expiresAt: string } | undefined>;

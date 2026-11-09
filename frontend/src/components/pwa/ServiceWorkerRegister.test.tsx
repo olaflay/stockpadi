@@ -18,6 +18,7 @@ describe("ServiceWorkerRegister", () => {
   let updateFound: (() => void) | undefined;
   let workerStateChange: (() => void) | undefined;
   const registration = {
+    active: { postMessage: vi.fn() } as { postMessage: (message: unknown) => void } | null,
     installing: null as { state: string; addEventListener: (type: string, listener: () => void) => void } | null,
     waiting: null as { postMessage: (message: unknown) => void } | null,
     update: vi.fn().mockResolvedValue(undefined),
@@ -39,8 +40,20 @@ describe("ServiceWorkerRegister", () => {
     workerStateChange = undefined;
     registration.installing = null;
     registration.waiting = null;
+    registration.active = { postMessage: vi.fn() };
+    Object.defineProperty(serviceWorker, "controller", { configurable: true, value: {} });
     sessionStorage.setItem("stockpadi-cart", JSON.stringify({ "product-1__unit": { quantity: 1 } }));
     Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: serviceWorker });
+  });
+
+  it("asks the active worker to warm offline routes even before it controls this page", async () => {
+    Object.defineProperty(serviceWorker, "controller", { configurable: true, value: null });
+    render(<ServiceWorkerRegister />);
+
+    await waitFor(() => expect(registration.active?.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: "CACHE_OFFLINE_ROUTES",
+      routes: expect.arrayContaining(["/dashboard", "/pos", "/products"]),
+    })));
   });
 
   afterEach(() => {

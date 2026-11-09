@@ -6,46 +6,27 @@ export const OFFLINE_ROUTES = [
   "/dashboard",
   "/pos",
   "/products",
-  "/products/new",
-  "/products/import",
   "/sales",
   "/contacts",
-  "/expenses",
-  "/expenses/new",
-  "/purchases",
-  "/purchases/new",
-  "/purchases/update-stock",
-  "/stock-count",
   "/close-day",
   "/reports",
-  "/more",
-  "/profile",
   "/settings/data",
-  "/settings/sync-health",
 ] as const;
+
+const OFFLINE_ROUTE_PREFIXES = ["/sales/", "/customers/"] as const;
 
 export const OFFLINE_WARM_ROUTES = [
   "/dashboard",
   "/pos",
   "/products",
-  "/products/new",
-  "/products/import",
   "/sales",
   "/contacts",
-  "/expenses",
-  "/expenses/new",
-  "/purchases",
-  "/purchases/new",
-  "/purchases/update-stock",
-  "/stock-count",
   "/close-day",
   "/reports",
-  "/more",
-  "/profile",
   "/settings/data",
-  "/settings/sync-health",
 ] as const;
 
 export function isOfflineRoute(pathname: string): boolean {
-  return OFFLINE_ROUTES.includes(pathname as (typeof OFFLINE_ROUTES)[number]);
+  return OFFLINE_ROUTES.includes(pathname as (typeof OFFLINE_ROUTES)[number]) ||
+    OFFLINE_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }

@@ -6,7 +6,7 @@ import { DatabaseZap } from "lucide-react";
 import { StateCard } from "@/components/ui/StateCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getBrandingConfig } from "@/config/branding";
-import { recoverStartupWorkspace, resolveStartupDestination, withStartupTimeout } from "@/features/auth/startup-route";
+import { openStartupDestination, recoverStartupWorkspace, resolveStartupDestination, withStartupTimeout } from "@/features/auth/startup-route";
 
 type StartupState = "opening" | "recovering" | "blocked";
 
@@ -37,7 +37,7 @@ export default function Home() {
     const openWorkspace = async () => {
       try {
         const destination = await withStartupTimeout(resolveStartupDestination());
-        if (!cancelled) router.replace(destination);
+        if (!cancelled) openStartupDestination(destination, router.replace);
         return;
       } catch (error) {
         console.error("[StartupRoute] Could not read local app state:", error);
@@ -54,7 +54,7 @@ export default function Home() {
 
       try {
         const destination = await withStartupTimeout(resolveStartupDestination());
-        if (!cancelled) router.replace(destination);
+        if (!cancelled) openStartupDestination(destination, router.replace);
       } catch (error) {
         console.error("[StartupRoute] Recovery completed but local routing still failed:", error);
         if (!cancelled) setStartupState("blocked");

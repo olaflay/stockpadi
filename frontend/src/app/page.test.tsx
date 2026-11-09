@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
+import { openStartupDestination } from "@/features/auth/startup-route";
 
 const replace = vi.fn();
 const resolveStartupDestination = vi.fn();
@@ -12,6 +13,7 @@ vi.mock("@/features/auth/startup-route", () => ({
   resolveStartupDestination: () => resolveStartupDestination(),
   recoverStartupWorkspace: () => recoverStartupWorkspace(),
   withStartupTimeout: <T,>(operation: Promise<T>) => operation,
+  openStartupDestination: (destination: string, replace: (href: string) => void) => replace(destination),
 }));
 
 describe("startup recovery screen", () => {
@@ -66,4 +68,5 @@ describe("startup recovery screen", () => {
     expect(screen.queryByRole("button", { name: "Repair and continue" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload after closing tabs" })).toBeInTheDocument();
   });
+
 });

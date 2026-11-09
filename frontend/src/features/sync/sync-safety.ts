@@ -1,7 +1,11 @@
 import { db } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import type { SyncEntityType } from "@/types/sync";
-import { SYNC_REQUIRED_MAX_AGE_MS, SYNC_REQUIRED_QUEUE_THRESHOLD } from "@/config/limits";
+import {
+  SYNC_REQUIRED_ABSOLUTE_QUEUE_LIMIT,
+  SYNC_REQUIRED_MAX_AGE_MS,
+  SYNC_REQUIRED_QUEUE_THRESHOLD,
+} from "@/config/limits";
 
 /** A long-stalled, large queue is a business-risk signal, not a reason to
  * make the app unusable. View and sync remain available; high-risk writes are
@@ -28,7 +32,9 @@ export async function getSyncSafety(): Promise<SyncSafety> {
     .sort()[0] ?? null;
   const ageMs = oldestPendingAt ? Math.max(0, Date.now() - new Date(oldestPendingAt).getTime()) : 0;
   return {
-    required: rows.length >= SYNC_REQUIRED_QUEUE_THRESHOLD && ageMs >= SYNC_REQUIRED_MAX_AGE_MS,
+    required:
+      rows.length >= SYNC_REQUIRED_ABSOLUTE_QUEUE_LIMIT ||
+      (rows.length >= SYNC_REQUIRED_QUEUE_THRESHOLD && ageMs >= SYNC_REQUIRED_MAX_AGE_MS),
     queueCount: rows.length,
     oldestPendingAt,
     ageMs,

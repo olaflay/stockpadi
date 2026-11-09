@@ -222,9 +222,11 @@ function PosPageContent() {
         <ScreenHeader title="Sell" hideBack={true} />
         <EmptyState
           icon={ShoppingBag}
-          title="Nothing to sell yet"
-          description="Add products first, then come back here to start checking out sales."
-          action={{ label: "Add a product", onClick: () => router.push("/products/new") }}
+          title={isOnline ? "Nothing to sell yet" : "Products aren’t ready on this phone"}
+          description={isOnline
+            ? "Add products first, then come back here to start checking out sales."
+            : "Connect this phone once, then come back to Sell."}
+          action={isOnline ? { label: "Add a product", onClick: () => router.push("/products/new") } : undefined}
         />
       </div>
     );

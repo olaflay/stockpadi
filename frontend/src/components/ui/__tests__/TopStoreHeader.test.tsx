@@ -52,6 +52,7 @@ describe("TopStoreHeader navigation & hierarchy unification", () => {
     expect(menuButton).toBeDefined();
     expect(screen.queryByRole("button", { name: /go back/i })).toBeNull();
     expect(screen.getByText("Dashboard")).toBeDefined();
+    expect(screen.getByTestId("sync-indicator")).toBeInTheDocument();
 
     fireEvent.click(menuButton);
     expect(mockOpenDrawer).toHaveBeenCalledOnce();

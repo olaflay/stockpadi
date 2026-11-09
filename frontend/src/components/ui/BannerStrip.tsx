@@ -1,31 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, Bell } from "lucide-react";
-import { RippleButton } from "@/components/ui/Ripple";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useFailedSyncCount, usePendingSalesCount } from "@/lib/use-pending-sync-count";
 import { useCurrentUserOptional } from "@/features/auth/use-current-user";
 import { useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
-
-const NOTIFICATIONS_DISMISSED_KEY = "stockpadi-notifications-dismissed";
-
-function areNotificationsDismissed(): boolean {
-  try {
-    return window.localStorage.getItem(NOTIFICATIONS_DISMISSED_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function rememberNotificationDismissal(): void {
-  try {
-    window.localStorage.setItem(NOTIFICATIONS_DISMISSED_KEY, "true");
-  } catch {
-    // Notification preferences must not prevent the authenticated shell from
-    // rendering when installed-browser storage is unavailable.
-  }
-}
 
 /**
  * Consolidated banner strip for connection, verification, and notification
@@ -37,22 +15,6 @@ export function BannerStrip() {
   const pendingSalesCount = usePendingSalesCount();
   const failedCount = useFailedSyncCount();
   const syncPhase = useSyncRuntimePhase();
-  const [showNotification, setShowNotification] = useState(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return false;
-    return Notification.permission === "default" && !areNotificationsDismissed();
-  });
-
-  const handleEnableNotifications = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    const permission = await Notification.requestPermission();
-    if (permission === "granted" || permission === "denied") setShowNotification(false);
-  };
-
-  const handleDismissNotifications = () => {
-    rememberNotificationDismissal();
-    setShowNotification(false);
-  };
-
   const user = useCurrentUserOptional();
   const showUnverified = Boolean(
     user?.accountType === "BUSINESS_OWNER" &&
@@ -60,65 +22,32 @@ export function BannerStrip() {
     user.businessStatus !== "verified" &&
     user.businessStatus !== "active"
   );
-  const salesWaiting = `${pendingSalesCount} ${pendingSalesCount === 1 ? "sale" : "sales"} saved here`;
-  const syncStatus = !isOnline
-    ? "Offline"
+  const isSaving = isOnline && (
+    syncPhase === "uploading" ||
+    syncPhase === "syncing" ||
+    syncPhase === "downloading" ||
+    pendingSalesCount > 0
+  );
+  const status = !isOnline
+    ? { label: "Offline · Sales stay on this phone", tone: "bg-danger" }
     : failedCount > 0
-      ? "Needs attention"
-      : syncPhase === "uploading" || syncPhase === "syncing"
-        ? "Saving"
-        : syncPhase === "downloading"
-          ? "Connecting"
-        : pendingSalesCount > 0
-          ? salesWaiting
-          : "Online";
-
-  const syncStatusTone = !isOnline || failedCount > 0
-    ? "bg-danger"
-    : syncPhase === "uploading" || syncPhase === "downloading" || syncPhase === "syncing"
-      ? "bg-warning"
-      : "bg-success";
+      ? { label: "Needs attention", tone: "bg-danger" }
+      : isSaving
+        ? { label: "Saving", tone: "bg-warning" }
+        : { label: "Online", tone: "bg-success" };
 
   return (
     <div className="flex w-full flex-col" role="status" aria-live="polite">
       {showUnverified && (
         <div className="bg-warning-container border-b border-warning/20 px-4 py-1 text-center text-[length:var(--font-size-caption)] font-medium leading-tight text-on-warning-container">
-          Store pending admin approval · Changes are saved locally and will upload once verified
+          Store setup is waiting for approval
         </div>
       )}
 
       <div className="flex items-center justify-center gap-1.5 bg-surface-container-high px-4 py-1 text-center text-[length:var(--font-size-caption)] font-medium leading-tight text-on-surface-muted">
-        <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncStatusTone}`} />
-        <span>{syncStatus}</span>
+        <span aria-hidden data-testid="connection-status-dot" className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.tone}`} />
+        <span>{status.label}</span>
       </div>
-
-      {showNotification && (
-        <div className="flex items-center justify-between gap-2 bg-surface-container border-b border-border px-4 py-2 shadow-[var(--shadow-elevation-1)] animate-step-in">
-          <div className="flex items-center gap-2 min-w-0">
-            <Bell size={14} className="shrink-0 text-brand-accent" />
-            <span className="text-[length:var(--font-size-caption)] font-medium text-on-surface truncate">
-              Enable saved-work and stock alerts
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <RippleButton
-              type="button"
-              onClick={handleEnableNotifications}
-              className="rounded-[var(--radius-inline)] bg-brand-accent px-2.5 py-0.5 text-[length:var(--font-size-caption)] font-medium text-brand-accent-contrast hover:opacity-90 transition-opacity"
-            >
-              Enable
-            </RippleButton>
-            <button
-              type="button"
-              onClick={handleDismissNotifications}
-              aria-label="Dismiss"
-              className="touch-hitbox flex h-6 w-6 items-center justify-center rounded-full text-on-surface-muted hover:bg-on-surface/10"
-            >
-              <X size={12} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

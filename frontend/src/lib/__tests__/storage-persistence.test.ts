@@ -93,9 +93,17 @@ describe("storage-persistence", () => {
   });
 
   describe("attemptEmergencyCacheEviction", () => {
-    it("deletes eligible non-critical caches", async () => {
+    it("deletes only obsolete app-owned runtime caches", async () => {
       const deleteMock = vi.fn().mockResolvedValue(true);
-      const keysMock = vi.fn().mockResolvedValue(["stockpadi-static-1", "stockpadi-navigation-1", "keep-me"]);
+      vi.stubEnv("NEXT_PUBLIC_BUILD_VERSION", "current");
+      const keysMock = vi.fn().mockResolvedValue([
+        "stockpadi-static-old",
+        "stockpadi-navigation-old",
+        "stockpadi-static-current",
+        "stockpadi-navigation-current",
+        "stockpadi-current-precache-v2-https://example.test/",
+        "third-party-image-cache",
+      ]);
 
       vi.stubGlobal("caches", {
         keys: keysMock,
@@ -104,7 +112,12 @@ describe("storage-persistence", () => {
 
       const freed = await attemptEmergencyCacheEviction();
       expect(freed).toBe(true);
-      expect(deleteMock).toHaveBeenCalledWith("stockpadi-navigation-1");
+      expect(deleteMock).toHaveBeenCalledWith("stockpadi-navigation-old");
+      expect(deleteMock).toHaveBeenCalledWith("stockpadi-static-old");
+      expect(deleteMock).not.toHaveBeenCalledWith("stockpadi-navigation-current");
+      expect(deleteMock).not.toHaveBeenCalledWith("stockpadi-static-current");
+      expect(deleteMock).not.toHaveBeenCalledWith("stockpadi-current-precache-v2-https://example.test/");
+      expect(deleteMock).not.toHaveBeenCalledWith("third-party-image-cache");
     });
   });
 

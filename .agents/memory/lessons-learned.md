@@ -45,3 +45,7 @@
   shutdown all affect low-end device responsiveness.
 - Capability constraints should be `ideal`, not `exact`, so old or poor cameras can negotiate a
   supported stream rather than failing because they cannot meet a preferred profile.
+## 2026-11-09: Offline and sync reliability audit
+Worked: Compared the existing protocol against browser, PostgreSQL, Supabase, Vercel and OWASP primary sources before changing architecture; Research and Backend owned it.
+Caught: Emergency quota recovery could delete the current offline shell, and unit tests were being treated as installed-PWA proof; Security and QA caught these at their gates.
+Change: Default to version-aware cache cleanup and require browser/device plus restore evidence before marking offline or recovery behavior verified.

@@ -85,13 +85,13 @@ A short onboarding step where the owner picks a business-type template. This set
 | User management | Owner, Manager, Cashier, Inventory Staff, Accountant roles, scoped per branch; bottom navigation filtered to role permissions | Cashier shifts after the staff/offline identity ADR |
 | Authentication | Email/password + OTP verification and Google OAuth for first setup (online required); PIN for daily unlock (offline capable); user picker shown on devices with existing local users; sessions expire after 24 hours | — |
 | Backup & Data | Full offline database backup/restore (JSON), CSV accounting exports | Point-in-time restore UI |
-| Sync | Full offline operation for all of the above except void/refund | Owner-visible device/outbox health after privacy review |
+| Sync | Offline till core: dashboard, POS, product lookup, sale history, debtors, close day, reports and data export. Other workflows are online-first. Refunds/voids remain online-only. | Privacy-limited diagnostics remain a support tool, not a routine cashier surface |
 
 ## 8. Non-Functional Requirements
 
 | Requirement | Target |
 | --- | --- |
-| Offline availability | 100% of MVP flows fully functional with zero network connection |
+| Offline availability | 100% of the till core in Section 10.5 works with zero network after preparation; online-first screens keep the current screen and explain that a connection is required |
 | Cold start (cached, 2G) | Under 3 seconds to interactive |
 | Sync latency (on reconnect) | Queued transactions begin uploading within 5 seconds of connectivity detection |
 | Device support | Android 8+, 2GB RAM minimum, Chrome/WebView; iOS Safari supported but not primary |
@@ -204,6 +204,18 @@ Navigation tabs are filtered at runtime based on the authenticated user's role. 
 ### 10.4 Cached assets and failure recovery
 
 Service worker precaches the app shell and the branch's product catalog images on the freshest available connection. If local storage quota is exceeded, the app shows a warning and blocks new offline writes rather than failing silently.
+
+### 10.5 Offline support policy
+
+The offline tier is deliberately small enough for low-end Android devices and weak Nigerian data connections:
+
+- **Guaranteed after preparation:** dashboard, POS, product lookup, sale list, customer debtors, close day, reports, and data export/recovery.
+- **Online-first:** product creation/import, purchases/restocking, expenses, stock count, staff, branches, admin and profile/settings outside recovery. These screens never replace a working page with a browser network error.
+- **Preparation:** begins immediately after an authenticated app entry. The current shell is registered/warmed in the background while the session pull stores branches, products, prices, inventory, customers, credit movements and sales in IndexedDB. A never-prepared device may browse the cached fallback but must not promise an offline sale until it has a local session, branch and sellable catalog.
+- **Offline duration:** normal supported window is one trading day (24 hours). The app warns and requires owner-assisted saving when at least 100 material changes are still waiting after 24 hours. A new queue reaches an absolute circuit breaker at 1,000 changes. Existing records are never deleted and recovery/export remains available.
+- **Capacity:** 1,000 outbox mutations is the supported safety ceiling, not an IndexedDB storage claim. It covers more than two high-volume trading days at the product estimate of 50–300 sales/day while bounding operational and reconciliation risk.
+- **Recovery:** the support-safe diagnostic includes counts, age, build, storage and stable error codes but no business payload or customer personal data. A damaged device uses the reconciliation export/import path; support must never instruct a merchant to clear site data while mutations are pending.
+- **UI restraint:** queue and cache mechanics stay invisible, but the everyday shell keeps a simple traffic-light state: red offline, yellow while saving, green when online and settled. A compact save indicator may offer recovery only when attention is genuinely required; technical details remain outside the cashier flow.
 
 ## 11. Database Design
 

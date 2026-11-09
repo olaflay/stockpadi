@@ -59,10 +59,21 @@ export function OfflineNavigationGuard() {
       return;
     }
 
-    // A full document request lets the service worker answer from the warmed
-    // navigation cache. Soft navigation would request an uncached RSC payload.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate service-worker document navigation for offline cache fallback
-    window.location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
+    // Never leave a working app screen unless a controlling worker can answer
+    // the document request. Without this check Android Chrome replaces the app
+    // with ERR_FAILED and the cashier cannot get back without relaunching.
+    void (async () => {
+      const hasController = Boolean(navigator.serviceWorker?.controller);
+      const cached = "caches" in window
+        ? await window.caches.match(destination.pathname).catch(() => undefined)
+        : undefined;
+      if (!hasController || !cached) {
+        setBlockedPath(destination.pathname);
+        return;
+      }
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- verified cached document navigation
+      window.location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
+    })();
   }, [frameworkOffline]);
 
   useEffect(() => {
@@ -110,7 +121,7 @@ export function OfflineNavigationGuard() {
       onClose={() => setBlockedPath(null)}
       onConfirm={() => setBlockedPath(null)}
       title="This page needs a connection"
-      description="You’re currently offline and this page isn’t available offline. Your saved work is safe on this device."
+      description="You’re offline and this screen was not saved for offline use yet. Stay here; your saved work is safe on this device."
       confirmLabel="Stay here"
       hideCancelButton
       variant="info"

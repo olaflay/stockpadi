@@ -135,14 +135,9 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Backup & offline data"
-              description="Save status, pending uploads and local backup"
+              label="Backup & data"
+              description="Export or restore business records"
               href="/settings/data"
-            />
-            <SettingsRow
-              label="Sync health"
-              description="Connection status and changes waiting to upload"
-              href="/settings/sync-health"
             />
             <SettingsRow
               label="WhatsApp reports"

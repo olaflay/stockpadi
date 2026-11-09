@@ -24,33 +24,23 @@ describe("BannerStrip connection status", () => {
 
   it("shows a concise offline status", () => {
     state.online = false;
-    state.pendingSales = 2;
 
     render(<BannerStrip />);
 
-    expect(screen.getByText("Offline")).toBeInTheDocument();
+    expect(screen.getByText("Offline · Sales stay on this phone")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-danger");
   });
 
-  it("uses plain saving language while a sale is being sent", () => {
-    state.phase = "uploading";
-    state.pendingSales = 1;
-
+  it("shows green online status when settled", () => {
     render(<BannerStrip />);
-
-    expect(screen.getByText("Saving")).toBeInTheDocument();
-  });
-
-  it("shows a settled online state when no sales are waiting", () => {
-    render(<BannerStrip />);
-
     expect(screen.getByText("Online")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-success");
   });
 
-  it("shows only the actionable error label when a mutation needs attention", () => {
-    state.failed = 1;
-
+  it("shows yellow while saving", () => {
+    state.phase = "uploading";
     render(<BannerStrip />);
-
-    expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(screen.getByText("Saving")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-warning");
   });
 });
