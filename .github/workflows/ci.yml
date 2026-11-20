@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -60,14 +64,16 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: npm --prefix backend run db:migrate
+        # Run directly so the runner uses injected GitHub secrets and does not
+        # require the developer-only backend/.env file to exist in the checkout.
+        run: node backend/scripts/migrate.mjs
 
       - name: Verify hosted migration state
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: npm --prefix backend run db:verify
+        run: node backend/scripts/verify-migrations.mjs
 
       - name: Explicitly skip hosted database verification for pull requests
         if: github.event_name == 'pull_request'
