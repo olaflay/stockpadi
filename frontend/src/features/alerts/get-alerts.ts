@@ -10,14 +10,14 @@ import {
 } from "@/features/inventory/product-insights";
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 
-export type AlertType = "low_stock" | "expiring" | "unsynced" | "customer_credit";
+export type AlertType = "low_stock" | "expiring" | "unsynced" | "customer_credit" | "broadcast";
 
 export interface Alert {
   id: string;
   type: AlertType;
   title: string;
   description: string;
-  href: string;
+  href?: string;
 }
 
 export interface AlertQueryOptions {
@@ -122,7 +122,7 @@ export async function getAlerts(unsyncedCount: number, options: AlertQueryOption
  */
 export async function getAlertCounts(
   unsyncedCount: number,
-  _acknowledgedIds?: Set<string>,
+  acknowledgedIds: Set<string> = new Set(),
   options: AlertQueryOptions = {},
 ): Promise<number> {
   const branchScope = options.branchScope ?? null;
@@ -146,12 +146,12 @@ export async function getAlertCounts(
     : detectedLowStockIds;
 
   let count = 0;
-  if (!lowStockOnly && unsyncedCount > 0) count++;
+  if (!lowStockOnly && unsyncedCount > 0 && !acknowledgedIds.has("unsynced-outbox")) count++;
   if (!lowStockOnly) {
     const balances = await getAllCustomerCreditBalances();
-    if ([...balances.values()].some((balance) => balance > 0)) count++;
+    if ([...balances.values()].some((balance) => balance > 0) && !acknowledgedIds.has("customer-credit-active")) count++;
   }
-  count += lowStockIds.size;
-  count += expiringIds.size;
+  count += [...lowStockIds].filter((id) => !acknowledgedIds.has(`low-stock-${id}`)).length;
+  count += [...expiringIds].filter((id) => !acknowledgedIds.has(`expiring-${id}`)).length;
   return count;
 }

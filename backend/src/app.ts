@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { handleAccountContext } from "./modules/accounts/account.controller.js";
 import { handleAdminRequest } from "./modules/admin/admin.controller.js";
+import { handleBroadcastList } from "./modules/broadcasts/broadcast.controller.js";
 import { handleSalesList, handleVoidSale, handleRefundSale } from "./modules/sales/sales.controller.js";
 import { handleWorkerAudit, handleWorkerList, handleWorkerMember, handleWorkerRequest } from "./modules/workers/worker.controller.js";
 import { handleBusinessRegistration } from "./modules/businesses/business.controller.js";
@@ -99,6 +100,7 @@ const EXACT_ROUTE_METHODS = new Map<string, readonly string[]>([
   [workerRoutes.list.path, ["GET", "POST"]],
   [workerRoutes.audit.path, ["GET"]],
   [adminRoutes.path, ["POST"]],
+  ["/api/broadcasts", ["GET"]],
   [accountRoutes.path, ["POST"]],
   [salesRoutes.list, ["GET"]],
   [salesRoutes.path, ["POST"]],
@@ -257,6 +259,7 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
       return jsonResponse(413, { error: { code: "PAYLOAD_TOO_LARGE", message: `Request body must not exceed ${MAX_BODY_BYTES} bytes` } }, requestOrigin);
     }
     if (request.method === "GET" && (pathname === "/" || pathname === "/health" || pathname === "/api/health")) return jsonResponse(200, healthPayload(), requestOrigin);
+    if (request.method === "GET" && pathname === "/api/broadcasts") return jsonResponse(200, await handleBroadcastList(request), requestOrigin);
     if (request.method === "GET" && pathname === workerRoutes.list.path) return jsonResponse(200, await handleWorkerList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.product) return jsonResponse(200, await handleProductList(request), requestOrigin);
     if (request.method === "GET" && pathname === inventoryRoutes.categories) return jsonResponse(200, await handleCategoryList(request), requestOrigin);

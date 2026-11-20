@@ -13,6 +13,7 @@ import { KeyboardScrollHandler } from "@/components/ui/KeyboardScrollHandler";
 import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
 import { TooltipProvider } from "@/components/ui/TooltipContext";
 import { OfflineNavigationGuard } from "@/components/ui/OfflineNavigationGuard";
+import { BroadcastProvider, BroadcastBanner } from "@/features/alerts/BroadcastProvider";
 
 function AppShellBody({ children }: { children: React.ReactNode }) {
   const { isNavVisible } = useNavigation();
@@ -24,6 +25,7 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
       <GuidedTour />
       <OfflineNavigationGuard />
       <BannerStrip />
+      <BroadcastBanner />
       <SideDrawer />
       <main
         className={`relative z-20 min-h-0 min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-2 sm:pt-2.5 w-full max-w-xl md:max-w-2xl mx-auto transition-[padding] duration-200 ${
@@ -58,7 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <NavigationProvider>
             <TooltipProvider>
               <KeyboardScrollHandler />
-              <AppShellBody>{children}</AppShellBody>
+              <BroadcastProvider><AppShellBody>{children}</AppShellBody></BroadcastProvider>
             </TooltipProvider>
           </NavigationProvider>
         </DrawerProvider>

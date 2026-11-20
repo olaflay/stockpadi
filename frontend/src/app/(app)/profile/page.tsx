@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { UserCircle, LogOut } from "lucide-react";
+import { UserCircle, LogOut, Store } from "lucide-react";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { signOut } from "@/features/auth/logout";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { getSupabase } from "@/lib/supabase";
+import { SettingsRow } from "@/components/ui/SettingsRow";
 
 const ACCOUNT_LABELS = {
   ADMIN: "Platform Admin",
@@ -34,7 +35,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Profile" />
+      <ScreenHeader title="Manage account" />
       <div className="flex flex-col items-center gap-3 py-4 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-accent/10">
           <UserCircle size={40} className="text-brand-accent" aria-hidden />
@@ -47,6 +48,14 @@ export default function ProfilePage() {
           {email && <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">{email}</p>}
         </div>
       </div>
+      {user.accountType === "BUSINESS_OWNER" && (
+        <section>
+          <h2 className="mb-2 px-1 text-[length:var(--font-size-label)] font-semibold text-on-surface-muted">Business</h2>
+          <div className="overflow-hidden rounded-[var(--radius-card)] bg-surface-container">
+            <SettingsRow icon={Store} label="Business profile" description="Store name, receipt headers and contact info" href="/settings/business" tone="brand" />
+          </div>
+        </section>
+      )}
       <section className="rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
         <p className="text-[length:var(--font-size-body)] text-on-surface">
           {user.accountType === "WORKER" ? "Sign in with your email and password through the normal login screen. Password resets are handled by your Business Owner." : "Sign in with your email and password through the normal login screen. Password changes are available through Forgot password."}

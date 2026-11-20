@@ -32,6 +32,7 @@ interface Tenant {
   currency: string;
   is_active: boolean;
   status?: "pending" | "verified" | "suspended" | "rejected";
+  deleted_at?: string | null;
   created_at: string;
   owner_name?: string;
   owner_email?: string;
@@ -141,6 +142,21 @@ export default function SuperAdminTenantsPage() {
       showToast(err instanceof Error ? err.message : "Failed to approve store.", "danger");
     } finally {
       setApprovingId(null);
+    }
+  }
+
+  async function restoreTenant(tenant: Tenant, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setTogglingId(tenant.id);
+    try {
+      await callBackend("platform-api", { action: "restore_business", businessId: tenant.id, confirmation: tenant.name });
+      setTenants((items) => items.map((item) => item.id === tenant.id ? { ...item, deleted_at: null, is_active: true, status: "verified" } : item));
+      showToast("Business access restored.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not restore this business.", "danger");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -343,7 +359,7 @@ export default function SuperAdminTenantsPage() {
         <div className="flex flex-col gap-3">
           {filteredTenants.map((tenant) => {
             const isVerified = tenant.status === "verified";
-            const isSuspended = tenant.status === "suspended" || (!tenant.is_active && tenant.status !== "pending");
+            const isSuspended = tenant.deleted_at || tenant.status === "suspended" || (!tenant.is_active && tenant.status !== "pending");
             const isPending = tenant.status === "pending";
 
             return (
@@ -383,7 +399,7 @@ export default function SuperAdminTenantsPage() {
                         ) : (
                           <Clock size={11} />
                         )}
-                        <span className="capitalize">{tenant.status ?? (tenant.is_active ? "verified" : "suspended")}</span>
+                        <span>{tenant.deleted_at ? "Removed" : tenant.status ?? (tenant.is_active ? "verified" : "suspended")}</span>
                       </span>
 
                       {/* Business Type Badge */}
@@ -454,6 +470,16 @@ export default function SuperAdminTenantsPage() {
                     >
                       <CheckCircle2 size={13} />
                       <span>{approvingId === tenant.id ? "Approving…" : "Approve"}</span>
+                    </RippleButton>
+                  ) : tenant.deleted_at ? (
+                    <RippleButton
+                      type="button"
+                      onClick={(event) => void restoreTenant(tenant, event)}
+                      disabled={togglingId === tenant.id}
+                      className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-xs font-semibold text-success disabled:opacity-50"
+                    >
+                      <Power size={13} aria-hidden />
+                      <span>{togglingId === tenant.id ? "Restoring…" : "Restore"}</span>
                     </RippleButton>
                   ) : (
                     <RippleButton

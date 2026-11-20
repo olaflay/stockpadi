@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useOffline } from "next/offline";
-import { WifiOff } from "lucide-react";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { OfflineNotice } from "@/components/ui/OnlineOnlyButton";
 import { isOfflineRoute, OFFLINE_WARM_ROUTES } from "@/lib/offline-routes";
 import { resolveRouteWarmingStrategy, type ConnectionHints } from "@/lib/route-warming";
 
@@ -116,16 +115,10 @@ export function OfflineNavigationGuard() {
   }, [frameworkOffline]);
 
   return (
-    <ConfirmDialog
+    <OfflineNotice
       isOpen={blockedPath !== null}
       onClose={() => setBlockedPath(null)}
-      onConfirm={() => setBlockedPath(null)}
-      title="This page needs a connection"
-      description="You’re offline and this screen was not saved for offline use yet. Stay here; your saved work is safe on this device."
-      confirmLabel="Stay here"
-      hideCancelButton
-      variant="info"
-      icon={<WifiOff size={22} aria-hidden />}
+      navigation
     />
   );
 }

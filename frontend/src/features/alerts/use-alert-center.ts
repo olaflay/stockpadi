@@ -1,112 +1,69 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAlerts, getAlertCounts, type Alert } from "./get-alerts";
 import { usePendingSyncCount } from "@/lib/use-pending-sync-count";
 import { useCurrentUserOptional } from "@/features/auth/use-current-user";
+import { useAlertReadState } from "./alert-read-state";
+import { alertScope, useBroadcasts } from "./BroadcastProvider";
 
-const ACKNOWLEDGED_STORAGE_KEY = "stockpadi-alerts-acknowledged";
-
-function useAcknowledgedIds() {
-  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ACKNOWLEDGED_STORAGE_KEY);
-      if (stored) {
-        const parsed = new Set<string>(JSON.parse(stored));
-        setTimeout(() => setAcknowledgedIds(parsed), 0);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  return acknowledgedIds;
+function useAlertQueryOptions() {
+  const user = useCurrentUserOptional();
+  const branches = (user?.branchIds ?? []).join(",");
+  const worker = user?.accountType === "WORKER";
+  return useMemo(() => ({
+    branchScope: worker ? (branches ? branches.split(",") : []) : null,
+    lowStockOnly: worker,
+  }), [worker, branches]);
 }
 
-/**
- * Cheap count-only alert query — for high-frequency call sites (the nav
- * badge mounted on every authenticated screen, the dashboard summary).
- * Skips the products.bulkGet + description-string work in getAlerts, since
- * these consumers only ever render a number. Use useAlertCenter() instead
- * only where the full descriptive list is actually rendered (the /alerts
- * page itself).
- */
+/** Count unseen conditions, rather than repeatedly counting already-opened alerts. */
 export function useAlertBadgeCount(): number {
   const unsyncedCount = usePendingSyncCount();
-  const acknowledgedIds = useAcknowledgedIds();
   const user = useCurrentUserOptional();
-  const branchScope = useMemo(
-    () => (user?.accountType === "WORKER" ? user.branchIds ?? [] : null),
-    [user]
-  );
-  const lowStockOnly = user?.accountType === "WORKER";
-
-  return useLiveQuery(
-    () => getAlertCounts(unsyncedCount, acknowledgedIds, { branchScope, lowStockOnly }),
-    [unsyncedCount, acknowledgedIds, branchScope, lowStockOnly]
+  const options = useAlertQueryOptions();
+  const { readIds, viewedIds } = useAlertReadState(alertScope(user));
+  const { broadcasts } = useBroadcasts();
+  const conditions = useLiveQuery(
+    () => getAlertCounts(unsyncedCount, new Set([...readIds, ...viewedIds]), options),
+    [unsyncedCount, readIds, viewedIds, options, user?.businessId],
   ) ?? 0;
+  return conditions + broadcasts.filter((row) => !readIds.has(`broadcast-${row.id}`) && !viewedIds.has(`broadcast-${row.id}`)).length;
 }
 
 export function useAlertCenter() {
   const unsyncedCount = usePendingSyncCount();
   const user = useCurrentUserOptional();
-  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
-  const branchScope = useMemo(
-    () => (user?.accountType === "WORKER" ? user.branchIds ?? [] : null),
-    [user]
-  );
-  const lowStockOnly = user?.accountType === "WORKER";
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ACKNOWLEDGED_STORAGE_KEY);
-      if (stored) {
-        const parsed = new Set<string>(JSON.parse(stored));
-        setTimeout(() => setAcknowledgedIds(parsed), 0);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
+  const options = useAlertQueryOptions();
+  const { readIds, markRead, markViewed } = useAlertReadState(alertScope(user));
+  const feed = useBroadcasts();
   const result = useLiveQuery(async () => {
     try {
-      const alerts = await getAlerts(unsyncedCount, { branchScope, lowStockOnly });
-      return { alerts, error: null as string | null };
-    } catch (err) {
-      return { alerts: [] as Alert[], error: err instanceof Error ? err.message : "Couldn't load alerts." };
+      return { alerts: await getAlerts(unsyncedCount, options), error: null as string | null };
+    } catch {
+      return { alerts: [] as Alert[], error: "Couldn't load alerts." };
     }
-  }, [unsyncedCount, branchScope, lowStockOnly]);
-
-  // undefined distinctly means "still loading" — do not collapse it into an
-  // empty array, or the page can never distinguish loading from caught up.
-  const alerts = result?.alerts;
-  // Operational alerts remain visible until their underlying condition is
-  // resolved. Opening an alert must not permanently hide a recurring debt or
-  // low-stock condition on this device.
-  const activeAlerts = alerts || [];
-
-  const acknowledgeAlert = (id: string) => {
-    const next = new Set(acknowledgedIds);
-    next.add(id);
-    setAcknowledgedIds(next);
-    localStorage.setItem(ACKNOWLEDGED_STORAGE_KEY, JSON.stringify([...next]));
-  };
-
-  const clearAcknowledged = () => {
-    setAcknowledgedIds(new Set());
-    localStorage.removeItem(ACKNOWLEDGED_STORAGE_KEY);
-  };
-
+  }, [unsyncedCount, options, user?.businessId]);
+  const alerts = useMemo(() => [
+    ...feed.broadcasts.map((row): Alert => ({
+      id: `broadcast-${row.id}`, type: "broadcast", title: "Announcement", description: row.content,
+    })),
+    ...(result?.alerts ?? []),
+  ], [feed.broadcasts, result]);
   return {
-    isLoading: result === undefined,
+    isLoading: result === undefined || (feed.loading && alerts.length === 0),
     error: result?.error ?? null,
-    alerts: activeAlerts,
-    allAlertsCount: alerts?.length ?? 0,
-    acknowledgeAlert,
-    clearAcknowledged,
+    broadcastError: feed.error,
+    alerts,
+    readIds,
+    markRead,
+    markViewed,
+    allAlertsCount: alerts.length,
+    acknowledgeAlert: (id: string) => markRead([id]),
+    hasMore: feed.hasMore,
+    loadMore: feed.loadMore,
+    loadingMore: feed.loading,
+    retryBroadcasts: feed.retry,
   };
 }

@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
+import { OfflineNotice } from "@/components/ui/OnlineOnlyButton";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { DEFAULT_OWING_MESSAGE_TEMPLATE, normalizeNigerianPhone, renderOwingMessage } from "@/lib/whatsapp";
 import { serverPatch } from "@/platform/api/backend-client";
@@ -17,6 +18,7 @@ export default function SharingSettingsPage() {
   const { showToast } = useToast();
   const [whatsappInput, setWhatsappInput] = useState<string | null>(null);
   const [templateInput, setTemplateInput] = useState<string | null>(null);
+  const [showOfflineNotice, setShowOfflineNotice] = useState(false);
   const profile = useLiveQuery(() => db.businessProfile.get(BUSINESS_PROFILE_SINGLETON_ID), []);
 
   if (user.accountType !== "BUSINESS_OWNER") {
@@ -58,7 +60,7 @@ export default function SharingSettingsPage() {
     if (!profile) return;
     const template = (templateInput ?? profile.owingMessageTemplate ?? "").trim();
     if (!template) { showToast("Message template cannot be empty", "danger"); return; }
-    if (!navigator.onLine) { showToast("Connect to the internet to save this template", "warning"); return; }
+    if (!navigator.onLine) { setShowOfflineNotice(true); return; }
     try {
       const saved = await serverPatch<{ owing_message_template?: string }>("/api/business/profile", { name: profile.name, businessTypeId: profile.businessTypeId, owingMessageTemplate: template });
       await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { owingMessageTemplate: saved.owing_message_template ?? template });
@@ -67,6 +69,8 @@ export default function SharingSettingsPage() {
   }
 
   return (
+    <>
+      <OfflineNotice isOpen={showOfflineNotice} onClose={() => setShowOfflineNotice(false)} />
     <div className="flex flex-col gap-4">
       <ScreenHeader title="Sharing" backHref="/settings" />
 
@@ -100,5 +104,6 @@ export default function SharingSettingsPage() {
         <RippleButton type="button" onClick={saveTemplate} className="min-h-[var(--touch-target-min)] self-start rounded-[var(--radius-control)] bg-brand-accent px-4 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast">Save template</RippleButton>
       </label>
     </div>
+    </>
   );
 }
