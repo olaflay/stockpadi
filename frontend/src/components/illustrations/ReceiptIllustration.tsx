@@ -11,7 +11,7 @@ export function ReceiptIllustration({ className }: { className?: string }) {
       <path
         d="M28 16 H68 V76 L63 72 L58 76 L53 72 L48 76 L43 72 L38 76 L33 72 L28 76 Z"
         fill="var(--color-surface-container-high)"
-        stroke="currentColor"
+        stroke="var(--color-brand-accent)"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />

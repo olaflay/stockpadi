@@ -11,7 +11,7 @@ import { useOnlineStatus } from "@/lib/use-online-status";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
-import { RegisterIllustration } from "@/components/illustrations/RegisterIllustration";
+import Image from "next/image";
 import { TextInput } from "@/components/ui/TextInput";
 import { BackendError, callBackend } from "@/features/auth/backend-client";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
@@ -212,13 +212,13 @@ export default function RegisterForm() {
           className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-focus-block)] bg-brand-accent/10 text-brand-accent mb-1"
           aria-hidden
         >
-          <RegisterIllustration className="h-10 w-10" />
+          <Image src="/register-shop.webp" alt="" width={64} height={64} unoptimized className="h-full w-full rounded-[inherit] object-cover" />
         </div>
         <h1 className="text-[length:var(--font-size-title-lg)] font-bold tracking-tight text-on-surface">
           Create your account
         </h1>
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
-          Set up in seconds, sell offline forever
+          Create a shop profile to start recording sales and tracking stock.
         </p>
       </div>
 
