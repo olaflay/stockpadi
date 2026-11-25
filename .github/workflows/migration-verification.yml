@@ -31,4 +31,4 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: npm --prefix backend run db:verify
+        run: node backend/scripts/verify-migrations.mjs
