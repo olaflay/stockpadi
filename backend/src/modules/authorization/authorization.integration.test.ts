@@ -47,6 +47,9 @@ describe("backend authorization integration", () => {
 
   it("allows Admin without a tenant and rejects Owner from Admin operations", async () => {
     const admin: any = withResolver(dbFor(contextFor("ADMIN")));
+    admin.auth = {
+      admin: { listUsers: vi.fn().mockResolvedValue({ data: { users: [] }, error: null }) },
+    };
     admin.from = vi.fn((table: string) => {
       if (table === "platform_audit_logs") return { insert: async () => ({ error: null }) };
       return table === "business_profile"
