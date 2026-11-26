@@ -81,13 +81,14 @@ describe("SettingsPage component", () => {
     // Owner management sections are visible
     expect(screen.getByText("People & Permissions")).toBeDefined();
     expect(screen.getByText("Staff & access")).toBeDefined();
-    expect(screen.getByText("Business profile")).toBeDefined();
+    expect(screen.queryByText("Business profile")).toBeNull();
     expect(screen.getByText("Branches & outlets")).toBeDefined();
 
     // Data & Support sections
     expect(screen.getByText("Data & Sharing")).toBeDefined();
     expect(screen.getByText("Backup & data")).toBeDefined();
     expect(screen.queryByText("Sync health")).toBeNull();
+    expect(screen.getByText("WhatsApp reports")).toBeDefined();
     expect(screen.getByText("Help & Support")).toBeDefined();
     expect(screen.getByText("App Walkthrough")).toBeDefined();
   });
