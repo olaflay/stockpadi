@@ -49,7 +49,16 @@ jobs:
 
       - run: npm run test
 
-      - run: npm run build
+      - name: Build frontend with CI-only configuration
+        env:
+          NEXT_PUBLIC_APP_ENV: staging
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-build-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PROJECT_REF: ci-build-placeholder
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+          NEXT_PUBLIC_BACKEND_URL: https://api.ci.example.invalid
+          NEXT_PUBLIC_SITE_URL: https://app.ci.example.invalid
+          NEXT_PUBLIC_BUILD_VERSION: ${{ github.sha }}
+        run: npm run build
 
       - run: npm run backend:build
 
