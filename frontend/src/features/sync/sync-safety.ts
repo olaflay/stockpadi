@@ -13,7 +13,7 @@ import {
 export const HIGH_RISK_SYNC_ENTITY_TYPES = new Set<SyncEntityType>([
   "sale", "stock_adjustment", "stock_count_submission", "purchase_receipt", "credit_payment", "expense", "expense_reversal",
 ]);
-const UNSYNCED_STATUSES = new Set(["pending", "syncing", "blocked", "failed", "conflict"]);
+const UNSYNCED_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"] as const;
 
 export interface SyncSafety {
   required: boolean;
@@ -25,11 +25,17 @@ export interface SyncSafety {
 export async function getSyncSafety(): Promise<SyncSafety> {
   const businessId = await getLocalBusinessId();
   if (!businessId) return { required: false, queueCount: 0, oldestPendingAt: null, ageMs: 0 };
-  const rows = (await db.outbox.toArray()).filter((row) => row.businessId === businessId && UNSYNCED_STATUSES.has(row.status));
-  const oldestPendingAt = rows
-    .map((row) => row.createdAtLocal)
-    .filter(Boolean)
-    .sort()[0] ?? null;
+  // High-risk writes call this check before entering their local transaction.
+  // Use the status index instead of decoding every historical outbox row, and
+  // find the oldest timestamp in one pass rather than sorting the whole queue.
+  const rows = (await db.outbox.where("status").anyOf(...UNSYNCED_STATUSES).toArray())
+    .filter((row) => row.businessId === businessId);
+  let oldestPendingAt: string | null = null;
+  for (const row of rows) {
+    if (row.createdAtLocal && (oldestPendingAt === null || row.createdAtLocal < oldestPendingAt)) {
+      oldestPendingAt = row.createdAtLocal;
+    }
+  }
   const ageMs = oldestPendingAt ? Math.max(0, Date.now() - new Date(oldestPendingAt).getTime()) : 0;
   return {
     required:

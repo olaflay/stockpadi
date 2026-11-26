@@ -93,6 +93,16 @@ describe("runSyncCycle", () => {
     expect(result?.pullResult.fullySynced).toBe(false);
   });
 
+  it("follows a triggered sale push with authoritative reconciliation", async () => {
+    drainOutbox.mockResolvedValueOnce({ drained: 1, pendingRemaining: 0 });
+
+    await triggerSync("sale");
+    await vi.waitFor(() => expect(preloadSessionData).toHaveBeenCalledWith(true, "reconciliation"));
+
+    expect(drainOutbox).toHaveBeenNthCalledWith(1, { types: ["sale"], runMaintenance: false });
+    expect(drainOutbox).toHaveBeenCalledTimes(2);
+  });
+
   it("does not wait for an unrelated routine pull before sending a sale", async () => {
     let releasePull!: (value: { fullySynced: boolean }) => void;
     preloadSessionData.mockImplementationOnce(() => new Promise((resolve) => { releasePull = resolve; }));

@@ -15,15 +15,14 @@ export function WelcomeIllustration({ className }: { className?: string }) {
         height="32"
         rx="4"
         fill="var(--color-surface-container-high)"
-        stroke="currentColor"
-        strokeWidth="2.5"
+        stroke="none"
       />
 
       {/* Modern shop awning */}
       <path
         d="M20 42 C20 42 22 26 48 26 C74 26 76 42 76 42 Z"
         fill="currentColor"
-        opacity="0.14"
+        opacity="0.85"
       />
       <path {...STROKE_PROPS} stroke="currentColor" d="M18 42 L24 28 H72 L78 42 Z" />
 

@@ -46,7 +46,10 @@ Structured in accordance with the **Diátaxis Documentation Framework** (Tutoria
 | [COUNTER-RESEARCH-OPERATIONAL-UX-SOLUTIONS-2026-11.md](COUNTER-RESEARCH-OPERATIONAL-UX-SOLUTIONS-2026-11.md) | Counter-research, independent judge verdict, and evidence for standardized operational UX solutions. | Challenging a proposed remedy or extending the expense/delivery outcome pilot. |
 | [research/AI-LAYER-VOICE-CHAT-IMAGE-ENTRY.md](research/AI-LAYER-VOICE-CHAT-IMAGE-ENTRY.md) (`AI_IMPLEMENTATION_PRIMARY`) | Primary owner-supplied AI implementation research input for voice, chat, image entry, evaluation, safety, cost, and rollout. Governed by the conflict notes beside it. | **Consult first for any AI implementation or AI research**, then re-verify time-sensitive claims and apply the TRUST gate. |
 | [research/AI-IMPLEMENTATION-RESEARCH-NOTES.md](research/AI-IMPLEMENTATION-RESEARCH-NOTES.md) | Governance label, conflict register, verification gaps, and TRUST evidence requirements for the primary AI input. | Before turning any recommendation in the AI source into architecture or code. |
+| [research/AI-READINESS-AUDIT-2026-11.md](research/AI-READINESS-AUDIT-2026-11.md) | Repository evidence map for the AI brief, including completed foundations, unresolved prerequisites, accepted work order, and external approval gates. | Before planning or reviewing any AI-related implementation. |
+| [research/AI-PAYMENT-AND-PRORATION-RESEARCH-2026-11.md](research/AI-PAYMENT-AND-PRORATION-RESEARCH-2026-11.md) (`AI_PAYMENT_PRORATION`) | Primary-source-backed boundaries and deterministic rules for split tender, debt settlement, landed-cost proration, refunds, and future payment-provider integration. | Any AI, payment, purchase-cost allocation, transfer-verification, reconciliation, or refund work. |
 | [research/OFFLINE-STARTUP-RECOVERY-2026-11.md](research/OFFLINE-STARTUP-RECOVERY-2026-11.md) | Primary-source findings and accepted recovery behavior for blocked IndexedDB startup. | Changing startup routing, Dexie lifecycle handling, or offline recovery UX. |
+| [research/OFFLINE-SYNC-RELIABILITY-AUDIT-2026-11.md](research/OFFLINE-SYNC-RELIABILITY-AUDIT-2026-11.md) | Current primary-source architecture audit, offline support policy, codebase gap matrix, tool decisions, and staged reliability backlog. | Changing offline scope, queue safety, sync architecture, observability, testing, or recovery policy. |
 | [specs/](specs/README.md) | Active feature specification index: Units Model, Contacts Hub, Hub Dashboard, and Stock Count redesign. | Implementing specced roadmap features. |
 
 ### 1.2 Explanation (Understanding-Oriented / Architecture & Principles)
@@ -62,6 +65,7 @@ Structured in accordance with the **Diátaxis Documentation Framework** (Tutoria
 | Document | Scope & Authority | When to Consult |
 |---|---|---|
 | [PWA-UPDATE-VERIFICATION.md](PWA-UPDATE-VERIFICATION.md) | Manual verification checklist for PWA service worker updates, pending offline sales across reload, and form draft recovery. | Pre-release testing, PWA deployment validation, or update debugging. |
+| [OFFLINE-SYNC-INCIDENT-RUNBOOK.md](OFFLINE-SYNC-INCIDENT-RUNBOOK.md) | Privacy-safe triage, rollback, cache/worker recovery, restore and reconciliation procedure. | Responding to startup, queue, deployment, database, or device-loss incidents. |
 | [products-import-template.xlsx](products-import-template.xlsx) | Standard Excel spreadsheet format for merchant catalog import. | Testing or onboarding merchant inventory bulk imports. |
 
 ### 1.4 Tutorials (Learning-Oriented / Activation & Onboarding)

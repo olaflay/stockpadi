@@ -21,6 +21,6 @@ export function resolveRouteWarmingStrategy(connection?: ConnectionHints): Route
     || connection?.effectiveType === "3g";
 
   return isConstrained
-    ? { initialDelayMs: 6_000, betweenRoutesMs: 750, idleTimeoutMs: 4_000 }
-    : { initialDelayMs: 1_500, betweenRoutesMs: 100, idleTimeoutMs: 1_500 };
+    ? { initialDelayMs: 10_000, betweenRoutesMs: 1_000, idleTimeoutMs: 5_000 }
+    : { initialDelayMs: 3_000, betweenRoutesMs: 150, idleTimeoutMs: 2_000 };
 }

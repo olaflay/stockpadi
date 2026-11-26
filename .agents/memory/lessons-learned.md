@@ -49,3 +49,8 @@
 Worked: Compared the existing protocol against browser, PostgreSQL, Supabase, Vercel and OWASP primary sources before changing architecture; Research and Backend owned it.
 Caught: Emergency quota recovery could delete the current offline shell, and unit tests were being treated as installed-PWA proof; Security and QA caught these at their gates.
 Change: Default to version-aware cache cleanup and require browser/device plus restore evidence before marking offline or recovery behavior verified.
+
+## 2026-11-09: Startup and offline-preparation performance
+Worked: Split the offline cache into a two-route boot shell and idle-time secondary warming; Frontend owned it.
+Caught: Service-worker warming, page warming, route prefetch, authentication and initial sync competed during startup; QA and Performance caught the duplicated critical-path work.
+Change: Default background preparation to idle-only, disable eager navigation prefetch on persistent menus, and never warm through an uncontrolled first-install page.

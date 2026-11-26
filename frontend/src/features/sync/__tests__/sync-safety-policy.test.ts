@@ -52,4 +52,14 @@ describe("offline queue safety policy", () => {
     await db.outbox.bulkPut(Array.from({ length: 1_000 }, (_, index) => row(index, recent)));
     expect((await getSyncSafety()).required).toBe(true);
   });
+
+  it("counts quarantined changes that still require review", async () => {
+    const stale = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+    await db.outbox.bulkPut(Array.from({ length: 100 }, (_, index) => ({
+      ...row(index, stale),
+      status: "needs_review" as const,
+    })));
+
+    expect(await getSyncSafety()).toMatchObject({ required: true, queueCount: 100 });
+  });
 });

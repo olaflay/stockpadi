@@ -160,7 +160,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               id={`tour-nav-${item.label.toLowerCase()}`}
-              prefetch={true}
+              prefetch={false}
               className={`flex min-h-[var(--touch-target-min)] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                 isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
               }`}

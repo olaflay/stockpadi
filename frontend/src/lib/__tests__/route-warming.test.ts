@@ -12,6 +12,6 @@ describe("resolveRouteWarmingStrategy", () => {
 
   it("honours data saver even when the reported connection is fast", () => {
     expect(resolveRouteWarmingStrategy({ effectiveType: "4g", saveData: true }).betweenRoutesMs)
-      .toBe(750);
+      .toBe(1_000);
   });
 });

@@ -15,8 +15,7 @@ export function EmptySalesIllustration({ className }: { className?: string }) {
         height="56"
         rx="8"
         fill="var(--color-surface-container-high)"
-        stroke="currentColor"
-        strokeWidth="2.5"
+        stroke="none"
       />
 
       {/* Modern top clip mechanism */}

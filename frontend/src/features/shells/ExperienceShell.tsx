@@ -99,7 +99,7 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={true}
+                prefetch={false}
                 className={`min-w-0 flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-1 py-2 text-[length:var(--font-size-caption)] transition-colors duration-[var(--motion-duration-short)] ${
                   active ? "text-brand-accent-active font-semibold" : "text-on-surface-muted"
                 }`}

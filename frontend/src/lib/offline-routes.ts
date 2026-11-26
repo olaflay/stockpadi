@@ -15,6 +15,11 @@ export const OFFLINE_ROUTES = [
 
 const OFFLINE_ROUTE_PREFIXES = ["/sales/", "/customers/"] as const;
 
+/** Minimum shell needed for a cashier to reopen and sell. Warm this small set
+ * first; the remaining offline routes wait until the app and sync engine are
+ * idle so startup stays responsive on low-end phones. */
+export const OFFLINE_BOOT_ROUTES = ["/dashboard", "/pos"] as const;
+
 export const OFFLINE_WARM_ROUTES = [
   "/dashboard",
   "/pos",

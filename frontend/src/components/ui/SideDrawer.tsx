@@ -263,7 +263,7 @@ export function SideDrawer() {
                       key={item.href}
                       href={item.href}
                       onClick={closeDrawer}
-                      prefetch={true}
+                      prefetch={false}
                       className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[length:var(--font-size-body)] font-medium transition-all ${
                         isActive
                           ? "bg-brand-accent/15 text-brand-accent-active font-semibold shadow-xs"

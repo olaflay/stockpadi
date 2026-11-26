@@ -9,7 +9,7 @@ import { ensureBackendBuildCompatibility } from "@/features/sync/build-compatibi
 import { PWA_DATA_REFRESH_EVENT, PWA_DATABASE_BLOCKED_EVENT, PWA_DATABASE_READY_EVENT, PWA_UPDATE_REQUIRED_EVENT } from "@/lib/pwa-update-events";
 import { beginPwaCriticalActivity, hasPwaCriticalActivity } from "@/lib/pwa-update-activity";
 import { persistFormDraftsForReload, restoreFormDraftsAfterReload } from "@/lib/pwa-reload-drafts";
-import { OFFLINE_WARM_ROUTES } from "@/lib/offline-routes";
+import { OFFLINE_BOOT_ROUTES } from "@/lib/offline-routes";
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const MAX_SAFE_WAIT_MS = 7_500;
@@ -34,6 +34,8 @@ export function ServiceWorkerRegister() {
   const failureCount = useRef(0);
   const hadController = useRef(false);
   const disposed = useRef(false);
+  const coreWarmTimer = useRef<number | null>(null);
+  const coreWarmSent = useRef(false);
 
   useEffect(() => {
     syncPhaseRef.current = syncPhase;
@@ -120,7 +122,26 @@ export function ServiceWorkerRegister() {
       registration.addEventListener("updatefound", onUpdateFound);
       if (registration.installing) watchInstallingWorker(registration.installing);
       if (registration.waiting && hadController.current) showFallback("An app update is ready.");
-      registration.active?.postMessage({ type: "CACHE_OFFLINE_ROUTES", routes: OFFLINE_WARM_ROUTES });
+      const warmCoreWhenIdle = () => {
+        coreWarmTimer.current = null;
+        if (disposed.current || coreWarmSent.current) return;
+        if (syncPhaseRef.current !== "idle") {
+          coreWarmTimer.current = window.setTimeout(warmCoreWhenIdle, 1_000);
+          return;
+        }
+        if (!registration.active) {
+          // A first installation can resolve register() before the worker is
+          // active. Keep the one-shot warm pending instead of silently losing
+          // it and leaving the next offline launch without its selling shell.
+          coreWarmTimer.current = window.setTimeout(warmCoreWhenIdle, 1_000);
+          return;
+        }
+        registration.active.postMessage({ type: "CACHE_OFFLINE_ROUTES", routes: OFFLINE_BOOT_ROUTES });
+        coreWarmSent.current = true;
+      };
+      if (!coreWarmSent.current && coreWarmTimer.current === null) {
+        coreWarmTimer.current = window.setTimeout(warmCoreWhenIdle, 2_500);
+      }
       return registration;
     };
     const ensureRegistration = (): Promise<ServiceWorkerRegistration> => {
@@ -221,6 +242,7 @@ export function ServiceWorkerRegister() {
       disposed.current = true;
       window.clearInterval(periodicUpdateCheck);
       if (reloadTimer.current !== null) window.clearTimeout(reloadTimer.current);
+      if (coreWarmTimer.current !== null) window.clearTimeout(coreWarmTimer.current);
       for (const activity of activeFormTimers.values()) {
         window.clearTimeout(activity.timer);
         activity.finish();
