@@ -11,9 +11,19 @@ import {
   isSameLocalDay,
   formatExpiryForDisplay,
   parseShortExpiryInput,
+  localDayBounds,
+  localDateKey,
 } from "@/lib/date";
 
 describe("Date and Time Utilities", () => {
+  it("uses consecutive local midnights and rejects impossible date input", () => {
+    const bounds = localDayBounds("2026-11-26")!;
+    expect(localDateKey(new Date(bounds.start))).toBe("2026-11-26");
+    expect(localDateKey(new Date(bounds.end))).toBe("2026-11-27");
+    expect(new Date(bounds.start).getHours()).toBe(0);
+    expect(new Date(bounds.end).getHours()).toBe(0);
+    expect(localDayBounds("2026-02-30")).toBeNull();
+  });
   it("computes start of today at local midnight accurately", () => {
     const fixedDate = new Date("2026-08-30T14:35:22.123Z");
     const startIso = getStartOfTodayIso(fixedDate);

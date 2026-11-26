@@ -11,7 +11,9 @@ import {
   Plus,
   CalendarCheck,
   Receipt,
-  ArrowRight,
+  Package,
+  Users,
+  AlertTriangle,
   ClipboardCheck,
 } from "lucide-react";
 import { db } from "@/lib/db";
@@ -21,6 +23,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { formatCurrency } from "@/lib/format";
+import { DashboardSalesCard } from "@/features/dashboard/DashboardSalesCard";
 import { useDashboardMetrics } from "@/features/dashboard/use-dashboard-metrics";
 import { getAllCustomerCreditBalances } from "@/features/customers/credit";
 import { SelectInput } from "@/components/ui/SelectInput";
@@ -32,19 +35,6 @@ import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
-/** Format hero card date with ordinal suffix, e.g. "Friday, 2nd of October" */
-function formatDashboardHeroDate(date: Date = new Date()): string {
-  const weekday = date.toLocaleDateString("en-GB", { weekday: "long" });
-  const day = date.getDate();
-  const month = date.toLocaleDateString("en-GB", { month: "long" });
-  const getOrdinal = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return s[(v - 20) % 10] || s[v] || s[0];
-  };
-  return `${weekday}, ${day}${getOrdinal(day)} of ${month}`;
-}
-
 /**
  * One KPI tile: label up top, big number + caption below, and optional actionable prompt.
  * Pure typography and tonal surface matching Samsung One UI / M3 design tokens.
@@ -54,6 +44,8 @@ function KpiCard({
   value,
   sub,
   actionLabel,
+  icon: Icon,
+  iconTone = "bg-brand-container text-on-brand-container",
   valueClassName = "text-on-surface",
   href,
   onClick,
@@ -62,32 +54,33 @@ function KpiCard({
   value: string;
   sub: string;
   actionLabel?: string;
+  icon: typeof Receipt;
+  iconTone?: string;
   valueClassName?: string;
   href?: string;
   onClick?: () => void;
 }) {
   const content = (
-    <>
-      <p className="text-xs font-semibold text-on-surface-variant leading-tight truncate">
-        {label}
-      </p>
-      <div className="mt-1.5 min-w-0">
-        <p className={`font-number text-[clamp(15px,4.2vw,18px)] font-bold tracking-tight tabular-nums leading-snug break-words ${valueClassName}`}>
+    <div className="flex min-w-0 items-start gap-2">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${iconTone}`}>
+        <Icon size={17} aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold leading-tight text-on-surface-variant">{label}</p>
+        <p className={`mt-1 wrap-anywhere font-number text-[clamp(15px,4.2vw,18px)] font-bold leading-snug tracking-tight tabular-nums ${valueClassName}`}>
           {value}
         </p>
-        <p className="mt-0.5 text-xs text-on-surface-muted leading-tight truncate">
-          {sub}
-        </p>
+        <p className="mt-0.5 text-xs leading-tight text-on-surface-muted">{sub}</p>
+        {actionLabel && (
+          <span className="mt-2 block text-[length:var(--font-size-caption)] font-semibold text-brand-accent">
+            {actionLabel}
+          </span>
+        )}
       </div>
-      {actionLabel && (
-        <span className="mt-2 text-[length:var(--font-size-caption)] font-semibold text-brand-accent hover:underline flex items-center gap-0.5">
-          {actionLabel}
-        </span>
-      )}
-    </>
+    </div>
   );
 
-  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col justify-between rounded-2xl bg-surface-container p-3.5 sm:p-4 text-left hover:bg-surface-container-high transition-colors";
+  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col rounded-2xl border border-border/30 bg-surface-container p-3 text-left shadow-elevation-1 sm:p-4 hover:bg-surface-container-high transition-colors";
 
   if (href) {
     return (
@@ -315,63 +308,16 @@ export default function DashboardPage() {
         </RippleLink>
       )}
 
-      {/* PRIMARY HERO CARD: Today's Sales */}
       {canSeeOwnSales && (
-        <div className="mb-3.5 flex w-full flex-col rounded-3xl bg-surface-container p-4 sm:p-5 text-left border border-border/20 shadow-xs">
-          {/* Small top header with label in capital letters and dynamic date */}
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted">
-              {user.accountType === "WORKER" ? "YOUR SALES TODAY" : "TODAY'S SALES"}
-            </p>
-            <span className="text-xs font-medium text-on-surface-muted shrink-0">
-              {formatDashboardHeroDate()}
-            </span>
-          </div>
-
-          {/* Bold Tabular Total */}
-          <p className="mt-2 truncate font-number text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-on-surface">
-            {formatCurrency(metrics.todaysSalesTotal)}
-          </p>
-
-          {/* High-signal Breakdown */}
-          <p className="mt-1 text-xs text-on-surface-muted leading-tight">
-            {metrics.todaysSalesCount} {metrics.todaysSalesCount === 1 ? "sale" : "sales"} · {formatCurrency(metrics.todaysPaidSalesTotal)} cash · {formatCurrency(metrics.todaysCreditSalesTotal)} credit
-          </p>
-
-          {/* Cleveland-McGill Proportional Visual Ratio Bar */}
-          {metrics.todaysSalesTotal > 0 && (
-            <div className="mt-2.5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest" aria-hidden>
-              <div
-                style={{ width: `${Math.min(100, Math.max(0, (metrics.todaysPaidSalesTotal / metrics.todaysSalesTotal) * 100))}%` }}
-                className="bg-brand-accent transition-all duration-300"
-                title="Cash takings"
-              />
-              <div
-                style={{ width: `${Math.min(100, Math.max(0, (metrics.todaysCreditSalesTotal / metrics.todaysSalesTotal) * 100))}%` }}
-                className="bg-credit transition-all duration-300"
-                title="Credit sales"
-              />
-            </div>
-          )}
-
-          {/* M3 / One UI Tonal Action Card for View Sales & Receipts */}
-          <RippleLink
-            href="/sales"
-            className="mt-3.5 flex items-center justify-between rounded-2xl bg-surface-container-high hover:bg-surface-container-highest active:scale-[0.99] px-4 py-3 text-xs text-on-surface transition-all shadow-xs border border-border/40 group"
-          >
-            <span className="font-semibold text-on-surface text-[13px]">View sales & receipts</span>
-            <div className="flex items-center gap-1.5 text-on-surface-variant group-hover:text-brand-accent transition-colors">
-              <span className="text-[12px] font-medium">{metrics.todaysSalesCount} recorded</span>
-              <ArrowRight size={15} className="text-brand-accent group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </RippleLink>
-        </div>
+        <DashboardSalesCard branchId={branchId} viewerId={viewerId} branchIds={user.branchIds} />
       )}
 
       {/* QUICK ACTIONS DOCK: Anchored directly below hero in the primary thumb arc */}
       {quickActions.length > 0 && (
+        <section aria-labelledby="dashboard-actions-title" className="mb-4">
+          <h2 id="dashboard-actions-title" className="mb-2 text-lg font-bold text-on-surface">Quick actions</h2>
         <div
-          className={`mb-3.5 rounded-3xl bg-surface-container p-3 sm:p-4 grid gap-2 sm:gap-3 ${
+          className={`grid gap-2 sm:gap-3 ${
             quickActions.length === 2
               ? "grid-cols-2"
               : quickActions.length === 3
@@ -386,7 +332,7 @@ export default function DashboardPage() {
                 <RippleLink
                   key={action.key}
                   href={action.href}
-                  className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                  className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center shadow-elevation-1 min-w-0 active:scale-95 transition-transform"
                 >
                   <div
                     className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
@@ -408,7 +354,7 @@ export default function DashboardPage() {
                 key={action.key}
                 type="button"
                 onClick={action.onClick}
-                className="group flex flex-col items-center justify-center py-1.5 px-1 text-center min-w-0 active:scale-95 transition-transform"
+                className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center shadow-elevation-1 min-w-0 active:scale-95 transition-transform"
               >
                 <div
                   className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
@@ -426,16 +372,18 @@ export default function DashboardPage() {
             );
           })}
         </div>
+        </section>
       )}
 
       {/* SECONDARY METRICS: 2x2 Grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
         {canSeeStoreMoney && (
           <KpiCard
-            label="Net Cash"
+            label="Net cash"
+            icon={Wallet}
             value={formatCurrency(netCashFlow)}
             sub="After expenses"
-            actionLabel="Reports →"
+            actionLabel="Reports"
             valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
             href="/reports"
           />
@@ -444,26 +392,31 @@ export default function DashboardPage() {
         {canSeeStoreMoney && (
           <KpiCard
             label="Inventory"
+            icon={Package}
             value={formatCurrency(metrics.inventoryValue)}
             sub={`${metrics.stockedProductCount} products`}
-            actionLabel="Stock →"
+            actionLabel="Stock"
             href="/products"
           />
         )}
 
         {canSeeCustomers && (
           <KpiCard
-            label="Owed to You"
+            label="Owed to you"
+            icon={Users}
+            iconTone="bg-credit-container text-on-credit-container"
             value={customersOwingData !== undefined ? formatCurrency(customersOwingData.totalOwed) : "…"}
             sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "debtor" : "debtors"}` : "Cleared"}
-            actionLabel="Debtors →"
+            actionLabel="Debtors"
             valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-credit" : "text-on-surface"}
             href="/contacts?tab=debtors"
           />
         )}
 
         <KpiCard
-          label="Low Stock"
+          label="Low stock"
+            icon={AlertTriangle}
+            iconTone="bg-warning-container text-on-warning-container"
           value={String(metrics.lowStockCount)}
           sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} items low` : "All healthy"}
           actionLabel={metrics.lowStockCount > 0 ? "View low stock →" : undefined}
@@ -485,28 +438,31 @@ export default function DashboardPage() {
       )}
 
       {/* QUICK SELL / TOP SELLERS: Compact product rows with 1-tap + Sell */}
-      {metrics.topProducts && metrics.topProducts.length > 0 && (
+      {hasCapability(user, "POS_SELL") && metrics.topProducts.length > 0 && (
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[length:var(--font-size-label)] font-medium text-on-surface-muted">
-              Quick Sell
+            <h2 className="text-lg font-bold text-on-surface">
+              Quick sell
             </h2>
             <RippleLink href="/products" className="text-xs font-semibold text-brand-accent hover:underline">
               All products →
             </RippleLink>
           </div>
-          <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
+          <div className="flex flex-col gap-2">
             {metrics.topProducts.map((p) => (
               <div
                 key={p.id}
-                className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-surface-container-high/40 transition-colors"
+                className="flex min-h-[var(--touch-target-min)] w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/30 bg-surface-container px-4 py-2.5 text-left shadow-elevation-1"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--font-size-body)] font-semibold text-on-surface">{p.name}</p>
                   <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
-                    {formatCurrency(p.sellPrice)} · <span className={p.currentStock <= 5 ? "text-warning font-medium" : ""}>{p.currentStock} in stock</span>
+                    {formatCurrency(p.sellPrice)}
                   </p>
                 </div>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${p.currentStock <= 5 ? "bg-warning-container text-on-warning-container" : "bg-success-container text-on-success-container"}`}>
+                  {p.currentStock} in stock
+                </span>
                 <RippleLink
                   href={`/pos?add=${p.id}`}
                   className="relative flex h-8 items-center gap-1 rounded-full bg-brand-container px-3 text-xs font-semibold text-on-brand-container hover:brightness-95 active:scale-95 transition-all before:absolute before:-inset-2 before:content-['']"
