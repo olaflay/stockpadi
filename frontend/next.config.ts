@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ["localhost:3000", ...configuredDevOrigins],
   experimental: {
+    // Shared contracts use Node ESM extensions in their TypeScript source.
+    extensionAlias: { ".js": [".js", ".ts", ".tsx"] },
     useOffline: true,
     optimizePackageImports: ["lucide-react", "dexie-react-hooks", "dexie"],
     staleTimes: {
