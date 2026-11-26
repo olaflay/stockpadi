@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useFailedSyncCount, usePendingSyncCount } from "@/lib/use-pending-sync-count";
@@ -137,6 +137,31 @@ export function SyncIndicator({
       setIsRetrying(false);
     }
   };
+
+  const reconnectPending = useRef(false);
+  const offerSaveAfterReconnect = useEffectEvent(() => {
+    reconnectPending.current = false;
+    showToast("Changes saved on this device are waiting to upload.", "neutral", {
+      label: "Save now",
+      onClick: () => {
+        if (navigator.onLine) void handleForceSync();
+      },
+    });
+  });
+
+  useEffect(() => {
+    if (!compact || !isContrast) return;
+    if (!isOnline) {
+      reconnectPending.current = true;
+      return;
+    }
+    if (pendingCount === 0 || failedCount > 0) reconnectPending.current = false;
+    if (!reconnectPending.current || runtimePhase !== "idle" || isSyncing) return;
+
+    // Give the existing reconnect sync time to drain the queue first.
+    const timer = window.setTimeout(offerSaveAfterReconnect, 5000);
+    return () => window.clearTimeout(timer);
+  }, [compact, isContrast, isOnline, pendingCount, failedCount, runtimePhase, isSyncing]);
 
   // High-risk write safety backpressure (100+ unsaved mutations older than 48h)
   if (failedCount === 0 && syncSafety.required) {

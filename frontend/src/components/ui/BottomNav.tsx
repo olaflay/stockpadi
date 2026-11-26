@@ -100,8 +100,9 @@ export function BottomNav() {
     <>
       <nav
         data-bottom-nav
+        inert={!isNavVisible}
         aria-label="Main navigation"
-        className={`fixed bottom-0 left-0 right-0 z-[var(--z-bottom-nav)] flex border-t border-border/40 bg-surface-container gpu-layer transition-all duration-200 ease-out after:content-[''] after:absolute after:top-full after:inset-x-0 after:h-32 after:bg-surface-container after:pointer-events-none ${
+        className={`fixed bottom-0 left-0 right-0 z-[var(--z-bottom-nav)] flex bg-surface-container gpu-layer transition-all duration-200 ease-out motion-reduce:transition-none ${
           isNavVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         }`}
         style={{
@@ -109,11 +110,7 @@ export function BottomNav() {
           willChange: "transform, opacity",
         }}
       >
-        {/* Downward background extension: permanently blankets the chin and overscroll area behind the home indicator */}
-        <div
-          aria-hidden
-          className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none"
-        />
+        <div aria-hidden className="absolute top-full inset-x-0 h-32 bg-surface-container pointer-events-none" />
         {items.map((item) => {
           const isMore = item.href === "/more";
           // M3 guideline: When More modal is open, navigation is NOT in state until user picks a page.

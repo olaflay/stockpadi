@@ -87,6 +87,35 @@ describe("importProducts cap enforcement", () => {
     expect(await db.products.where("businessId").equals("test-business").count()).toBe(3);
   });
 
+  it("allows only one concurrent import when both claim the same SKU", async () => {
+    const first = row(1);
+    const second = row(2);
+    second.data.sku = " sku-1 ";
+
+    const results = await Promise.allSettled([
+      importProducts([first], OWNER, null),
+      importProducts([second], OWNER, null),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: expect.objectContaining({ message: expect.stringContaining("SKU") }),
+    });
+    expect(await db.products.count()).toBe(1);
+    expect(await db.outbox.count()).toBe(1);
+  });
+
+  it("rejects the whole batch when a previewed barcode is already in the catalog", async () => {
+    await db.products.add({ ...product(1), barcode: "EXISTING" });
+    const duplicate = row(3);
+    duplicate.data.barcode = "existing";
+
+    await expect(importProducts([row(2), duplicate], OWNER, null)).rejects.toThrow("Row 3: barcode");
+    expect(await db.products.count()).toBe(1);
+    expect(await db.stockMovements.count()).toBe(0);
+    expect(await db.outbox.count()).toBe(0);
+  });
+
   it("makes imported products visible to the tenant-filtered stock list", async () => {
     await importProducts([row(2), row(3)], OWNER, null);
 

@@ -19,6 +19,7 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { hasCapability } from "@/features/auth/authorization";
 import { acquireOverlayScrollLock } from "@/components/ui/overlay-scroll-lock";
 import { useSheetDrag } from "@/components/ui/use-sheet-drag";
+import { useOnlineStatus } from "@/lib/use-online-status";
 
 interface MoreSheetModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ interface MoreSheetModalProps {
 
 export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalProps) {
   const user = useCurrentUser();
+  const isOnline = useOnlineStatus();
   const isOwnerOrAdmin = hasAccountType(user, ["BUSINESS_OWNER", "ADMIN"]);
   const bottomNavHrefs = new Set(
     isOwnerOrAdmin
@@ -170,7 +172,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
         aria-modal="true"
         aria-label="More navigation menu"
         tabIndex={-1}
-        className="relative z-10 flex min-h-0 max-h-[78vh] w-full max-w-lg mx-auto flex-col rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 bg-surface shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up overflow-hidden pointer-events-auto px-2"
+        className="relative z-10 flex min-h-0 max-h-[78dvh] w-full max-w-lg mx-auto flex-col rounded-t-[var(--radius-focus-block)] sm:rounded-[var(--radius-focus-block)] bg-surface shadow-elevation-3 animate-sheet-up overflow-hidden pointer-events-auto px-2"
         style={{ boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)" }}
       >
         {/* M3 Drag Handle */}
@@ -208,12 +210,12 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
                 <Link
                   key={item.href}
                   href={item.href}
-                  prefetch={false}
+                  prefetch={item.href === "/settings" && isOnline ? null : false}
                   onClick={onClose}
                   className={`min-w-0 flex flex-col items-center justify-center gap-2 rounded-[20px] p-3 sm:py-3.5 transition-all text-center ${
                     isActive
-                      ? "bg-brand-accent/15 border border-brand-accent/40 text-brand-accent font-semibold"
-                      : "bg-surface-container-low hover:bg-surface-container border border-border/30 text-on-surface active:scale-95"
+                      ? "bg-brand-container text-on-brand-container font-semibold"
+                      : "bg-surface-container-low hover:bg-surface-container text-on-surface active:scale-95"
                   }`}
                 >
                   <Icon size={22} className={isActive ? "text-brand-accent" : "text-on-surface-muted"} />

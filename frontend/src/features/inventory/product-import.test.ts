@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
 import { parseProductFile, buildErrorReportCsv, IMPORT_HEADERS } from "./product-import";
@@ -6,6 +7,20 @@ import { generateFallbackSku, generateUniqueFallbackSku } from "./generate-sku";
 import { PRODUCT_IMPORT_MAX_ROWS } from "@/config/limits";
 
 const HEADER = IMPORT_HEADERS.join(",");
+
+describe("original import workbooks", () => {
+  beforeEach(async () => { await db.products.clear(); });
+
+  it.each(["products-import-filled.xlsx", "stockpadi-sample-stock-import.xlsx"])(
+    "accepts all 25 product rows in %s",
+    async (name) => {
+      const source = readFileSync(new URL(`../../../../docs/${name}`, import.meta.url));
+      const result = await parseProductFile(new File([new Uint8Array(source)], name));
+      expect(result.errors).toEqual([]);
+      expect(result.validRows).toHaveLength(25);
+    }
+  );
+});
 
 function csvFromRows(rows: Array<Array<string | number | null>>): File {
   const body = rows.map((r) => {

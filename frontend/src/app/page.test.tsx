@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
-import { openStartupDestination } from "@/features/auth/startup-route";
 
 const replace = vi.fn();
 const resolveStartupDestination = vi.fn();
@@ -38,15 +38,25 @@ describe("startup recovery screen", () => {
 
     await waitFor(() => expect(recoverStartupWorkspace).toHaveBeenCalledOnce());
     expect(screen.queryByRole("button", { name: "Repair and continue" })).not.toBeInTheDocument();
-    expect(await screen.findByText("Another app tab is still using saved data")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
   it("ships a recovery link in the document even before React startup completes", () => {
     resolveStartupDestination.mockReturnValue(new Promise(() => undefined));
     render(<Home />);
 
-    expect(screen.getByRole("link", { name: "Open offline recovery", hidden: true })).toHaveAttribute("href", "/offline.html");
-    expect(screen.getByRole("link", { name: "Reload app", hidden: true })).toHaveAttribute("href", "/");
+    expect(screen.getByText("Recovery help", { selector: "a" })).toHaveAttribute("href", "/offline.html");
+    expect(screen.getByText("Try again", { selector: "a" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("status")).toHaveTextContent(/Opening/);
+  });
+
+  it("opens the destination once when React replays startup effects", async () => {
+    resolveStartupDestination.mockResolvedValue("/dashboard");
+    render(<StrictMode><Home /></StrictMode>);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
+    expect(replace).toHaveBeenCalledOnce();
+    expect(resolveStartupDestination).toHaveBeenCalledOnce();
   });
 
   it("performs recovery before rerouting instead of repeating the timeout loop", async () => {
@@ -64,9 +74,9 @@ describe("startup recovery screen", () => {
     recoverStartupWorkspace.mockResolvedValue(false);
     render(<Home />);
 
-    expect(await screen.findByText("Another app tab is still using saved data")).toBeInTheDocument();
+    expect(await screen.findByText("If the app is open elsewhere on this device, close it there and try again.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Repair and continue" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reload after closing tabs" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
 });

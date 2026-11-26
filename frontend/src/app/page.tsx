@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DatabaseZap } from "lucide-react";
 import { StateCard } from "@/components/ui/StateCard";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { getBrandingConfig } from "@/config/branding";
 import { openStartupDestination, recoverStartupWorkspace, resolveStartupDestination, withStartupTimeout } from "@/features/auth/startup-route";
 
@@ -23,24 +22,23 @@ const HYDRATION_WATCHDOG = `
 
 /** Routes into onboarding or straight to the dashboard based on local state, no network round trip. */
 export default function Home() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const branding = getBrandingConfig();
   const [startupState, setStartupState] = useState<StartupState>("opening");
-  const startupBeganRef = useRef(false);
+  const startupRead = useRef<ReturnType<typeof resolveStartupDestination> | null>(null);
 
   useEffect(() => {
     (window as typeof window & { __stockpadiStartupHydrated?: boolean }).__stockpadiStartupHydrated = true;
-    if (startupBeganRef.current) return;
-    startupBeganRef.current = true;
+    const initialRead = startupRead.current ??= withStartupTimeout(resolveStartupDestination());
     let cancelled = false;
 
     const openWorkspace = async () => {
       try {
-        const destination = await withStartupTimeout(resolveStartupDestination());
-        if (!cancelled) openStartupDestination(destination, router.replace);
+        const destination = await initialRead;
+        if (!cancelled) openStartupDestination(destination, replace);
         return;
       } catch (error) {
-        console.error("[StartupRoute] Could not read local app state:", error);
+        if (!cancelled) console.error("[StartupRoute] Could not read local app state:", error);
       }
 
       if (cancelled) return;
@@ -54,7 +52,7 @@ export default function Home() {
 
       try {
         const destination = await withStartupTimeout(resolveStartupDestination());
-        if (!cancelled) openStartupDestination(destination, router.replace);
+        if (!cancelled) openStartupDestination(destination, replace);
       } catch (error) {
         console.error("[StartupRoute] Recovery completed but local routing still failed:", error);
         if (!cancelled) setStartupState("blocked");
@@ -63,7 +61,7 @@ export default function Home() {
 
     void openWorkspace();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [replace]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface px-6 py-8 text-center">
@@ -72,22 +70,17 @@ export default function Home() {
         <StateCard
           icon={DatabaseZap}
           tone="warning"
-          title="Another app tab is still using saved data"
-          description="Close every other tab or window for this app, then reload this one. Your saved records remain on this device."
-          action={{ label: "Reload after closing tabs", onClick: () => window.location.reload() }}
-          secondaryAction={{ label: "Open recovery help", onClick: () => router.replace("/offline") }}
+          title="Couldn’t open the app"
+          description="If the app is open elsewhere on this device, close it there and try again."
+          action={{ label: "Try again", onClick: () => window.location.reload() }}
+          secondaryAction={{ label: "Recovery help", onClick: () => replace("/offline") }}
         />
       ) : (
-        <section data-startup-loading className="w-full max-w-sm" aria-live="polite" aria-label={`Opening ${branding.businessName}`}>
-          <div className="mx-auto mb-6 size-14 rounded-full bg-brand-accent/10" />
-          <h1 className="text-title-lg font-bold text-on-surface">{branding.businessName}</h1>
-          <p className="mt-2 text-body text-on-surface-muted">
-            {startupState === "recovering" ? "Repairing the saved workspace" : "Opening saved work on this device"}
-          </p>
-          <div className="mt-8 space-y-3" aria-hidden="true">
-            <Skeleton className="h-16 w-full rounded-card" />
-            <Skeleton className="h-16 w-full rounded-card" />
-          </div>
+        <section data-startup-loading className="w-full max-w-sm">
+          <h1 role="status" className="text-title-lg font-bold text-on-surface">
+            {startupState === "recovering" ? "Still opening…" : `Opening ${branding.businessName}…`}
+          </h1>
+          <progress aria-hidden="true" className="mx-auto mt-4 block h-1 w-32 accent-brand-accent motion-reduce:hidden" />
         </section>
       )}
       <section
@@ -96,16 +89,16 @@ export default function Home() {
         className="w-full max-w-sm rounded-[var(--radius-card)] bg-surface-container p-6 text-center shadow-[var(--shadow-elevation-2)]"
       >
         <DatabaseZap className="mx-auto size-8 text-warning" aria-hidden />
-        <h2 className="mt-4 text-title-lg font-bold text-on-surface">The app did not finish opening</h2>
-        <p className="mt-2 text-body text-on-surface-muted">The saved screen loaded without the app controls. Your records remain on this device.</p>
+        <h2 className="mt-4 text-title-lg font-bold text-on-surface">Couldn’t open the app</h2>
+        <p className="mt-2 text-body text-on-surface-muted">Try again or open recovery help.</p>
         <div className="mt-6 grid gap-2">
-          <a className="rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 font-semibold text-brand-accent-contrast" href="/offline.html">
-            Open offline recovery
-          </a>
           {/* Deliberately native: this recovery path must work when Next/React chunks fail to hydrate. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a className="rounded-[var(--radius-control)] px-5 py-3 font-semibold text-on-surface" href="/">
-            Reload app
+          <a className="rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 font-semibold text-brand-accent-contrast" href="/">
+            Try again
+          </a>
+          <a className="rounded-[var(--radius-control)] px-5 py-3 font-semibold text-on-surface" href="/offline.html">
+            Recovery help
           </a>
         </div>
       </section>

@@ -81,11 +81,11 @@ export function StateCard({
           )
         )}
 
-        <p className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
+        <p className="w-full wrap-anywhere text-balance text-[length:var(--font-size-title-lg)] font-bold text-on-surface leading-snug">
           {title}
         </p>
 
-        <div className="mt-2 max-w-xs text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
+        <div className="mt-2 w-full max-w-xs wrap-anywhere text-[length:var(--font-size-body)] text-on-surface-muted leading-relaxed">
           {description}
         </div>
       </div>

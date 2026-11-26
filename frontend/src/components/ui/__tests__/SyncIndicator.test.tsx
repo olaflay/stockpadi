@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { SyncIndicator } from "../SyncIndicator";
 import { TECHNICAL_LEAK_WORDS } from "@/features/sync/statusMessages";
 
@@ -117,6 +117,32 @@ describe("SyncIndicator - Zero-Jargon & Ambient Demotion Verification", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
+  });
+
+  it.each([0, 2])("offers a reconnect action only if changes remain (%s)", (remaining) => {
+    vi.useFakeTimers();
+    mockState.online = false;
+    mockState.pendingCount = 2;
+    const { rerender } = render(<SyncIndicator compact variant="contrast" />);
+
+    mockState.online = true;
+    mockState.runtimePhase = "syncing";
+    rerender(<SyncIndicator compact variant="contrast" />);
+    act(() => vi.advanceTimersByTime(5000));
+    expect(mockState.showToast).not.toHaveBeenCalled();
+
+    mockState.pendingCount = remaining;
+    mockState.runtimePhase = "idle";
+    rerender(<SyncIndicator compact variant="contrast" />);
+    act(() => vi.advanceTimersByTime(5000));
+    if (remaining === 0) {
+      expect(mockState.showToast).not.toHaveBeenCalled();
+    } else {
+      expect(mockState.showToast).toHaveBeenCalledExactlyOnceWith(
+        "Changes saved on this device are waiting to upload.", "neutral", expect.objectContaining({ label: "Save now" }),
+      );
+    }
   });
 
   it("Permutation 1: Offline with pending items renders plain language and cashier safety guarantee", () => {

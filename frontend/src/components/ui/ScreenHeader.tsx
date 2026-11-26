@@ -102,7 +102,7 @@ export function ScreenHeader({
         <ChevronLeft size={24} aria-hidden />
       </button>
 
-      <h1 className="min-w-0 flex-1 truncate text-[length:var(--font-size-title-lg)] font-bold tracking-tight text-on-surface leading-tight">
+      <h1 className="min-w-0 flex-1 wrap-anywhere text-[length:var(--font-size-title-lg)] font-bold tracking-tight text-on-surface leading-tight">
         {title}
       </h1>
 
