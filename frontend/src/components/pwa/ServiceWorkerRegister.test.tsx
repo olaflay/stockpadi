@@ -46,20 +46,43 @@ describe("ServiceWorkerRegister", () => {
     Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: serviceWorker });
   });
 
-  it("asks the active worker to warm offline routes even before it controls this page", async () => {
+  it("warms only the minimum selling shell after startup settles", async () => {
+    vi.useFakeTimers();
     Object.defineProperty(serviceWorker, "controller", { configurable: true, value: null });
     render(<ServiceWorkerRegister />);
 
-    await waitFor(() => expect(registration.active?.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+    await vi.waitFor(() => expect(serviceWorker.register).toHaveBeenCalled());
+    expect(registration.active?.postMessage).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(registration.active?.postMessage).toHaveBeenCalledWith(expect.objectContaining({
       type: "CACHE_OFFLINE_ROUTES",
-      routes: expect.arrayContaining(["/dashboard", "/pos", "/products"]),
-    })));
+      routes: ["/dashboard", "/pos"],
+    }));
+    vi.useRealTimers();
+  });
+
+  it("waits for a first-install worker to become active before marking the shell warm", async () => {
+    vi.useFakeTimers();
+    registration.active = null;
+    render(<ServiceWorkerRegister />);
+
+    await vi.waitFor(() => expect(serviceWorker.register).toHaveBeenCalled());
+    await vi.advanceTimersByTimeAsync(2_500);
+    const activeWorker = { postMessage: vi.fn() };
+    registration.active = activeWorker;
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(activeWorker.postMessage).toHaveBeenCalledWith({
+      type: "CACHE_OFFLINE_ROUTES",
+      routes: ["/dashboard", "/pos"],
+    });
   });
 
   afterEach(() => {
     cleanup();
     Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: undefined });
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("keeps an installed update waiting until the operator chooses to activate it", async () => {

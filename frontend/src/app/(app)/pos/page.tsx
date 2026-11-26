@@ -55,7 +55,7 @@ function PosPageContent() {
   
 
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebounce(query, 80);
+  const debouncedQuery = useDebounce(query, 130);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -6,6 +6,7 @@ import { WifiOff } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isOfflineRoute, OFFLINE_WARM_ROUTES } from "@/lib/offline-routes";
 import { resolveRouteWarmingStrategy, type ConnectionHints } from "@/lib/route-warming";
+import { useSyncRuntimePhase } from "@/features/sync/sync-runtime-state";
 
 interface NavigatorWithConnection extends Navigator {
   connection?: ConnectionHints;
@@ -41,6 +42,7 @@ function sameOriginDestination(anchor: HTMLAnchorElement): URL | null {
 export function OfflineNavigationGuard() {
   const [blockedPath, setBlockedPath] = useState<string | null>(null);
   const frameworkOffline = useOffline();
+  const syncPhase = useSyncRuntimePhase();
 
   const handleDocumentClick = useCallback((event: MouseEvent) => {
     if ((!frameworkOffline && navigator.onLine) || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -82,13 +84,17 @@ export function OfflineNavigationGuard() {
   }, [handleDocumentClick]);
 
   useEffect(() => {
-    if (frameworkOffline || !navigator.onLine || !("serviceWorker" in navigator)) return;
+    if (frameworkOffline || !navigator.onLine || !("serviceWorker" in navigator) || syncPhase !== "idle") return;
     let cancelled = false;
     const connection = (navigator as NavigatorWithConnection).connection;
     const strategy = resolveRouteWarmingStrategy(connection);
 
     void navigator.serviceWorker.ready.then(async () => {
-      if (cancelled) return;
+      // Fetch warming only reaches the worker when this document is already
+      // controlled. On a first install an uncontrolled fetch merely duplicates
+      // startup traffic without filling the navigation cache; the registration
+      // component warms the two boot routes through postMessage instead.
+      if (cancelled || !navigator.serviceWorker.controller) return;
       await new Promise((resolve) => window.setTimeout(resolve, strategy.initialDelayMs));
       // Sequential idle-time warming avoids competing with a route the user
       // actually requested, especially on constrained Nigerian connections.
@@ -113,7 +119,7 @@ export function OfflineNavigationGuard() {
     });
 
     return () => { cancelled = true; };
-  }, [frameworkOffline]);
+  }, [frameworkOffline, syncPhase]);
 
   return (
     <ConfirmDialog

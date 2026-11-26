@@ -5,6 +5,8 @@
 **Routing tag:** `AI_IMPLEMENTATION_PRIMARY`
 **Reviewed:** 2026-11-08
 
+**Payment and proration supplement:** [AI-PAYMENT-AND-PRORATION-RESEARCH-2026-11.md](AI-PAYMENT-AND-PRORATION-RESEARCH-2026-11.md) (`AI_PAYMENT_PRORATION`)
+
 ## How to use this source
 
 Use the primary input as the first research brief for AI voice, chat, image entry, evaluations, consent, cost controls, and rollout. It does not authorize implementation by itself. Every proposed change still passes `docs/LAUNCH_SCOPE.md`, the TRUST Standard, and the repository's locked decisions. Time-sensitive facts and vendor claims require fresh primary-source verification.
@@ -20,6 +22,7 @@ Use the primary input as the first research brief for AI voice, chat, image entr
 | Bank-transfer verification/provider integration appears in research item R13. The product's locked PCI boundary currently records payment methods only and does not process payments. | Scope conflict if implemented | Research may continue, but implementation requires surfacing and resolving the locked-decision conflict first. |
 | Offline voice inbox and image entry are proposed for later phases, while AI output must remain a draft and must never silently create financial truth. | Safety constraint | Keep drafts outside the ledger; require explicit human confirmation and the canonical authenticated write path. |
 | Cost, model availability, privacy terms, Nigerian law, and device/platform behavior are time-sensitive. | Revalidation required | Date every verification and record uncertainty, target-device results, and monthly cost per shop in naira. |
+| “Payment” spans tender tags, debt settlement, landed-cost allocation, and potentially regulated processing; treating them as one AI action can corrupt financial meaning. | Safety/accounting boundary | Follow the payment/proration supplement. Deterministic code performs allocation; AI only drafts source values and never handles raw card data. |
 
 ## TRUST gate
 

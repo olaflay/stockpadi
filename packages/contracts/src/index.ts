@@ -1,3 +1,5 @@
+export * from "./ai.js";
+
 export const WORKER_CAPABILITIES = [
   "POS_SELL",
   "VIEW_PRODUCTS",

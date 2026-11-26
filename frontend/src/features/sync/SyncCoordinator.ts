@@ -29,6 +29,18 @@ let activeSaleCycle: Promise<SyncCycleResult | null> | null = null;
 let queuedTrigger: SyncPullTrigger | null = null;
 let activeCoordinatorStop: (() => void) | null = null;
 let activeCoordinatorConsumers = 0;
+const saleReconciliationCycles = new WeakSet<Promise<SyncCycleResult | null>>();
+
+/** A sale push is intentionally fast-lane only, but its acknowledged stock
+ * delta must be confirmed by an authoritative pull promptly. Attach that
+ * follow-up at the canonical trigger boundary so local writes, lifecycle
+ * requests, and future callers cannot accidentally bypass it. */
+function withSaleReconciliation(cycle: Promise<SyncCycleResult | null>): Promise<SyncCycleResult | null> {
+  if (saleReconciliationCycles.has(cycle)) return cycle;
+  saleReconciliationCycles.add(cycle);
+  void cycle.then(() => triggerSync("reconciliation"), () => undefined).catch(() => undefined);
+  return cycle;
+}
 
 /** Canonical single-flight sync execution path. */
 export function runSyncCycle(trigger: SyncPullTrigger = "startup"): Promise<SyncCycleResult | null> {
@@ -108,7 +120,7 @@ export function triggerSync(trigger: SyncPullTrigger, debounceMs = 0): Promise<S
   if (activeCycle) {
     if (trigger === "sale" && activeTrigger !== "sale") {
       recordCoalescedTrigger();
-      return runUrgentSaleCycle(true);
+      return withSaleReconciliation(runUrgentSaleCycle(true));
     }
     queuedTrigger = coalesceTrigger(queuedTrigger, trigger);
     recordCoalescedTrigger();
@@ -121,7 +133,7 @@ export function triggerSync(trigger: SyncPullTrigger, debounceMs = 0): Promise<S
     queuedTrigger = null;
     if (next) void triggerSync(next).catch(() => undefined);
   });
-  return cycle;
+  return trigger === "sale" ? withSaleReconciliation(cycle) : cycle;
 }
 
 async function executeSyncCycle(trigger: SyncPullTrigger, waitForLease = false): Promise<SyncCycleResult | null> {
@@ -274,7 +286,6 @@ export function startSyncCoordinator(): () => void {
     if (["online", "resume", "focus"].includes(trigger)) realtimeController?.refresh(true);
     const cycle = triggerSync(trigger);
     void cycle.catch(() => undefined).finally(() => {
-      if (trigger === "sale") void triggerSync("reconciliation").catch(() => undefined);
       realtimeController?.refresh();
       void scheduleWake();
     });
