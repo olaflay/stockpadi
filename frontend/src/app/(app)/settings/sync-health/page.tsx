@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import { OnlineOnlyButton } from "@/components/ui/OnlineOnlyButton";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -448,14 +449,14 @@ export default function SyncHealthPage() {
                             </div>
                           )}
                         </div>
-                        <RippleButton
+                        <OnlineOnlyButton
                           type="button"
-                          disabled={isResolving || !online}
+                          disabled={isResolving}
                           onClick={() => setPendingConflictResolution({ item, mode: "local" })}
                           className="w-full rounded-[var(--radius-control)] bg-brand-accent px-3 py-2 text-xs font-semibold text-brand-accent-contrast disabled:opacity-50"
                         >
                           Keep This Device
-                        </RippleButton>
+                        </OnlineOnlyButton>
                       </div>
 
                       {/* Other Device Card */}
@@ -485,14 +486,14 @@ export default function SyncHealthPage() {
                             </div>
                           )}
                         </div>
-                        <RippleButton
+                        <OnlineOnlyButton
                           type="button"
-                          disabled={isResolving || !online}
+                          disabled={isResolving}
                           onClick={() => setPendingConflictResolution({ item, mode: "cloud" })}
                           className="w-full rounded-[var(--radius-control)] bg-surface-container-high px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-highest disabled:opacity-50"
                         >
                           Keep Other Device
-                        </RippleButton>
+                        </OnlineOnlyButton>
                       </div>
                     </div>
                   ) : (

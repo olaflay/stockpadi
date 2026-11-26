@@ -23,6 +23,8 @@ import { AlertBadge } from "@/components/ui/AlertBadge";
 import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
 import { TooltipProvider } from "@/components/ui/TooltipContext";
 import { KeyboardScrollHandler } from "@/components/ui/KeyboardScrollHandler";
+import { OfflineNavigationGuard } from "@/components/ui/OfflineNavigationGuard";
+import { BroadcastProvider, BroadcastBanner } from "@/features/alerts/BroadcastProvider";
 
 type Shell = "business" | "work";
 
@@ -68,6 +70,8 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
         <TopStoreHeader />
         <SyncEngine />
         <BannerStrip />
+        <OfflineNavigationGuard />
+        <BroadcastBanner />
         <SideDrawer />
         <main className={`min-h-0 min-w-0 flex-1 flex flex-col overflow-x-hidden overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-5 w-full max-w-xl md:max-w-2xl mx-auto ${isNavVisible ? "pb-32" : "pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"}`}>
           {children}
@@ -125,7 +129,7 @@ export function ExperienceShell({ shell, children }: { shell: Shell; children: R
       <NavigationProvider>
         <TooltipProvider>
           <KeyboardScrollHandler />
-          <ShellContent shell={shell}>{children}</ShellContent>
+          <BroadcastProvider><ShellContent shell={shell}>{children}</ShellContent></BroadcastProvider>
         </TooltipProvider>
       </NavigationProvider>
     </AuthProvider>

@@ -685,7 +685,7 @@ export default function ProductsPage() {
         !showBulkConfirm &&
         !isKeyboardVisible &&
         !isSearchActive && (
-          <FAB href="/products/new" label="Add product" id="products-add-fab" size="md">
+          <FAB href="/products/new" label="Add product" id="products-add-fab" size="md" autoHideOnScroll>
             <Plus size={24} aria-hidden />
           </FAB>
         )}

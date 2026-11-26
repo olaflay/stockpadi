@@ -114,11 +114,6 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
-              label="Business profile"
-              description="Store name, receipt headers and contact info"
-              href="/settings/business"
-            />
-            <SettingsRow
               label="Branches & outlets"
               description="Store locations and staff assignments"
               href="/settings/branches"

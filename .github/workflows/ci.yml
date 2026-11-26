@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -46,29 +53,37 @@ jobs:
 
       - run: npm run backend:build
 
-      # Production database verification is required on main. Pull requests
-      # intentionally skip hosted DB access in the explicit step below.
+  migrate-production:
+    name: Apply and verify production migrations
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm --prefix backend ci
+
       - name: Require hosted migration credentials
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: node scripts/require-migration-credentials.mjs
 
       - name: Apply pending database migrations safely
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: npm --prefix backend run db:migrate
+        # Run directly so the runner uses injected GitHub secrets and does not
+        # require the developer-only backend/.env file to exist in the checkout.
+        run: node backend/scripts/migrate.mjs
 
       - name: Verify hosted migration state
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: npm --prefix backend run db:verify
-
-      - name: Explicitly skip hosted database verification for pull requests
-        if: github.event_name == 'pull_request'
-        run: echo "Hosted migration execution is intentionally not run for pull requests; main-branch release verification requires SUPABASE_DB_URL."
+        run: node backend/scripts/verify-migrations.mjs

@@ -44,8 +44,10 @@ jobs:
           EXPECTED_SUPABASE_PROJECT_REF: ${{ inputs.supabase_project_ref }}
           EXPECTED_BUILD_VERSION: ${{ inputs.build_version }}
         run: npm run deployment:verify
+      - name: Install database verifier dependencies
+        run: npm --prefix backend ci
       - name: Verify hosted migration state without modifying the database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: node scripts/require-migration-credentials.mjs && npm --prefix backend run db:verify
+        run: node scripts/require-migration-credentials.mjs && node backend/scripts/verify-migrations.mjs

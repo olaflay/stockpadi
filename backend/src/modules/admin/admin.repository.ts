@@ -5,7 +5,7 @@ import { sendEmail } from "../../shared/email/mailer.js";
 import { renderWelcomeEmail } from "../../shared/email/email-templates.js";
 
 export async function listBusinesses(db: SupabaseClient, actorId?: string) {
-  const businesses = await db.from("business_profile").select("id, name, business_type, currency, is_active, status, created_at").order("created_at", { ascending: false });
+  const businesses = await db.from("business_profile").select("id, name, business_type, currency, is_active, status, deleted_at, created_at").order("created_at", { ascending: false });
   if (businesses.error) throw new HttpError(500, "QUERY_FAILED", businesses.error.message);
   const owners = await db.from("users").select("id, business_id, full_name").eq("account_type", "BUSINESS_OWNER");
   if (owners.error) throw new HttpError(500, "QUERY_FAILED", owners.error.message);
@@ -25,7 +25,7 @@ export async function listBusinesses(db: SupabaseClient, actorId?: string) {
 }
 
 export async function getBusiness(db: SupabaseClient, actorId: string, businessId: string) {
-  const result = await db.from("business_profile").select("id, name, business_type, currency, status, is_active, branding, created_at, updated_at").eq("id", businessId).maybeSingle();
+  const result = await db.from("business_profile").select("id, name, business_type, currency, status, is_active, deleted_at, branding, created_at, updated_at").eq("id", businessId).maybeSingle();
   if (result.error) throw new HttpError(500, "QUERY_FAILED", result.error.message);
   if (!result.data) return null;
 
@@ -91,6 +91,26 @@ export async function setBusinessStatus(db: SupabaseClient, actorId: string, bus
       throw new HttpError(404, "NOT_FOUND", "Business not found");
     }
     throw new HttpError(500, "UPDATE_FAILED", rpcResult.error.message);
+  }
+  await queueSyncHints(businessId, [null]);
+}
+
+export async function softDeleteBusiness(db: SupabaseClient, actorId: string, businessId: string) {
+  const result = await db.rpc("platform_soft_delete_business", { p_business_id: businessId, p_actor_id: actorId });
+  if (result.error) {
+    if (result.error.message?.includes("BUSINESS_NOT_FOUND")) throw new HttpError(404, "NOT_FOUND", "Business not found");
+    if (result.error.message?.includes("BUSINESS_ALREADY_DELETED")) throw new HttpError(409, "ALREADY_DELETED", "This business is already removed.");
+    throw new HttpError(500, "UPDATE_FAILED", "Business access could not be removed.");
+  }
+  await queueSyncHints(businessId, [null]);
+}
+
+export async function restoreBusiness(db: SupabaseClient, actorId: string, businessId: string) {
+  const result = await db.rpc("platform_restore_business", { p_business_id: businessId, p_actor_id: actorId });
+  if (result.error) {
+    if (result.error.message?.includes("BUSINESS_NOT_FOUND")) throw new HttpError(404, "NOT_FOUND", "Business not found");
+    if (result.error.message?.includes("BUSINESS_NOT_DELETED")) throw new HttpError(409, "NOT_DELETED", "This business is not removed.");
+    throw new HttpError(500, "UPDATE_FAILED", "Business access could not be restored.");
   }
   await queueSyncHints(businessId, [null]);
 }

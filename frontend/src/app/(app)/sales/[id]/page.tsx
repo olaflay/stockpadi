@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Share2, Ban, RotateCcw, MoreVertical } from "lucide-react";
 import { db } from "@/lib/db";
 import type { LocalCustomer, LocalUser } from "@/lib/db";
+import { OnlineOnlyButton } from "@/components/ui/OnlineOnlyButton";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
@@ -298,26 +299,26 @@ export default function SaleDetailPage({ params }: PageProps) {
           <div className="flex flex-col gap-2">
             {!sale.voidedAt && hasAccountType(user, CAN_VOID_SALE) && (
               <>
-            <RippleButton
+            <OnlineOnlyButton
               type="button"
               onClick={() => { setShowMoreActions(false); setShowRefundModal(true); }}
-              disabled={refunding || voiding || !isOnline}
+              disabled={refunding || voiding}
               title={!isOnline ? "Refunding a sale requires an internet connection" : undefined}
               className="flex min-h-[var(--touch-target-min)] w-full items-center gap-3 rounded-[var(--radius-control)] border border-warning/30 bg-surface px-4 text-left text-[length:var(--font-size-body)] font-medium text-warning hover:bg-warning/5 disabled:opacity-50 transition-colors"
             >
               <RotateCcw size={18} aria-hidden />
               {isOnline ? "Refund sale" : "Refund (needs internet)"}
-            </RippleButton>
-            <RippleButton
+            </OnlineOnlyButton>
+            <OnlineOnlyButton
               type="button"
               onClick={() => { setShowMoreActions(false); handleVoid(); }}
-              disabled={voiding || refunding || !isOnline}
+              disabled={voiding || refunding}
               title={!isOnline ? "Voiding a sale requires an internet connection" : undefined}
               className="flex min-h-[var(--touch-target-min)] w-full items-center gap-3 rounded-[var(--radius-control)] border border-danger/30 bg-surface px-4 text-left text-[length:var(--font-size-body)] font-medium text-danger hover:bg-danger/5 disabled:opacity-50 transition-colors"
             >
               <Ban size={18} aria-hidden />
               {voiding ? "Voiding…" : isOnline ? "Void sale" : "Void (needs internet)"}
-            </RippleButton>
+            </OnlineOnlyButton>
               </>
             )}
           </div>
@@ -361,14 +362,14 @@ export default function SaleDetailPage({ params }: PageProps) {
               >
                 Cancel
               </RippleButton>
-              <RippleButton
+              <OnlineOnlyButton
                 type="button"
                 onClick={handleRefund}
-                disabled={refunding || !refundReason.trim() || !isOnline}
+                disabled={refunding || !refundReason.trim()}
                 className="min-h-[44px] flex-1 rounded-[var(--radius-control)] bg-brand-accent text-brand-accent-contrast font-medium hover:opacity-95 disabled:opacity-50"
               >
                 {refunding ? "Processing…" : "Confirm Refund"}
-              </RippleButton>
+              </OnlineOnlyButton>
             </div>
           </div>
         </Modal>

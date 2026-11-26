@@ -21,14 +21,18 @@ import {
   XCircle,
   MapPin,
   RefreshCw,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
+import { Modal } from "@/components/ui/Modal";
 
 interface BranchDetail {
   id: string;
   name: string;
   address?: string;
   is_active: boolean;
+  deleted_at?: string | null;
 }
 
 interface BusinessDetail {
@@ -38,6 +42,7 @@ interface BusinessDetail {
   currency: string;
   status?: "pending" | "verified" | "suspended" | "rejected";
   is_active: boolean;
+  deleted_at?: string | null;
   created_at: string;
   updated_at?: string;
   owner_name?: string;
@@ -57,6 +62,8 @@ export default function AdminBusinessDetailPage() {
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   const fetchDetail = useCallback(async (isSilent = false) => {
     if (!id) return;
@@ -101,10 +108,12 @@ export default function AdminBusinessDetailPage() {
   }, [id, showToast]);
 
   async function handleToggleStatus() {
-    if (!business) return;
+    if (!business || business.deleted_at) return;
     setToggling(true);
     const newStatus = !business.is_active;
     try {
+      const existing = await callBackend<{ business: BusinessDetail | null }>("platform-api", { action: "get_business", businessId: business.id });
+      if (existing.business?.deleted_at) throw new Error("Restore this business before changing its status.");
       const result = await callBackend<{ welcomeEmailSent?: boolean }>("platform-api", {
         action: "set_business_status",
         businessId: business.id,
@@ -128,6 +137,27 @@ export default function AdminBusinessDetailPage() {
       );
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to update store status.", "danger");
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleSoftDeleteOrRestore() {
+    if (!business) return;
+    setToggling(true);
+    const wasDeleted = Boolean(business.deleted_at);
+    try {
+      await callBackend("platform-api", {
+        action: wasDeleted ? "restore_business" : "soft_delete_business",
+        businessId: business.id,
+        ...(wasDeleted ? {} : { confirmation: deleteConfirmation }),
+      });
+      setShowDeleteModal(false);
+      setDeleteConfirmation("");
+      await fetchDetail(true);
+      showToast(wasDeleted ? "Business access restored. Its records were preserved." : "Business access removed. Its records were preserved.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not update business access.", "danger");
     } finally {
       setToggling(false);
     }
@@ -176,7 +206,7 @@ export default function AdminBusinessDetailPage() {
     );
   }
 
-  const isVerified = business.is_active && business.status !== "suspended";
+  const isVerified = !business.deleted_at && business.is_active && business.status !== "suspended";
   const isSuspended = !business.is_active || business.status === "suspended";
 
   return (
@@ -205,7 +235,7 @@ export default function AdminBusinessDetailPage() {
           <RippleButton
             type="button"
             onClick={handleToggleStatus}
-            disabled={toggling}
+            disabled={toggling || Boolean(business.deleted_at)}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
               business.is_active
                 ? "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20"
@@ -214,6 +244,15 @@ export default function AdminBusinessDetailPage() {
           >
             <Power size={13} />
             <span>{business.is_active ? "Suspend Store" : "Activate Store"}</span>
+          </RippleButton>
+          <RippleButton
+            type="button"
+            onClick={() => business.deleted_at ? void handleSoftDeleteOrRestore() : setShowDeleteModal(true)}
+            disabled={toggling}
+            className={`inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors ${business.deleted_at ? "border-success/40 bg-success/10 text-success" : "border-danger/40 bg-danger/10 text-danger"}`}
+          >
+            {business.deleted_at ? <RotateCcw size={14} aria-hidden /> : <Trash2 size={14} aria-hidden />}
+            {business.deleted_at ? "Restore business" : "Remove business"}
           </RippleButton>
         </div>
       </div>
@@ -249,7 +288,7 @@ export default function AdminBusinessDetailPage() {
                   ) : (
                     <Clock size={12} />
                   )}
-                  <span className="capitalize">{business.status ?? (business.is_active ? "verified" : "suspended")}</span>
+                  <span>{business.deleted_at ? "Removed" : business.status ?? (business.is_active ? "verified" : "suspended")}</span>
                 </span>
               </div>
 
@@ -285,6 +324,20 @@ export default function AdminBusinessDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setDeleteConfirmation(""); }} title="Remove business access" variant="dialog">
+        <div className="flex flex-col gap-4">
+          <p className="text-[length:var(--font-size-body)] text-on-surface-muted">The owner and staff will lose access. Business records, including sales and stock history, will be kept. You can restore access later.</p>
+          <label htmlFor="business-delete-confirmation" className="flex flex-col gap-2 text-[length:var(--font-size-label)] font-medium text-on-surface">
+            Type <span className="font-bold">{business.name}</span> to confirm
+            <input id="business-delete-confirmation" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} autoComplete="off" className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)]" />
+          </label>
+          <div className="flex justify-end gap-2">
+            <RippleButton type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmation(""); }} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] px-4 text-on-surface-muted">Cancel</RippleButton>
+            <RippleButton type="button" disabled={toggling || deleteConfirmation !== business.name} onClick={() => void handleSoftDeleteOrRestore()} className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-danger px-4 font-semibold text-on-danger disabled:opacity-50">{toggling ? "Removing…" : "Remove business"}</RippleButton>
+          </div>
+        </div>
+      </Modal>
 
       {/* Grid of Inspection Sections */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

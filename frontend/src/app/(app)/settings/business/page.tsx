@@ -10,6 +10,7 @@ import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { useToast } from "@/components/ui/Toast";
 import { RippleButton } from "@/components/ui/Ripple";
+import { OfflineNotice } from "@/components/ui/OnlineOnlyButton";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { serverPatch } from "@/platform/api/backend-client";
 
@@ -23,11 +24,12 @@ export default function BusinessSettingsPage() {
   const [name, setName] = useState<string | null>(null);
   const [businessTypeId, setBusinessTypeId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOfflineNotice, setShowOfflineNotice] = useState(false);
 
   if (user.accountType !== "BUSINESS_OWNER") {
     return (
       <div>
-        <ScreenHeader title="Business" backHref="/settings" />
+        <ScreenHeader title="Business" backHref="/profile" />
         <PermissionDenied requiredAccountType="BUSINESS_OWNER" />
       </div>
     );
@@ -36,7 +38,7 @@ export default function BusinessSettingsPage() {
   if (profile === undefined) {
     return (
       <div>
-        <ScreenHeader title="Business" backHref="/settings" />
+        <ScreenHeader title="Business" backHref="/profile" />
         <Skeleton className="h-40" />
       </div>
     );
@@ -45,7 +47,7 @@ export default function BusinessSettingsPage() {
   if (!profile) {
     return (
       <div>
-        <ScreenHeader title="Business" backHref="/settings" />
+        <ScreenHeader title="Business" backHref="/profile" />
         <p className="text-center text-[length:var(--font-size-body)] text-on-surface-muted">
           Complete{" "}
           <a href="/onboarding" className="underline">
@@ -63,11 +65,14 @@ export default function BusinessSettingsPage() {
 
   async function handleSave() {
     if (!profile || isSubmitting) return;
+    if (typeof navigator === "undefined" || !navigator.onLine) {
+      setShowOfflineNotice(true);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const nextName = (name ?? profile.name).trim() || profile.name;
       const nextType = businessTypeId ?? profile.businessTypeId;
-      if (typeof navigator === "undefined" || !navigator.onLine) throw new Error("Business profile changes require an internet connection.");
       await serverPatch("/api/business/profile", { name: nextName, businessTypeId: nextType });
       await db.businessProfile.update(BUSINESS_PROFILE_SINGLETON_ID, { name: nextName, businessTypeId: nextType });
       showToast("Business profile updated", "success");
@@ -79,6 +84,8 @@ export default function BusinessSettingsPage() {
   }
 
   return (
+    <>
+    <OfflineNotice isOpen={showOfflineNotice} onClose={() => setShowOfflineNotice(false)} />
     <div className="flex flex-col gap-4">
       <ScreenHeader title="Business" backHref="/settings" />
 
@@ -117,5 +124,6 @@ export default function BusinessSettingsPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

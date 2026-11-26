@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, BUSINESS_PROFILE_SINGLETON_ID, type LocalBranch } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { OfflineNotice } from "@/components/ui/OnlineOnlyButton";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -37,6 +38,7 @@ export default function CloseDayPage() {
 
   const [reconciliationBusy, setReconciliationBusy] = useState(false);
   const [reconciliationMessage, setReconciliationMessage] = useState<string | null>(null);
+  const [showOfflineNotice, setShowOfflineNotice] = useState(false);
   const [reconciliationOk, setReconciliationOk] = useState(false);
   const [history, setHistory] = useState<ReconciliationRecord[]>([]);
   const [closeBranchId, setCloseBranchId] = useState<string | null>(null);
@@ -179,8 +181,7 @@ export default function CloseDayPage() {
       return;
     }
     if (typeof navigator === "undefined" || !navigator.onLine) {
-      setReconciliationMessage("Close day requires an internet connection. Reconnect before submitting.");
-      setReconciliationOk(false);
+      setShowOfflineNotice(true);
       return;
     }
     setReconciliationBusy(true);
@@ -267,6 +268,8 @@ export default function CloseDayPage() {
   }
 
   return (
+    <>
+    <OfflineNotice isOpen={showOfflineNotice} onClose={() => setShowOfflineNotice(false)} />
     <div className="flex flex-col gap-4 pb-12">
       <ScreenHeader title="Close day" backHref="/dashboard" />
 
@@ -558,5 +561,6 @@ export default function CloseDayPage() {
         </details>
       )}
     </div>
+    </>
   );
 }

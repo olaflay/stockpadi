@@ -340,7 +340,7 @@ html {
 }
 
 .animate-step-in {
-  animation: step-in var(--motion-duration-medium) var(--easing-standard);
+  animation: step-in var(--motion-duration-medium) var(--easing-emphasized-decelerate) both;
 }
 
 /* Number "recount" pop — reaffirms a register change on the quantity badge,
