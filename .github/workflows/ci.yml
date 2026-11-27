@@ -47,6 +47,7 @@ jobs:
 
       - run: npm run lint
 
+      - run: node --test scripts/verify-deployment.test.mjs
       - run: npm run test
 
       - name: Install browser for offline smoke checks

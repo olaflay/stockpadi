@@ -21,6 +21,7 @@ const expectedBuildVersion = process.env.EXPECTED_BUILD_VERSION;
 
 const frontend = await getJson(`${frontendUrl}/api/environment`);
 const backend = await getJson(`${backendUrl}/health`);
+const proxiedBackend = await getJson(`${frontendUrl}/api/version`);
 const frontendApi = await fetch(`${frontendUrl}/api/products`, { redirect: "error" });
 const serviceWorker = await fetch(`${frontendUrl}/sw.js`, { redirect: "error" });
 const serviceWorkerText = await serviceWorker.text();
@@ -28,6 +29,13 @@ const errors = [];
 
 if (frontend.response.status !== 200) errors.push(`frontend environment endpoint returned ${frontend.response.status}`);
 if (backend.response.status !== 200) errors.push(`backend health returned ${backend.response.status}`);
+if (proxiedBackend.response.status !== 200) {
+  errors.push(`frontend API version endpoint returned ${proxiedBackend.response.status}`);
+} else if (typeof proxiedBackend.body?.build !== "string" || !proxiedBackend.body.build) {
+  errors.push("frontend API version endpoint did not report a backend build");
+} else if (proxiedBackend.body.build !== backend.body?.buildVersion) {
+  errors.push(`frontend API is routing to backend build ${proxiedBackend.body.build}, expected ${backend.body?.buildVersion ?? "a verifiable build"}`);
+}
 if (frontendApi.status !== 401) errors.push(`frontend protected API expected 401, received ${frontendApi.status}`);
 if (serviceWorker.status !== 200) errors.push(`service worker returned ${serviceWorker.status}`);
 if (!frontend.body || !backend.body) errors.push("frontend/backend identity response was not valid JSON");
@@ -54,6 +62,7 @@ const result = {
     buildVersion: backend.body.buildVersion,
     supabaseProjectRef: backend.body.supabaseProjectRef,
   } : null,
+  proxiedBackend: { status: proxiedBackend.response.status, buildVersion: proxiedBackend.body?.build ?? null },
   serviceWorker: { status: serviceWorker.status },
   errors,
 };
