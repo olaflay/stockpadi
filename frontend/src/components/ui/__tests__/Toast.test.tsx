@@ -27,6 +27,17 @@ describe("Toast notification system", () => {
     cleanup();
   });
 
+  it("replaces the visible toast and gives the replacement its own full timer", () => {
+    render(<ToastProvider><TestConsumer /></ToastProvider>);
+    act(() => screen.getByText("Show Success Toast").click());
+    act(() => vi.advanceTimersByTime(4000));
+    act(() => screen.getByText("Show Warning Toast").click());
+    act(() => vi.advanceTimersByTime(1001));
+    expect(screen.queryByText("Product saved successfully")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByText("Warning: stock is low")).toBeInTheDocument();
+  });
+
   it("renders a toast and stays visible for 5 seconds before disappearing", () => {
     render(
       <ToastProvider>

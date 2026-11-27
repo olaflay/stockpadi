@@ -11,9 +11,10 @@ import { getBrandingConfig } from "@/config/branding";
 
 const USER_GUIDE_STEPS = [
   { title: "Add your products", body: "Products → the + button. Set a cost price and sell price; starting stock is optional." },
-  { title: "Make a sale", body: "Sell tab → tap a product to add it to the cart → Complete sale. Works fully offline; it syncs once you're back online." },
+  { title: "Receive or count stock", body: "Open Restock history and choose Receive delivery for stock from a supplier. Choose Count stock when you want to check what's already on the shelf." },
+  { title: "Make a sale", body: "Open Sell, tap a product to add it to the cart, then complete the sale. After offline setup, you can take sales without a connection." },
   { title: "Track what's owed", body: "Tag a sale as Credit at checkout to link it to a customer. Their balance shows on the Customers screen." },
-  { title: "Close out your day", body: "Reports → Close day (cash count). Count your cash and see what you made today." },
+  { title: "Close out your day", body: "Open Close day from the dashboard or navigation drawer to compare your cash count with the day's sales." },
 ];
 
 const FAQS = [

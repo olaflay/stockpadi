@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { localDayBounds } from "@/lib/date";
+import { localDateKey, localDayBounds } from "@/lib/date";
 import type { Sale } from "@/types/sale";
 import { DashboardSalesCard } from "./DashboardSalesCard";
 
@@ -10,7 +10,9 @@ afterEach(cleanup);
 
 it("shows the selected day's non-voided sales, scoped to the worker's branch and own receipts", async () => {
   await db.sales.clear();
-  const day = "2026-01-15";
+  const now = new Date();
+  const historical = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+  const day = localDateKey(historical);
   const bounds = localDayBounds(day)!;
   function sale(id: string, overrides: Partial<Sale> = {}): Sale {
     return {
@@ -28,11 +30,19 @@ it("shows the selected day's non-voided sales, scoped to the worker's branch and
     sale("next-day", { createdAtLocal: bounds.end }),
   ]);
   render(<DashboardSalesCard branchId="main" viewerId="cashier" branchIds={["main"]} />);
-  expect(await screen.findByText("No sales recorded")).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Sales date"), { target: { value: day } });
+  expect(await screen.findByText("0 sales recorded")).toBeInTheDocument();
+  const dateInput = screen.getByLabelText("Sales date");
+  expect(dateInput).toHaveAttribute("type", "date");
+  fireEvent.pointerDown(dateInput);
+  fireEvent.click(dateInput);
+  // Native Cancel does not emit a change or reliably blur. Pointer focus still
+  // must not paint a persistent ring or update the selected date.
+  expect(dateInput.parentElement).not.toHaveClass("focus-within:ring-2");
+  expect(screen.getByText("0 sales recorded")).toBeInTheDocument();
+  fireEvent.change(dateInput, { target: { value: day } });
   expect(await screen.findByText("1 sale")).toBeInTheDocument();
   expect(screen.getByText(/60.* cash$/)).toBeInTheDocument();
   expect(screen.getByText(/30.* credit$/)).toBeInTheDocument();
   expect(screen.getByText(/10.* other payments$/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "View sales & receipts" })).toHaveAttribute("href", "/sales?date=2026-01-15&branch=main&own=1");
+  expect(screen.getByRole("link", { name: "View sales & receipts" })).toHaveAttribute("href", `/sales?date=${day}&branch=main&own=1`);
 });

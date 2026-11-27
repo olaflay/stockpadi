@@ -21,6 +21,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 const SERVICE_WORKER_VERSION = process.env.NEXT_PUBLIC_BUILD_VERSION ?? "local";
 const SERVICE_WORKER_CACHE_ID = `stockpadi-${SERVICE_WORKER_VERSION}`;
+const PRECACHE_CACHE = `stockpadi-precache-${SERVICE_WORKER_VERSION}`;
 const NAVIGATION_CACHE = `stockpadi-navigation-${SERVICE_WORKER_VERSION}`;
 const STATIC_CACHE = `stockpadi-static-${SERVICE_WORKER_VERSION}`;
 
@@ -46,6 +47,10 @@ const LEGACY_APP_CACHES = new Set([
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   cacheId: SERVICE_WORKER_CACHE_ID,
+  // Serwist constructs its precache strategy before applying cacheId.
+  // Name it explicitly so activation cannot delete the active offline shell
+  // while cleaning up a genuinely legacy default cache.
+  precacheOptions: { cacheName: PRECACHE_CACHE },
   // A waiting worker is activated by the page only at a safe point or after
   // the user chooses to update. The outbox itself remains in IndexedDB.
   skipWaiting: false,
@@ -142,10 +147,11 @@ if (typeof self.addEventListener === "function") self.addEventListener("activate
       // bounded while the current and immediately previous shells stay atomic.
       const priorNavigation = keys.filter((key) => key.startsWith("stockpadi-navigation-") && key !== NAVIGATION_CACHE).at(-1);
       const priorStatic = keys.filter((key) => key.startsWith("stockpadi-static-") && key !== STATIC_CACHE).at(-1);
-      const retained = new Set([priorNavigation, priorStatic].filter((key): key is string => Boolean(key)));
+      const priorPrecache = keys.filter((key) => key.startsWith("stockpadi-precache-") && key !== PRECACHE_CACHE).at(-1);
+      const retained = new Set([priorNavigation, priorStatic, priorPrecache].filter((key): key is string => Boolean(key)));
       return Promise.all(keys
         .filter((key) => {
-          const isCurrent = key === NAVIGATION_CACHE || key === STATIC_CACHE || key.startsWith(`${SERVICE_WORKER_CACHE_ID}-`);
+          const isCurrent = key === PRECACHE_CACHE || key === NAVIGATION_CACHE || key === STATIC_CACHE || key.startsWith(`${SERVICE_WORKER_CACHE_ID}-`);
           const isOwnedVersionedCache = key.startsWith("stockpadi-navigation-") || key.startsWith("stockpadi-static-") || key.startsWith("stockpadi-");
           const isLegacySerwistCache = key === `serwist-precache-v2-${self.registration.scope}`;
           return !isCurrent && !retained.has(key) && (isOwnedVersionedCache || LEGACY_APP_CACHES.has(key) || isLegacySerwistCache);

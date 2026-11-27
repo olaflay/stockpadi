@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { Eye, EyeOff, WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { RippleButton } from "@/components/ui/Ripple";
@@ -8,26 +8,38 @@ import { TextInput } from "@/components/ui/TextInput";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { isPasswordPwned } from "@/lib/pwned-passwords";
-import { getSupabase } from "@/lib/supabase";
 import { PasswordGuidance } from "@/components/auth/PasswordGuidance";
 import { meetsPasswordPolicy } from "@stockpadi/contracts";
-import { serverPost } from "@/platform/api/backend-client";
+import { BackendRequestError, serverPostAnonymous } from "@/platform/api/backend-client";
 import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
+
+function subscribeToResetLink(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+function readResetToken() {
+  const token = new URLSearchParams(window.location.hash.slice(1)).get("token_hash") ?? "";
+  return /^[a-z0-9_-]{32,128}$/i.test(token) ? token : "";
+}
 
 export default function ResetPasswordForm() {
   const isOnline = useOnlineStatus();
+  const recoveryToken = useSyncExternalStore(subscribeToResetLink, readResetToken, () => null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const formRegionRef = useRef<HTMLDivElement>(null);
-  useAuthFieldVisibility(formRegionRef);
+  useAuthFieldVisibility(formRegionRef, Boolean(recoveryToken && !linkError && !success));
 
   const errorRef = useScrollToError<HTMLDivElement>(error);
 
   async function handleSubmit() {
+    if (!recoveryToken || busy) return;
     setError(null);
     if (!isOnline) {
       setError("An internet connection is required to change your password.");
@@ -43,25 +55,21 @@ export default function ResetPasswordForm() {
     try {
       if (await isPasswordPwned(password)) {
         setError("This password has appeared in a data breach. Please choose a different one.");
-        setBusy(false);
         return;
       }
 
-      // The reset link establishes a short-lived Supabase recovery session.
-      // Its token authenticates the request; the backend then applies the same
-      // shared password policy used at registration, with no business lookup.
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Password reset is not configured.");
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error("This reset link has expired or has already been used. Request a new one.");
-      }
-      await serverPost("/api/auth/password/update", { password });
-
+      await serverPostAnonymous("/api/auth/password/recovery/complete", { tokenHash: recoveryToken, password });
+      window.history.replaceState(null, "", window.location.pathname);
+      setPassword("");
       setSuccess(true);
     } catch (cause) {
-      if (cause instanceof Error && cause.message.includes("expired")) {
-        setError("This reset link has expired. Request a new one and try again.");
+      if (cause instanceof BackendRequestError) {
+        if (cause.code === "RESET_LINK_INVALID" || cause.code === "RESET_LINK_USED") {
+          window.history.replaceState(null, "", window.location.pathname);
+          setLinkError(cause.message);
+        } else {
+          setError(cause.message);
+        }
       } else {
         setError("We couldn't update your password. Check your connection and try again.");
       }
@@ -84,6 +92,27 @@ export default function ResetPasswordForm() {
           className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-brand-accent text-[length:var(--font-size-body-lg)] font-bold text-brand-accent-contrast hover:opacity-95 transition-opacity duration-[var(--motion-duration-short)] py-3 shadow-[var(--shadow-elevation-1)] flex items-center justify-center no-underline"
         >
           Sign in
+        </Link>
+      </div>
+    );
+  }
+
+  if (recoveryToken === null) {
+    return <p role="status" className="p-6 text-center text-on-surface-muted">Checking your reset link…</p>;
+  }
+
+  if (!recoveryToken || linkError) {
+    return (
+      <div className="auth-viewport flex w-full max-w-md flex-col items-center justify-center gap-4 px-6 mx-auto text-center">
+        <h1 className="text-[length:var(--font-size-title-lg)] font-bold text-on-surface">
+          Request a new reset link
+        </h1>
+        <p className="text-on-surface-muted">{linkError ?? "This reset link is missing, invalid, or expired."}</p>
+        <Link
+          href="/forgot-password"
+          className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-control)] bg-brand-accent px-5 font-bold text-brand-accent-contrast"
+        >
+          Send a new reset link
         </Link>
       </div>
     );

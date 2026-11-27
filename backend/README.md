@@ -90,6 +90,19 @@ exact deployed frontend URL, and add the Supabase and SMTP secrets from
 API URL, and redeploy the frontend. Browser feature requests still use
 same-origin `/api/*`.
 
+### Password recovery
+
+Apply the password recovery cooldown migration before deploying the backend and
+frontend. Recovery uses the backend's existing Brevo or SMTP sender and the
+Supabase project configured by `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY`. Set `FRONTEND_ORIGIN` to the HTTPS URL where users
+sign in. The recovery email opens that app directly, so it does not depend on
+Supabase's recovery email template or redirect allowlist.
+
+Verify delivery using a staging account and inbox. Open the emailed link in a
+browser without a session, set a new password, sign in with it, and confirm the
+same link cannot change the password again.
+
 ## Database boundary
 
 Do not add migrations here. From the project root, use:

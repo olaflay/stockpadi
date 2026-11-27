@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import { createApp, resetRequestRateLimitForTests } from "./app.js";
+import { createApp, handleRequest, resetRequestRateLimitForTests } from "./app.js";
 
 const servers: Array<ReturnType<typeof createServer>> = [];
 
@@ -21,6 +21,52 @@ async function startBackend() {
 }
 
 describe("backend service routes", () => {
+  // Independent inventory of the public HTTP contract. A wrong-method probe
+  // checks route recognition without invoking a handler or changing data.
+  const resourceId = "00000000-0000-0000-0000-000000000000";
+  const routeMethods = [
+    ["/", "GET"], ["/health", "GET"], ["/api/health", "GET"], ["/api/version", "GET"],
+    ["/api/businesses/register", "POST"], ["/api/businesses/branches", "GET, POST"],
+    [`/api/businesses/branches/${resourceId}`, "PATCH, DELETE"], ["/api/business/profile", "GET, PATCH"],
+    ["/api/customers", "GET, POST"], [`/api/customers/${resourceId}`, "GET"],
+    ["/api/customers/credit-payment", "POST"], ["/api/purchases", "GET"], ["/api/purchases/receive", "POST"],
+    ["/api/expenses", "GET, POST"], ["/api/products", "GET, POST"], ["/api/categories", "GET"],
+    ["/api/inventory/adjust", "POST"], ["/api/inventory/stock-count", "POST"], ["/api/inventory", "GET"],
+    ["/api/reports/summary", "GET, POST"], ["/api/reconciliation/summary", "GET, POST"],
+    ["/api/reconciliation/submit", "POST"], ["/api/reconciliation/history", "GET"],
+    ["/api/workers", "GET, POST"], ["/api/workers/audit", "GET"], [`/api/workers/${resourceId}`, "GET"],
+    [`/api/workers/${resourceId}/action`, "POST"], ["/api/admin", "POST"], ["/api/broadcasts", "GET"],
+    ["/api/account-context", "POST"], ["/api/sales", "GET"], ["/api/sales/void", "POST"],
+    ["/api/sales/refund", "POST"], ["/api/auth/email-verification/send", "POST"],
+    ["/api/auth/email-verification/verify", "POST"], ["/api/auth/password/update", "POST"],
+    ["/api/auth/password/recovery/request", "POST"], ["/api/auth/password/recovery/complete", "POST"],
+    ["/api/sync/pull", "GET"], ["/api/sync/health", "GET"], ["/api/sync/push", "POST"],
+  ] as const;
+
+  const publicPaths = new Set<string>([
+    "/", "/health", "/api/health", "/api/version", "/api/businesses/register",
+    "/api/auth/password/recovery/request", "/api/auth/password/recovery/complete",
+  ]);
+  const protectedMethods = routeMethods
+    .filter(([path]) => !publicPaths.has(path))
+    .flatMap(([path, methods]) => methods.split(", ").map((method) => [method, path] as const));
+
+  it.each(protectedMethods)("requires authentication for %s %s", async (method, path) => {
+    const response = await handleRequest(new Request(`http://localhost${path}`, {
+      method,
+      ...(method === "POST" || method === "PATCH" ? { body: "{}" } : {}),
+    }));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: { code: "UNAUTHENTICATED" } });
+  });
+
+  it.each(routeMethods)("recognizes %s and advertises its supported methods", async (path, methods) => {
+    const response = await handleRequest(new Request(`http://localhost${path}`, { method: "PUT" }));
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe(methods);
+    expect(await response.json()).toMatchObject({ error: { code: "METHOD_NOT_ALLOWED" } });
+  });
+
   it.each(["/", "/health", "/health?probe=deployment"])("returns service health for GET %s", async (path) => {
     const backendUrl = await startBackend();
     const response = await fetch(`${backendUrl}${path}`);

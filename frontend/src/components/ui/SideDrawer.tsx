@@ -6,16 +6,13 @@ import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Truck,
-  LogOut,
   Store,
   Users,
   FileSpreadsheet,
-  Database,
   HelpCircle,
   CalendarCheck,
   Settings,
   X,
-  UserCheck,
   ReceiptText,
   TrendingDown,
 } from "lucide-react";
@@ -25,8 +22,6 @@ import { useSideDrawer } from "@/components/ui/DrawerContext";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
-import { signOut } from "@/features/auth/logout";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useIsStandalone, openInstallPrompt } from "@/lib/pwa-install";
 import { Download } from "lucide-react";
 import { acquireOverlayScrollLock } from "@/components/ui/overlay-scroll-lock";
@@ -35,8 +30,6 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
-  badge?: React.ReactNode;
-  ownerOnly?: boolean;
   capability?: WorkerCapability;
 }
 
@@ -49,7 +42,6 @@ export function SideDrawer() {
   const { isOpen, closeDrawer } = useSideDrawer();
   const pathname = usePathname();
   const user = useCurrentUser();
-  const isOwnerOrAdmin = user.accountType === "BUSINESS_OWNER" || user.accountType === "ADMIN";
 
   // Dynamic store name from local business profile
   const businessProfile = useLiveQuery(
@@ -60,6 +52,7 @@ export function SideDrawer() {
   const storeName = businessProfile?.name?.trim() || branding.businessName;
 
   const drawerRef = React.useRef<HTMLElement>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const isStandalone = useIsStandalone();
 
   // Close on path change
@@ -98,7 +91,13 @@ export function SideDrawer() {
   // Lock body scroll when drawer is open
   useEffect(() => {
     if (!isOpen) return;
-    return acquireOverlayScrollLock();
+    const previousFocus = document.activeElement;
+    closeButtonRef.current?.focus({ preventScroll: true });
+    const release = acquireOverlayScrollLock();
+    return () => {
+      release();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+    };
   }, [isOpen]);
 
   /**
@@ -122,7 +121,7 @@ export function SideDrawer() {
           capability: "MANAGE_EXPENSES",
         },
         {
-          label: "Stock",
+          label: "Restock history",
           href: "/purchases",
           icon: Truck,
           capability: "RECEIVE_STOCK",
@@ -144,33 +143,16 @@ export function SideDrawer() {
           icon: Users,
           capability: "VIEW_CUSTOMERS",
         },
-        {
-          label: "Staff and permissions",
-          href: "/staff",
-          icon: UserCheck,
-          ownerOnly: true,
-        },
       ],
     },
     {
       title: "Business tools",
       items: [
         {
-          label: "Business profile",
-          href: "/profile",
-          icon: Store,
-        },
-        {
-          label: "Product imports",
-          href: "/products/import",
+          label: "Import catalog",
+          href: "/more/import-catalog",
           icon: FileSpreadsheet,
           capability: "MANAGE_PRODUCTS",
-        },
-        {
-          label: "Backup and offline data",
-          href: "/settings/data",
-          icon: Database,
-          ownerOnly: true,
         },
         {
           label: "Settings",
@@ -231,6 +213,7 @@ export function SideDrawer() {
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             onClick={closeDrawer}
             aria-label="Close navigation drawer"
             className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all shrink-0 ml-2"
@@ -240,10 +223,10 @@ export function SideDrawer() {
         </div>
 
         {/* Grouped Navigation Items (Material UI standard) */}
-        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-4">
+        <nav aria-label="Shop workflows" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-4">
           {sections.map((section, sIdx) => {
             const visibleItems = section.items.filter(
-              (item) => (!item.ownerOnly || isOwnerOrAdmin) && (!item.capability || hasCapability(user, item.capability))
+              (item) => !item.capability || hasCapability(user, item.capability)
             );
 
             if (visibleItems.length === 0) return null;
@@ -264,7 +247,7 @@ export function SideDrawer() {
                       href={item.href}
                       onClick={closeDrawer}
                       prefetch={false}
-                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[length:var(--font-size-body)] font-medium transition-all ${
+                      className={`flex min-h-[var(--touch-target-min)] items-center gap-3 rounded-xl px-3.5 py-2 text-[length:var(--font-size-body)] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors ${
                         isActive
                           ? "bg-brand-accent/15 text-brand-accent-active font-semibold shadow-xs"
                           : "text-on-surface hover:bg-surface-container active:scale-[0.99]"
@@ -277,7 +260,6 @@ export function SideDrawer() {
                         aria-hidden
                       />
                       <span className="flex-1 truncate">{item.label}</span>
-                      {item.badge && <span className="shrink-0 ml-2 flex items-center">{item.badge}</span>}
                     </Link>
                   );
                 })}
@@ -286,7 +268,7 @@ export function SideDrawer() {
           })}
         </nav>
 
-        {/* Drawer Footer: Support, Appearance & Sign Out */}
+        {/* Keep installation and support reachable without opening Settings. */}
         <div className="shrink-0 space-y-2 border-t border-border/40 bg-surface-container-low px-3.5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))]">
           {!isStandalone && (
             <button
@@ -311,28 +293,6 @@ export function SideDrawer() {
             <span>Help and support</span>
           </Link>
 
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3.5 py-2">
-            <span className="text-xs font-semibold text-on-surface">Appearance</span>
-            <ThemeToggle variant="pill-icons" />
-          </div>
-
-          <button
-            type="button"
-            onClick={async () => {
-              closeDrawer();
-              await signOut();
-            }}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/15 active:scale-[0.98] transition-all"
-            title="Sign out"
-            aria-label="Sign out"
-          >
-            <LogOut size={14} aria-hidden />
-            <span>Sign out</span>
-          </button>
-
-          <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted pt-0.5">
-            {branding.businessName} • Offline-first retail
-          </p>
         </div>
       </aside>
     </>

@@ -49,7 +49,11 @@ jobs:
 
       - run: npm run test
 
-      - name: Build frontend with CI-only configuration
+      - name: Install browser for offline smoke checks
+        working-directory: frontend
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Build frontend and verify offline browser recovery
         env:
           NEXT_PUBLIC_APP_ENV: staging
           NEXT_PUBLIC_SUPABASE_URL: https://ci-build-placeholder.supabase.co
@@ -58,7 +62,9 @@ jobs:
           NEXT_PUBLIC_BACKEND_URL: https://api.ci.example.invalid
           NEXT_PUBLIC_SITE_URL: https://app.ci.example.invalid
           NEXT_PUBLIC_BUILD_VERSION: ${{ github.sha }}
-        run: npm run build
+        run: |
+          npm run build
+          npm --prefix frontend run test:e2e
 
       - run: npm run backend:build
 

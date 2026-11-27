@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
 import type { CurrentUser } from "@/features/auth/use-current-user";
@@ -46,6 +46,13 @@ describe("Reports page role gating", () => {
 
     await screen.findByText("Reports");
     expect(screen.queryByText("You don't have access to this screen")).not.toBeInTheDocument();
+  });
+
+  it("lets an owner reach stock reports before recording their first sale", async () => {
+    renderAs({ id: "user-2", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" });
+    expect(await screen.findByText("No sales recorded")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Stock" }));
+    expect(screen.getByRole("heading", { name: "Stock value" })).toBeInTheDocument();
   });
 
 });

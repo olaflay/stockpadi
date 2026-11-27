@@ -49,6 +49,7 @@ describe("Service Worker configuration (sw.ts)", () => {
     expect(capturedConfig?.clientsClaim).toBe(false);
     expect(capturedConfig?.navigationPreload).toBe(true);
     expect(capturedConfig?.precacheEntries).toEqual(["/offline", "/favicon.ico"]);
+    expect(capturedConfig?.precacheOptions).toMatchObject({ cacheName: "stockpadi-precache-local" });
     expect(mockAddEventListeners).toHaveBeenCalledOnce();
   });
 
@@ -134,6 +135,10 @@ describe("Service Worker configuration (sw.ts)", () => {
         "stockpadi-static-local",
         "stockpadi-static-older-build",
         "stockpadi-static-old-build",
+        "stockpadi-precache-local",
+        "stockpadi-precache-older-build",
+        "stockpadi-precache-old-build",
+        "serwist-precache-v2-https://example.com/",
         "other-cache",
       ]),
       delete: vi.fn().mockImplementation(async (key: string) => {
@@ -148,6 +153,11 @@ describe("Service Worker configuration (sw.ts)", () => {
     activate?.({ waitUntil } as unknown as Event);
     await waitUntil.mock.results[0]?.value;
 
-    expect(deleted).toEqual(["stockpadi-navigation-older-build", "stockpadi-static-older-build"]);
+    expect(deleted).toEqual([
+      "stockpadi-navigation-older-build",
+      "stockpadi-static-older-build",
+      "stockpadi-precache-older-build",
+      "serwist-precache-v2-https://example.com/",
+    ]);
   });
 });

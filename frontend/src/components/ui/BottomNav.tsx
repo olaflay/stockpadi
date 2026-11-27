@@ -18,6 +18,7 @@ import type { WorkerCapability } from "@/features/auth/authorization";
 import { AlertBadge } from "@/components/ui/AlertBadge";
 import { useNavigation } from "@/components/ui/NavigationContext";
 import { MoreSheetModal } from "@/components/ui/MoreSheetModal";
+import { useOnlineStatus } from "@/lib/use-online-status";
 
 const SECONDARY_ROUTES_PREFIXES = [
   "/more",
@@ -30,7 +31,6 @@ const SECONDARY_ROUTES_PREFIXES = [
   "/profile",
   "/staff",
   "/alerts",
-  "/products/import",
 ];
 
 const DELICATE_FORM_FLOWS = [
@@ -82,6 +82,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
   const { isNavVisible } = useNavigation();
+  const isOnline = useOnlineStatus();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   // Delicate exclusion: Hide BottomNav ONLY on full-screen creation forms & onboarding wizards
@@ -95,6 +96,9 @@ export function BottomNav() {
     (item) => !("capability" in item) || hasCapability(user, item.capability as WorkerCapability),
   );
   const isSecondary = isSecondaryDestination(pathname);
+  const connection = typeof navigator === "undefined" ? undefined :
+    (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  const canPrefetch = isOnline && !connection?.saveData && !connection?.effectiveType?.endsWith("2g");
 
   return (
     <>
@@ -137,6 +141,7 @@ export function BottomNav() {
                   isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
                 }`}
                 aria-expanded={isMoreOpen}
+                aria-current={isActive ? "page" : undefined}
                 aria-label="Open more options menu"
               >
                 <span
@@ -157,7 +162,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               id={`tour-nav-${item.label.toLowerCase()}`}
-              prefetch={false}
+              prefetch={canPrefetch ? null : false}
               className={`flex min-h-[var(--touch-target-min)] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 py-1 text-[length:var(--font-size-caption)] leading-tight transition-colors duration-[var(--motion-duration-short)] ${
                 isActive ? "font-semibold text-on-surface" : "text-on-surface-muted"
               }`}

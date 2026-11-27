@@ -59,3 +59,14 @@ export function supabaseForAccessToken(accessToken: string): SupabaseClient {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
 }
+
+/** An isolated Auth client so verifying a recovery token never changes the admin client session. */
+export function supabaseForRecovery(): SupabaseClient {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY are required");
+  ensureWebSocketForSupabase();
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+}

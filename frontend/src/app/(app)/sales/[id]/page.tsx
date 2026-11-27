@@ -19,7 +19,7 @@ import { voidSale, VoidSaleError } from "@/features/pos/void-sale";
 import { refundSale, RefundSaleError } from "@/features/pos/refund-sale";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ReceiptIllustration } from "@/components/illustrations";
+import { DocumentMotif } from "@/components/illustrations/DocumentMotif";
 import type { PaymentMethod, Sale } from "@/types/sale";
 import { tenantGet } from "@/lib/local-tenant";
 
@@ -181,7 +181,7 @@ export default function SaleDetailPage({ params }: PageProps) {
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-container px-4 py-3 text-on-brand-container shadow-elevation-1 animate-step-in">
           <div className="flex min-w-0 items-center gap-3">
-            {!sale.voidedAt && <ReceiptIllustration className="h-9 w-9 shrink-0" />}
+            {!sale.voidedAt && <DocumentMotif />}
             <div className="min-w-0">
               <p className="text-[length:var(--font-size-caption)] font-semibold">
                 {new Date(sale.createdAtLocal).toLocaleString("en-NG", {

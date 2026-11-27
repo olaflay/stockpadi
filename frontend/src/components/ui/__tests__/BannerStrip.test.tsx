@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { BannerStrip } from "../BannerStrip";
 
 const state = vi.hoisted(() => ({
-  online: true, pending: 0, failed: 0, required: false,
+  online: true, pending: 0, failed: 0, required: false, alerts: 0,
   pull: null as { lastUpdated?: string; failed: boolean } | null,
   phase: "idle" as "idle" | "uploading" | "downloading" | "syncing",
 }));
@@ -18,6 +18,7 @@ vi.mock("@/features/auth/use-current-user", () => ({ useCurrentUserOptional: () 
 vi.mock("@/features/sync/sync-runtime-state", () => ({ useSyncRuntimePhase: () => state.phase }));
 vi.mock("@/lib/use-sync-safety", () => ({ useSyncSafety: () => ({ required: state.required }) }));
 vi.mock("dexie-react-hooks", () => ({ useLiveQuery: () => state.pull }));
+vi.mock("@/features/alerts/use-alert-center", () => ({ useAlertBadgeCount: () => state.alerts }));
 
 describe("BannerStrip connection status", () => {
   afterEach(() => {
@@ -28,6 +29,7 @@ describe("BannerStrip connection status", () => {
     state.phase = "idle";
     state.pull = null;
     state.required = false;
+    state.alerts = 0;
   });
 
   it("shows a concise offline status", () => {
@@ -67,5 +69,16 @@ describe("BannerStrip connection status", () => {
     rerender(<BannerStrip />);
     expect(screen.getByText("Offline · Changes need review")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/settings/sync-health");
+  });
+
+  it("shows a single notification link alongside connection status and updates its count", () => {
+    const { rerender } = render(<BannerStrip />);
+    expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("href", "/alerts");
+    state.alerts = 7;
+    rerender(<BannerStrip />);
+    const link = screen.getByRole("link", { name: "Notifications, 7 unread" });
+    expect(link).toHaveTextContent("7");
+    expect(link.parentElement).toContainElement(screen.getByRole("status"));
+    expect(screen.getAllByRole("link", { name: /Notifications/ })).toHaveLength(1);
   });
 });

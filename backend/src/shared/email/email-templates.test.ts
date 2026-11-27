@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { renderNewSignupAdminEmail, renderVerificationEmail, renderWelcomeEmail, renderWorkerInviteEmail, renderWorkerPasswordChangedEmail } from "./email-templates.js";
+import { renderNewSignupAdminEmail, renderPasswordRecoveryEmail, renderVerificationEmail, renderWelcomeEmail, renderWorkerInviteEmail, renderWorkerPasswordChangedEmail } from "./email-templates.js";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -14,6 +14,7 @@ describe("transactional emails", () => {
       renderWorkerInviteEmail("<script>owner</script>", "staff@example.test"),
       renderWorkerPasswordChangedEmail("staff@example.test"),
       renderNewSignupAdminEmail({ ownerName: "<script>owner</script>", ownerEmail: "owner@example.test", storeName: "<Store>", businessType: "retail", businessId: "id" }),
+      renderPasswordRecoveryEmail(new URL("https://app.example.test/reset-password#token_hash=fixture")),
     ];
     for (const email of emails) {
       expect(email.html).toContain('class="email-content"');
@@ -21,10 +22,25 @@ describe("transactional emails", () => {
       expect(email.html).not.toContain("<script>");
       expect(email.html).not.toContain("box-shadow");
       expect(email.html).not.toContain("user-scalable=no");
+      expect(email.html).toContain('aria-hidden="true" class="document-motif"');
+      expect(email.html).not.toMatch(/<(img|svg)\b/);
+      expect(email.text).not.toContain("document-motif");
       expect(email.text).toBeTruthy();
     }
     expect(emails[1].text).toContain("has been approved");
-    expect(emails[1].html).toContain("https://app.example.test/dashboard");
+    expect(emails[0].html).toContain(">123456</p>");
+    expect(emails[0].html).not.toContain("href=");
+    expect(emails[1].html).toContain('href="https://app.example.test/login"');
+    expect(emails[1].text).toContain("https://app.example.test/login");
+    expect(emails[4].html).toContain('href="https://app.example.test/admin/businesses/id"');
+    expect(emails[4].text).toContain("https://app.example.test/admin/businesses/id");
+  });
+
+  it("requires an HTTPS origin for the approval link in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("FRONTEND_ORIGIN", "http://app.example.test");
+    expect(() => renderWelcomeEmail("Owner", "Store")).toThrow("HTTPS frontend URL");
+    expect(renderVerificationEmail("Owner", "012345").text).toContain("012345");
   });
 
   it("keeps the compatibility-runtime verification and welcome templates identical", () => {

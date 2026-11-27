@@ -3,6 +3,7 @@
 import React from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { hasAppBackHistory } from "@/lib/app-history";
 
 interface ScreenHeaderProps {
   title: string;
@@ -16,6 +17,8 @@ interface ScreenHeaderProps {
    * If supplied, takes precedence over router navigation.
    */
   backHref?: string;
+  /** Use browser history first, with this destination for a direct entry. */
+  fallbackHref?: string;
   /**
    * If true, hides the back button. For root screens, this yields to the
    * top green app bar (TopStoreHeader) so the page UI shifts up.
@@ -35,6 +38,7 @@ export function ScreenHeader({
   title,
   onBack,
   backHref,
+  fallbackHref,
   hideBack = false,
   action,
   className,
@@ -58,8 +62,13 @@ export function ScreenHeader({
 
     // In a browser/PWA with no explicit backHref, if history has entries, router.back()
     // returns to the prior screen the user came from.
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    if (hasAppBackHistory()) {
       router.back();
+      return;
+    }
+
+    if (fallbackHref) {
+      router.replace(fallbackHref);
       return;
     }
 
