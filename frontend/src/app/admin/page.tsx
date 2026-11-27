@@ -95,10 +95,12 @@ export default function SuperAdminTenantsPage() {
       });
 
       showToast(
-        newStatus && !result.welcomeEmailSent
-          ? "Store activated, but the welcome email could not be sent. Check email configuration and retry activation."
-          : `Store ${newStatus ? "activated and welcome email sent" : "suspended"} successfully.`,
-        newStatus && !result.welcomeEmailSent ? "warning" : newStatus ? "success" : "warning"
+        newStatus
+          ? result.welcomeEmailSent === false
+            ? "Store activated. Open the store to resend the approval email."
+            : result.welcomeEmailSent ? "Store activated and approval email sent." : "Store is active."
+          : "Store suspended.",
+        newStatus && result.welcomeEmailSent !== false ? "success" : "warning"
       );
 
       setTenants((prev) =>
@@ -126,10 +128,10 @@ export default function SuperAdminTenantsPage() {
         status: "verified",
       });
       showToast(
-        result.welcomeEmailSent
-          ? "Store approved and the welcome email was sent."
-          : "Store approved, but the welcome email could not be sent. Check email configuration and retry approval.",
-        result.welcomeEmailSent ? "success" : "warning"
+        result.welcomeEmailSent === false
+          ? "Store approved. Open the store to resend the approval email."
+          : result.welcomeEmailSent ? "Store approved and approval email sent." : "Store is approved.",
+        result.welcomeEmailSent === false ? "warning" : "success"
       );
       setTenants((prev) =>
         prev.map((t) =>

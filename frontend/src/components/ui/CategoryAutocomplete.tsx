@@ -97,12 +97,14 @@ export function CategoryAutocomplete({
   const isNewName = trimmedQuery.length > 0 && !isExactMatch;
 
   function selectCategory(category: CategoryOption) {
+    if (blurTimeout.current) clearTimeout(blurTimeout.current);
     setQuery(category.name);
     onSelect(category.id, category.name);
     setIsOpen(false);
   }
 
   function selectNew() {
+    if (blurTimeout.current) clearTimeout(blurTimeout.current);
     onSelect("", trimmedQuery);
     setIsOpen(false);
   }
@@ -243,16 +245,8 @@ export function CategoryAutocomplete({
                 type="button"
                 role="option"
                 aria-selected={category.id === value}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                  selectCategory(category);
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                  selectCategory(category);
-                }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectCategory(category)}
                 className="flex flex-1 items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface"
               >
                 <HighlightMatch text={category.name} query={trimmedQuery} />
@@ -294,16 +288,8 @@ export function CategoryAutocomplete({
                 type="button"
                 role="option"
                 aria-selected={category.id === value}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                  selectCategory(category);
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                  selectCategory(category);
-                }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectCategory(category)}
                 className="flex flex-1 items-center justify-between px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-on-surface"
               >
                 <HighlightMatch text={category.name} query={trimmedQuery} />
@@ -338,16 +324,8 @@ export function CategoryAutocomplete({
               type="button"
               role="option"
               aria-selected={false}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectNew();
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                selectNew();
-              }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={selectNew}
               className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[length:var(--font-size-body)] text-brand-accent hover:bg-surface-container active:bg-surface-container-high font-medium"
             >
               <Plus size={16} className="shrink-0" aria-hidden />

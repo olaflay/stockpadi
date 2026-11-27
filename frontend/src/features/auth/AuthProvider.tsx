@@ -17,6 +17,7 @@ import {
   type FastPathAuthSession,
 } from "@/features/auth/auth-session-sync";
 import { ensureStoragePersistence } from "@/lib/storage-persistence";
+import { adminReviewRoute } from "@/features/auth/admin-review-route";
 
 const subscribeToHydration = () => () => {};
 
@@ -129,7 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resolved.kind === "needs-login"
       ) {
         if (!pathname.startsWith("/login")) {
-          router.replace("/login?force=true");
+          const review = adminReviewRoute(pathname);
+          router.replace(review ? `/login?force=true&review=${encodeURIComponent(review)}` : "/login?force=true");
         }
         return;
       }

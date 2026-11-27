@@ -113,7 +113,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
     },
     hasCapability(user, "RECEIVE_STOCK") && {
       href: "/purchases",
-      label: "Stock",
+      label: "Restock history",
       icon: ShoppingCart,
     },
     hasCapability(user, "VIEW_CUSTOMERS") && {
@@ -137,7 +137,7 @@ export function MoreSheetModal({ isOpen, onClose, activePath }: MoreSheetModalPr
       icon: BarChart3,
     },
     (isOwnerOrAdmin || hasCapability(user, "MANAGE_PRODUCTS")) && {
-      href: "/products/import",
+      href: "/more/import-catalog",
       label: "Product imports",
       icon: FileSpreadsheet,
     },

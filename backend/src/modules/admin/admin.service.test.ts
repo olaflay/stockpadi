@@ -50,6 +50,24 @@ describe("admin approval", () => {
     expect(sendBusinessApprovalEmail).not.toHaveBeenCalled();
   });
 
+  it("allows an approval email retry without changing business status", async () => {
+    vi.mocked(getBusiness).mockResolvedValue({ status: "verified", is_active: true } as never);
+    vi.mocked(sendBusinessApprovalEmail).mockResolvedValue(true);
+    await expect(executeAdminOperation({} as never, { id: "admin" } as never, {
+      action: "resend_approval_email", businessId: "business",
+    })).resolves.toMatchObject({ welcomeEmailSent: true });
+    expect(setBusinessStatus).not.toHaveBeenCalled();
+    expect(sendBusinessApprovalEmail).toHaveBeenCalledExactlyOnceWith({}, "business");
+  });
+
+  it("blocks approval email retries for pending stores", async () => {
+    vi.mocked(getBusiness).mockResolvedValue({ status: "pending", is_active: true } as never);
+    await expect(executeAdminOperation({} as never, { id: "admin" } as never, {
+      action: "resend_approval_email", businessId: "business",
+    })).rejects.toMatchObject({ status: 409, code: "BUSINESS_NOT_APPROVED" });
+    expect(sendBusinessApprovalEmail).not.toHaveBeenCalled();
+  });
+
   it("rejects a non-admin before changing access or sending email", async () => {
     vi.mocked(resolveAccountContext).mockResolvedValue({ accountType: "BUSINESS_OWNER" } as never);
     await expect(executeAdminOperation({} as never, { id: "owner" } as never, {

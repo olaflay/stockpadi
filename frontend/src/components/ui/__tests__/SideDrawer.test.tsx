@@ -68,16 +68,17 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     expect(screen.getByText("Expenses")).toBeInTheDocument();
     expect(screen.getByText("Close day")).toBeInTheDocument();
     expect(screen.getByText("Contacts and debtors")).toBeInTheDocument();
-    expect(screen.getByText("Stock")).toBeInTheDocument();
+    expect(screen.getByText("Restock history")).toBeInTheDocument();
 
     // Check management
-    expect(screen.getByText("Business profile")).toBeInTheDocument();
-    expect(screen.getByText("Staff and permissions")).toBeInTheDocument();
-    expect(screen.getByText("Product imports")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("link", { name: "Import catalog" })).toHaveAttribute("href", "/more/import-catalog");
+    expect(screen.queryByText("Business profile")).not.toBeInTheDocument();
+    expect(screen.queryByText("Staff and permissions")).not.toBeInTheDocument();
 
     // Check footer
     expect(screen.getByText("Help and support")).toBeInTheDocument();
-    expect(screen.getByText("Sign out")).toBeInTheDocument();
+    expect(screen.queryByText("Sign out")).not.toBeInTheDocument();
   });
 
   it("hides owner-only sections like staff permissions for workers", () => {
@@ -102,6 +103,6 @@ describe("SideDrawer component (Material UI / M3 Specification)", () => {
     expect(drawer.className).toContain("z-[var(--z-drawer)]");
     expect(drawer.className).toContain("h-dvh");
     expect(drawer.className).toContain("max-h-dvh");
-    expect(screen.getByText("Sign out").parentElement?.parentElement?.className).toContain("safe-area-inset-bottom");
+    expect(screen.getByRole("link", { name: "Help and support" }).parentElement?.className).toContain("safe-area-inset-bottom");
   });
 });

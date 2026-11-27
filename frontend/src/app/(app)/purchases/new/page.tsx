@@ -70,7 +70,7 @@ function NewPurchaseContent() {
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
-        <ScreenHeader title="Receive delivery" backHref="/purchases" />
+        <ScreenHeader title="Receive delivery" fallbackHref="/purchases" />
         <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
@@ -196,7 +196,7 @@ function NewPurchaseContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Receive delivery" backHref="/purchases" />
+      <ScreenHeader title="Receive delivery" fallbackHref="/purchases" />
 
       {/* Delivery Date Selection */}
       <div className="flex flex-col gap-1.5">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, ChevronRight, ShieldCheck } from "lucide-react";
+import { LogOut, ChevronRight } from "lucide-react";
 import { getBrandingConfig } from "@/config/branding";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SettingsRow } from "@/components/ui/SettingsRow";
@@ -12,6 +12,7 @@ import { useTheme } from "@/features/settings/use-theme";
 import { signOut } from "@/features/auth/logout";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 import { Modal } from "@/components/ui/Modal";
+import { AboutApp } from "@/features/settings/AboutApp";
 
 /**
  * Settings is grouped by the decisions a store owner makes:
@@ -42,9 +43,6 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <ScreenHeader title="Settings" hideBack={true} />
-      <p className="-mt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">
-        Set up your store once, then keep access, data, and support in one place.
-      </p>
 
       {/* Account Identity Header — Clean profile surface */}
       <RippleLink
@@ -94,7 +92,7 @@ export default function SettingsPage() {
       {canManageBusiness && (
         <section className="flex flex-col">
           <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            People & Permissions
+            Store and staff
           </h2>
           <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
@@ -102,17 +100,6 @@ export default function SettingsPage() {
               description="Add cashiers, workers and manage permissions"
               href="/staff"
             />
-          </div>
-        </section>
-      )}
-
-      {/* Store Setup Section */}
-      {canManageBusiness && (
-        <section className="flex flex-col">
-          <h2 className="px-1 pb-1 text-[12px] font-semibold uppercase tracking-wider text-on-surface-muted">
-            Store Setup
-          </h2>
-          <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
             <SettingsRow
               label="Branches & outlets"
               description="Store locations and staff assignments"
@@ -165,7 +152,7 @@ export default function SettingsPage() {
           />
           <SettingsRow
             label={`About ${branding.businessName}`}
-            description="Version 0.1.0 • Offline-first architecture"
+            description="How the app stores and uploads records"
             onClick={() => setIsAboutModalOpen(true)}
           />
         </div>
@@ -196,19 +183,7 @@ export default function SettingsPage() {
           onClose={() => setIsAboutModalOpen(false)}
         >
           <div className="flex flex-col gap-4 text-left">
-            <div className="rounded-2xl bg-surface-container p-4">
-              <p className="text-[length:var(--font-size-body-lg)] font-bold text-on-surface">{branding.businessName}</p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mt-0.5">
-                Version 0.1.0 • Offline-first retail inventory and point-of-sale.
-              </p>
-            </div>
-
-            <section className="flex items-start gap-3 rounded-2xl bg-surface-container p-4">
-              <ShieldCheck size={20} className="mt-0.5 shrink-0 text-brand-accent" aria-hidden />
-              <p className="text-[length:var(--font-size-caption)] leading-relaxed text-on-surface-muted">
-                <strong className="text-on-surface font-semibold">NDPR Compliance Statement:</strong> All sales, inventory, and staff data are stored locally in IndexedDB on this device. No information is transmitted to external servers unless synchronizing with your secure business database.
-              </p>
-            </section>
+            <AboutApp />
 
             <RippleButton
               type="button"

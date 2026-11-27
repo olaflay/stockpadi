@@ -80,7 +80,9 @@ export default function Home() {
           <h1 role="status" className="text-title-lg font-bold text-on-surface">
             {startupState === "recovering" ? "Still opening…" : `Opening ${branding.businessName}…`}
           </h1>
-          <progress aria-hidden="true" className="mx-auto mt-4 block h-1 w-32 accent-brand-accent motion-reduce:hidden" />
+          <div aria-hidden className="mx-auto mt-4 h-1 w-32 overflow-hidden rounded-full bg-brand-accent/15">
+            <div className="startup-progress-segment h-full w-1/3 rounded-full bg-brand-accent" />
+          </div>
         </section>
       )}
       <section

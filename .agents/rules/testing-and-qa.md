@@ -1,5 +1,12 @@
 # Testing and QA
 
+## Commit and push verification gate
+
+1. Before committing and again before pushing, verify the exact staged tree or outgoing revision. Require a successful production build, lint, typecheck, unit and integration suites, and a clean diff check. An unchanged revision may reuse recorded local evidence.
+2. Inventory **every supported application endpoint** by HTTP method and route, including frontend handlers and rewrites, the Node API, and retained compatibility functions. Reconcile that inventory with automated checks. Verify the expected success or rejection, response contract, authentication and role/tenant boundaries, and resulting side effects wherever applicable. An untested endpoint, failure, or unavailable required check leaves verification incomplete.
+3. Exercise routes that change state with disposable credentials and data in local or staging environments. In production use non-mutating smoke checks and designated test-tenant flows only.
+4. After pushing, check the remote revision, required CI jobs, frontend/backend deployment status, and the target's reported build commit. Smoke-test the actual deployed endpoints and the changed workflows. Report the exact commit, environment, checks passed, and anything pending or failed. A successful Git push alone does not complete the release.
+
 ## What must have a passing automated test before merge, no exceptions
 
 Any change touching `stock_movements`, the delta-merge logic, or anything in `.agents/rules/offline-sync-and-ledger.md`'s scope must ship with a test that simulates two devices writing concurrently and asserts the merged result matches expectations. See `.agents/skills/write-offline-conflict-test.md` for the concrete pattern. A change here that "looks correct" without this test does not merge. Manual QA is not a substitute, the whole point of the ledger design is that the failure mode is silent, a human tester will not notice a lost sale the way an automated assertion will.

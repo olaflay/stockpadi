@@ -167,7 +167,7 @@ export default function MorePage() {
             <SettingsRow
               icon={Truck}
               tone="neutral"
-              label="Stock"
+              label="Restock history"
               description="Record new inventory received from suppliers"
               href="/purchases"
               prefetch={false}
@@ -191,7 +191,7 @@ export default function MorePage() {
               tone="neutral"
               label="Product imports"
               description="Bulk upload or download products via Excel / CSV"
-              href="/products/import"
+              href="/more/import-catalog"
               prefetch={false}
             />
           )}

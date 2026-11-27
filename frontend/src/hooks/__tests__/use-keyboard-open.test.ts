@@ -41,6 +41,10 @@ describe("useKeyboardOpen", () => {
     };
     Object.defineProperty(window, "visualViewport", { writable: true, value: mockVV });
 
+    const input = document.createElement("input");
+    input.type = "number";
+    document.body.appendChild(input);
+    input.focus();
     const { result } = renderHook(() => useKeyboardOpen());
     expect(result.current).toBe(true);
 
@@ -49,6 +53,17 @@ describe("useKeyboardOpen", () => {
       mockVV.height = 844;
       listeners["resize"]?.forEach((cb) => cb());
     });
+    expect(result.current).toBe(false);
+    expect(input).toHaveFocus();
+  });
+
+  it("does not treat a focused native date picker as text entry on mobile", () => {
+    Object.defineProperty(window, "visualViewport", { writable: true, value: undefined });
+    const input = document.createElement("input");
+    input.type = "date";
+    document.body.appendChild(input);
+    const { result } = renderHook(() => useKeyboardOpen());
+    act(() => input.focus());
     expect(result.current).toBe(false);
   });
 

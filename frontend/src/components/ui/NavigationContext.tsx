@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import React, { createContext, useContext, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 
 interface NavigationContextType {
   isNavVisible: boolean;
@@ -45,7 +46,7 @@ export function isNavAllowedOnRoute(pathname: string): boolean {
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [prevPathname, setPrevPathname] = useState(pathname);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const isKeyboardVisible = useKeyboardOpen();
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [overrideHidden, setOverrideHidden] = useState(false);
 
@@ -55,96 +56,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setIsSearchActive(false);
     setOverrideHidden(false);
   }
-
-  // Mobile virtual keyboard detection via VisualViewport API + input focus
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleFocusChange = () => {
-      const activeEl = document.activeElement;
-      if (!activeEl) return;
-      const isInput =
-        activeEl.tagName === "INPUT" ||
-        activeEl.tagName === "TEXTAREA" ||
-        (activeEl as HTMLElement).isContentEditable;
-
-      if (isInput) {
-        // If the focused input is inside an overlay modal, dialog or sheet, do not toggle bottom nav
-        if ((activeEl as HTMLElement).closest?.('[role="dialog"], [aria-modal="true"], [data-modal-container]')) {
-          return;
-        }
-
-        // On desktop/non-touch screens, never toggle keyboard visibility on input focus
-        const isTouchMobile =
-          typeof window !== "undefined" &&
-          window.innerWidth < 1024 &&
-          ("ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
-
-        if (!isTouchMobile) {
-          return;
-        }
-
-        const type = (activeEl as HTMLInputElement).type;
-        if (type !== "checkbox" && type !== "radio" && type !== "hidden" && type !== "file") {
-          setIsKeyboardVisible(true);
-          // Ensure focused input field comes comfortably into field of view above software keyboard
-          setTimeout(() => {
-            if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
-              (activeEl as HTMLElement).scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-                inline: "nearest",
-              });
-            }
-          }, 180);
-          return;
-        }
-      }
-      setIsKeyboardVisible(false);
-    };
-
-    const handleViewportResize = () => {
-      const activeEl = document.activeElement;
-      // Resizing while inside an open modal should not flicker the background nav bar
-      if (activeEl && (activeEl as HTMLElement).closest?.('[role="dialog"], [aria-modal="true"], [data-modal-container]')) {
-        return;
-      }
-
-      const isInput =
-        activeEl &&
-        (activeEl.tagName === "INPUT" ||
-          activeEl.tagName === "TEXTAREA" ||
-          (activeEl as HTMLElement).isContentEditable);
-
-      const vv = window.visualViewport;
-      if (!vv) return;
-      // If visual viewport shrinks by > 120px compared to window inner height, keyboard is open
-      const keyboardOpen = vv.height < window.innerHeight - 120;
-      setIsKeyboardVisible(keyboardOpen && Boolean(isInput));
-
-      if (keyboardOpen && activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
-        setTimeout(() => {
-          if (document.activeElement === activeEl && typeof (activeEl as HTMLElement).scrollIntoView === "function") {
-            (activeEl as HTMLElement).scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-          }
-        }, 100);
-      }
-    };
-
-    window.addEventListener("focusin", handleFocusChange, { passive: true });
-    window.addEventListener("focusout", handleFocusChange, { passive: true });
-    window.visualViewport?.addEventListener("resize", handleViewportResize);
-
-    return () => {
-      window.removeEventListener("focusin", handleFocusChange);
-      window.removeEventListener("focusout", handleFocusChange);
-      window.visualViewport?.removeEventListener("resize", handleViewportResize);
-    };
-  }, []);
 
   const isPrimaryRoute = useMemo(() => {
     return isNavAllowedOnRoute(pathname);

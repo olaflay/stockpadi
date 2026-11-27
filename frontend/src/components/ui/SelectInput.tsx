@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 interface SelectInputProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   /** Turns the border red, matching TextInput's hasError, for required selects. */
   hasError?: boolean;
+  validationState?: "warning" | "error";
 }
 
 /**
@@ -14,19 +15,17 @@ interface SelectInputProps extends React.SelectHTMLAttributes<HTMLSelectElement>
  * left-side icon. Forwards ref so react-hook-form's register() still works.
  */
 export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
-  function SelectInput({ className = "", hasError = false, ...props }, ref) {
-    const baseClass =
-      "min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] bg-surface pl-3.5 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)]";
-    const normalClass = "border border-border focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
-    const errorClass = "border-2 border-danger focus:border-danger focus:ring-2 focus:ring-danger/20";
+  function SelectInput({ className = "", hasError = false, validationState, "aria-invalid": ariaInvalid, ...props }, ref) {
+    const invalid = hasError || validationState === "error" ? true : ariaInvalid;
 
     return (
       <div className="relative">
         <select
           ref={ref}
           {...props}
-          aria-invalid={hasError || undefined}
-          className={`${baseClass} ${hasError ? errorClass : normalClass} ${className}`}
+          aria-invalid={invalid}
+          data-validation-state={validationState === "warning" ? "warning" : undefined}
+          className={`form-field min-h-[var(--touch-target-min)] w-full appearance-none rounded-[var(--radius-control)] border border-border bg-surface pl-3.5 pr-9 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)] ${className}`}
         />
         <ChevronDown
           size={18}

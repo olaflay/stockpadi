@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { getBrandingConfig } from "@/config/branding";
 import { formatCurrency } from "@/lib/format";
 import type { ReceiptViewModel } from "@/features/pos/receipt-view-model";
+import { documentMotifOpacity, documentMotifTiles } from "@/components/illustrations/document-motif";
 
 export function receiptExportFileName(extension: "pdf" | "jpg"): string {
   return `sales_receipt.${extension}`;
@@ -31,7 +32,7 @@ export async function shareReceiptPdf(receipt: ReceiptViewModel): Promise<"share
   // one canvas source prevents the two formats from drifting over time.
   const canvas = renderReceiptCanvas(receipt);
   const document = new jsPDF({
-    orientation: "portrait",
+    orientation: canvas.width > canvas.height ? "landscape" : "portrait",
     unit: "px",
     format: [canvas.width, canvas.height],
     hotfixes: ["px_scaling"],
@@ -61,7 +62,17 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
   const width = 1080;
   const padding = 72;
   const line = 44;
-  const height = Math.max(1420, 790 + receipt.items.length * 82 + receipt.payments.length * 52 + (receipt.usesCurrentCatalogLabels ? 62 : 0));
+  const headerBottom = receipt.voidedAt ? 272 : 232;
+  const itemHeight = 82;
+  const paymentHeight = 36;
+  const totalRows: Array<[string, number]> = [["Subtotal", receipt.subtotal]];
+  if (receipt.discount > 0) totalRows.push(["Discount", -receipt.discount]);
+  totalRows.push(["Total", receipt.total]);
+  const totalsHeight = (totalRows.length - 1) * line + 56;
+  // Account for the section labels and dividers as well as the variable rows.
+  const height = headerBottom + 182 + receipt.items.length * itemHeight
+    + totalsHeight + receipt.payments.length * paymentHeight
+    + (receipt.usesCurrentCatalogLabels ? 24 : 0) + padding;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -72,20 +83,35 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
   context.fillRect(0, 0, width, height);
   context.fillStyle = "#ffffff";
   roundedRect(context, 36, 36, width - 72, height - 72, 32);
+  const tileSize = 18;
+  const tileStep = 23;
+  const motifWidth = (documentMotifTiles[0].length - 1) * tileStep + tileSize;
+  const motifX = width - padding - motifWidth;
+  context.save();
   context.fillStyle = accent;
-  roundedRect(context, 36, 36, width - 72, 224, 32);
-  context.fillRect(36, 210, width - 72, 50);
+  documentMotifTiles.forEach((row, rowIndex) => {
+    row.forEach((tile, columnIndex) => {
+      if (!tile) return;
+      context.globalAlpha = documentMotifOpacity[tile];
+      context.fillRect(motifX + columnIndex * tileStep, 80 + rowIndex * tileStep, tileSize, tileSize);
+    });
+  });
+  context.restore();
 
-  context.fillStyle = "#1b1b1f";
-  context.textAlign = "center";
+  context.textAlign = "left";
   context.font = "700 44px system-ui, sans-serif";
-  context.fillStyle = "#ffffff";
-  context.fillText(receipt.businessName, width / 2, 116);
+  context.fillStyle = "#1b1b1f";
+  context.fillText(receipt.businessName, padding, 116, motifX - padding * 1.5);
   context.font = "400 28px system-ui, sans-serif";
-  context.fillStyle = "rgba(255,255,255,0.82)";
-  context.fillText(`Sales receipt #${receipt.receiptNumber}`, width / 2, 164);
-  context.fillText(receipt.dateLabel, width / 2, 204);
-  let y = 318;
+  context.fillStyle = "#5f5f66";
+  context.fillText(`Sales receipt #${receipt.receiptNumber}`, padding, 161);
+  context.fillText(receipt.dateLabel, padding, 201);
+  if (receipt.voidedAt) {
+    context.font = "700 26px system-ui, sans-serif";
+    context.fillStyle = "#8a2428";
+    context.fillText("Cancelled", padding, 241);
+  }
+  let y = headerBottom;
   context.strokeStyle = "#d5d5dc";
   context.lineWidth = 2;
   context.beginPath(); context.moveTo(padding, y); context.lineTo(width - padding, y); context.stroke();
@@ -107,15 +133,12 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
     context.fillText(`${item.quantity} ${item.unitLabel} × ${formatCurrency(item.unitPrice)}`, padding, y + 32);
     context.fillStyle = "#1b1b1f";
     context.font = "500 28px system-ui, sans-serif";
-    y += 82;
+    y += itemHeight;
   }
   y += 12;
   context.strokeStyle = "#d5d5dc";
   context.beginPath(); context.moveTo(padding, y); context.lineTo(width - padding, y); context.stroke();
   y += 48;
-  const totalRows: Array<[string, number]> = [["Subtotal", receipt.subtotal]];
-  if (receipt.discount > 0) totalRows.push(["Discount", -receipt.discount]);
-  totalRows.push(["Total", receipt.total]);
   for (const [label, amount] of totalRows) {
     const isTotal = label === "Total";
     context.font = `${isTotal ? "700 34" : "400 28"}px system-ui, sans-serif`;
@@ -131,7 +154,7 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
   for (const payment of receipt.payments) {
     context.fillText(payment.method.replace("_", " "), padding, y);
     context.textAlign = "right"; context.fillText(formatCurrency(payment.amount), width - padding, y);
-    context.textAlign = "left"; y += 36;
+    context.textAlign = "left"; y += paymentHeight;
   }
   if (receipt.usesCurrentCatalogLabels) {
     context.font = "400 20px system-ui, sans-serif";

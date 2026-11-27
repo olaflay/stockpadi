@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Truck } from "lucide-react";
+import { ClipboardCheck, Truck } from "lucide-react";
 import { db } from "@/lib/db";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,14 +11,12 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { FilterDropdownBar } from "@/components/ui/FilterDropdownBar";
-import { FAB } from "@/components/ui/FAB";
 import { formatCurrency } from "@/lib/format";
 import { getPeriodStartIso } from "@/lib/date";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { tenantArray } from "@/lib/local-tenant";
 import type { Supplier, Purchase } from "@/types/purchase";
-import type { Product } from "@/types/product";
 
 type RestockPeriod = "all" | "month" | "week";
 
@@ -31,17 +28,15 @@ export default function PurchasesPage() {
 
   const result = useLiveQuery(async () => {
     try {
-      const [suppliers, products, purchases] = await Promise.all([
+      const [suppliers, purchases] = await Promise.all([
         tenantArray<Supplier>(db.suppliers),
-        tenantArray<Product>(db.products),
         tenantArray<Purchase>(db.purchases.orderBy("createdAtLocal").reverse()),
       ]);
-      return { purchases, suppliers, products, error: null as string | null };
+      return { purchases, suppliers, error: null as string | null };
     } catch (err) {
       return {
         purchases: [],
         suppliers: [],
-        products: [],
         error: err instanceof Error ? err.message : "Could not load restock history.",
       };
     }
@@ -65,7 +60,7 @@ export default function PurchasesPage() {
   if (!hasCapability(user, "RECEIVE_STOCK")) {
     return (
       <div>
-        <ScreenHeader title="Stock" backHref="/products" />
+        <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
         <PermissionDenied requiredCapabilities={["RECEIVE_STOCK"]} />
       </div>
     );
@@ -74,7 +69,7 @@ export default function PurchasesPage() {
   if (result === undefined) {
     return (
       <div>
-        <ScreenHeader title="Stock" backHref="/products" />
+        <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-14" />
           <Skeleton className="h-14" />
@@ -87,32 +82,40 @@ export default function PurchasesPage() {
   if (result.error) {
     return (
       <div>
-        <ScreenHeader title="Stock" backHref="/products" />
+        <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
         <ErrorState message="Couldn't load your restock history." onRetry={() => window.location.reload()} />
       </div>
     );
   }
 
-  const canAdd = hasCapability(user, "RECEIVE_STOCK");
+  const stockActions = (
+    <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Stock actions" role="group">
+      <RippleLink href="/purchases/new" className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-xl bg-brand-accent px-4 text-sm font-semibold text-brand-accent-contrast">
+        <Truck size={17} aria-hidden />Receive delivery
+      </RippleLink>
+      {hasCapability(user, "SUBMIT_STOCK_COUNT") && (
+        <RippleLink href="/stock-count" className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-xl bg-surface-container px-4 text-sm font-semibold text-on-surface">
+          <ClipboardCheck size={17} aria-hidden />Count stock
+        </RippleLink>
+      )}
+    </div>
+  );
 
   const periodStart = period === "all" ? "" : getPeriodStartIso(period);
+  const suppliersById = new Map(result.suppliers.map((supplier) => [supplier.id, supplier]));
   const filteredPurchases = period === "all"
     ? (result?.purchases ?? [])
     : (result?.purchases ?? []).filter((p) => p.createdAtLocal >= periodStart);
 
   if (result.purchases.length === 0) {
     return (
-      <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
-        <ScreenHeader title="Stock" backHref="/products" />
+      <div className="flex flex-col flex-1 min-h-0">
+        <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
+        {stockActions}
         <EmptyState
           icon={Truck}
           title="No deliveries recorded"
           description="Receive stock from a supplier so what's on the shelf matches the app."
-          action={
-            canAdd
-              ? { label: "Receive delivery", href: "/purchases/new" }
-              : undefined
-          }
         />
       </div>
     );
@@ -120,7 +123,8 @@ export default function PurchasesPage() {
 
   return (
     <div>
-      <ScreenHeader title="Stock" backHref="/products" />
+      <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
+      {stockActions}
 
       <div className="mb-3 flex flex-col gap-2.5">
         <FilterDropdownBar
@@ -148,22 +152,6 @@ export default function PurchasesPage() {
           ariaLabel="Filter restock period"
         />
 
-        {canAdd && (
-          <div className="grid grid-cols-2 gap-2">
-            <Link
-              href="/purchases/new"
-              className="flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] bg-brand-accent px-3 text-center text-[length:var(--font-size-caption)] font-semibold text-brand-accent-contrast hover:opacity-95 transition-opacity"
-            >
-              Receive delivery
-            </Link>
-            <Link
-              href="/stock-count"
-              className="flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-control)] border border-border px-3 text-center text-[length:var(--font-size-caption)] font-medium text-on-surface hover:bg-surface-container transition-colors"
-            >
-              Count stock
-            </Link>
-          </div>
-        )}
       </div>
 
       <div>
@@ -174,7 +162,7 @@ export default function PurchasesPage() {
         ) : (
           <ul className="flex flex-col gap-2 pb-20">
             {filteredPurchases.slice(0, visibleLimit).map((purchase) => {
-              const supplier = result.suppliers.find((s) => s.id === purchase.supplierId);
+              const supplier = purchase.supplierId ? suppliersById.get(purchase.supplierId) : undefined;
               const itemCount = purchase.items.reduce((sum, i) => sum + i.quantity, 0);
               const total = purchase.items.reduce((sum, i) => sum + i.quantity * i.unitCost, 0);
               return (
@@ -208,11 +196,6 @@ export default function PurchasesPage() {
         )}
       </div>
 
-      {canAdd && (
-        <FAB href="/purchases/new" label="Receive delivery">
-          <Plus size={26} aria-hidden />
-        </FAB>
-      )}
     </div>
   );
 }

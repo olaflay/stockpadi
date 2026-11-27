@@ -63,20 +63,19 @@ const TOAST_DURATION_MS = 5000;
 
 /**
  * Dismissible toast for high-frequency actions (completing a sale, saving products, errors).
- * Lasts for ~5 seconds, slides down from the top of the screen, and includes a cancel/dismiss
- * button on every toast so users can dismiss them before they disappear.
+ * A new notice replaces the visible one. Brief notices expire and actionable
+ * notices remain available until used, dismissed, or replaced.
  */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const timersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const timerRef = useRef<{ id: number; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   const dismissToast = useCallback((id: number) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
+    if (timerRef.current?.id === id) {
+      clearTimeout(timerRef.current.timer);
+      timerRef.current = null;
     }
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+    setToast((current) => current?.id === id ? null : current);
   }, []);
 
   const showToast = useCallback(
@@ -92,22 +91,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           : undefined;
       const onClick = typeof actionOrOnClick === "function" ? actionOrOnClick : undefined;
 
-      setToasts((current) => [...current, { id, text, tone, action, onClick }]);
-
-      const timer = setTimeout(() => {
-        dismissToast(id);
-      }, TOAST_DURATION_MS);
-
-      timersRef.current.set(id, timer);
+      if (timerRef.current) clearTimeout(timerRef.current.timer);
+      timerRef.current = null;
+      setToast({ id, text, tone, action, onClick });
+      // An actionable notice needs time to be read and used.
+      if (!action && !onClick) {
+        timerRef.current = { id, timer: setTimeout(() => dismissToast(id), TOAST_DURATION_MS) };
+      }
     },
     [dismissToast]
   );
 
   useEffect(() => {
-    const activeTimers = timersRef.current;
     return () => {
-      activeTimers.forEach((timer) => clearTimeout(timer));
-      activeTimers.clear();
+      if (timerRef.current) clearTimeout(timerRef.current.timer);
     };
   }, []);
 
@@ -117,17 +114,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-20 sm:bottom-24 z-[9999] flex flex-col-reverse items-center gap-2 px-4 pb-[env(safe-area-inset-bottom,0px)]"
+        className="pointer-events-none fixed inset-x-0 bottom-20 sm:bottom-24 z-[9999] flex justify-center px-4 pb-[env(safe-area-inset-bottom,0px)]"
         aria-live="polite"
         aria-atomic="true"
       >
-        {toasts.map((toast) => (
+        {toast && (
           <ToastItem
             key={toast.id}
             toast={toast}
             onDismiss={() => dismissToast(toast.id)}
           />
-        ))}
+        )}
       </div>
     </ToastContext.Provider>
   );
@@ -201,7 +198,10 @@ function ToastItem({
       {toast.onClick ? (
         <button
           type="button"
-          onClick={toast.onClick}
+          onClick={() => {
+            toast.onClick?.();
+            onDismiss();
+          }}
           className="flex-1 text-left font-medium line-clamp-2 underline decoration-dotted underline-offset-4 hover:opacity-90 active:opacity-75 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
         >
           {toast.text}

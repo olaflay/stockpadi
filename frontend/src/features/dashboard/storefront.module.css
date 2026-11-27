@@ -1,8 +1,14 @@
 .crop {
-  --storefront-size: clamp(4.25rem, 23vw, 8.5rem);
-  flex: none;
-  overflow: hidden;
-  inline-size: calc(var(--storefront-size) * 0.65);
+  --storefront-size: 100%;
+  position: absolute;
+  z-index: -1;
+  inset: clamp(2.75rem, 34%, 3.5rem) 0 0 auto;
+  inline-size: min(54%, 19rem);
+  display: flex;
+  align-items: end;
+  pointer-events: none;
+  opacity: .56;
+  mask-image: linear-gradient(to right, transparent, black 29%);
 }
 
 .storefront {
@@ -17,6 +23,7 @@
   flex: none;
   inline-size: var(--storefront-size);
   aspect-ratio: 1.63;
+  transform: translate(13%, 15%);
 }
 
 .storefront > span {
