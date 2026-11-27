@@ -8,9 +8,12 @@ const run = promisify(execFile);
 
 test("deployment verification detects a frontend rewrite to an older backend", async () => {
   let routedBuild = "current";
+  let workerBuild = "current";
   const identity = { environment: "staging", apiVersion: "v1", buildVersion: "current", supabaseProjectRef: "test-project" };
   const server = createServer((request, response) => {
-    if (request.url === "/sw.js") return response.end("stockpadi-navigation-current");
+    if (request.url === "/sw.js") {
+      return response.end(`let eR="${workerBuild}",eq=\`stockpadi-navigation-\${eR}\`;`);
+    }
     response.setHeader("content-type", "application/json");
     if (request.url === "/api/products") {
       response.statusCode = 401;
@@ -39,6 +42,9 @@ test("deployment verification detects a frontend rewrite to an older backend", a
       assert.match(error.stdout, /frontend API is routing to backend build previous, expected current/);
       return true;
     });
+    routedBuild = "current";
+    workerBuild = "previous";
+    await assert.rejects(verify(), { code: 1, stdout: /service worker version does not match frontend build version/ });
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

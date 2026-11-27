@@ -13,6 +13,15 @@ async function getJson(url) {
   return { response, body };
 }
 
+function hasNavigationCacheVersion(source, version) {
+  if (source.includes(`stockpadi-navigation-${version}`)) return true;
+  // The production minifier may keep the cache name as a template literal.
+  const binding = /stockpadi-navigation-\$\{([$\w]+)\}/.exec(source)?.[1];
+  if (!binding) return false;
+  const assignment = new RegExp(`(?:^|[^$\\w])${RegExp.escape(binding)}\\s*=\\s*(["'])${RegExp.escape(version)}\\1`);
+  return assignment.test(source);
+}
+
 const frontendUrl = baseUrl(process.env.FRONTEND_URL, "FRONTEND_URL");
 const backendUrl = baseUrl(process.env.BACKEND_URL, "BACKEND_URL");
 const expectedEnvironment = process.env.EXPECTED_NEXT_PUBLIC_APP_ENV;
@@ -46,7 +55,7 @@ if (frontend.body?.supabaseProjectRef !== backend.body?.supabaseProjectRef) erro
 if (expectedEnvironment && frontend.body?.environment !== expectedEnvironment) errors.push("deployed environment does not match EXPECTED_NEXT_PUBLIC_APP_ENV");
 if (expectedProjectRef && frontend.body?.supabaseProjectRef !== expectedProjectRef) errors.push("deployed project does not match EXPECTED_SUPABASE_PROJECT_REF");
 if (expectedBuildVersion && frontend.body?.buildVersion !== expectedBuildVersion) errors.push("deployed build does not match EXPECTED_BUILD_VERSION");
-if (frontend.body?.buildVersion && !serviceWorkerText.includes(`stockpadi-navigation-${frontend.body.buildVersion}`)) errors.push("service worker version does not match frontend build version");
+if (frontend.body?.buildVersion && !hasNavigationCacheVersion(serviceWorkerText, frontend.body.buildVersion)) errors.push("service worker version does not match frontend build version");
 
 const result = {
   ok: errors.length === 0,
