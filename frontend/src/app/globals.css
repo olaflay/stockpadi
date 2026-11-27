@@ -475,11 +475,28 @@ html {
   animation: ripple var(--motion-duration-short) var(--easing-standard);
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+:is(input, select, textarea) {
+  --field-focus-color: var(--color-brand-accent);
+}
+
+:is(input, select, textarea)[data-validation-state="warning"] {
+  --field-focus-color: var(--color-warning);
+  border-color: var(--field-focus-color);
+}
+
+:is(input, select, textarea):is([aria-invalid="true"], [aria-invalid="grammar"], [aria-invalid="spelling"], :user-invalid) {
+  --field-focus-color: var(--color-danger);
+  border-color: var(--field-focus-color);
+}
+
+.form-field:focus {
+  border-color: var(--field-focus-color);
+}
+
+:is(input, select, textarea):focus {
+  --field-focus-shadow: 0 0 0 2px var(--field-focus-color);
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-brand-accent);
+  box-shadow: var(--field-focus-shadow);
 }
 
 input.search-bar-input:focus,
@@ -490,29 +507,16 @@ input[type="search"].search-bar-input:focus,
 }
 
 .search-bar-input:focus-visible {
-  outline: 2px solid var(--color-brand-accent) !important;
+  outline: 2px solid var(--field-focus-color) !important;
   outline-offset: -2px;
 }
 
 a:focus-visible,
 button:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
+[tabindex]:not(input, select, textarea):focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-brand-accent);
-}
-
-input:invalid,
-select:invalid,
-textarea:invalid {
-  box-shadow: none;
-}
-
-input:invalid:focus-visible,
-select:invalid:focus-visible,
-textarea:invalid:focus-visible {
-  outline: 2px solid var(--color-brand-accent);
-  outline-offset: 2px;
 }
 
 @media (forced-colors: active) {
@@ -537,8 +541,7 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-text-fill-color: var(--color-on-surface);
-  -webkit-box-shadow: 0 0 0px 1000px var(--color-surface) inset;
-  box-shadow: 0 0 0px 1000px var(--color-surface) inset;
+  box-shadow: var(--field-focus-shadow, 0 0 transparent), 0 0 0 1000px var(--color-surface) inset;
   transition: background-color 5000s ease-in-out 0s;
 }
 

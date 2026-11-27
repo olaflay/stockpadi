@@ -61,6 +61,21 @@ describe("ScreenHeader primitive", () => {
     expect(mockReplace).toHaveBeenCalledWith("/products");
   });
 
+  it("returns to the preceding screen before using a fallback", () => {
+    const length = vi.spyOn(window.history, "length", "get").mockReturnValue(2);
+    try {
+      render(<ScreenHeader title="Receive delivery" fallbackHref="/purchases" />);
+      fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+      expect(mockBack).toHaveBeenCalledOnce();
+      expect(mockReplace).not.toHaveBeenCalled();
+      length.mockReturnValue(1);
+      fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+      expect(mockReplace).toHaveBeenCalledWith("/purchases");
+    } finally {
+      length.mockRestore();
+    }
+  });
+
   it("supports hideBack mode with action rendered cleanly", () => {
     render(
       <ScreenHeader

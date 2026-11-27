@@ -32,6 +32,7 @@ import { emailVerificationRoutes } from "./modules/auth/email-verification.route
 import { logger } from "./shared/logging/logger.js";
 import { passwordRoutes } from "./modules/auth/password.routes.js";
 import { handlePasswordUpdate } from "./modules/auth/password.controller.js";
+import { handlePasswordRecoveryComplete, handlePasswordRecoveryRequest } from "./modules/auth/password-recovery.controller.js";
 import { handleSyncPush } from "./modules/sync/sync.controller.js";
 import { handleSyncPull } from "./modules/sync/sync-pull.controller.js";
 import { handleSyncHealth } from "./modules/sync/sync-health.controller.js";
@@ -108,6 +109,8 @@ const EXACT_ROUTE_METHODS = new Map<string, readonly string[]>([
   [emailVerificationRoutes.send, ["POST"]],
   [emailVerificationRoutes.verify, ["POST"]],
   [passwordRoutes.update, ["POST"]],
+  [passwordRoutes.requestRecovery, ["POST"]],
+  [passwordRoutes.completeRecovery, ["POST"]],
   [syncRoutes.pull, ["GET"]],
   [syncRoutes.health, ["GET"]],
   [syncRoutes.push, ["POST"]],
@@ -131,6 +134,7 @@ const MAX_BODY_BYTES = 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const GENERAL_REQUEST_LIMIT = 120;
 const SYNC_REQUEST_LIMIT = 30;
+const RECOVERY_REQUEST_LIMIT = 5;
 const MAX_RATE_LIMIT_KEYS = 10_000;
 
 interface RateLimitBucket {
@@ -140,12 +144,12 @@ interface RateLimitBucket {
 
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 
-function rateLimitClientKey(request: Request): string {
+function rateLimitClientKey(request: Request, useBearer = true): string {
   // These headers are used only as a best-effort edge rate-limit key. Auth
   // remains the security boundary; credentials are reduced to a short
   // non-reversible fingerprint and never stored or logged.
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (bearer) return `token:${createHash("sha256").update(bearer).digest("hex").slice(0, 24)}`;
+  if (useBearer && bearer) return `token:${createHash("sha256").update(bearer).digest("hex").slice(0, 24)}`;
   const forwarded = request.headers.get("x-forwarded-for")?.split(",", 1)[0]?.trim();
   return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown-client";
 }
@@ -153,9 +157,11 @@ function rateLimitClientKey(request: Request): string {
 function rateLimitResponse(request: Request, pathname: string): Response | null {
   if (request.method === "OPTIONS" || pathname === "/" || pathname === "/health" || pathname === "/api/health") return null;
   const now = Date.now();
-  const scope = pathname === "/api/sync/push" ? "sync" : "api";
-  const limit = scope === "sync" ? SYNC_REQUEST_LIMIT : GENERAL_REQUEST_LIMIT;
-  const key = `${scope}:${rateLimitClientKey(request)}`;
+  const scope = pathname === "/api/sync/push" ? "sync"
+    : pathname === passwordRoutes.requestRecovery || pathname === passwordRoutes.completeRecovery ? "recovery"
+    : "api";
+  const limit = scope === "sync" ? SYNC_REQUEST_LIMIT : scope === "recovery" ? RECOVERY_REQUEST_LIMIT : GENERAL_REQUEST_LIMIT;
+  const key = `${scope}:${rateLimitClientKey(request, scope !== "recovery")}`;
   const current = rateLimitBuckets.get(key);
   const bucket = !current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS
     ? { startedAt: now, count: 0 }
@@ -287,6 +293,8 @@ export async function handleRequest(request: Request, pathnameOverride?: string)
     if (pathname === emailVerificationRoutes.send) return jsonResponse(200, await handleSendVerification(request), requestOrigin);
     if (pathname === emailVerificationRoutes.verify) return jsonResponse(200, await handleVerifyEmail(request, body), requestOrigin);
     if (pathname === passwordRoutes.update) return jsonResponse(200, await handlePasswordUpdate(request, body), requestOrigin);
+    if (pathname === passwordRoutes.requestRecovery) return jsonResponse(200, await handlePasswordRecoveryRequest(body), requestOrigin);
+    if (pathname === passwordRoutes.completeRecovery) return jsonResponse(200, await handlePasswordRecoveryComplete(body), requestOrigin);
     if (request.method === "POST" && workerActionMatch) {
       const actionBody = body && typeof body === "object" ? body as Record<string, unknown> : {};
       return jsonResponse(200, await handleWorkerRequest(request, { ...actionBody, userId: decodeURIComponent(workerActionMatch[1]) }), requestOrigin);

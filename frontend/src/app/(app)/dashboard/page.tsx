@@ -15,6 +15,7 @@ import {
   Users,
   AlertTriangle,
   ClipboardCheck,
+  ArrowRight,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray, tenantGet } from "@/lib/local-tenant";
@@ -61,6 +62,7 @@ function KpiCard({
   onClick?: () => void;
 }) {
   const content = (
+    <>
     <div className="flex min-w-0 items-start gap-2">
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${iconTone}`}>
         <Icon size={17} aria-hidden />
@@ -71,13 +73,14 @@ function KpiCard({
           {value}
         </p>
         <p className="mt-0.5 text-xs leading-tight text-on-surface-muted">{sub}</p>
-        {actionLabel && (
-          <span className="mt-2 block text-[length:var(--font-size-caption)] font-semibold text-brand-accent">
-            {actionLabel}
-          </span>
-        )}
       </div>
     </div>
+    {actionLabel && (
+      <span className="mt-auto flex w-full items-center justify-between gap-1 pt-2 text-[length:var(--font-size-caption)] font-semibold text-brand-accent-active">
+        {actionLabel}<ArrowRight size={14} className="shrink-0" aria-hidden />
+      </span>
+    )}
+    </>
   );
 
   const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col rounded-2xl border border-border/30 bg-surface-container p-3 text-left shadow-elevation-1 sm:p-4 hover:bg-surface-container-high transition-colors";
@@ -383,7 +386,7 @@ export default function DashboardPage() {
             icon={Wallet}
             value={formatCurrency(netCashFlow)}
             sub="After expenses"
-            actionLabel="Reports"
+            actionLabel="View reports"
             valueClassName={netCashFlow >= 0 ? "text-success" : "text-danger"}
             href="/reports"
           />
@@ -395,7 +398,7 @@ export default function DashboardPage() {
             icon={Package}
             value={formatCurrency(metrics.inventoryValue)}
             sub={`${metrics.stockedProductCount} products`}
-            actionLabel="Stock"
+            actionLabel="View stock"
             href="/products"
           />
         )}
@@ -407,7 +410,7 @@ export default function DashboardPage() {
             iconTone="bg-credit-container text-on-credit-container"
             value={customersOwingData !== undefined ? formatCurrency(customersOwingData.totalOwed) : "…"}
             sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "debtor" : "debtors"}` : "Cleared"}
-            actionLabel="Debtors"
+            actionLabel="View debtors"
             valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-credit" : "text-on-surface"}
             href="/contacts?tab=debtors"
           />
@@ -419,7 +422,7 @@ export default function DashboardPage() {
             iconTone="bg-warning-container text-on-warning-container"
           value={String(metrics.lowStockCount)}
           sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} items low` : "All healthy"}
-          actionLabel={metrics.lowStockCount > 0 ? "View low stock →" : undefined}
+          actionLabel={metrics.lowStockCount > 0 ? "View low stock" : undefined}
           valueClassName={metrics.lowStockCount > 0 ? "text-warning" : "text-on-surface"}
           href="/products?filter=low-stock"
         />

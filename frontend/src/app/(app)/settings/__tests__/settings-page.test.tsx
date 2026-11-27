@@ -79,7 +79,7 @@ describe("SettingsPage component", () => {
     expect(screen.getByText("Owner")).toBeDefined();
 
     // Owner management sections are visible
-    expect(screen.getByText("People & Permissions")).toBeDefined();
+    expect(screen.getByText("Store and staff")).toBeDefined();
     expect(screen.getByText("Staff & access")).toBeDefined();
     expect(screen.queryByText("Business profile")).toBeNull();
     expect(screen.getByText("Branches & outlets")).toBeDefined();
@@ -107,7 +107,7 @@ describe("SettingsPage component", () => {
     expect(screen.getByText("Staff")).toBeDefined();
 
     // Team and Business management must not be rendered for worker
-    expect(screen.queryByText("People & Permissions")).toBeNull();
+    expect(screen.queryByText("Store and staff")).toBeNull();
     expect(screen.queryByText("Staff & access")).toBeNull();
     expect(screen.queryByText("Business profile")).toBeNull();
     expect(screen.queryByText("Data & Sharing")).toBeNull();

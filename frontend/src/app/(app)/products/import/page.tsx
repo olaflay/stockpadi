@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Download, Upload, AlertCircle, HelpCircle, CheckCircle2, FileSpreadsheet, Loader2 } from "lucide-react";
 import { db } from "@/lib/db";
@@ -47,6 +47,7 @@ function StepBadge({ n, text }: { n: number; text: string }) {
 
 export default function ImportProductsPage() {
   const router = useRouter();
+  const backFallback = usePathname().startsWith("/more/") ? "/more" : "/products";
   const user = useCurrentUser();
   const { showToast } = useToast();
 
@@ -63,7 +64,7 @@ export default function ImportProductsPage() {
   if (!hasCapability(user, "MANAGE_PRODUCTS")) {
     return (
       <div>
-        <ScreenHeader title="Import products" backHref="/products" />
+        <ScreenHeader title="Import products" fallbackHref={backFallback} />
         <PermissionDenied requiredCapabilities={["MANAGE_PRODUCTS"]} />
       </div>
     );
@@ -157,7 +158,7 @@ export default function ImportProductsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Import products" backHref="/products" />
+      <ScreenHeader title="Import products" fallbackHref={backFallback} />
 
       <p className="text-[length:var(--font-size-body)] text-on-surface-muted">
         Add many products at once by filling in a spreadsheet template, then uploading it.

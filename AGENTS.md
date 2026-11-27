@@ -45,6 +45,8 @@ Next.js (PWA) + React + TypeScript, Dexie.js over IndexedDB for local storage, S
 
 ## Rules index (`.agents/rules/`)
 
+Every commit and push must follow the [release verification gate](.agents/rules/testing-and-qa.md#commit-and-push-verification-gate), including coverage for every application endpoint and verification of the exact pushed revision.
+
 | File | Governs |
 |---|---|
 | `offline-sync-and-ledger.md` | The delta-merge ledger, conflict resolution per entity, what must never become a mutable field |

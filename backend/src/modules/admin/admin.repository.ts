@@ -29,7 +29,7 @@ export async function getBusiness(db: SupabaseClient, actorId: string, businessI
   if (result.error) throw new HttpError(500, "QUERY_FAILED", result.error.message);
   if (!result.data) return null;
 
-  const owner = await db.from("users").select("id, full_name, is_active").eq("business_id", businessId).eq("account_type", "BUSINESS_OWNER").maybeSingle();
+  const owner = await db.from("users").select("id, full_name, is_active, email_verified").eq("business_id", businessId).eq("account_type", "BUSINESS_OWNER").maybeSingle();
   const branches = await db.from("branches").select("id, name, address, is_active").eq("business_id", businessId);
   const productsCount = await db.from("products").select("id", { count: "exact", head: true }).eq("business_id", businessId);
   const workersCount = await db.from("users").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("account_type", "WORKER");
@@ -42,6 +42,7 @@ export async function getBusiness(db: SupabaseClient, actorId: string, businessI
     owner_name: owner.data?.full_name ?? "Unknown Owner",
     owner_id: owner.data?.id ?? null,
     owner_email: authOwner?.data.user?.email ?? null,
+    owner_email_verified: owner.data?.email_verified ?? null,
     branches: branches.data ?? [],
     branch_count: branches.data?.length ?? 0,
     product_count: productsCount.count ?? 0,

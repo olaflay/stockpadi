@@ -75,6 +75,10 @@ Daily database backup, merchant export, and browser local backup solve different
 
 ### P0 — before a shop pilot
 
+**Browser fault lab, first slice (2026-11-27).** The production-build smoke test installs the real worker, checks an uncached document while offline, and confirms the frontend environment API remains network-only and recovers after reconnect. It runs in desktop and Android-sized Chromium. The initial run exposed activation cleanup deleting the active precache under Serwist's default cache name. The worker now explicitly names its versioned precache and retains one prior generation. Run the first slice with `npm --prefix frontend run test:e2e` after a production frontend build, using the same environment as the build. CI supplies isolated placeholder configuration.
+
+**Next slice.** Seed an authenticated local till, finish a sale offline, close and reopen the browser profile, then reconnect. Reconcile the sale, stock movement, and outbox against the sandbox backend. Assert the server has one sale after retry and the outbox only retires after confirmation. Real Android and backup restore evidence remain separate gates.
+
 1. **Browser fault lab.** Add Playwright projects for Chromium desktop and Android-sized Chromium. Cover install/first control, cached cold start, in-app offline navigation, offline sale then process kill, reconnect, duplicate request, response loss after server commit, two tabs, worker update, and IndexedDB version blocking. Run a smaller smoke set in CI; run the full matrix nightly/on release.
 2. **Physical device gate.** Test an installed PWA on the named low-end Android model under real radio loss and OS process termination. Record app/build/browser/device versions and video or logs. DevTools throttling cannot close this gate.
 3. **Restore rehearsal.** Choose RPO/RTO, restore a production-format backup into an isolated project, verify migrations, functions, RLS, counts, ledger invariants and login, then destroy the rehearsal project. Record elapsed time and data-loss window.

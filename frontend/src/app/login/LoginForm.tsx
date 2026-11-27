@@ -23,6 +23,7 @@ import { GOOGLE_AUTH_ENABLED } from "@/features/auth/auth-config";
 import { BUSINESS_PROFILE_SINGLETON_ID } from "@/lib/db";
 import { setLocalBusinessId } from "@/lib/local-tenant";
 import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
+import { adminReviewRoute } from "@/features/auth/admin-review-route";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -138,8 +139,8 @@ export default function LoginForm() {
         router.replace("/pending-approval");
         return;
       }
-      // Unverified business owners can enter /dashboard immediately; cloud sync will await verification
-      router.replace(profile.account_type === "ADMIN" ? "/admin" : "/dashboard");
+      const review = adminReviewRoute(new URLSearchParams(window.location.search).get("review"));
+      router.replace(profile.account_type === "ADMIN" ? review ?? "/admin" : "/dashboard");
     } catch (error) {
       if (error instanceof BackendError && (error.code === "ACCOUNT_NOT_APPROVED" || error.message?.includes("not approved") || error.message?.includes("wait for approval"))) {
         const supabase = getSupabase();

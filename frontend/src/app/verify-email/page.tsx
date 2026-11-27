@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * /verify-email — Email verification of an approved account.
+ * /verify-email — Verify a business owner's email address.
  *
- * Reached AFTER the admin approves the account (business_status='verified'),
  * The verification code email is issued during registration. A manual
  * "Send again" inside the OTP card is available if it was lost.
  *
@@ -44,7 +43,7 @@ export default function VerifyEmailPage() {
       return;
     }
     if (resolved.user.emailVerified) {
-      router.replace(resolved.user.businessStatus === "pending" ? "/pending-approval" : "/dashboard");
+      router.replace(resolved.user.businessStatus === "verified" ? "/dashboard" : "/pending-approval");
     }
   }, [resolved, router]);
 
@@ -72,7 +71,7 @@ export default function VerifyEmailPage() {
         <EmailVerificationCard
           userId={resolved.user.id}
           onSuccess={() => {
-            router.replace(resolved.user.businessStatus === "pending" ? "/pending-approval" : "/dashboard");
+            router.replace(resolved.user.businessStatus === "verified" ? "/dashboard" : "/pending-approval");
           }}
         />
 

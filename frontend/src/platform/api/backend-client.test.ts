@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BackendRequestError, NetworkUnavailableError, serverGet, serverPost } from "@/platform/api/backend-client";
+import { BackendRequestError, NetworkUnavailableError, serverGet, serverPost, serverPostAnonymous } from "@/platform/api/backend-client";
 
 const getSession = vi.hoisted(() => vi.fn());
 
@@ -66,5 +66,14 @@ describe("backend client transport policy", () => {
     await serverGet("/api/version");
 
     expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ "X-Client-Version": "0.1.0" });
+  });
+
+  it("sends recovery requests without a session lookup or authorization header", async () => {
+    getSession.mockClear();
+    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(serverPostAnonymous("/api/auth/password/recovery/request", { email: "owner@example.test" })).resolves.toEqual({ ok: true });
+    expect(getSession).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty("Authorization");
   });
 });

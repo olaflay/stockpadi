@@ -78,13 +78,15 @@ async function request<T>(
   path: string,
   body?: unknown,
   retried = false,
-  allowUnauthenticated = false,
+  allowUnauthenticated: boolean | "anonymous" = false,
   timeoutMs = REQUEST_TIMEOUT_MS,
   attempt = 0,
 ): Promise<T> {
   let token: string | null;
   try {
-    token = await withTimeout(currentAccessToken(true, allowUnauthenticated), AUTH_TIMEOUT_MS, "Authentication service timed out.");
+    token = allowUnauthenticated === "anonymous"
+      ? null
+      : await withTimeout(currentAccessToken(true, allowUnauthenticated), AUTH_TIMEOUT_MS, "Authentication service timed out.");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -111,7 +113,7 @@ async function request<T>(
       if (!compatibility.compatible) {
         throw new BackendRequestError(426, "CLIENT_UPGRADE_REQUIRED", "Update required before syncing saved changes.");
       }
-      if (response.status === 401 && !retried) {
+      if (response.status === 401 && !retried && allowUnauthenticated !== "anonymous") {
         const supabase = getSupabase();
         if (supabase && typeof supabase.auth.refreshSession === "function") {
           const refreshed = await withTimeout(supabase.auth.refreshSession(), AUTH_TIMEOUT_MS, "Authentication service timed out.");
@@ -158,6 +160,10 @@ export function serverPost<T>(path: string, body: unknown, options?: { timeoutMs
 }
 export function serverPostPublic<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
   return request<T>("POST", path, body, false, true, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+}
+
+export function serverPostAnonymous<T>(path: string, body: unknown): Promise<T> {
+  return request<T>("POST", path, body, false, "anonymous");
 }
 export function serverPut<T>(path: string, body: unknown, options?: { timeoutMs?: number }): Promise<T> {
   return request<T>("PUT", path, body, false, false, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);

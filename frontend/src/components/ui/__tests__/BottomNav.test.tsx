@@ -71,6 +71,17 @@ describe("BottomNav component", () => {
     expect(moreButton.className).toContain("font-semibold text-on-surface");
   });
 
+  it.each([
+    ["/more/import-catalog", "More"],
+    ["/products/import", "Products"],
+  ])("selects only the origin tab for %s", (path, label) => {
+    currentPath = path;
+    const { container } = render(<BottomNav />);
+    const current = container.querySelectorAll('[aria-current="page"]');
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent(label);
+  });
+
   it("renders 5 owner tabs when user is a business owner", () => {
     currentPath = "/dashboard";
     render(<BottomNav />);

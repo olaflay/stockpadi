@@ -6,11 +6,10 @@ import { ArrowLeft, WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { RippleButton } from "@/components/ui/Ripple";
 import { TextInput } from "@/components/ui/TextInput";
-import { getSupabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useScrollToError } from "@/hooks/use-scroll-to-error";
 import { useAuthFieldVisibility } from "@/hooks/use-auth-field-visibility";
-import { getAppUrl } from "@/config/branding";
+import { BackendRequestError, serverPostAnonymous } from "@/platform/api/backend-client";
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -37,14 +36,12 @@ export default function ForgotPasswordForm() {
 
     setBusy(true);
     try {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase is not configured.");
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${getAppUrl()}/reset-password` });
-      if (resetError) throw resetError;
-
+      await serverPostAnonymous("/api/auth/password/recovery/request", { email: email.trim().toLowerCase() });
       setSuccess(true);
-    } catch {
-      setError("Could not request a password reset. Check your connection.");
+    } catch (cause) {
+      setError(cause instanceof BackendRequestError
+        ? cause.message
+        : "Could not request a password reset. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -57,7 +54,7 @@ export default function ForgotPasswordForm() {
           Check your email
         </h1>
         <p className="text-[length:var(--font-size-body)] text-on-surface-muted mb-8">
-          If an account exists for that email, we&apos;ve sent a password reset link.
+          If an account exists for that email, you&apos;ll receive a reset link. Check your spam folder if it doesn&apos;t arrive.
         </p>
         <Link
           href="/login"
@@ -113,7 +110,7 @@ export default function ForgotPasswordForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder="johnsonaimus@gmail.com"
+              placeholder="you@example.com"
               autoComplete="email"
               autoCapitalize="none"
               inputMode="email"

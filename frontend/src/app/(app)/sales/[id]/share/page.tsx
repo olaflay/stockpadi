@@ -18,6 +18,7 @@ import { useCurrentUser, hasAccountType } from "@/features/auth/use-current-user
 import { BUSINESS_MANAGEMENT_ACCOUNT_TYPES, WORKER_EXPERIENCE_ACCOUNT_TYPES, hasCapability } from "@/features/auth/authorization";
 import { createReceiptViewModel } from "@/features/pos/receipt-view-model";
 import { shareReceiptImage, shareReceiptPdf } from "@/features/pos/receipt-share";
+import { DocumentMotif } from "@/components/illustrations/DocumentMotif";
 
 interface PageProps { params: Promise<{ id: string }>; }
 
@@ -64,11 +65,14 @@ export default function ShareReceiptPage({ params }: PageProps) {
       <ScreenHeader title="Share receipt" backHref={`/sales/${id}`} />
       <main className="flex-1 overflow-y-auto pb-2" aria-label="Receipt preview">
         <article className="mx-auto max-w-md rounded-[var(--radius-card)] border border-border bg-surface px-4 py-5 shadow-[var(--shadow-elevation-1)]">
-          <header className="border-b border-dashed border-border pb-4 text-center">
-            <h2 className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">{receipt.businessName}</h2>
-            <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Receipt #{receipt.receiptNumber}</p>
-            <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{receipt.dateLabel}</p>
-            {receipt.voidedAt && <p className="mt-2 text-[length:var(--font-size-caption)] font-semibold text-danger">Cancelled</p>}
+          <header className="flex items-start justify-between gap-3 border-b border-dashed border-border pb-4">
+            <div className="min-w-0">
+              <h2 className="wrap-anywhere text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">{receipt.businessName}</h2>
+              <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Receipt #{receipt.receiptNumber}</p>
+              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{receipt.dateLabel}</p>
+              {receipt.voidedAt && <p className="mt-2 text-[length:var(--font-size-caption)] font-semibold text-danger">Cancelled</p>}
+            </div>
+            <DocumentMotif />
           </header>
           <section className="py-4">
             <h2 className="sr-only">Items</h2>

@@ -25,6 +25,17 @@ export async function executeAdminOperation(db: SupabaseClient, actor: User, req
       : undefined;
     return { status: "ok", welcomeEmailSent };
   }
+  if (request.action === "resend_approval_email") {
+    if (!request.businessId) throw new HttpError(400, "INVALID_BODY", "businessId is required");
+    const business = await getBusiness(db, actor.id, request.businessId);
+    if (!business) throw new HttpError(404, "NOT_FOUND", "Business not found");
+    if (business.status !== "verified" || !business.is_active || business.deleted_at) {
+      throw new HttpError(409, "BUSINESS_NOT_APPROVED", "Approve this store before sending the approval email.");
+    }
+    await writePlatformAudit(db, actor.id, "resend_approval_email", "business_profile", request.businessId, request.businessId);
+    const welcomeEmailSent = await sendBusinessApprovalEmail(db, request.businessId);
+    return { status: "ok", welcomeEmailSent };
+  }
   if (request.action === "soft_delete_business" || request.action === "restore_business") {
     if (!request.businessId) throw new HttpError(400, "INVALID_BODY", "businessId is required");
     const business = await getBusiness(db, actor.id, request.businessId);

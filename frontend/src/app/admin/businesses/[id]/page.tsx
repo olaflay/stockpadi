@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Clock,
+  Mail,
   CheckCircle2,
   XCircle,
   MapPin,
@@ -48,6 +49,7 @@ interface BusinessDetail {
   owner_name?: string;
   owner_id?: string | null;
   owner_email?: string | null;
+  owner_email_verified?: boolean | null;
   branches?: BranchDetail[];
   branch_count?: number;
   product_count?: number;
@@ -110,10 +112,8 @@ export default function AdminBusinessDetailPage() {
   async function handleToggleStatus() {
     if (!business || business.deleted_at) return;
     setToggling(true);
-    const newStatus = !business.is_active;
+    const newStatus = business.status !== "verified";
     try {
-      const existing = await callBackend<{ business: BusinessDetail | null }>("platform-api", { action: "get_business", businessId: business.id });
-      if (existing.business?.deleted_at) throw new Error("Restore this business before changing its status.");
       const result = await callBackend<{ welcomeEmailSent?: boolean }>("platform-api", {
         action: "set_business_status",
         businessId: business.id,
@@ -121,10 +121,12 @@ export default function AdminBusinessDetailPage() {
       });
 
       showToast(
-        newStatus && !result.welcomeEmailSent
-          ? "Store activated, but the welcome email could not be sent. Check email configuration and retry activation."
-          : `Store ${newStatus ? "activated and welcome email sent" : "suspended"} successfully.`,
-        newStatus && !result.welcomeEmailSent ? "warning" : newStatus ? "success" : "warning"
+        newStatus
+          ? result.welcomeEmailSent === false
+            ? "Store approved. Use Resend approval email to try delivery again."
+            : result.welcomeEmailSent ? "Store approved and approval email sent." : "Store is approved."
+          : "Store suspended.",
+        newStatus && result.welcomeEmailSent !== false ? "success" : "warning"
       );
       setBusiness((prev) =>
         prev
@@ -137,6 +139,25 @@ export default function AdminBusinessDetailPage() {
       );
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to update store status.", "danger");
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleResendApproval() {
+    if (!business || toggling) return;
+    setToggling(true);
+    try {
+      const result = await callBackend<{ welcomeEmailSent: boolean }>("platform-api", {
+        action: "resend_approval_email",
+        businessId: business.id,
+      });
+      showToast(
+        result.welcomeEmailSent ? "Approval email sent." : "Approval email could not be sent. Check the backend email configuration.",
+        result.welcomeEmailSent ? "success" : "warning"
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not resend the approval email.", "danger");
     } finally {
       setToggling(false);
     }
@@ -206,8 +227,8 @@ export default function AdminBusinessDetailPage() {
     );
   }
 
-  const isVerified = !business.deleted_at && business.is_active && business.status !== "suspended";
-  const isSuspended = !business.is_active || business.status === "suspended";
+  const isVerified = !business.deleted_at && business.is_active && business.status === "verified";
+  const isSuspended = Boolean(business.deleted_at) || business.status === "suspended" || business.status === "rejected";
 
   return (
     <div className="flex flex-col gap-6">
@@ -221,7 +242,7 @@ export default function AdminBusinessDetailPage() {
           <span>Back to Tenant Directory</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => fetchDetail(true)}
@@ -237,13 +258,13 @@ export default function AdminBusinessDetailPage() {
             onClick={handleToggleStatus}
             disabled={toggling || Boolean(business.deleted_at)}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-              business.is_active
+              isVerified
                 ? "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20"
                 : "border-success/40 bg-success/10 text-success hover:bg-success/20"
             }`}
           >
             <Power size={13} />
-            <span>{business.is_active ? "Suspend Store" : "Activate Store"}</span>
+            <span>{isVerified ? "Suspend store" : business.status === "pending" ? "Approve store" : "Activate store"}</span>
           </RippleButton>
           <RippleButton
             type="button"
@@ -288,7 +309,7 @@ export default function AdminBusinessDetailPage() {
                   ) : (
                     <Clock size={12} />
                   )}
-                  <span>{business.deleted_at ? "Removed" : business.status ?? (business.is_active ? "verified" : "suspended")}</span>
+                  <span>{business.deleted_at ? "Removed" : isVerified ? "Approved" : business.status === "pending" ? "Awaiting approval" : business.status ?? "Unknown"}</span>
                 </span>
               </div>
 
@@ -366,6 +387,22 @@ export default function AdminBusinessDetailPage() {
                 <p className="text-sm text-on-surface mt-0.5 break-all">
                   {business.owner_email || "Not available"}
                 </p>
+                {business.owner_email_verified != null && (
+                  <p className="mt-1 text-xs text-on-surface-muted">
+                    {business.owner_email_verified ? "Email verified" : "Email verification pending"}
+                  </p>
+                )}
+                {isVerified && business.owner_email && (
+                  <button
+                    type="button"
+                    onClick={handleResendApproval}
+                    disabled={toggling}
+                    className="mt-2 inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-accent hover:bg-brand-container disabled:opacity-50"
+                  >
+                    <Mail size={14} aria-hidden />
+                    Resend approval email
+                  </button>
+                )}
               </div>
 
               <div>

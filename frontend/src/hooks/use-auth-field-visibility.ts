@@ -1,10 +1,10 @@
 import { useEffect, type RefObject } from "react";
 
 /** Keeps focus inside the auth scroll region without moving the document. */
-export function useAuthFieldVisibility(regionRef: RefObject<HTMLElement | null>): void {
+export function useAuthFieldVisibility(regionRef: RefObject<HTMLElement | null>, enabled = true): void {
   useEffect(() => {
     const region = regionRef.current;
-    if (!region) return;
+    if (!enabled || !region) return;
     let frame: number | null = null;
     let timer: number | null = null;
 
@@ -43,5 +43,5 @@ export function useAuthFieldVisibility(regionRef: RefObject<HTMLElement | null>)
       if (frame !== null) cancelAnimationFrame(frame);
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [regionRef]);
+  }, [regionRef, enabled]);
 }

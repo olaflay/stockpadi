@@ -47,7 +47,7 @@ describe("More Page — Operations & Settings Hub", () => {
     expect(screen.getByText("Contacts and debtors")).toBeInTheDocument();
     expect(screen.getByText("Sales and receipts")).toBeInTheDocument();
     expect(screen.getByText("Expenses")).toBeInTheDocument();
-    expect(screen.getByText("Stock")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Restock history/ })).toHaveAttribute("href", "/purchases");
     expect(screen.getByText("Stock count")).toBeInTheDocument();
     expect(screen.getByText("Close day")).toBeInTheDocument();
     expect(screen.getByText("Store and staff settings")).toBeInTheDocument();

@@ -2,12 +2,16 @@ import { forwardRef, useState } from "react";
 
 interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   hasError?: boolean;
+  validationState?: "warning" | "error";
   /** id of the element (usually a <span role="alert">) describing the error, wired to aria-describedby. */
   errorId?: string;
 }
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
-  function TextInput({ className = "", type, onChange, onBlur, value, hasError = false, errorId, ...props }, ref) {
+  function TextInput({
+    className = "", type, onChange, onBlur, value, hasError = false, validationState, errorId,
+    "aria-invalid": ariaInvalid, "aria-describedby": describedBy, ...props
+  }, ref) {
     const [internalError, setInternalError] = useState(false);
 
     // Validate email if the input type is email
@@ -48,11 +52,9 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       }
     };
 
-    const isError = hasError || internalError;
-
-    const baseClass = "min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] bg-surface px-3.5 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)]";
-    const normalClass = "border border-border focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
-    const errorClass = "border-2 border-danger focus:border-danger focus:ring-2 focus:ring-danger/20";
+    const invalid = hasError || internalError || validationState === "error" ? true : ariaInvalid;
+    const isError = invalid !== undefined && invalid !== false && invalid !== "false";
+    const description = [describedBy, isError ? errorId : undefined].filter(Boolean).join(" ");
 
     return (
       <input
@@ -61,10 +63,11 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
-        aria-invalid={isError || undefined}
-        aria-describedby={isError ? errorId : undefined}
         {...props}
-        className={`${baseClass} ${isError ? errorClass : normalClass} ${className}`}
+        aria-invalid={invalid}
+        aria-describedby={description || undefined}
+        data-validation-state={validationState === "warning" ? "warning" : undefined}
+        className={`form-field min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-control)] border border-border bg-surface px-3.5 text-[length:var(--font-size-body-lg)] text-on-surface outline-none transition-all duration-[var(--motion-duration-short)] shadow-[var(--shadow-recessed)] ${className}`}
       />
     );
   }

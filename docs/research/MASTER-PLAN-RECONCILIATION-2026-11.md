@@ -26,3 +26,10 @@ The follow-up checkout pass also connects the visible Cash tendered label to its
 - Owner alerts, day close, and unified role-aware navigation need route and permission parity, offline behavior checks, and merchant testing before adoption.
 - Social orders, reservations, public storefronts, product sizing, and guest checkout remain gated by launch scope and explicit domain decisions. Unpaid intent, posted sales, and fulfillment must remain distinguishable.
 - Payment verification requires an explicit decision against the locked payment-method-as-tag boundary. AI, marketing, and external connectors require their own authorization, privacy, and release evidence. Treat provider and legal proposals as research leads pending primary-source verification.
+
+## Workflow consolidation follow-up
+
+- **Stock:** Keep product browsing, receiving a delivery, and counting stock distinct because they have different outcomes and permissions. Restock history now provides one labeled entry for receiving and a permission-filtered entry for counting. Product import continues to use the same importer from Products or More.
+- **Sales and reports:** Sales history retains receipts and filtering with one Reports entry. Reports retains Overview, Sales, and Stock together, including for stores that have yet to record a sale.
+- **Settings and guidance:** Keep multi-step staff, branch, backup/restore, and help workflows on their existing routes. Group staff and branches in Settings, share About content across its sheet and legacy link, and remove duplicate settings actions from the drawer. The discoverable walkthrough and help remain available.
+- **Other entry points reviewed:** Contacts and Debtors already share a hub with distinct initial filters. Checkout, expenses, and Close day describe different actions and should keep clear, separate entry points. Validate the revised discovery paths in short merchant sessions before further consolidation.

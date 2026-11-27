@@ -35,6 +35,7 @@ next-env.d.ts
 **/test-*.js
 **/test-*.ts
 **/playwright.config.*
+!frontend/playwright.config.ts
 **/coverage/
 **/.vitest/
 **/test-results/

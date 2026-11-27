@@ -691,7 +691,7 @@ export function PaymentStep(props: {
 
         {!isOnline && (
           <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
-            Offline · Completed sales are saved on this device and upload when you're back online.
+            Offline · Completed sales are saved on this device and upload when you&apos;re back online.
           </p>
         )}
       </div>

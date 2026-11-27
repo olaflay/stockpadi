@@ -19,7 +19,7 @@ function AppShellBody({ children }: { children: React.ReactNode }) {
   const { isNavVisible } = useNavigation();
 
   return (
-    <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface">
+    <div className="flex h-[var(--app-visible-height,100dvh)] max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface">
       <TopStoreHeader />
       <SyncEngine />
       <GuidedTour />

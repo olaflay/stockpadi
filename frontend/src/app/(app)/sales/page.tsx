@@ -279,7 +279,6 @@ function SalesHistoryContent({ date, branch, ownOnly }: { date: string | null; b
                 title={group.monthName}
                 inflow={group.inflow}
                 outflow={group.outflow > 0 ? group.outflow : undefined}
-                analysisHref="/reports"
               />
 
               {/* Transactions List */}
