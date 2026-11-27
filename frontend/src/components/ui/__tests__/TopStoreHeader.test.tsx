@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TopStoreHeader } from "../TopStoreHeader";
 
 let currentPath = "/dashboard";
+let unread = 0;
 const mockOpenDrawer = vi.fn();
 const mockBack = vi.fn();
 const mockReplace = vi.fn();
@@ -31,13 +32,14 @@ vi.mock("@/components/ui/SyncIndicator", () => ({
 }));
 
 vi.mock("@/features/alerts/use-alert-center", () => ({
-  useAlertBadgeCount: () => 0,
+  useAlertBadgeCount: () => unread,
 }));
 
 describe("TopStoreHeader navigation & hierarchy unification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentPath = "/dashboard";
+    unread = 0;
   });
 
   afterEach(() => {
@@ -56,6 +58,23 @@ describe("TopStoreHeader navigation & hierarchy unification", () => {
 
     fireEvent.click(menuButton);
     expect(mockOpenDrawer).toHaveBeenCalledOnce();
+  });
+
+  it("places notifications in the same header row as the drawer and dashboard title", () => {
+    const { rerender } = render(<TopStoreHeader />);
+    const bell = screen.getByRole("link", { name: "Notifications" });
+    const title = screen.getByRole("heading", { name: "Dashboard" });
+    const drawer = screen.getByRole("button", { name: "Open navigation menu" });
+    expect(bell).toHaveAttribute("href", "/alerts");
+    expect(bell.parentElement).toContainElement(title);
+    expect(bell.parentElement).toContainElement(drawer);
+
+    unread = 7;
+    currentPath = "/work";
+    rerender(<TopStoreHeader />);
+    const badgeLink = screen.getByRole("link", { name: "Notifications, 7 unread" });
+    expect(badgeLink).toHaveTextContent("7");
+    expect(badgeLink).toHaveAttribute("href", "/work/alerts");
   });
 
   it("renders hamburger menu button on root products screen", () => {

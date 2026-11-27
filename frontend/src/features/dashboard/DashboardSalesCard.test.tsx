@@ -35,9 +35,10 @@ it("shows the selected day's non-voided sales, scoped to the worker's branch and
   expect(dateInput).toHaveAttribute("type", "date");
   fireEvent.pointerDown(dateInput);
   fireEvent.click(dateInput);
+  fireEvent.keyDown(dateInput, { key: "Escape" });
   // Native Cancel does not emit a change or reliably blur. Pointer focus still
   // must not paint a persistent ring or update the selected date.
-  expect(dateInput.parentElement).not.toHaveClass("focus-within:ring-2");
+  expect(dateInput.parentElement).not.toHaveClass("has-[:focus-visible]:ring-2");
   expect(screen.getByText("0 sales recorded")).toBeInTheDocument();
   fireEvent.change(dateInput, { target: { value: day } });
   expect(await screen.findByText("1 sale")).toBeInTheDocument();

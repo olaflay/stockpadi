@@ -9,11 +9,9 @@ import { db } from "@/lib/db";
 import { getLocalBusinessId } from "@/lib/local-tenant";
 import { useSyncSafety } from "@/lib/use-sync-safety";
 import Link from "next/link";
-import { Bell } from "lucide-react";
-import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 
 /**
- * Consolidated banner strip for connection, verification, and notification
+ * Consolidated banner strip for connection and verification
  * status. PWA installation is rendered globally by InstallBanner so a new
  * user can see it before entering the authenticated shell.
  */
@@ -24,7 +22,6 @@ export function BannerStrip() {
   const syncPhase = useSyncRuntimePhase();
   const user = useCurrentUserOptional();
   const safety = useSyncSafety();
-  const alertCount = useAlertBadgeCount();
   const statusDetails = useLiveQuery(async () => {
     const businessId = await getLocalBusinessId();
     if (!businessId) return null;
@@ -64,28 +61,14 @@ export function BannerStrip() {
         </div>
       )}
 
-      <div className={`grid grid-cols-[minmax(var(--touch-target-min),1fr)_minmax(0,auto)_minmax(var(--touch-target-min),1fr)] items-center gap-2 border-b border-current/10 px-gutter py-1 text-[length:var(--font-size-caption)] sm:px-gutter-lg ${status.surface}`}>
-        <div className="col-start-2 flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1 text-center">
-          <div role="status" className="flex min-w-0 items-center justify-center gap-2">
-            <span aria-hidden data-testid="connection-status-dot" className={`h-2 w-2 shrink-0 rounded-full ${status.tone}`} />
-            <span className="font-semibold">{status.label}</span>
-          </div>
-          {status.action && (
-            <Link href="/settings/sync-health" className="inline-flex min-h-[var(--touch-target-min)] items-center font-semibold underline underline-offset-2">View details</Link>
-          )}
+      <div className={`flex flex-wrap items-center justify-center gap-x-3 border-b border-current/10 px-gutter py-1 text-center text-[length:var(--font-size-caption)] font-normal leading-tight ${status.surface}`}>
+        <div role="status" className="flex min-w-0 items-center justify-center gap-1.5">
+          <span aria-hidden data-testid="connection-status-dot" className={`size-1.5 shrink-0 rounded-full ${status.tone}`} />
+          <span>{status.label}</span>
         </div>
-        <Link
-          href="/alerts"
-          aria-label={alertCount > 0 ? `Notifications, ${alertCount} unread` : "Notifications"}
-          className="relative col-start-3 flex size-[var(--touch-target-min)] items-center justify-center justify-self-end rounded-full hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          <Bell size={20} aria-hidden />
-          {alertCount > 0 && (
-            <span aria-hidden className="absolute end-0 top-0 inline-flex min-w-5 items-center justify-center rounded-full bg-danger-container px-1 py-0.5 text-xs font-bold leading-none text-on-danger-container ring-1 ring-current">
-              {alertCount > 99 ? "99+" : alertCount}
-            </span>
-          )}
-        </Link>
+        {status.action && (
+          <Link href="/settings/sync-health" className="inline-flex min-h-[var(--touch-target-min)] items-center font-semibold underline underline-offset-2">View details</Link>
+        )}
       </div>
     </div>
   );

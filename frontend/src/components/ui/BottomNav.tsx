@@ -15,7 +15,6 @@ import {
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { WorkerCapability } from "@/features/auth/authorization";
-import { AlertBadge } from "@/components/ui/AlertBadge";
 import { useNavigation } from "@/components/ui/NavigationContext";
 import { MoreSheetModal } from "@/components/ui/MoreSheetModal";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -63,7 +62,7 @@ function isSecondaryDestination(pathname: string): boolean {
  * - Worker: Dashboard | Sell | Products | Stock | More
  */
 const OWNER_NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
   { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
   { href: "/reports", label: "Reports", icon: BarChart3, capability: "VIEW_REPORTS" as const },
@@ -71,7 +70,7 @@ const OWNER_NAV = [
 ] as const;
 
 const WORKER_NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/pos", label: "Sell", icon: Receipt, capability: "POS_SELL" as const },
   { href: "/products", label: "Products", icon: Package, capability: "VIEW_PRODUCTS" as const },
   { href: "/stock-count", label: "Stock", icon: ClipboardCheck, capability: "SUBMIT_STOCK_COUNT" as const },
@@ -150,7 +149,6 @@ export function BottomNav() {
                   }`}
                 >
                   <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
-                  {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
                 </span>
                 {item.label}
               </button>
@@ -174,7 +172,6 @@ export function BottomNav() {
                 }`}
               >
                 <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
-                {"badge" in item && Boolean(item.badge) ? <AlertBadge /> : null}
               </span>
               {item.label}
             </Link>

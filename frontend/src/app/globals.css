@@ -615,13 +615,6 @@ input:-webkit-autofill:active {
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
 }
 
-/* Smooth CSS slide-down when an input or textarea is focused — zero React unmounting, zero tap cancellation */
-body:has(input:focus, textarea:focus) [data-bottom-nav] {
-  transform: translateY(100%);
-  pointer-events: none;
-  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
-}
-
 body:has(input:focus, textarea:focus) [data-install-banner] {
   opacity: 0;
   pointer-events: none;

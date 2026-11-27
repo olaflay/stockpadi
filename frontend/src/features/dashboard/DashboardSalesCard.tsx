@@ -78,7 +78,7 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
         <h2 id="dashboard-sales-title" className="text-lg font-bold tracking-tight">
           {day === today ? (viewerId ? "Your sales today" : "Today's sales") : (viewerId ? "Your sales for the day" : "Sales for the day")}
         </h2>
-        <label className={`relative inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-full bg-surface-container px-3 text-sm font-semibold text-on-surface has-[:active]:bg-surface-container-high ${pickerUsedByPointer ? "" : "focus-within:ring-2 focus-within:ring-brand-accent"}`}>
+        <label className={`relative inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-full bg-surface-container px-3 text-sm font-semibold text-on-surface has-[:active]:bg-surface-container-high ${pickerUsedByPointer ? "" : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-accent"}`}>
           <CalendarDays size={17} aria-hidden />
           <span aria-hidden>{bounds.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(bounds.date.getFullYear() !== new Date().getFullYear() && { year: "numeric" }) })}</span>
           <input
@@ -89,7 +89,6 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full"
             onPointerDown={() => setPickerUsedByPointer(true)}
             onBlur={() => setPickerUsedByPointer(false)}
-            onKeyDown={() => setPickerUsedByPointer(false)}
             onClick={(event) => {
               try { event.currentTarget.showPicker?.(); } catch { /* The native input remains usable. */ }
             }}

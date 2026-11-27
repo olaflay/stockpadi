@@ -18,7 +18,6 @@ import { SyncEngine } from "@/features/sync/SyncEngine";
 import { DrawerProvider } from "@/components/ui/DrawerContext";
 import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
 import { SideDrawer } from "@/components/ui/SideDrawer";
-import { AlertBadge } from "@/components/ui/AlertBadge";
 
 import { NavigationProvider, useNavigation } from "@/components/ui/NavigationContext";
 import { TooltipProvider } from "@/components/ui/TooltipContext";
@@ -111,7 +110,6 @@ function ShellContent({ shell, children }: { shell: Shell; children: React.React
                   }`}
                 >
                   <Icon size={22} strokeWidth={active ? 2.4 : 1.8} aria-hidden />
-                  {(item.href === "/business" || item.href === "/work") && <AlertBadge />}
                 </span>
                 <span className="max-w-full min-w-0 truncate">{item.label}</span>
               </Link>

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Store,
-  Bell,
   Wallet,
   PackagePlus,
   Plus,
@@ -33,7 +32,6 @@ import { RippleLink } from "@/components/ui/Ripple";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import { EmailVerificationBanner } from "@/features/auth/EmailVerificationBanner";
-import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { AddExpenseSheet } from "@/features/expenses/components/AddExpenseSheet";
 
 /**
@@ -178,8 +176,6 @@ export default function DashboardPage() {
   const showVerificationBanner =
     user.accountType === "BUSINESS_OWNER" && localUser !== undefined && !localUser?.emailVerified;
     
-  const allAlertsCount = useAlertBadgeCount();
-
   const netCashFlow = metrics
     ? (metrics.todaysCashSalesTotal - metrics.todaysExpensesTotal - metrics.todaysPurchasesTotal + metrics.todaysCreditCollected)
     : 0;
@@ -296,19 +292,6 @@ export default function DashboardPage() {
             ))}
           </SelectInput>
         </div>
-      )}
-
-      {/* Alerts notification strip */}
-      {allAlertsCount > 0 && (
-        <RippleLink
-          href="/alerts"
-          className="mb-4 flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-container text-on-brand-container px-4 py-3 text-left hover:brightness-95 transition-all"
-        >
-          <span className="text-[length:var(--font-size-body)] font-medium">
-            {allAlertsCount} {allAlertsCount === 1 ? "alert" : "alerts"} need your attention
-          </span>
-          <Bell size={18} aria-hidden />
-        </RippleLink>
       )}
 
       {canSeeOwnSales && (

@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, ChevronLeft } from "lucide-react";
+import { Bell, Menu, ChevronLeft } from "lucide-react";
 import { useSideDrawer } from "@/components/ui/DrawerContext";
+import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { hasAppBackHistory } from "@/lib/app-history";
 
 const TITLE_PATTERNS: readonly [string, string][] = [
@@ -85,15 +87,17 @@ function isSubPage(pathname: string): boolean {
 
 /**
  * TopStoreHeader — Authoritative green top app bar.
- * Houses navigation, the page title, and a compact save/connection indicator.
+ * Houses navigation, the page title, and the notification action.
  * Unifies mobile navigation hierarchy and eliminates redundant secondary headers.
  */
 export function TopStoreHeader() {
   const { openDrawer } = useSideDrawer();
   const pathname = usePathname();
   const router = useRouter();
+  const alertCount = useAlertBadgeCount();
   const pageTitle = getPageTitle(pathname);
   const showBack = isSubPage(pathname);
+  const shellPrefix = pathname.match(/^\/(business|work)(?=\/|$)/)?.[0] ?? "";
 
   const handleBack = () => {
     if (hasAppBackHistory()) {
@@ -145,7 +149,18 @@ export function TopStoreHeader() {
             {pageTitle}
           </h1>
         </div>
-
+        <Link
+          href={`${shellPrefix}/alerts`}
+          aria-label={alertCount > 0 ? `Notifications, ${alertCount} unread` : "Notifications"}
+          className="relative flex size-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:bg-white/20 focus-visible:outline-2 focus-visible:-outline-offset-2"
+        >
+          <Bell size={21} aria-hidden />
+          {alertCount > 0 && (
+            <span aria-hidden className="pointer-events-none absolute end-0 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-container px-1 text-[length:var(--font-size-caption)] font-bold leading-none text-on-danger-container">
+              {alertCount > 99 ? "99+" : alertCount}
+            </span>
+          )}
+        </Link>
       </div>
     </header>
   );

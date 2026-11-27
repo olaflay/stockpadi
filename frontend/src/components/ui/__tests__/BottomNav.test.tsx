@@ -25,10 +25,6 @@ vi.mock("@/components/ui/NavigationContext", () => ({
   useNavigation: () => ({ isNavVisible: true }),
 }));
 
-vi.mock("@/components/ui/AlertBadge", () => ({
-  AlertBadge: () => <span data-testid="alert-badge" />,
-}));
-
 describe("BottomNav component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
