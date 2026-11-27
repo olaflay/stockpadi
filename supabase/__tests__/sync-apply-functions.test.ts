@@ -286,6 +286,53 @@ describe("sync_apply_stock_adjustment: idempotent retry", () => {
 });
 
 describe("sync_apply_product: optimistic concurrency and canonical fields", () => {
+  it("locks the tenant product row before checking its expected version", async () => {
+    const { rows } = await db.query<{ definition: string }>(
+      "select pg_get_functiondef('public.sync_apply_product(jsonb,uuid)'::regprocedure) as definition"
+    );
+    const lock = "where id = v_id and business_id = v_business_id for update;";
+    expect(rows[0].definition).toContain(lock);
+    expect(rows[0].definition.indexOf(lock)).toBeLessThan(
+      rows[0].definition.indexOf("if v_expected_version <> v_current_version")
+    );
+  });
+
+  it.each(["sku", "barcode"] as const)("rejects overlapping offline imports by %s in either arrival order", async (field) => {
+    for (const reversed of [false, true]) {
+      const key: string = crypto.randomUUID();
+      const devices = [0, 1].map((device) => ({
+        id: crypto.randomUUID(),
+        sku: field === "sku" ? key : `${key}-${device}`,
+        barcode: field === "barcode" ? key : null,
+        name: `Imported item ${device}`,
+        categoryId: null, brandId: null, unitLabel: "piece",
+        costPrice: 100, sellPrice: 150, expiryTracking: "off",
+        expiryDate: null, lowStockThreshold: null, version: 1,
+      }));
+      devices[1][field] = ` ${key.toUpperCase()} `;
+      const [winner, loser] = reversed ? devices.reverse() : devices;
+      const apply = (snapshot: typeof winner) => db.query(
+        "select sync_apply_product($1::jsonb, $2::uuid)", [JSON.stringify(snapshot), actorId]
+      );
+      await apply(winner);
+      await expect(apply(loser)).rejects.toMatchObject({ code: "23505" });
+
+      const opening = (productId: string) => JSON.stringify({
+        id: crypto.randomUUID(), clientId: crypto.randomUUID(), productId, branchId,
+        quantityDelta: 6, reasonCode: "initial_stock", createdAtLocal: new Date().toISOString(),
+      });
+      const adjustment = (payload: string) => db.query(
+        "select sync_apply_stock_adjustment($1::jsonb, $2::uuid)", [payload, actorId]
+      );
+      const accepted = opening(winner.id);
+      await adjustment(accepted);
+      await adjustment(accepted);
+      await expect(adjustment(opening(loser.id))).rejects.toThrow();
+      expect(await currentStock(winner.id, branchId)).toBe(6);
+      expect(await currentStock(loser.id, branchId)).toBe(0);
+    }
+  });
+
   it("returns a deterministic conflict and preserves the newer remote snapshot", async () => {
     const snapshot = await db.query<{ version: number }>(`select version from products where id = $1;`, [
       productId,

@@ -179,7 +179,7 @@ export function CheckoutContainer(props: {
           }`}
         >
           {/* Left Pane: Cart */}
-          <div inert={activeTab !== "cart"} aria-hidden={activeTab !== "cart"} className="h-full w-1/2 min-w-0 shrink-0 pr-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          <div inert={activeTab !== "cart"} aria-hidden={activeTab !== "cart"} className="h-full w-1/2 min-w-0 shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain">
             <CartStep
               cartLines={props.cartLines}
               products={props.products}
@@ -202,7 +202,7 @@ export function CheckoutContainer(props: {
           </div>
 
           {/* Right Pane: Payment */}
-          <div inert={activeTab !== "payment"} aria-hidden={activeTab !== "payment"} className="h-full w-1/2 min-w-0 shrink-0 pl-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          <div inert={activeTab !== "payment"} aria-hidden={activeTab !== "payment"} className="h-full w-1/2 min-w-0 shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain">
             <PaymentStep
               itemCount={props.itemCount}
               subtotal={props.subtotal}

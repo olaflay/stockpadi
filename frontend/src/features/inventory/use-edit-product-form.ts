@@ -31,17 +31,20 @@ export function useEditProductForm(id: string) {
   const categories = useLiveQuery(() => tenantArray(db.categories), [], []);
   const branches = useLiveQuery(() => tenantArray(db.branches), [], []);
   const product = useLiveQuery(() => tenantGet<Product>(db.products, id), [id]);
-  const totalStock = useLiveQuery(
-    async () => {
-      const movements = await tenantArray<StockMovement>(db.stockMovements.where("productId").equals(id));
-      return movements.reduce((sum, m) => sum + m.quantityDelta, 0);
-    },
+  const movements = useLiveQuery(
+    () => tenantArray<StockMovement>(db.stockMovements.where("productId").equals(id)),
     [id],
     undefined
   );
 
-  const [stockInputOverride, setStockInputOverride] = useState<string | undefined>(undefined);
-  const [stockBranchId, setStockBranchId] = useState<string | null>(null);
+  const [stockInputOverride, setStockInputOverride] = useState<{ branchId: string; value: string }>();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const stockBranchId = selectedBranchId ?? resolveDefaultBranch(branches, user) ?? null;
+  const totalStock = movements?.reduce((sum, movement) => sum + movement.quantityDelta, 0);
+  const branchStock = stockBranchId ? movements?.reduce(
+    (sum, movement) => movement.branchId === stockBranchId ? sum + movement.quantityDelta : sum,
+    0
+  ) : undefined;
 
   // Starts open only if this product already uses a second unit, so
   // existing data is never hidden; otherwise stays collapsed like Add
@@ -50,7 +53,8 @@ export function useEditProductForm(id: string) {
   const [categoryIdOverride, setCategoryIdOverride] = useState<string | null>(null);
   const [categoryInputName, setCategoryInputName] = useState("");
 
-  const stockInput = stockInputOverride ?? (totalStock === undefined ? "" : String(totalStock));
+  const stockDraft = stockInputOverride?.branchId === stockBranchId ? stockInputOverride : undefined;
+  const stockInput = stockDraft?.value ?? (branchStock === undefined ? "" : String(branchStock));
   const showUnitConversion = showUnitConversionOverride ?? Boolean(product?.altUnitLabel);
   const categoryId = categoryIdOverride ?? product?.categoryId ?? "";
 
@@ -84,11 +88,12 @@ export function useEditProductForm(id: string) {
 
     const newStockQty = Number(stockInput.trim());
     const stockChanges =
+      stockDraft !== undefined &&
       stockInput.trim() !== "" &&
       Number.isFinite(newStockQty) &&
       newStockQty >= 0 &&
-      totalStock !== undefined &&
-      newStockQty !== totalStock;
+      branchStock !== undefined &&
+      newStockQty !== branchStock;
     if (stockChanges && !hasCapability(user, "ADJUST_STOCK") && !hasCapability(user, "SUBMIT_STOCK_COUNT")) {
       showToast("Your account cannot change stock quantities.", "danger");
       return;
@@ -138,25 +143,16 @@ export function useEditProductForm(id: string) {
     await writeProductEditOffline(id, update, newCategory, user);
 
     // If stock quantity was changed on the edit screen, record the ledger adjustment
-    if (
-      stockInput.trim() !== "" &&
-      Number.isFinite(newStockQty) &&
-      newStockQty >= 0 &&
-      totalStock !== undefined &&
-      newStockQty !== totalStock
-    ) {
-      const effectiveBranchId = stockBranchId ?? resolveDefaultBranch(branches, user) ?? null;
-      if (effectiveBranchId) {
-        await writeStockAdjustment({
-          branchId: effectiveBranchId,
-          productId: id,
-          countedQuantity: newStockQty,
-          reasonCode: "recount",
-          note: "Updated from Edit Product",
-          createdByUserId: user.id,
-          actor: user,
-        });
-      }
+    if (stockChanges && stockBranchId) {
+      await writeStockAdjustment({
+        branchId: stockBranchId,
+        productId: id,
+        countedQuantity: newStockQty,
+        reasonCode: "recount",
+        note: "Updated from Edit Product",
+        createdByUserId: user.id,
+        actor: user,
+      });
     }
 
     if (resolvedCategoryId) markCategoryUsed(resolvedCategoryId);
@@ -182,9 +178,14 @@ export function useEditProductForm(id: string) {
     product,
     totalStock,
     stockInput,
-    setStockInput: (value: string) => setStockInputOverride(value),
+    setStockInput: (value: string) => {
+      if (stockBranchId) setStockInputOverride({ branchId: stockBranchId, value });
+    },
     stockBranchId,
-    setStockBranchId,
+    setStockBranchId: (branchId: string | null) => {
+      setStockInputOverride(undefined);
+      setSelectedBranchId(branchId);
+    },
     showUnitConversion,
     toggleShowUnitConversion: () => setShowUnitConversionOverride(!showUnitConversion),
     categoryId,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Receipt, Plus, BarChart3, ArrowDownLeft, XCircle, Smartphone, CreditCard, Layers } from "lucide-react";
@@ -17,7 +17,7 @@ import { NoResultsState } from "@/components/ui/NoResultsState";
 import { MonthGroupHeader } from "@/components/ui/MonthGroupHeader";
 import { TransactionItemRow, type TransactionStatus } from "@/components/ui/TransactionItemRow";
 import { FAB } from "@/components/ui/FAB";
-import { getPeriodStartIso, formatTransactionTimestamp, getMonthYearKey, formatMonthYear } from "@/lib/date";
+import { getPeriodStartIso, formatTransactionTimestamp, getMonthYearKey, formatMonthYear, localDayBounds } from "@/lib/date";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { hasCapability } from "@/features/auth/authorization";
 import type { PaymentMethod, Sale } from "@/types/sale";
@@ -30,33 +30,52 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   credit: "Credit",
 };
 
-type SalesPeriod = "today" | "week" | "month" | "all_time";
+type SalesPeriod = "day" | "today" | "week" | "month" | "all_time";
 type SalesPaymentFilter = "all" | "cash" | "transfer" | "pos_terminal" | "credit";
 
 export default function SalesPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-16 rounded-2xl" />}>
+      <SalesHistory />
+    </Suspense>
+  );
+}
+
+function SalesHistory() {
+  const params = useSearchParams();
+  return <SalesHistoryContent key={params.toString()} date={params.get("date")} branch={params.get("branch")} ownOnly={params.get("own") === "1"} />;
+}
+
+function SalesHistoryContent({ date, branch, ownOnly }: { date: string | null; branch: string | null; ownOnly: boolean }) {
   const user = useCurrentUser();
   const router = useRouter();
-  const [period, setPeriod] = useState<SalesPeriod>("month");
+  const dayBounds = localDayBounds(date);
+  const dayLabel = dayBounds?.date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const [period, setPeriod] = useState<SalesPeriod>(dayBounds ? "day" : "month");
   const [paymentFilter, setPaymentFilter] = useState<SalesPaymentFilter>("all");
   const [query, setQuery] = useState("");
 
   const result = useLiveQuery(async () => {
     try {
-      const startIso = getPeriodStartIso(period);
+      const index = db.sales.where("createdAtLocal");
+      const range = period === "day" && dayBounds
+        ? index.between(dayBounds.start, dayBounds.end, true, false)
+        : index.aboveOrEqual(getPeriodStartIso(period === "day" ? "month" : period));
       const sales = await tenantArray<Sale>(
-        db.sales.where("createdAtLocal").aboveOrEqual(startIso).reverse()
+        range.reverse()
       );
       return { sales, error: null as string | null };
     } catch (err) {
       return { sales: [], error: err instanceof Error ? err.message : "Could not load sales." };
     }
-  }, [period]);
+  }, [period, date]);
 
   const canViewBranchSales = hasCapability(user, "VIEW_BRANCH_SALES");
 
   const visibleSales = useMemo(() => {
     return (
       result?.sales.filter((sale) => {
+        if (branch && branch !== sale.branchId) return false;
         if (
           user.accountType === "WORKER" &&
           !(user.branchIds ?? []).includes(sale.branchId)
@@ -66,7 +85,7 @@ export default function SalesPage() {
 
         if (
           user.accountType === "WORKER" &&
-          !canViewBranchSales &&
+          (ownOnly || !canViewBranchSales) &&
           sale.createdByUserId !== user.id
         ) {
           return false;
@@ -93,7 +112,7 @@ export default function SalesPage() {
         return true;
       }) ?? []
     );
-  }, [result?.sales, user.accountType, user.id, user.branchIds, paymentFilter, canViewBranchSales, query]);
+  }, [result?.sales, user.accountType, user.id, user.branchIds, paymentFilter, canViewBranchSales, query, branch, ownOnly]);
 
   const [visibleLimit, setVisibleLimit] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -152,6 +171,7 @@ export default function SalesPage() {
       id: "period",
       label: "Date Range",
       options: [
+        ...(dayLabel ? [{ value: "day", label: dayLabel }] : []),
         { value: "today", label: "Today" },
         { value: "week", label: "7 Days" },
         { value: "month", label: "30 Days" },
@@ -160,6 +180,7 @@ export default function SalesPage() {
       selectedValue: period,
       onChange: (val) => setPeriod(val as SalesPeriod),
       renderTriggerLabel: (val) => {
+        if (val === "day" && dayLabel) return dayLabel;
         if (val === "today") return "Today";
         if (val === "week") return "7 Days";
         if (val === "month") return "30 Days";
@@ -214,7 +235,7 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-3 pb-12">
+    <div className="financial-surfaces flex flex-col gap-3 pb-12">
       <ScreenHeader title="Sales history" action={reportsAction} />
 
       <div className="sticky top-0 z-20 -mx-gutter border-b border-border/30 bg-surface/95 px-gutter pb-2.5 pt-1 sm:-mx-gutter-lg sm:px-gutter-lg supports-[backdrop-filter:blur(1px)]:backdrop-blur-sm">

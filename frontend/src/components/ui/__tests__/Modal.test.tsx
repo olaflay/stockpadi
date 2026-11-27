@@ -29,7 +29,7 @@ describe("Modal", () => {
     const tonalIcon = closeButton.firstElementChild;
 
     expect(header).toHaveClass("min-h-12", "py-1.5");
-    expect(closeButton).toHaveClass("bg-transparent", "h-10", "w-10");
+    expect(closeButton).toHaveClass("bg-transparent", "size-touch-target");
     expect(tonalIcon).toHaveClass("h-7", "w-7", "bg-surface-container-high");
     expect(dialog.parentElement).toHaveClass("animate-modal-scrim-in");
     expect(dialog).toHaveClass("animate-sheet-up");

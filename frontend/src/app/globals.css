@@ -489,6 +489,11 @@ input[type="search"].search-bar-input:focus,
   box-shadow: none !important;
 }
 
+.search-bar-input:focus-visible {
+  outline: 2px solid var(--color-brand-accent) !important;
+  outline-offset: -2px;
+}
+
 a:focus-visible,
 button:focus-visible,
 [role="button"]:focus-visible,
@@ -501,6 +506,30 @@ input:invalid,
 select:invalid,
 textarea:invalid {
   box-shadow: none;
+}
+
+input:invalid:focus-visible,
+select:invalid:focus-visible,
+textarea:invalid:focus-visible {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  :is(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .search-bar-input:focus-visible {
+    outline-color: Highlight !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in {
+    animation: none;
+  }
 }
 
 input:-webkit-autofill,

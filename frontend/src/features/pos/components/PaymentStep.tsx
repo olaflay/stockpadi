@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { UserPlus, BookUser, AlertCircle } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { RippleButton } from "@/components/ui/Ripple";
@@ -22,7 +22,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 
 const METHOD_ACTIVE_STYLES: Record<PaymentMethod, string> = {
   cash: "bg-brand-accent text-on-brand border-brand-accent",
-  transfer: "bg-info text-on-info border-info",
+  transfer: "bg-info-container text-on-info-container border-info",
   pos_terminal: "bg-terminal text-on-terminal border-terminal",
   credit: "bg-credit text-on-credit border-credit",
 };
@@ -130,6 +130,7 @@ export function PaymentStep(props: {
   const tenderedAmount = parseFloat(cashTendered) || 0;
   const changeDue = tenderedAmount - total;
   const insufficientCash = isCashOnly && tenderedAmount > 0 && tenderedAmount < total - AMOUNT_EPSILON;
+  const cashTenderedInputId = useId();
 
   function commitPosNote(index: number, meta: { provider?: string; terminalLabel?: string }) {
     const parts = [meta.provider, meta.terminalLabel].filter(Boolean);
@@ -272,7 +273,7 @@ export function PaymentStep(props: {
                         type="button"
                         onClick={() => onUpdatePaymentMethod(index, method)}
                         aria-pressed={isSelected}
-                        className={`min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all border touch-manipulation active:scale-95 select-none ${
+                        className={`min-h-touch-target px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all border touch-manipulation active:scale-95 select-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                           isSelected
                             ? `${METHOD_ACTIVE_STYLES[method] ?? "bg-brand-accent text-on-brand border-brand-accent"} shadow-xs font-bold`
                             : "bg-surface text-on-surface border-border/40 hover:bg-surface-container"
@@ -288,7 +289,7 @@ export function PaymentStep(props: {
                     type="button"
                     onClick={() => onRemovePaymentLine(index)}
                     aria-label="Remove this payment method"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors"
+                    className="flex h-touch-target w-touch-target shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10 transition-colors focus-visible:ring-2 focus-visible:ring-danger"
                   >
                     ×
                   </button>
@@ -314,13 +315,16 @@ export function PaymentStep(props: {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") (e.target as HTMLElement).blur();
                   }}
-                  className="min-h-[var(--touch-target-min)] min-h-[44px] flex-1 min-w-[80px] rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body-lg)] font-number font-bold text-on-surface tabular-nums outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+                  className="min-h-touch-target flex-1 min-w-0 rounded-[var(--radius-control)] bg-surface border border-border px-3 text-[length:var(--font-size-body-lg)] font-number font-bold text-on-surface tabular-nums outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
                 />
               </div>
               {/* Bank transfer audit metadata: provider chips + sender/session ID,
                   composed into the payment's note and printed on the receipt (§9.3) */}
               {payment.method === "transfer" && (
                 <div className="flex flex-col gap-1.5">
+                  <p className="text-xs text-on-surface-muted">
+                    Check your bank app before completing the sale. This screen records the transfer details.
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {TRANSFER_PROVIDERS.map((provider) => {
                       const active = transferMeta[index]?.provider === provider;
@@ -383,7 +387,7 @@ export function PaymentStep(props: {
             </div>
           ))}
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             {effectivePayments.length < PAYMENT_METHODS.length && (
               <button
                 type="button"
@@ -414,7 +418,7 @@ export function PaymentStep(props: {
             is a prominent success container so the cashier never misses it (§9.1) */}
         {isCashOnly && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-container-low p-3">
-            <label className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+            <label htmlFor={cashTenderedInputId} className="text-[length:var(--font-size-caption)] text-on-surface-muted">
               Cash tendered
             </label>
 
@@ -427,7 +431,7 @@ export function PaymentStep(props: {
                     variant="filter"
                     selected={active}
                     onClick={() => applyTendered(chip.value)}
-                    className="font-number tabular-nums min-h-[40px] active:scale-95 touch-manipulation"
+                    className="font-number tabular-nums min-h-touch-target active:scale-95 touch-manipulation"
                   >
                     {chip.label}
                   </Chip>
@@ -454,6 +458,7 @@ export function PaymentStep(props: {
             </div>
 
             <input
+              id={cashTenderedInputId}
               type="number"
               inputMode="decimal"
               min="0"
@@ -659,7 +664,7 @@ export function PaymentStep(props: {
       </div>
 
       <div
-        className={`sticky bottom-0 z-20 mt-auto flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] transition-all duration-200 ${
+        className={`mt-auto shrink-0 flex-col gap-1.5 pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] ${
           isKeyboardOpen ? "hidden pointer-events-none" : "flex"
         }`}
       >
@@ -686,7 +691,7 @@ export function PaymentStep(props: {
 
         {!isOnline && (
           <p className="text-center text-[length:var(--font-size-caption)] text-on-surface-muted">
-            Offline · Sale saved on phone.
+            Offline · Completed sales are saved on this device and upload when you're back online.
           </p>
         )}
       </div>

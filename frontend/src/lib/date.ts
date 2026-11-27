@@ -7,6 +7,23 @@
 export type ReportPeriod = "today" | "yesterday" | "week" | "month" | "all_time" | "custom";
 export type DateOption = "today" | "yesterday" | "custom";
 
+export function localDateKey(date = new Date()): string {
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part, index) => String(part).padStart(index === 0 ? 4 : 2, "0"))
+    .join("-");
+}
+
+/** Local calendar day as an inclusive start and exclusive next midnight. */
+export function localDayBounds(key: string | null) {
+  if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const date = new Date(`${key}T00:00:00`);
+  if (!Number.isFinite(date.getTime()) || localDateKey(date) !== key) return null;
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  next.setHours(0, 0, 0, 0);
+  return { date, start: date.toISOString(), end: next.toISOString() };
+}
+
 /**
  * Resolves an ISO 8601 timestamp from a user date selection ("today" | "yesterday" | "custom").
  * Preserves the current local time of day while safely mapping the calendar date.

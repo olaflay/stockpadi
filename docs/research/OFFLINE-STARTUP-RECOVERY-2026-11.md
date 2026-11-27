@@ -61,3 +61,8 @@ Serves promise 9 (understandable, recoverable interface) without weakening promi
 ## Remaining device verification
 
 Before release, verify on an installed Android PWA with two open app tabs: hold the old connection, launch the new build offline, choose **Repair and continue**, confirm the cooperating tab releases the database, and confirm pending outbox rows remain unchanged. A genuinely frozen or old-code tab cannot be forcibly closed by browser JavaScript; the final state must instruct the operator to close it and reload.
+## Startup feedback follow-up
+
+The November 26 Android screenshots show a visible checkout footer edge and two recovery screens with different technical explanations. For TRUST promises 7 and 9, startup uses a short status and a single indeterminate indicator while opening, then a concise retry and recovery choice when it cannot continue. The no-JavaScript recovery links and the local data protection path remain available. The startup effect shares its first read across React effect replay so the live effect can finish routing.
+
+Material and Apple both recommend indeterminate progress for work of unknown duration and actionable feedback when progress stalls. See [Material progress guidance](https://m2.material.io/components/progress-indicators) and [Apple progress guidance](https://developer.apple.com/design/human-interface-guidelines/progress-indicators). The screenshots do not establish a timing regression or its cause. Cold-start timing on the installed Android PWA after an update remains an open check.

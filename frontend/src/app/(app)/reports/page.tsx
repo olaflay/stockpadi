@@ -81,7 +81,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="financial-surfaces flex flex-col gap-6">
       <ScreenHeader title="Reports" hideBack={true} />
       <ReportsBody
         period={period}

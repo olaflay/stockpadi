@@ -3,23 +3,31 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { BannerStrip } from "../BannerStrip";
 
-const state = vi.hoisted(() => ({ online: true, pendingSales: 0, failed: 0, phase: "idle" as "idle" | "uploading" | "downloading" | "syncing" }));
+const state = vi.hoisted(() => ({
+  online: true, pending: 0, failed: 0, required: false,
+  pull: null as { lastUpdated?: string; failed: boolean } | null,
+  phase: "idle" as "idle" | "uploading" | "downloading" | "syncing",
+}));
 
 vi.mock("@/lib/use-online-status", () => ({ useOnlineStatus: () => state.online }));
 vi.mock("@/lib/use-pending-sync-count", () => ({
-  usePendingSalesCount: () => state.pendingSales,
+  usePendingSyncCount: () => state.pending,
   useFailedSyncCount: () => state.failed,
 }));
 vi.mock("@/features/auth/use-current-user", () => ({ useCurrentUserOptional: () => null }));
 vi.mock("@/features/sync/sync-runtime-state", () => ({ useSyncRuntimePhase: () => state.phase }));
+vi.mock("@/lib/use-sync-safety", () => ({ useSyncSafety: () => ({ required: state.required }) }));
+vi.mock("dexie-react-hooks", () => ({ useLiveQuery: () => state.pull }));
 
 describe("BannerStrip connection status", () => {
   afterEach(() => {
     cleanup();
     state.online = true;
-    state.pendingSales = 0;
+    state.pending = 0;
     state.failed = 0;
     state.phase = "idle";
+    state.pull = null;
+    state.required = false;
   });
 
   it("shows a concise offline status", () => {
@@ -27,20 +35,37 @@ describe("BannerStrip connection status", () => {
 
     render(<BannerStrip />);
 
-    expect(screen.getByText("Offline · Sales stay on this phone")).toBeInTheDocument();
-    expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-danger");
+    expect(screen.getByText("Offline · Sales stay on this device")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-on-surface-muted");
   });
 
-  it("shows green online status when settled", () => {
+  it("waits for confirmation before showing all saved", () => {
     render(<BannerStrip />);
-    expect(screen.getByText("Online")).toBeInTheDocument();
+    expect(screen.getByText("Online · Waiting for confirmation")).toBeInTheDocument();
+  });
+
+  it("shows green only for a completed update", () => {
+    state.pull = { lastUpdated: "2026-11-26T12:00:00Z", failed: false };
+    render(<BannerStrip />);
+    expect(screen.getByText("All saved")).toBeInTheDocument();
     expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-success");
   });
 
   it("shows yellow while saving", () => {
     state.phase = "uploading";
     render(<BannerStrip />);
-    expect(screen.getByText("Saving")).toBeInTheDocument();
+    expect(screen.getByText("Saving changes…")).toBeInTheDocument();
     expect(screen.getByTestId("connection-status-dot")).toHaveClass("bg-warning");
+  });
+
+  it("shows pending uploads and gives failed changes priority, even offline", () => {
+    state.pending = 2;
+    const { rerender } = render(<BannerStrip />);
+    expect(screen.getByText("Changes waiting to upload")).toBeInTheDocument();
+    state.online = false;
+    state.failed = 1;
+    rerender(<BannerStrip />);
+    expect(screen.getByText("Offline · Changes need review")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/settings/sync-health");
   });
 });

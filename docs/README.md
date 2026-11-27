@@ -51,6 +51,7 @@ Structured in accordance with the **Diátaxis Documentation Framework** (Tutoria
 | [research/OFFLINE-STARTUP-RECOVERY-2026-11.md](research/OFFLINE-STARTUP-RECOVERY-2026-11.md) | Primary-source findings and accepted recovery behavior for blocked IndexedDB startup. | Changing startup routing, Dexie lifecycle handling, or offline recovery UX. |
 | [research/OFFLINE-SYNC-RELIABILITY-AUDIT-2026-11.md](research/OFFLINE-SYNC-RELIABILITY-AUDIT-2026-11.md) | Current primary-source architecture audit, offline support policy, codebase gap matrix, tool decisions, and staged reliability backlog. | Changing offline scope, queue safety, sync architecture, observability, testing, or recovery policy. |
 | [specs/](specs/README.md) | Active feature specification index: Units Model, Contacts Hub, Hub Dashboard, and Stock Count redesign. | Implementing specced roadmap features. |
+| [research/MASTER-PLAN-RECONCILIATION-2026-11.md](research/MASTER-PLAN-RECONCILIATION-2026-11.md) | Supplemental product plan findings, adopted checkout refinements, and release gates. | Reviewing proposals from the November master plan. |
 
 ### 1.2 Explanation (Understanding-Oriented / Architecture & Principles)
 

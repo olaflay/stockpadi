@@ -167,13 +167,13 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`min-w-0 w-full ${maxWidth} flex flex-col bg-surface ${
+        className={`min-w-0 w-full ${maxWidth} flex flex-col bg-surface-container-low ${
           isDialog
-            ? "rounded-[28px] border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-step-in"
-            : "rounded-t-[28px] sm:rounded-[28px] border-t sm:border border-border/40 shadow-[0px_8px_24px_rgba(0,0,0,0.12)] animate-sheet-up"
+            ? "rounded-[var(--radius-focus-block)] animate-step-in"
+            : "rounded-t-[var(--radius-focus-block)] sm:rounded-[var(--radius-focus-block)] animate-sheet-up"
         } overflow-hidden transition-transform`}
         style={{
-          boxShadow: "var(--elevation-3), var(--shadow-inner-highlight)",
+          boxShadow: "var(--elevation-3)",
           maxHeight: maxHeightStyle,
         }}
       >
@@ -193,15 +193,15 @@ export function Modal({
 
         {/* Modal Header */}
         <div
-          className="flex min-h-12 min-w-0 shrink-0 items-center justify-between gap-3 bg-surface px-4 py-1.5 select-none sm:px-5"
+          className="flex min-h-12 min-w-0 shrink-0 items-center justify-between gap-3 px-4 py-1.5 select-none sm:px-5"
         >
-          <h2 id={titleId} className="min-w-0 flex-1 truncate text-[length:var(--font-size-body-lg)] font-semibold text-on-surface tracking-tight">
+          <h2 id={titleId} className="min-w-0 flex-1 wrap-anywhere text-[length:var(--font-size-body-lg)] font-semibold leading-snug text-on-surface tracking-tight">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-transparent text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+            className="group flex size-touch-target shrink-0 items-center justify-center rounded-full bg-transparent text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
             aria-label="Close modal"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-container-high transition-[background-color,transform] duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] group-hover:bg-surface-container-highest group-active:scale-90 group-active:bg-surface-container-highest">
@@ -213,7 +213,7 @@ export function Modal({
         {/* Modal Content */}
         <div
           ref={contentRef}
-          className="min-w-0 flex-1 overflow-y-auto px-6 py-5 scroll-smooth overscroll-contain"
+          className="min-w-0 flex-1 overflow-y-auto px-6 py-5 overscroll-contain"
           style={{
             scrollPaddingBottom: "2.5rem",
           }}

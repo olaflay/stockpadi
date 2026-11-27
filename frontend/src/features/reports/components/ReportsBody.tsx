@@ -13,9 +13,9 @@ import {
   BarChart2,
   Receipt,
   ArrowRight,
-  Package,
 } from "lucide-react";
 import { RippleLink } from "@/components/ui/Ripple";
+import { ReportIllustration } from "./ReportIllustration";
 import { PerformancePill } from "@/components/ui/PerformancePill";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -313,27 +313,23 @@ export function ReportsBody({
       {/* ==================== TAB 1: OVERVIEW ==================== */}
       {activeTab === "overview" && (
         <div className="flex flex-col gap-4 animate-step-in">
-          {/* Hero Revenue Card */}
-          <section className="min-w-0 rounded-3xl bg-surface-container p-5 border border-border/20 shadow-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[length:var(--font-size-caption)] font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                <span>Net sales ({PERIOD_LABELS[period]?.toLowerCase()})</span>
-                <InfoTooltip text="Sales recorded less refunds in this period." />
-              </span>
-              <PerformancePill
-                tone={periodSales.length > 0 ? "success" : "neutral"}
-                icon={TrendingUp}
-                label={periodSales.length > 0 ? "Recorded" : "No Sales"}
-              />
+          <section className="min-w-0 rounded-3xl border border-brand-accent/15 bg-brand-container p-4 text-on-brand-container shadow-elevation-1 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-lg font-bold">Net sales</h2>
+                  <InfoTooltip text="Sales recorded less refunds in this period." ariaLabel="About net sales" />
+                </div>
+                <p className="mt-1 text-xs font-medium">{PERIOD_LABELS[period]}</p>
+                <p className="mt-2 wrap-anywhere font-number text-3xl font-bold tabular-nums sm:text-4xl">
+                  {formatCurrency(totalRevenue)}
+                </p>
+              </div>
+              <ReportIllustration kind="receipt" />
             </div>
-            <p className="mt-2 truncate text-3xl font-number font-bold tabular-nums text-on-surface">
-              {formatCurrency(totalRevenue)}
-            </p>
-            <div className="mt-3 flex items-center justify-between border-t border-border/20 pt-2.5 text-xs text-on-surface-muted">
-              <span>
-                {periodSales.length} {periodSales.length === 1 ? "sale" : "sales"} recorded
-              </span>
-              <span>Avg: {formatCurrency(averageSaleValue)} / sale</span>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-current/20 pt-2.5 text-xs">
+              <span>{periodSales.length ? `${periodSales.length} ${periodSales.length === 1 ? "sale" : "sales"} recorded` : "No sales recorded"}</span>
+              {periodSales.length > 0 && <span>{formatCurrency(averageSaleValue)} average per sale</span>}
             </div>
           </section>
 
@@ -349,7 +345,7 @@ export function ReportsBody({
                   </h3>
                 </div>
                 {peakDay && (
-                  <span className="text-[length:var(--font-size-caption)] font-semibold text-brand-accent bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[length:var(--font-size-caption)] font-semibold text-on-brand-container bg-brand-container px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Busiest: {peakDay.day}
                   </span>
                 )}
@@ -406,39 +402,29 @@ export function ReportsBody({
             </section>
           )}
 
-          {/* Net profit (expandable breakdown) */}
-          <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
+          <div className="overflow-hidden rounded-3xl border border-border/20 bg-surface-container shadow-elevation-1">
+            <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-bold text-on-surface">Net profit</h3>
+                  <InfoTooltip text="Sales revenue minus what you paid for products and shop expenses." ariaLabel="About net profit" />
+                </div>
+                <p className="mt-1 text-xs text-on-surface-muted">Sales less product cost and shop expenses</p>
+                <p className={`mt-2 wrap-anywhere font-number text-2xl font-bold tabular-nums sm:text-3xl ${periodNetProfit === null ? "text-on-surface-muted" : periodNetProfit < 0 ? "text-danger" : "text-on-surface"}`}>
+                  {periodNetProfit === null ? "Unavailable" : formatCurrency(periodNetProfit)}
+                </p>
+                {periodNetProfit === null && <p className="mt-1 text-xs text-on-surface-muted">Product cost unavailable</p>}
+              </div>
+              <ReportIllustration kind="profit" />
+            </div>
             <button
               type="button"
-              onClick={() => setShowProfitBreakdown((v) => !v)}
-              className="w-full p-5 text-left transition-colors hover:bg-surface-container-high flex flex-col gap-1"
+              aria-expanded={showProfitBreakdown}
+              onClick={() => setShowProfitBreakdown((value) => !value)}
+              className="mx-4 mb-4 flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-xl bg-brand-container px-3 text-left text-xs font-semibold text-on-brand-container hover:brightness-95"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                    <span>Net profit</span>
-                    <InfoTooltip text="Sales revenue minus product cost (what you paid) and shop operational expenses." />
-                  </p>
-                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Sales less product cost and shop expenses
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <PerformancePill
-                    tone={periodNetProfit !== null && periodNetProfit >= 0 ? "success" : "danger"}
-                    icon={periodNetProfit !== null && periodNetProfit >= 0 ? TrendingUp : TrendingDown}
-                    label={periodNetProfit === null ? "Cost unavailable" : periodNetProfit >= 0 ? "Profitable" : "Deficit"}
-                  />
-                  {showProfitBreakdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-              </div>
-              <p
-                className={`mt-1 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
-                  periodNetProfit !== null && periodNetProfit >= 0 ? "text-success" : "text-danger"
-                }`}
-              >
-                {periodNetProfit === null ? "Unavailable" : formatCurrency(periodNetProfit)}
-              </p>
+              {showProfitBreakdown ? "Hide profit breakdown" : "View profit breakdown"}
+              {showProfitBreakdown ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
             </button>
 
             {showProfitBreakdown && (
@@ -485,39 +471,28 @@ export function ReportsBody({
             )}
           </div>
 
-          {/* Net cash movement (expandable breakdown) */}
-          <div className="rounded-3xl bg-surface-container border border-border/20 shadow-xs overflow-hidden">
+          <div className="overflow-hidden rounded-3xl border border-border/20 bg-surface-container shadow-elevation-1">
+            <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-bold text-on-surface">Net cash movement</h3>
+                  <InfoTooltip text="Cash and transfers received, less money paid for restocks and expenses." ariaLabel="About net cash movement" />
+                </div>
+                <p className="mt-1 text-xs text-on-surface-muted">Money received less shop spending</p>
+                <p className={`mt-2 wrap-anywhere font-number text-2xl font-bold tabular-nums sm:text-3xl ${periodNetCashFlow < 0 ? "text-danger" : "text-on-surface"}`}>
+                  {formatCurrency(periodNetCashFlow)}
+                </p>
+              </div>
+              <ReportIllustration kind="cash" />
+            </div>
             <button
               type="button"
-              onClick={() => setShowCashFlowBreakdown((v) => !v)}
-              className="w-full p-5 text-left transition-colors hover:bg-surface-container-high flex flex-col gap-1"
+              aria-expanded={showCashFlowBreakdown}
+              onClick={() => setShowCashFlowBreakdown((value) => !value)}
+              className="mx-4 mb-4 flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-xl bg-brand-container px-3 text-left text-xs font-semibold text-on-brand-container hover:brightness-95"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                    <span>Net cash movement</span>
-                    <InfoTooltip text="Cash and transfers received, less money paid for restocks and expenses." />
-                  </p>
-                  <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                    Cash and transfers received less shop cash spent
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <PerformancePill
-                    tone={periodNetCashFlow >= 0 ? "success" : "danger"}
-                    icon={periodNetCashFlow >= 0 ? TrendingUp : TrendingDown}
-                    label={periodNetCashFlow >= 0 ? "Cash Positive" : "Deficit"}
-                  />
-                  {showCashFlowBreakdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-              </div>
-              <p
-                className={`mt-1 truncate text-2xl sm:text-3xl font-number font-bold tabular-nums ${
-                  periodNetCashFlow >= 0 ? "text-success" : "text-danger"
-                }`}
-              >
-                {formatCurrency(periodNetCashFlow)}
-              </p>
+              {showCashFlowBreakdown ? "Hide cash breakdown" : "View cash breakdown"}
+              {showCashFlowBreakdown ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
             </button>
 
             {showCashFlowBreakdown && (
@@ -657,9 +632,9 @@ export function ReportsBody({
                         <h4 className="text-sm font-bold text-on-surface">{day.dayName}</h4>
                       </div>
                       <PerformancePill
-                        tone={isProfitPositive ? "success" : "danger"}
-                        icon={isProfitPositive ? TrendingUp : TrendingDown}
-                        label={isProfitPositive ? "Profit" : "Deficit"}
+                        tone={day.netProfit === null ? "neutral" : isProfitPositive ? "success" : "danger"}
+                        icon={day.netProfit === null ? undefined : isProfitPositive ? TrendingUp : TrendingDown}
+                        label={day.netProfit === null ? "Cost unavailable" : isProfitPositive ? "Profit" : "Deficit"}
                       />
                     </div>
 
@@ -677,7 +652,7 @@ export function ReportsBody({
                         <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">Net profit</span>
                         <p
                           className={`font-number font-bold text-sm tabular-nums ${
-                            isProfitPositive ? "text-success" : "text-danger"
+                            day.netProfit === null ? "text-on-surface-muted" : isProfitPositive ? "text-success" : "text-danger"
                           }`}
                         >
                           {day.netProfit === null ? "Unavailable" : formatCurrency(day.netProfit)}
@@ -755,13 +730,13 @@ export function ReportsBody({
       {activeTab === "inventory" && (
         <div className="flex flex-col gap-4 animate-step-in">
           {/* Money on Shelves (Store Valuation Card) */}
-          <section className="rounded-2xl bg-surface-container p-4 border border-border/20 shadow-xs">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
-                <span>Money on Shelves (Stock Worth)</span>
+          <section className="rounded-3xl border border-border/20 bg-surface-container p-4 shadow-elevation-1">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="inline-flex items-center gap-1.5 text-base font-bold text-on-surface">
+                <span>Stock value</span>
                 <InfoTooltip text="Selling Value is what you expect to make when sold; Cost Value is what you spent buying the items from suppliers." />
               </h3>
-              <Package size={16} className="text-brand-accent" />
+              <ReportIllustration kind="stock" />
             </div>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted mb-3">
               Total value of all items currently sitting in your shop

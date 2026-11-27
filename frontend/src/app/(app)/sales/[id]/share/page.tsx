@@ -65,7 +65,7 @@ export default function ShareReceiptPage({ params }: PageProps) {
       <main className="flex-1 overflow-y-auto pb-2" aria-label="Receipt preview">
         <article className="mx-auto max-w-md rounded-[var(--radius-card)] border border-border bg-surface px-4 py-5 shadow-[var(--shadow-elevation-1)]">
           <header className="border-b border-dashed border-border pb-4 text-center">
-            <h1 className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">{receipt.businessName}</h1>
+            <h2 className="text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">{receipt.businessName}</h2>
             <p className="mt-1 text-[length:var(--font-size-caption)] text-on-surface-muted">Receipt #{receipt.receiptNumber}</p>
             <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{receipt.dateLabel}</p>
             {receipt.voidedAt && <p className="mt-2 text-[length:var(--font-size-caption)] font-semibold text-danger">Cancelled</p>}

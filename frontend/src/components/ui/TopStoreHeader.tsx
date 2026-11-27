@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, ChevronLeft, Bell } from "lucide-react";
 import { useSideDrawer } from "@/components/ui/DrawerContext";
-import { SyncIndicator } from "@/components/ui/SyncIndicator";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 
 const TITLE_PATTERNS: readonly [string, string][] = [
@@ -147,9 +146,8 @@ export function TopStoreHeader() {
           </h1>
         </div>
 
-        {/* Right: compact save state and actionable business alerts. */}
+        {/* Save status lives in the banner below the app bar. */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <SyncIndicator compact variant="contrast" />
           {alertCount > 0 && (
             <Link
               href="/alerts"

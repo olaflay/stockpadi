@@ -96,7 +96,7 @@ export function EditProductForm({
           <div className="pt-3 flex flex-col gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                Adjust stock count ({unitLabel})
+                Branch stock count ({unitLabel})
               </span>
               <TextInput
                 type="number"
@@ -104,7 +104,6 @@ export function EditProductForm({
                 inputMode="numeric"
                 value={stockInput ?? ""}
                 onChange={(e) => onStockInputChange(e.target.value)}
-                placeholder={String(totalStock ?? 0)}
               />
             </label>
 

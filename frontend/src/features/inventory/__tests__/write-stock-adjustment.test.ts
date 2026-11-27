@@ -31,6 +31,19 @@ describe("writeStockAdjustment", () => {
         createdAt: new Date().toISOString(),
         createdByUserId: "seed",
       },
+      {
+        id: crypto.randomUUID(),
+        clientId: "other-branch-seed",
+        branchId: "branch-2",
+        productId: PRODUCT_ID,
+        quantityDelta: 20,
+        source: "initial_stock",
+        sourceReferenceId: null,
+        reasonCode: null,
+        createdAtLocal: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        createdByUserId: "seed",
+      },
     ]);
 
     const movement = await writeStockAdjustment({
@@ -45,6 +58,7 @@ describe("writeStockAdjustment", () => {
 
     expect(movement.quantityDelta).toBe(-3);
     expect(await getCurrentStock(PRODUCT_ID, BRANCH_ID)).toBe(7);
+    expect(await getCurrentStock(PRODUCT_ID, "branch-2")).toBe(20);
 
     const outboxItem = await db.outbox.get(movement.clientId);
     expect(outboxItem?.type).toBe("stock_adjustment");
@@ -58,7 +72,7 @@ describe("writeStockAdjustment", () => {
    * both adjustments must survive and sum correctly, and a retried sync
    * must not double-count.
    */
-  it("honors independent counts from two devices, in either sync order, without double-counting a retry", async () => {
+  it.each([false, true])("honors independent counts and deduplicates retries (reverse order: %s)", async (reverse) => {
     const deviceAAdjustment = {
       id: crypto.randomUUID(),
       clientId: "device-a-adjustment-1",
@@ -86,8 +100,9 @@ describe("writeStockAdjustment", () => {
       createdByUserId: "device-b-user",
     };
 
-    await mergeIncomingStockMovements([deviceAAdjustment]);
-    await mergeIncomingStockMovements([deviceBAdjustment]);
+    const [first, second] = reverse ? [deviceBAdjustment, deviceAAdjustment] : [deviceAAdjustment, deviceBAdjustment];
+    await mergeIncomingStockMovements([first]);
+    await mergeIncomingStockMovements([second]);
     // Simulate a dropped connection and retry of device A's same batch.
     await mergeIncomingStockMovements([deviceAAdjustment]);
 

@@ -104,7 +104,7 @@ export function CartStep(props: {
         </div>
       </div>
 
-      <ul className="flex flex-1 flex-col gap-2 overflow-y-auto pb-1">
+      <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1">
         {cartLines.map((line) => {
           const product = products.find((p) => p.id === line.productId);
           if (!product) return null;
@@ -210,7 +210,7 @@ export function CartStep(props: {
       </ul>
 
       <div
-        className="sticky bottom-0 z-20 mt-auto flex flex-col gap-1.5 cta-scrim-container px-gutter sm:px-gutter-lg pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] transition-all duration-200"
+        className="mt-auto flex shrink-0 flex-col gap-1.5 pt-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))]"
       >
         {hasOutOfStockItem && (
           <div className="rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger flex items-center justify-between">
@@ -321,7 +321,7 @@ export function CartStep(props: {
                   key={amt}
                   type="button"
                   onClick={() => setDiscountInput(String(amt))}
-                  className="min-h-[40px] rounded-[var(--radius-control)] bg-surface-container px-3.5 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-high active:scale-95 touch-manipulation font-number tabular-nums transition-all"
+                  className="min-h-touch-target rounded-[var(--radius-control)] bg-surface-container px-3.5 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-high active:scale-95 touch-manipulation font-number tabular-nums transition-all"
                 >
                   {formatCurrency(amt)}
                 </button>

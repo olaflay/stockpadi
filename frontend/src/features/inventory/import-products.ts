@@ -1,7 +1,7 @@
 import { db, withDatabaseClosedRecovery } from "@/lib/db";
 import { withLocalBusinessIds } from "@/lib/local-tenant";
 import { enqueueOutboxWrite } from "@/features/sync/enqueue-outbox-write";
-import { countActiveProducts, productCapStatusFor } from "@/features/inventory/product-cap";
+import { productCapStatusFor } from "@/features/inventory/product-cap";
 import { PRODUCT_CAP } from "@/config/limits";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import type { Product } from "@/types/product";
@@ -29,10 +29,7 @@ export async function importProducts(
   const movements: StockMovement[] = [];
   const now = new Date().toISOString();
 
-  const projectedCount = (await countActiveProducts()) + rows.length;
-  if (productCapStatusFor(projectedCount) === "blocked") {
-    throw new Error(`This import would exceed the ${PRODUCT_CAP}-product cap for this store.`);
-  }
+  if (rows.length === 0) return;
 
   for (const row of rows) {
     const data = row.data;
@@ -90,6 +87,26 @@ export async function importProducts(
   // stable clientId so a retry never double-counts) makes the import durable
   // and convergent. See .agents/rules/offline-sync-and-ledger.md.
   await withDatabaseClosedRecovery(() => db.transaction("rw", db.products, db.stockMovements, db.outbox, async () => {
+    const existing = await db.products.where("businessId").equals(tenantProducts[0].businessId).toArray();
+    if (productCapStatusFor(existing.length + rows.length) === "blocked") {
+      throw new Error(`This import would exceed the ${PRODUCT_CAP}-product cap for this store.`);
+    }
+
+    const skus = new Set(existing.map((product) => product.sku.trim().toLowerCase()));
+    const barcodes = new Set(existing.map((product) => product.barcode?.trim().toLowerCase()).filter(Boolean));
+    for (const { rowNum, data } of rows) {
+      const sku = data.sku.trim().toLowerCase();
+      const barcode = data.barcode?.trim().toLowerCase();
+      if (!sku || skus.has(sku)) {
+        throw new Error(`Row ${rowNum}: SKU is missing or already in use.`);
+      }
+      if (barcode && barcodes.has(barcode)) {
+        throw new Error(`Row ${rowNum}: barcode is already in use.`);
+      }
+      skus.add(sku);
+      if (barcode) barcodes.add(barcode);
+    }
+
     await db.products.bulkAdd(tenantProducts);
     if (tenantMovements.length > 0) await db.stockMovements.bulkAdd(tenantMovements);
     for (const product of tenantProducts) {
