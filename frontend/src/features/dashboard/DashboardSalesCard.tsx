@@ -71,12 +71,12 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
   if (viewerId) filters.set("own", "1");
 
   return (
-    <section aria-labelledby="dashboard-sales-title" className="mb-4 rounded-3xl border border-brand-accent/15 bg-brand-container p-4 text-on-brand-container shadow-elevation-1 sm:p-5">
+    <section aria-labelledby="dashboard-sales-title" className="financial-surfaces mb-4 rounded-3xl border border-brand-accent/15 bg-brand-container p-4 text-on-brand-container shadow-elevation-1 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="dashboard-sales-title" className="text-lg font-bold tracking-tight">
           {day === today ? (viewerId ? "Your sales today" : "Today's sales") : (viewerId ? "Your sales for the day" : "Sales for the day")}
         </h2>
-        <label className="relative inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-full bg-surface/60 px-3 text-sm font-semibold focus-within:ring-2 focus-within:ring-brand-accent">
+        <label className="relative inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-full bg-surface-container px-3 text-sm font-semibold text-on-surface focus-within:ring-2 focus-within:ring-brand-accent">
           <CalendarDays size={17} aria-hidden />
           <span aria-hidden>{bounds.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(bounds.date.getFullYear() !== new Date().getFullYear() && { year: "numeric" }) })}</span>
           <input

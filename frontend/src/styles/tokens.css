@@ -47,6 +47,10 @@
    --color-surface-container-highest: #d6dcde;
    --color-on-surface: #14181a;
    --color-on-surface-muted: #495357;
+   /* Sales and reports use a green-tinted ink on neutral and tonal surfaces. */
+   --color-financial-ink: #102b23;
+   --color-financial-muted: #36544a;
+   --color-financial-tonal-ink: #10372a;
    --color-border: #9aa3a6;
    --color-outline: #73796e;
    --color-outline-variant: #c3cbcd;
@@ -300,6 +304,9 @@
       --color-surface-container-highest: #32383a;
       --color-on-surface: #e7ebec;
       --color-on-surface-muted: #a4adaf;
+      --color-financial-ink: var(--color-on-surface);
+      --color-financial-muted: var(--color-on-surface-muted);
+      --color-financial-tonal-ink: var(--color-on-brand-container);
       --color-border: #3d4446;
       --color-outline: #8c9388;
       --color-outline-variant: #43494a;
@@ -382,6 +389,9 @@
    --color-surface-container-highest: #32383a;
    --color-on-surface: #e7ebec;
    --color-on-surface-muted: #a4adaf;
+   --color-financial-ink: var(--color-on-surface);
+   --color-financial-muted: var(--color-on-surface-muted);
+   --color-financial-tonal-ink: var(--color-on-brand-container);
    --color-border: #3d4446;
    --color-outline: #8c9388;
    --color-outline-variant: #43494a;
@@ -451,6 +461,12 @@
    --shadow-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
    --shadow-recessed: inset 0 1px 2px rgba(0, 0, 0, 0.35);
    --shadow-recessed-strong: inset 0 1.5px 3px rgba(0, 0, 0, 0.42);
+}
+
+.financial-surfaces {
+   --color-on-surface: var(--color-financial-ink);
+   --color-on-surface-muted: var(--color-financial-muted);
+   --color-on-brand-container: var(--color-financial-tonal-ink);
 }
 
 /* Connected Segmented Control Helpers (M3 Connected & Morphing Standard) */

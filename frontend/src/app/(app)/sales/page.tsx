@@ -235,7 +235,7 @@ function SalesHistoryContent({ date, branch, ownOnly }: { date: string | null; b
   }
 
   return (
-    <div className="flex flex-col gap-3 pb-12">
+    <div className="financial-surfaces flex flex-col gap-3 pb-12">
       <ScreenHeader title="Sales history" action={reportsAction} />
 
       <div className="sticky top-0 z-20 -mx-gutter border-b border-border/30 bg-surface/95 px-gutter pb-2.5 pt-1 sm:-mx-gutter-lg sm:px-gutter-lg supports-[backdrop-filter:blur(1px)]:backdrop-blur-sm">

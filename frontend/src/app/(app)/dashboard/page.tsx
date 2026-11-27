@@ -66,7 +66,7 @@ function KpiCard({
         <Icon size={17} aria-hidden />
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-semibold leading-tight text-on-surface-variant">{label}</p>
+        <p className="text-xs font-semibold leading-tight text-on-surface">{label}</p>
         <p className={`mt-1 wrap-anywhere font-number text-[clamp(15px,4.2vw,18px)] font-bold leading-snug tracking-tight tabular-nums ${valueClassName}`}>
           {value}
         </p>
@@ -268,7 +268,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="pb-6 sm:pb-8">
+    <div className="financial-surfaces pb-6 sm:pb-8">
       <ScreenHeader title="Dashboard" hideBack={true} />
 
       {/* Email verification banner — shown only to owner until email confirmed */}

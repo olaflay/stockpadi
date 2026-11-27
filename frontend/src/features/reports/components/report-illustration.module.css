@@ -1,0 +1,72 @@
+.illustration {
+  --art: color-mix(in srgb, var(--color-on-brand-container) 45%, var(--color-brand-container));
+  --pale: color-mix(in srgb, var(--color-on-brand-container) 18%, var(--color-brand-container));
+  position: relative;
+  flex: none;
+  inline-size: clamp(3rem, 15vw, 4.5rem);
+  aspect-ratio: 1.25;
+  border-radius: 50% 45% 42% 49%;
+  background: var(--color-brand-container);
+  pointer-events: none;
+}
+
+.illustration span { position: absolute; }
+
+/* A receipt and its printed lines. */
+.receipt span:first-child {
+  inset: 15% 27% 12%;
+  border: 1px solid var(--art);
+  background: var(--pale);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 84% 90%, 66% 100%, 50% 90%, 33% 100%, 16% 90%, 0 100%);
+  transform: rotate(-8deg);
+}
+
+.receipt span:nth-child(2),
+.receipt span:nth-child(3) {
+  inset: 37% 37% auto;
+  block-size: 4%;
+  border-radius: 1em;
+  background: var(--art);
+  transform: rotate(-8deg);
+}
+
+.receipt span:nth-child(3) { inset-block-start: 51%; }
+
+/* Three ledger bars, a silhouette without an implied trend line. */
+.profit span {
+  inset-block-end: 18%;
+  inline-size: 14%;
+  border-radius: 20% 20% 0 0;
+  background: var(--art);
+}
+
+.profit span:first-child { inset-inline-start: 20%; block-size: 42%; background: var(--pale); }
+.profit span:nth-child(2) { inset-inline-start: 43%; block-size: 59%; }
+.profit span:nth-child(3) { inset-inline-start: 66%; block-size: 31%; background: var(--pale); }
+
+/* Coins seen edge-on. */
+.cash span {
+  inset: 31% 36% auto 16%;
+  block-size: 27%;
+  border: 1px solid var(--art);
+  border-radius: 50%;
+  background: var(--pale);
+}
+
+.cash span:first-child { inset-block-start: 51%; background: var(--art); }
+.cash span:nth-child(3) { inset: 53% 12% auto 55%; background: var(--art); }
+
+/* Boxes arranged on a shelf. */
+.stock span {
+  border: 1px solid var(--art);
+  border-radius: 12%;
+  background: linear-gradient(90deg, var(--pale) 42%, var(--color-brand-container) 42% 58%, var(--pale) 58%);
+}
+
+.stock span:first-child { inset: 19% 35% 51%; }
+.stock span:nth-child(2) { inset: 53% 51% 13% 17%; }
+.stock span:nth-child(3) { inset: 53% 17% 13% 51%; }
+
+@media (forced-colors: active) {
+  .illustration { display: none; }
+}

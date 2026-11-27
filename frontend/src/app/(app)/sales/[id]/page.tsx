@@ -179,27 +179,27 @@ export default function SaleDetailPage({ params }: PageProps) {
       <ScreenHeader title="Sale receipt" backHref="/sales" />
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-2">
-        <section className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-surface-container px-4 py-3 animate-step-in">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] bg-brand-container px-4 py-3 text-on-brand-container shadow-elevation-1 animate-step-in">
           <div className="flex min-w-0 items-center gap-3">
-            {!sale.voidedAt && <ReceiptIllustration className="h-9 w-9 shrink-0 text-brand-accent" />}
+            {!sale.voidedAt && <ReceiptIllustration className="h-9 w-9 shrink-0" />}
             <div className="min-w-0">
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              <p className="text-[length:var(--font-size-caption)] font-semibold">
                 {new Date(sale.createdAtLocal).toLocaleString("en-NG", {
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}
               </p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">{syncStatusLabel}</p>
-              <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
+              <p className="text-[length:var(--font-size-caption)]">
                 Sold by {sale.createdByName ?? seller?.fullName ?? (sale.createdByUserId === user.id ? "you" : "staff member")}
               </p>
+              <p className="text-[length:var(--font-size-caption)]">{syncStatusLabel}</p>
             </div>
           </div>
-          <div className="shrink-0 text-right">
-            <p className="font-number text-[length:var(--font-size-title-lg)] font-semibold tabular-nums text-on-surface">
+          <div className="min-w-0">
+            <p className="wrap-anywhere font-number text-[length:var(--font-size-title-lg)] font-bold tabular-nums">
               {formatCurrency(sale.total)}
             </p>
-            {sale.voidedAt && <p className="text-[length:var(--font-size-caption)] font-medium text-danger">Cancelled</p>}
+            {sale.voidedAt && <p className="mt-1 inline-block rounded-full bg-danger-container px-2 py-0.5 text-[length:var(--font-size-caption)] font-medium text-on-danger-container">Cancelled</p>}
           </div>
         </section>
 
