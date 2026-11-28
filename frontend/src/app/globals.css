@@ -568,7 +568,30 @@ input:-webkit-autofill:active {
   scrollbar-width: none;
 }
 
-/* Tonal Container System (Google Tonal Fill — Zero Card Shadows) */
+/* Empty scenes share theme-derived ink and two tonal fills. */
+.state-scene {
+  color: var(--color-on-brand-container);
+  --scene-paper: var(--color-surface-container-low);
+  --scene-tint: color-mix(in srgb, var(--color-brand-container) 75%, var(--color-surface-container));
+}
+
+@media (forced-colors: active) {
+  .state-scene {
+    color: CanvasText;
+    --scene-paper: Canvas;
+    --scene-tint: Canvas;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth-card-interactive,
+  .depth-card-interactive:active {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Tonal fills for ordinary cards. Raised controls use the elevation tokens. */
 .depth-card {
   background-color: var(--color-surface-container);
   box-shadow: none;

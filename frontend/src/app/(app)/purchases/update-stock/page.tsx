@@ -1,6 +1,5 @@
 "use client";
 
-import { ClipboardList } from "lucide-react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -62,7 +61,7 @@ export default function UpdateStockPage() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Adjust stock" backHref="/stock-count" />
         <EmptyState
-          icon={ClipboardList}
+          scene="shelf"
           title="No products yet"
           description="Add products before adjusting stock."
           action={{ label: "Add a product", onClick: () => router.push("/products/new") }}

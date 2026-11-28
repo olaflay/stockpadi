@@ -9,7 +9,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { RippleLink } from "@/components/ui/Ripple";
 import { useAlertCenter } from "@/features/alerts/use-alert-center";
-import { Bell, AlertTriangle, CloudOff, PackageMinus, HandCoins, Megaphone } from "lucide-react";
+import { AlertTriangle, CloudOff, PackageMinus, HandCoins, Megaphone } from "lucide-react";
 import { RippleButton } from "@/components/ui/Ripple";
 import type { AlertType } from "@/features/alerts/get-alerts";
 import { useCurrentUser } from "@/features/auth/use-current-user";
@@ -56,7 +56,7 @@ export default function AlertsPage() {
           <ErrorState message="Couldn't load alerts." onRetry={() => window.location.reload()} />
         ) : alerts.length === 0 ? (
           <EmptyState
-            icon={Bell}
+            scene="shop"
             title="All clear"
             description={
               user.accountType === "WORKER"

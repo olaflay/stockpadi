@@ -15,17 +15,22 @@ import storefront from "./storefront.module.css";
 
 function StorefrontIllustration() {
   return (
-    <svg aria-hidden="true" focusable="false" viewBox="0 0 224 110" className={storefront.storefront}>
-      <path className={storefront.ground} d="M8 102h216v8H8z" />
-      <path className={storefront.wall} d="M45 37h169v67H45z" />
-      <path className={storefront.trim} d="M45 94h169v10H45z" />
-      <path className={storefront.glass} d="M59 53h78v34H59zM155 53h37v51h-37z" />
-      <path className={storefront.trim} d="M95 53h3v34h-3zM59 71h78v2H59zM154 50h39v3h-39z" />
-      <path className={storefront.stripe} d="M47 12h155l14 25H31z" />
-      <path className={storefront.trim} d="M70 12h23l-7 25H60zm47 0h23l2 25h-28zm46 0h23l10 25h-27z" />
-      <path className={storefront.stripe} d="M31 37h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h17v4a14 14 0 0 1-17 13z" />
-      <path className={storefront.trim} d="M59 37h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0z" />
-      <path className={storefront.stripe} d="M14 91h20l-3 13H17zM24 91c-1-13-10-18-19-17 3 10 9 16 19 17zm0 0c1-12 8-19 17-20-1 11-7 19-17 20zM182 78h3v9h-3z" />
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 300 148" preserveAspectRatio="xMaxYMax meet" className={storefront.storefront}>
+      <path className={storefront.backdrop} d="M77 141a93 93 0 0 1 186 0z" />
+      <path className={storefront.backdrop} d="M48 117h12v3H48zm13-15h16v3H61zm175-86h28v3h-28zm41 9h16v3h-16z" />
+      <path className={storefront.ground} d="M14 139h286v9H14z" />
+      <path className={storefront.wall} d="M113 54h160v87H113z" />
+      <path className={storefront.trim} d="M113 131h160v10H113zM273 54h20v87h-20z" />
+      <path className={storefront.glass} d="M126 83h70v35h-70zm88 0h37v58h-37z" />
+      <path className={storefront.highlight} d="m142 83-16 24v-9l10-15zm18 0-24 35h8l24-35zm64 0h7l-17 25v-10z" />
+      <path className={storefront.detail} d="M126 116h70v4h-70zm34-33h3v35h-3zm52-3h41v3h-41zm9 28h3v9h-3z" />
+      <path className={storefront.stripe} d="m116 34 147 0 20 25H96z" />
+      <path className={storefront.awning} d="m139 34 22 0-8 25h-29zm43 0h22l4 25h-27zm43 0h22l17 25h-28z" />
+      <path className={storefront.stripe} d="M96 59h28v5a14 14 0 0 1-28 0zm57 0h28v5a14 14 0 0 1-28 0zm55 0h28v5a14 14 0 0 1-28 0zm56 0h19v5c0 8-10 14-19 13z" />
+      <path className={storefront.awning} d="M124 59h29v5a14.5 14.5 0 0 1-29 0zm57 0h27v5a13.5 13.5 0 0 1-27 0zm55 0h28v5a14 14 0 0 1-28 0z" />
+      <path className={storefront.detail} d="M81 119c-2-14-10-20-21-21 2 10 8 19 21 21zm0 0c1-12 8-21 19-24-1 12-5 19-19 24z" />
+      <path className={storefront.stripe} d="M68 119h25l-4 20H72z" />
+      <path className={storefront.wall} d="M263 127h37v12h-37z" />
     </svg>
   );
 }
@@ -99,25 +104,25 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
           />
         </label>
       </div>
-      <div aria-live="polite" aria-busy={!current} className="relative min-w-0">
-        {!current ? (
-          <Skeleton className="mt-2 h-10 w-36 rounded-xl" />
-        ) : totals ? (
-          <>
-            <div className={storefront.summary}>
-              <p className="relative z-10 w-[64%] wrap-anywhere font-number text-4xl font-bold leading-tight tracking-tight tabular-nums">{formatCurrency(totals.total)}</p>
-              <div className={storefront.crop}><StorefrontIllustration /></div>
-            </div>
-            <ul className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
-              <li className="inline-flex items-center gap-1 whitespace-nowrap"><Receipt size={14} aria-hidden />{totals.count ? `${totals.count} ${totals.count === 1 ? "sale" : "sales"}` : "0 sales recorded"}</li>
-              <li className="inline-flex items-center gap-1.5"><Banknote size={16} aria-hidden />{formatCurrency(totals.cash)} cash</li>
-              <li className="inline-flex items-center gap-1.5"><CreditCard size={16} aria-hidden />{formatCurrency(totals.credit)} credit</li>
-              {totals.other !== 0 && <li>{formatCurrency(totals.other)} other payments</li>}
-            </ul>
-          </>
-        ) : <p className="mt-2 text-sm">Couldn&apos;t load sales for this day. Open sales history to try again.</p>}
+      <div aria-live="polite" aria-busy={!current} className={storefront.summary}>
+        <div className={storefront.crop}><StorefrontIllustration /></div>
+        <div className={storefront.figures}>
+          {!current ? (
+            <Skeleton className="mt-2 h-10 w-36 rounded-xl" />
+          ) : totals ? (
+            <>
+              <p className="wrap-anywhere font-number text-4xl font-bold leading-tight tracking-tight tabular-nums">{formatCurrency(totals.total)}</p>
+              <ul className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+                <li className="inline-flex items-center gap-1 whitespace-nowrap"><Receipt size={14} aria-hidden />{totals.count ? `${totals.count} ${totals.count === 1 ? "sale" : "sales"}` : "0 sales recorded"}</li>
+                <li className="inline-flex items-center gap-1.5"><Banknote size={16} aria-hidden />{formatCurrency(totals.cash)} cash</li>
+                <li className="inline-flex items-center gap-1.5"><CreditCard size={16} aria-hidden />{formatCurrency(totals.credit)} credit</li>
+                {totals.other !== 0 && <li>{formatCurrency(totals.other)} other payments</li>}
+              </ul>
+            </>
+          ) : <p className="text-sm">Couldn&apos;t load sales for this day. Open sales history to try again.</p>}
+        </div>
       </div>
-      <RippleLink href={`/sales?${filters}`} className="mt-2.5 flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-2xl bg-brand-accent px-4 py-2 text-sm font-semibold text-brand-accent-contrast shadow-elevation-1">
+      <RippleLink href={`/sales?${filters}`} className="relative flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-2xl bg-brand-accent px-4 py-2 text-sm font-semibold text-brand-accent-contrast">
         <Receipt size={18} className="shrink-0" aria-hidden />
         <span className="flex-1">View sales &amp; receipts</span>
         <ArrowRight size={17} className="shrink-0" aria-hidden />

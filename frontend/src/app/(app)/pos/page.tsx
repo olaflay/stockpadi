@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense, useMemo, useDeferredValue } from "react"
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ShoppingBag } from "lucide-react";
 import { db, type LocalBranch, type LocalCategory, type LocalCustomer } from "@/lib/db";
 import type { Product } from "@/types/product";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -221,7 +220,7 @@ function PosPageContent() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Sell" hideBack={true} />
         <EmptyState
-          icon={ShoppingBag}
+          scene="shelf"
           title={isOnline ? "Nothing to sell yet" : "Products aren’t ready on this phone"}
           description={isOnline
             ? "Add products first, then come back here to start checking out sales."

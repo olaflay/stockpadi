@@ -15,7 +15,7 @@ interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 /**
  * Material Design 3 Chip Component.
- * Engineered with pure CSS compositor scaling (active:scale-[0.96]) for
+ * Engineered with pure CSS compositor scaling (motion-safe:active:scale-[0.96]) for
  * instantaneous tap feedback on budget Android devices with zero JS reflows.
  * 
  * Variants:
@@ -35,14 +35,14 @@ export function Chip({
   ...props
 }: ChipProps) {
   const baseClasses =
-    "inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-3 py-1 text-[length:var(--font-size-label)] font-medium select-none touch-manipulation transition-all duration-[var(--motion-duration-short)] ease-out disabled:opacity-40 disabled:pointer-events-none active:scale-[0.96]";
+    "inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-3 py-1 text-[length:var(--font-size-label)] font-medium select-none touch-manipulation transition-[background-color,color,scale] duration-[var(--motion-duration-short)] ease-out disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent motion-safe:active:scale-[0.96]";
 
   let stateClasses = "";
 
   if (variant === "filter") {
     stateClasses = selected
-      ? "bg-brand-accent text-brand-accent-contrast shadow-xs border border-transparent"
-      : "bg-surface-container-high text-on-surface border border-border/60 hover:bg-surface-container-highest";
+      ? "bg-brand-accent text-brand-accent-contrast"
+      : "bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-surface-container-highest";
   } else if (variant === "assist") {
     stateClasses =
       "bg-surface-container text-on-surface border border-transparent hover:bg-surface-container-high active:bg-surface-container-highest";

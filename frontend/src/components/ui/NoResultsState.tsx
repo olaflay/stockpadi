@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { StateCard } from "@/components/ui/StateCard";
 
 interface NoResultsStateProps {
@@ -36,7 +35,7 @@ export function NoResultsState({
 }: NoResultsStateProps) {
   return (
     <StateCard
-      icon={Search}
+      scene="search"
       title={`No results for "${query}"`}
       description={`Try a different keyword or clear the search to see all ${entityLabel}.`}
       action={action}

@@ -5,7 +5,6 @@ import { NoResultsState } from "../NoResultsState";
 import { EmptyState } from "../EmptyState";
 import { ErrorState } from "../ErrorState";
 import { PermissionDenied } from "../PermissionDenied";
-import { Package } from "lucide-react";
 
 const mockPush = vi.fn();
 
@@ -23,15 +22,11 @@ describe("StateCard standardisation", () => {
   // view: max-w-sm container, 56px tonal icon circle, title-lg heading,
   // body description, and standardised primary/secondary actions.
   const EXPECTED_CONTAINER = "max-w-sm";
-  const EXPECTED_ICON_CIRCLE = "h-14 w-14";
   const EXPECTED_TITLE = "text-[length:var(--font-size-title-lg)]";
   const EXPECTED_BODY = "text-[length:var(--font-size-body)]";
 
   function expectSharedLayout(container: HTMLElement) {
     expect(container.className).toContain(EXPECTED_CONTAINER);
-    // The 56px tonal icon circle is a child of the card, not the card itself.
-    const iconCircle = container.querySelector("div[class*='rounded-full']");
-    expect(iconCircle?.className).toContain(EXPECTED_ICON_CIRCLE);
     // The heading and body are children of the card too.
     const heading = container.querySelector("p[class*='font-size-title-lg']");
     expect(heading?.className).toContain(EXPECTED_TITLE);
@@ -43,15 +38,17 @@ describe("StateCard standardisation", () => {
     const { container } = render(<NoResultsState query="mango" />);
     const card = container.firstElementChild as HTMLElement;
     expectSharedLayout(card);
+    expect(card.querySelector("svg.state-scene")).toHaveAttribute("aria-hidden", "true");
     expect(card.getAttribute("role")).toBe("status");
   });
 
   it("gives EmptyState the shared layout and status role", () => {
     const { container } = render(
-      <EmptyState icon={Package} title="Add your first product" description="Start tracking stock." />
+      <EmptyState scene="shelf" title="Add your first product" description="Start tracking stock." />
     );
     const card = container.firstElementChild as HTMLElement;
     expectSharedLayout(card);
+    expect(card.querySelector("svg.state-scene")).toHaveAttribute("aria-hidden", "true");
     expect(card.getAttribute("role")).toBe("status");
   });
 
@@ -82,6 +79,7 @@ describe("StateCard action and role propagation", () => {
   it("propagates href action as RippleLink with id and secondaryAction with href", () => {
     render(
       <EmptyState
+        scene="shelf"
         title="No items"
         description="Add one to get started."
         action={{ label: "Add product", href: "/products/new", id: "add-prod-btn" }}
@@ -96,6 +94,7 @@ describe("StateCard action and role propagation", () => {
     const onClick = vi.fn();
     render(
       <EmptyState
+        scene="shelf"
         title="No items"
         description="Add one to get started."
         action={{ label: "Retry", onClick }}

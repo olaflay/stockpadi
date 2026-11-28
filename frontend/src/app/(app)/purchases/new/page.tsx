@@ -5,9 +5,10 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDraft, clearDraftStorage } from "@/hooks/use-draft";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Camera, Package, Search, UserPlus } from "lucide-react";
+import { Camera, Search, UserPlus } from "lucide-react";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
@@ -407,24 +408,16 @@ function NewPurchaseContent() {
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Products *</span>
 
         {hasNoProducts ? (
-          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-5">
-            <div className="flex items-center gap-3">
-              <Package size={20} className="text-on-surface-muted" aria-hidden />
-              <div className="flex flex-col">
-                <p className="font-medium text-on-surface">No products yet</p>
-                <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">
-                  Add products to your catalog first, then receive stock for them here.
-                </p>
-              </div>
-            </div>
-            <RippleButton
-              type="button"
-              onClick={() => router.push("/products/new")}
-              className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast hover:opacity-95 transition-opacity"
-            >
-              Add product
-            </RippleButton>
-          </div>
+          <EmptyState
+            scene="shelf"
+            title="No products yet"
+            description={hasCapability(user, "MANAGE_PRODUCTS")
+              ? "Add a product to your catalog to receive stock for it."
+              : "Ask a manager to add a product before you receive stock."}
+            action={hasCapability(user, "MANAGE_PRODUCTS")
+              ? { label: "Add product", href: "/products/new" }
+              : { label: "View products", href: "/products" }}
+          />
         ) : (
           <>
             <div className="flex gap-2">

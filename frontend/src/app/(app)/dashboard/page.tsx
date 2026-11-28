@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Store,
   Wallet,
   PackagePlus,
   Plus,
@@ -188,7 +187,7 @@ export default function DashboardPage() {
         <ScreenHeader title="Dashboard" hideBack={true} />
 
         {/* Hero Focus Card Placeholder */}
-        <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 shadow-xs">
+        <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container">
           <div className="flex items-center justify-between">
             <Skeleton className="h-4 w-28 rounded" />
             <Skeleton className="h-5 w-16 rounded-full" />
@@ -254,7 +253,7 @@ export default function DashboardPage() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Dashboard" hideBack={true} />
         <EmptyState
-          icon={Store}
+          scene="shop"
           title="Let's get your shop set up"
           description="Add your first product and this screen fills in with your sales and stock numbers."
           action={{
@@ -318,12 +317,12 @@ export default function DashboardPage() {
                 <RippleLink
                   key={action.key}
                   href={action.href}
-                  className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center shadow-elevation-1 min-w-0 active:scale-95 transition-transform"
+                  className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center min-w-0 motion-safe:active:scale-[0.98] motion-safe:transition-transform"
                 >
                   <div
-                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                    className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl transition-colors ${
                       action.isPrimary
-                        ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                        ? "bg-brand-accent text-brand-accent-contrast group-hover:brightness-105"
                         : "bg-surface-container-highest text-brand-accent group-hover:bg-brand-container/40 group-hover:text-brand-accent"
                     }`}
                   >
@@ -340,12 +339,12 @@ export default function DashboardPage() {
                 key={action.key}
                 type="button"
                 onClick={action.onClick}
-                className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center shadow-elevation-1 min-w-0 active:scale-95 transition-transform"
+                className="group flex flex-col items-center justify-center rounded-2xl bg-surface-container px-1 py-2.5 text-center min-w-0 motion-safe:active:scale-[0.98] motion-safe:transition-transform"
               >
                 <div
-                  className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-all ${
+                  className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl transition-colors ${
                     action.isPrimary
-                      ? "bg-brand-accent text-brand-accent-contrast shadow-sm group-hover:brightness-105"
+                      ? "bg-brand-accent text-brand-accent-contrast group-hover:brightness-105"
                       : "bg-surface-container-highest text-brand-accent group-hover:bg-brand-container/40 group-hover:text-brand-accent"
                   }`}
                 >
@@ -404,7 +403,7 @@ export default function DashboardPage() {
             icon={AlertTriangle}
             iconTone="bg-warning-container text-on-warning-container"
           value={String(metrics.lowStockCount)}
-          sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} items low` : "All healthy"}
+          sub={metrics.lowStockCount > 0 ? `${metrics.lowStockCount} ${metrics.lowStockCount === 1 ? "item" : "items"} low` : "All healthy"}
           actionLabel={metrics.lowStockCount > 0 ? "View low stock" : undefined}
           valueClassName={metrics.lowStockCount > 0 ? "text-warning" : "text-on-surface"}
           href="/products?filter=low-stock"
@@ -438,7 +437,7 @@ export default function DashboardPage() {
             {metrics.topProducts.map((p) => (
               <div
                 key={p.id}
-                className="flex min-h-[var(--touch-target-min)] w-full flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-container px-4 py-2.5 text-left shadow-elevation-1"
+                className="flex min-h-[var(--touch-target-min)] w-full flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-container px-4 py-2.5 text-left hover:bg-surface-container-high transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--font-size-body)] font-semibold text-on-surface">{p.name}</p>
@@ -474,7 +473,7 @@ export default function DashboardPage() {
                 <CalendarCheck size={20} aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-on-surface truncate">Close Today&apos;s Register</p>
+                <p className="text-sm font-semibold text-on-surface truncate">Close today&apos;s register</p>
                 <p className="text-xs text-on-surface-muted truncate">Check the day&apos;s cash against sales</p>
               </div>
             </div>

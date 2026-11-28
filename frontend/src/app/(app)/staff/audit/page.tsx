@@ -9,7 +9,6 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PermissionDenied } from "@/components/ui/PermissionDenied";
 import { useCurrentUser } from "@/features/auth/use-current-user";
-import { ScrollText } from "lucide-react";
 
 const ACTION_LABELS: Record<string, string> = {
   staff_created: "Staff added",
@@ -62,7 +61,7 @@ export default function StaffAuditPage() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Audit log" backHref="/staff" />
         <EmptyState
-          icon={ScrollText}
+          scene="records"
           title="Nothing logged yet"
           description="Staff and role changes will show up here."
           action={{ label: "Manage Staff", onClick: () => router.replace("/staff") }}

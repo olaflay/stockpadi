@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useState } from "react";
 import {
   Wallet,
@@ -612,9 +613,11 @@ export function ReportsBody({
 
           {/* Grouped Daily Summaries */}
           {filteredDailySummaries.length === 0 ? (
-            <div className="rounded-3xl bg-surface-container p-8 text-center text-xs text-on-surface-muted">
-              No sales recorded for this period.
-            </div>
+            <EmptyState
+              scene="records"
+              title="No sales recorded for this period."
+              description="Change the date range to check for earlier sales."
+            />
           ) : (
             filteredDailySummaries.map((day) => {
               const isExpanded = expandedDays.has(day.dateIso);
@@ -623,7 +626,7 @@ export function ReportsBody({
               return (
                 <div
                   key={day.dateIso}
-                  className="rounded-3xl bg-surface-container overflow-hidden shadow-xs"
+                  className="rounded-3xl bg-surface-container overflow-hidden"
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-2 mb-3">

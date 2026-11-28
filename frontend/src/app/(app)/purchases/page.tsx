@@ -113,7 +113,7 @@ export default function PurchasesPage() {
         <ScreenHeader title="Restock history" fallbackHref="/dashboard" />
         {stockActions}
         <EmptyState
-          icon={Truck}
+          scene="shelf"
           title="No deliveries recorded"
           description="Receive stock from a supplier so what's on the shelf matches the app."
         />
@@ -156,9 +156,12 @@ export default function PurchasesPage() {
 
       <div>
         {filteredPurchases.length === 0 ? (
-          <p className="py-8 text-center text-[length:var(--font-size-body)] text-on-surface-muted">
-            No deliveries recorded for this period.
-          </p>
+          <EmptyState
+            scene="shelf"
+            title="No deliveries in this period"
+            description="View all dates to see earlier deliveries."
+            action={{ label: "Show all dates", onClick: () => setPeriod("all") }}
+          />
         ) : (
           <ul className="flex flex-col gap-2 pb-20">
             {filteredPurchases.slice(0, visibleLimit).map((purchase) => {

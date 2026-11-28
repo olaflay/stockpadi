@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useDraft } from "@/hooks/use-draft";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Search, ClipboardList, ChevronDown, ChevronUp, Check, AlertTriangle, Plus, Minus } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Check, AlertTriangle, Plus, Minus } from "lucide-react";
 import { db } from "@/lib/db";
 import { getCurrentStock } from "@/features/inventory/stock";
 import { writeStockAdjustment } from "@/features/inventory/write-stock-adjustment";
@@ -113,7 +113,7 @@ export default function StockCountPage() {
         <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
           <ScreenHeader title="Stock count" />
           <EmptyState
-            icon={ClipboardList}
+            scene="shop"
             title="No branches yet"
             description="Add a branch in Settings before counting stock."
             action={{ label: "Add a branch", href: "/settings/branches" }}
@@ -195,7 +195,7 @@ export default function StockCountPage() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Stock count" />
         <EmptyState
-          icon={ClipboardList}
+          scene="shelf"
           title="No products yet"
           description="Add products before counting stock."
           action={{ label: "Add a product", href: "/products/new" }}

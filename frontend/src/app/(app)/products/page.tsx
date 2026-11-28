@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Plus, Package, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
+import { Plus, Truck, Upload, Camera, MoreVertical, Archive, RotateCcw, X } from "lucide-react";
 
 const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").then((m) => m.BarcodeScanner), {
   ssr: false,
@@ -15,7 +15,6 @@ const BarcodeScanner = dynamic(() => import("@/components/ui/BarcodeScanner").th
 import { db } from "@/lib/db";
 import type { Product } from "@/types/product";
 import { getLowStockProductIds, getBestSellingProductIds, getExpiringProductIds, getStockByProduct, resolveStockStatus, stockStatusLabel, LOW_STOCK_THRESHOLD } from "@/features/inventory/product-insights";
-import { EmptyShelfIllustration } from "@/components/illustrations";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -344,7 +343,7 @@ export default function ProductsPage() {
       <div className="flex flex-col flex-1 h-full min-h-0 justify-between">
         <ScreenHeader title="Products" hideBack={true} />
         <EmptyState
-          illustration={EmptyShelfIllustration}
+          scene="shelf"
           title="Your shelf is empty"
           description="Add your first product to start selling and tracking stock."
           action={
@@ -452,21 +451,18 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* Filter Chips Bar (Full Width, uncluttered) */}
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex flex-1 gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {(Object.keys(FILTER_LABELS) as ProductFilter[]).map((key) => (
-            <Chip
-              key={key}
-              variant="filter"
-              selected={filter === key}
-              onClick={() => setFilter(key)}
-              className="text-xs min-h-[28px] py-0.5 px-2.5"
-            >
-              {FILTER_LABELS[key]}
-            </Chip>
-          ))}
-        </div>
+      <div role="group" aria-label="Filter products" className="mb-2 flex flex-wrap gap-1.5">
+        {(Object.keys(FILTER_LABELS) as ProductFilter[]).map((key) => (
+          <Chip
+            key={key}
+            variant="filter"
+            selected={filter === key}
+            onClick={() => setFilter(key)}
+            className="min-h-[var(--touch-target-min)]"
+          >
+            {FILTER_LABELS[key]}
+          </Chip>
+        ))}
       </div>
 
       {/* Catalog Capacity Metadata Caption */}
@@ -507,7 +503,7 @@ export default function ProductsPage() {
             />
           ) : (
             <EmptyState
-              icon={Package}
+              scene="shelf"
               title={
                 filter === "low-stock"
                   ? "Nothing is low on stock"
@@ -527,7 +523,9 @@ export default function ProductsPage() {
                     : "Your branch is set up and ready. Add products to start tracking inventory and ringing up sales."
               }
               action={
-                filter === "all" && canEditProducts
+                filter !== "all"
+                  ? { label: "Show all products", onClick: () => setFilter("all") }
+                  : canEditProducts
                   ? {
                     label: "Add product",
                     href: "/products/new",

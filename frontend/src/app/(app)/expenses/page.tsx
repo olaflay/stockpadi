@@ -208,6 +208,8 @@ export default function ExpensesPage() {
     );
   }
 
+  const isFiltered = period !== "all_time" || selectedCategory !== "all" || selectedBranchId !== "all";
+
   return (
     <div className="flex flex-col gap-3 pb-12">
       <ScreenHeader title="Expenses" />
@@ -218,10 +220,18 @@ export default function ExpensesPage() {
       {filteredExpenses.length === 0 ? (
         <div className="py-12">
           <EmptyState
-            icon={Wallet}
-            title="No expenses found"
-            description="No expenses matched your selected filters."
-            action={{ label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
+            scene="records"
+            title={isFiltered ? "No expenses match these filters" : "No expenses yet"}
+            description={isFiltered
+              ? "Show all dates, categories and branches to see other expenses."
+              : "Record an expense to include it in your reports."}
+            action={isFiltered
+              ? { label: "Clear filters", onClick: () => {
+                  setPeriod("all_time");
+                  setSelectedCategory("all");
+                  setSelectedBranchId("all");
+                } }
+              : { label: "Add an expense", onClick: () => setIsAddSheetOpen(true) }}
           />
         </div>
       ) : (

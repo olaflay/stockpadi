@@ -4,8 +4,8 @@
  * Lead system: Samsung One UI (focus block) + M3 tonal container.
  * Per `.agents/rules/design-system.md`, all state views (EmptyState,
  * NoResultsState, ErrorState, PermissionDenied, offline pages) must share one
- * layout: `max-w-sm` container, 56px tonal icon circle, `title-lg` bold
- * heading, `body` muted description, and standardized primary/secondary
+ * layout: a compact tonal container, semantic artwork, a bold
+ * heading, a muted description, and shared primary/secondary
  * actions. This file owns that layout so the states cannot drift apart.
  *
  * Every value comes from a token. No hardcoded hex or pixel values.
@@ -14,6 +14,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
+import { EmptyScene, type EmptySceneKind } from "@/components/illustrations/EmptyScene";
 import { RippleButton, RippleLink } from "@/components/ui/Ripple";
 
 export type StateCardTone = "brand" | "neutral" | "warning" | "danger";
@@ -25,7 +26,8 @@ interface StateCardProps {
   description: ReactNode;
   /** 56px tonal icon circle. Omit when an illustration is supplied. */
   icon?: LucideIcon;
-  /** Hand-authored SVG illustration, used for emotional moments. */
+  scene?: EmptySceneKind;
+  /** Custom artwork for non-empty states that need it. */
   illustration?: ComponentType<{ className?: string }>;
   tone?: StateCardTone;
   /** Primary action. The CTA that leaves this state. */
@@ -56,6 +58,7 @@ export function StateCard({
   title,
   description,
   icon: Icon,
+  scene,
   illustration: Illustration,
   tone = "neutral",
   action,
@@ -69,7 +72,9 @@ export function StateCard({
       className={`flex flex-1 w-full max-w-sm mx-auto flex-col justify-between my-auto rounded-[var(--radius-card)] sm:rounded-[var(--radius-focus-block)] ${CARD_CLASSES[tone]} p-6 sm:p-7 overflow-hidden animate-step-in select-none ${className ?? ""}`}
     >
       <div className="flex flex-1 flex-col items-center justify-center text-center py-2 sm:py-4">
-        {Illustration ? (
+        {scene ? (
+          <EmptyScene scene={scene} className="state-scene mb-3 h-24 w-40 max-w-full shrink-0" />
+        ) : Illustration ? (
           <Illustration className="mb-4 h-22 w-22 sm:h-24 sm:w-24 text-brand-accent shrink-0" />
         ) : (
           Icon && (
@@ -97,7 +102,7 @@ export function StateCard({
               <RippleLink
                 id={action.id}
                 href={action.href}
-                className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-elevation-1 hover:brightness-105 active:scale-[0.98] active:brightness-95 transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] inline-flex items-center justify-center cursor-pointer text-center"
+                className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-elevation-1 hover:brightness-105 motion-safe:active:scale-[0.98] active:brightness-95 transition-colors duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] inline-flex items-center justify-center cursor-pointer text-center"
               >
                 {action.label}
               </RippleLink>
@@ -106,7 +111,7 @@ export function StateCard({
                 id={action.id}
                 type="button"
                 onClick={action.onClick}
-                className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-elevation-1 hover:brightness-105 active:scale-[0.98] active:brightness-95 transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] inline-flex items-center justify-center cursor-pointer"
+                className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-brand-accent px-5 py-3 text-[length:var(--font-size-body)] font-semibold text-brand-accent-contrast shadow-elevation-1 hover:brightness-105 motion-safe:active:scale-[0.98] active:brightness-95 transition-colors duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] inline-flex items-center justify-center cursor-pointer"
               >
                 {action.label}
               </RippleButton>
@@ -116,7 +121,7 @@ export function StateCard({
             (secondaryAction.href ? (
               <RippleLink
                 href={secondaryAction.href}
-                className="mt-2 w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] inline-flex items-center justify-center text-[length:var(--font-size-label)] font-semibold text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-[0.98] active:bg-surface-container-high transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] cursor-pointer"
+                className="mt-2 w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] inline-flex items-center justify-center text-[length:var(--font-size-label)] font-semibold text-on-surface-muted hover:text-on-surface hover:bg-surface-container motion-safe:active:scale-[0.98] active:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] cursor-pointer"
               >
                 {secondaryAction.label}
               </RippleLink>
@@ -124,7 +129,7 @@ export function StateCard({
               <RippleButton
                 type="button"
                 onClick={secondaryAction.onClick}
-                className="mt-2 w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] inline-flex items-center justify-center text-[length:var(--font-size-label)] font-semibold text-on-surface-muted hover:text-on-surface hover:bg-surface-container active:scale-[0.98] active:bg-surface-container-high transition-all duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] cursor-pointer"
+                className="mt-2 w-full min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] inline-flex items-center justify-center text-[length:var(--font-size-label)] font-semibold text-on-surface-muted hover:text-on-surface hover:bg-surface-container motion-safe:active:scale-[0.98] active:bg-surface-container-high transition-colors duration-[var(--motion-duration-short)] ease-[var(--easing-standard)] cursor-pointer"
               >
                 {secondaryAction.label}
               </RippleButton>

@@ -221,7 +221,7 @@ export function ContactsHubView({
       {/* Contacts List / Empty States */}
       {contactsData.length === 0 ? (
         <EmptyState
-          icon={Users}
+          scene="contacts"
           title="No contacts yet"
           description="Save your regular customers, debtors, and wholesale suppliers to keep all relationships in one place."
           action={{

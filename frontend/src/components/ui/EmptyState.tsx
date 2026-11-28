@@ -1,46 +1,17 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import type { ComponentType } from "react";
 import { StateCard } from "@/components/ui/StateCard";
+import type { EmptySceneKind } from "@/components/illustrations/EmptyScene";
 
 interface EmptyStateProps {
   title: string;
   description: string;
   action?: { label: string; onClick?: () => void; href?: string; id?: string };
-  /**
-   * A real icon in a soft tonal container, following Samsung One UI & M3.
-   */
-  icon?: LucideIcon;
-  /**
-   * Hand-authored SVG illustration for key emotional moments.
-   */
-  illustration?: ComponentType<{ className?: string }>;
-  /**
-   * Legacy flag kept for backward compatibility; rendering now maintains
-   * consistent close CTA spacing across all viewports.
-   */
-  fullScreen?: boolean;
+  scene: EmptySceneKind;
   className?: string;
 }
 
-/** First-run guidance with a clear redirect action. Never a dead end. */
-export function EmptyState({
-  title,
-  description,
-  action,
-  icon: Icon,
-  illustration: Illustration,
-  className,
-}: EmptyStateProps) {
-  return (
-    <StateCard
-      icon={Icon}
-      illustration={Illustration}
-      title={title}
-      description={description}
-      action={action}
-      className={className}
-    />
-  );
+/** First-run and empty-list guidance, with an action appropriate to the current screen. */
+export function EmptyState({ title, description, action, scene, className }: EmptyStateProps) {
+  return <StateCard scene={scene} title={title} description={description} action={action} className={className} />;
 }

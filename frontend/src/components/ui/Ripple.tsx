@@ -21,6 +21,7 @@ export function useRipple() {
   const [ripples, setRipples] = useState<RippleSpan[]>([]);
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.button !== 0 || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     // Avoid expensive getBoundingClientRect() which forces a full DOM layout recalculation
     // Use cached clientWidth/clientHeight with nativeEvent offsets for 60fps responsiveness on low-end CPUs
     const target = event.currentTarget;
@@ -77,7 +78,7 @@ export const RippleButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttrib
           startRipple(event);
           onPointerDown?.(event);
         }}
-        className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
+        className={`${positionClass} overflow-hidden motion-safe:active:scale-[0.98] motion-safe:transition-transform duration-75 ease-out ${className}`}
       >
         <RippleLayer ripples={ripples} />
         {children}
@@ -107,7 +108,7 @@ export function RippleLink({
         startRipple(event);
         onPointerDown?.(event);
       }}
-      className={`${positionClass} overflow-hidden active:scale-[0.98] transition-transform duration-75 ease-out ${className}`}
+      className={`${positionClass} overflow-hidden motion-safe:active:scale-[0.98] motion-safe:transition-transform duration-75 ease-out ${className}`}
     >
       <RippleLayer ripples={ripples} />
       {children}

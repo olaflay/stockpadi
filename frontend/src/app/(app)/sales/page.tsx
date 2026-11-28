@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Receipt, Plus, BarChart3, ArrowDownLeft, XCircle, Smartphone, CreditCard, Layers } from "lucide-react";
@@ -48,7 +48,6 @@ function SalesHistory() {
 
 function SalesHistoryContent({ date, branch, ownOnly }: { date: string | null; branch: string | null; ownOnly: boolean }) {
   const user = useCurrentUser();
-  const router = useRouter();
   const dayBounds = localDayBounds(date);
   const dayLabel = dayBounds?.date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   const [period, setPeriod] = useState<SalesPeriod>(dayBounds ? "day" : "month");
@@ -259,13 +258,18 @@ function SalesHistoryContent({ date, branch, ownOnly }: { date: string | null; b
             <NoResultsState query={query.trim()} entityLabel="sales" onClear={() => setQuery("")} />
           ) : (
             <EmptyState
-              icon={Receipt}
-              title="No sales found"
-              description="No sales recorded for this period."
+              scene="records"
+              title={period === "all_time" && paymentFilter === "all" ? "No sales yet" : "No sales match these filters"}
+              description={period === "all_time" && paymentFilter === "all"
+                ? "Receipts for this view will appear here when a sale is recorded."
+                : "Try a wider date range or show every payment method."}
               action={
-                hasCapability(user, "POS_SELL")
-                  ? { label: "Make a sale", onClick: () => router.push("/pos") }
-                  : undefined
+                period !== "all_time" || paymentFilter !== "all"
+                  ? { label: "Show all dates and payments", onClick: () => {
+                      setPeriod("all_time");
+                      setPaymentFilter("all");
+                    } }
+                  : hasCapability(user, "POS_SELL") ? { label: "Make a sale", href: "/pos" } : undefined
               }
             />
           )}
