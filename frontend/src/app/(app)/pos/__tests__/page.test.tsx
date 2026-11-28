@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
@@ -36,8 +36,9 @@ function renderAs(user: CurrentUser) {
 describe("POS page role gating", () => {
   beforeEach(async () => {
     await db.products.clear();
-    cleanup();
   });
+
+  afterEach(cleanup);
 
   it("renders PermissionDenied when no authoritative account context exists", async () => {
     renderAs({ id: "user-1", fullName: "Unknown", role: "cashier" });
@@ -49,8 +50,7 @@ describe("POS page role gating", () => {
   it("does not render PermissionDenied for a Worker account", async () => {
     renderAs({ id: "user-3", fullName: "Worker", role: "cashier", accountType: "WORKER", permissions: ["POS_SELL"] });
 
-    // Give the product useLiveQuery a tick to resolve to its empty-state.
-    await screen.findByText("Sell");
+    expect(await screen.findByText("Nothing to sell yet")).toBeInTheDocument();
     expect(screen.queryByText("You don't have access to this screen")).not.toBeInTheDocument();
   });
 });

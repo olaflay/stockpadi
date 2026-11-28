@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
@@ -32,8 +32,9 @@ describe("CloseDayPage testing", () => {
     await db.products.clear();
     await db.expenses.clear();
     await db.branches.clear();
-    cleanup();
   });
+
+  afterEach(cleanup);
 
   it("renders without error for a business owner with basic data", async () => {
     renderAs({ id: "user-owner", fullName: "Owner", role: "owner", accountType: "BUSINESS_OWNER" });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
 import { ThemeProvider } from "@/features/settings/ThemeProvider";
@@ -29,8 +29,9 @@ function renderAs(user: CurrentUser) {
 
 describe("More Page — Operations & Settings Hub", () => {
   beforeEach(async () => {
-    cleanup();
   });
+
+  afterEach(cleanup);
 
   it("renders full business operations and management sections for a Business Owner", async () => {
     renderAs({

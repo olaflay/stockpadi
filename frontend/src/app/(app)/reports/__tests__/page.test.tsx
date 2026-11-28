@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
@@ -32,8 +32,9 @@ describe("Reports page role gating", () => {
   beforeEach(async () => {
     await db.sales.clear();
     await db.products.clear();
-    cleanup();
   });
+
+  afterEach(cleanup);
 
   it("renders PermissionDenied for a Worker account", async () => {
     renderAs({ id: "user-1", fullName: "Worker", role: "cashier", accountType: "WORKER" });
