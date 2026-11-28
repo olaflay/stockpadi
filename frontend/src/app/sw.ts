@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import { offlineDocumentCacheKey } from "@/lib/offline-routes";
 import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
 
 /**
@@ -83,7 +84,16 @@ const serwist = new Serwist({
       handler: new NetworkFirst({
         cacheName: NAVIGATION_CACHE,
         networkTimeoutSeconds: 0.8,
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+        plugins: [
+          {
+            cacheKeyWillBeUsed: async ({ request }) => {
+              const url = new URL(request.url);
+              if (offlineDocumentCacheKey(url) === url.pathname) url.search = "";
+              return url.href;
+            },
+          },
+          new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 }),
+        ],
       }),
     },
   ],

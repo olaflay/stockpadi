@@ -1,11 +1,11 @@
 import type { Page } from "@playwright/test";
 
-export async function seedLocalOwner(page: Page) {
+export async function seedLocalOwner(page: Page, origin = "") {
   await page.route("**/api/version", (route) =>
     route.fulfill({ json: { build: "fixture", minClient: "0.1.0" } })
   );
   // Start with the app-created database and a disposable local-only owner.
-  await page.goto("/dashboard");
+  await page.goto(`${origin}/dashboard`);
   await page.waitForURL("**/login?force=true");
   await page.evaluate(async () => {
     const owner = "dashboard-browser-test";

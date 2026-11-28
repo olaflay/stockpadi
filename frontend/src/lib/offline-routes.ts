@@ -35,3 +35,11 @@ export function isOfflineRoute(pathname: string): boolean {
   return OFFLINE_ROUTES.includes(pathname as (typeof OFFLINE_ROUTES)[number]) ||
     OFFLINE_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
+
+/** These filters are rendered from local data after the document boots. */
+export function offlineDocumentCacheKey(url: URL): string {
+  const localKeys = url.pathname === "/sales" ? ["date", "branch", "own"]
+    : url.pathname === "/products" ? ["filter"]
+    : url.pathname === "/contacts" ? ["filter", "tab"] : [];
+  return [...url.searchParams.keys()].every((key) => localKeys.includes(key)) ? url.pathname : url.pathname + url.search;
+}

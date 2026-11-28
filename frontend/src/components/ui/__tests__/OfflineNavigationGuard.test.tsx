@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Link from "next/link";
 import { OfflineNavigationGuard } from "../OfflineNavigationGuard";
 
@@ -40,5 +40,38 @@ describe("OfflineNavigationGuard", () => {
 
     await waitFor(() => expect(screen.getByRole("dialog", { name: "This page needs a connection" })).toBeInTheDocument());
     expect(window.location.pathname).not.toBe("/pos");
+  });
+
+  it("cancels background route warming as soon as a user chooses a different page", async () => {
+    vi.useFakeTimers();
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const request = vi.fn<(url: string, options: RequestInit) => Promise<Response>>(
+      () => new Promise<Response>(() => {}),
+    );
+    vi.stubGlobal("fetch", request);
+    vi.stubGlobal("caches", { match: vi.fn().mockResolvedValue(undefined) });
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
+    Object.defineProperty(window.navigator, "serviceWorker", {
+      configurable: true,
+      value: { ready: Promise.resolve({}), controller: {} },
+    });
+    try {
+      render(
+        <>
+          <a href="/reports" onClick={(event) => event.preventDefault()}>Open reports</a>
+          <OfflineNavigationGuard />
+        </>,
+      );
+      await act(() => vi.advanceTimersByTimeAsync(4_000));
+      expect(request).toHaveBeenCalledWith("/dashboard", expect.objectContaining({ priority: "low" }));
+      const signal = request.mock.calls[0][1].signal;
+      expect(signal?.aborted).toBe(false);
+      fireEvent.click(screen.getByRole("link", { name: "Open reports" }));
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      visibility.mockRestore();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 });

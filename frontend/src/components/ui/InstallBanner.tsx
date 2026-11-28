@@ -99,19 +99,10 @@ export function InstallBanner() {
     setIsDismissed(true);
   };
 
-  // Determine if banner should be rendered
-  const visible = !isStandalone && !isDismissed && (isIos || Boolean(deferredPrompt));
-
-  // Determine if this is an app-shell page with a BottomNav bar
-  const isAuthOrStandaloneRoute =
-    pathname === "/" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password" ||
-    pathname === "/reset-password" ||
-    pathname === "/pending-approval" ||
-    pathname === "/verify-email" ||
-    pathname === "/offline";
+  // The automatic prompt belongs on Dashboard. The explicit install action
+  // remains available elsewhere without covering task buttons or form fields.
+  const onDashboard = pathname === "/dashboard" || pathname === "/business" || pathname === "/work";
+  const visible = onDashboard && !isStandalone && !isDismissed && (isIos || Boolean(deferredPrompt));
 
   return (
     <>
@@ -120,11 +111,7 @@ export function InstallBanner() {
           role="status"
           aria-live="polite"
           data-install-banner="true"
-          className={`fixed inset-x-3 sm:left-auto sm:right-4 sm:max-w-md z-45 flex items-center justify-between gap-3 rounded-2xl bg-brand-accent p-3.5 text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] animate-step-in transition-all duration-200 ${
-            isAuthOrStandaloneRoute
-              ? "bottom-[max(1rem,env(safe-area-inset-bottom,1rem))]"
-              : "bottom-[calc(68px+max(0.75rem,env(safe-area-inset-bottom,0.75rem)))]"
-          }`}
+          className="fixed inset-x-3 bottom-[calc(68px+max(0.75rem,env(safe-area-inset-bottom,0.75rem)))] z-45 flex items-center justify-between gap-3 rounded-2xl bg-brand-accent p-3.5 text-brand-accent-contrast shadow-[var(--shadow-elevation-3)] animate-step-in transition-all duration-200 sm:left-auto sm:right-4 sm:max-w-md"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <Download size={18} className="shrink-0" />

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 function ContactsContent() {
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter") as ContactKind | null;
+  const filterParam = searchParams.get("filter") ?? searchParams.get("tab");
   const initialKind: ContactKind =
     filterParam === "debtors" ||
     filterParam === "customers" ||
@@ -17,7 +17,7 @@ function ContactsContent() {
       ? filterParam
       : "all";
 
-  return <ContactsHubView initialKind={initialKind} />;
+  return <ContactsHubView key={initialKind} initialKind={initialKind} />;
 }
 
 export default function ContactsPage() {

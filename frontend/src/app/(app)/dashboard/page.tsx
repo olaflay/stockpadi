@@ -395,7 +395,7 @@ export default function DashboardPage() {
             sub={customersOwingData?.debtorCount ? `${customersOwingData.debtorCount} ${customersOwingData.debtorCount === 1 ? "debtor" : "debtors"}` : "Cleared"}
             actionLabel="View debtors"
             valueClassName={customersOwingData && customersOwingData.totalOwed > 0 ? "text-credit" : "text-on-surface"}
-            href="/contacts?tab=debtors"
+            href="/contacts?filter=debtors"
           />
         )}
 

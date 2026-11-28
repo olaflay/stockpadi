@@ -15,17 +15,18 @@ import storefront from "./storefront.module.css";
 
 function StorefrontIllustration() {
   return (
-    <div aria-hidden="true" className={storefront.storefront}>
-      <span className={storefront.ground} />
-      <span className={storefront.sign} />
-      <span className={storefront.building} />
-      <span className={storefront.window} />
-      <span className={storefront.door} />
-      <span className={storefront.awning}>
-        <span /><span /><span /><span /><span /><span /><span />
-      </span>
-      <span className={storefront.plant} />
-    </div>
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 224 110" className={storefront.storefront}>
+      <path className={storefront.ground} d="M8 102h216v8H8z" />
+      <path className={storefront.wall} d="M45 37h169v67H45z" />
+      <path className={storefront.trim} d="M45 94h169v10H45z" />
+      <path className={storefront.glass} d="M59 53h78v34H59zM155 53h37v51h-37z" />
+      <path className={storefront.trim} d="M95 53h3v34h-3zM59 71h78v2H59zM154 50h39v3h-39z" />
+      <path className={storefront.stripe} d="M47 12h155l14 25H31z" />
+      <path className={storefront.trim} d="M70 12h23l-7 25H60zm47 0h23l2 25h-28zm46 0h23l10 25h-27z" />
+      <path className={storefront.stripe} d="M31 37h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h17v4a14 14 0 0 1-17 13z" />
+      <path className={storefront.trim} d="M59 37h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0zm56 0h28v4a14 14 0 0 1-28 0z" />
+      <path className={storefront.stripe} d="M14 91h20l-3 13H17zM24 91c-1-13-10-18-19-17 3 10 9 16 19 17zm0 0c1-12 8-19 17-20-1 11-7 19-17 20zM182 78h3v9h-3z" />
+    </svg>
   );
 }
 
@@ -73,7 +74,6 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
 
   return (
     <section aria-labelledby="dashboard-sales-title" className="financial-surfaces relative isolate mb-4 overflow-hidden rounded-3xl bg-brand-container px-4 py-3 text-on-brand-container shadow-elevation-1 sm:px-5">
-      <div className={storefront.crop}><StorefrontIllustration /></div>
       <div className="relative flex flex-wrap items-center justify-between gap-1">
         <h2 id="dashboard-sales-title" className="text-lg font-bold tracking-tight">
           {day === today ? (viewerId ? "Your sales today" : "Today's sales") : (viewerId ? "Your sales for the day" : "Sales for the day")}
@@ -104,7 +104,10 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
           <Skeleton className="mt-2 h-10 w-36 rounded-xl" />
         ) : totals ? (
           <>
-            <p className="wrap-anywhere font-number text-4xl font-bold leading-tight tracking-tight tabular-nums">{formatCurrency(totals.total)}</p>
+            <div className={storefront.summary}>
+              <p className="relative z-10 w-[64%] wrap-anywhere font-number text-4xl font-bold leading-tight tracking-tight tabular-nums">{formatCurrency(totals.total)}</p>
+              <div className={storefront.crop}><StorefrontIllustration /></div>
+            </div>
             <ul className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
               <li className="inline-flex items-center gap-1 whitespace-nowrap"><Receipt size={14} aria-hidden />{totals.count ? `${totals.count} ${totals.count === 1 ? "sale" : "sales"}` : "0 sales recorded"}</li>
               <li className="inline-flex items-center gap-1.5"><Banknote size={16} aria-hidden />{formatCurrency(totals.cash)} cash</li>

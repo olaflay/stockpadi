@@ -25,9 +25,10 @@ test("keeps dashboard chrome compact and leaves navigation visible during the na
   const date = page.getByLabel("Sales date");
   await expect(date).toBeAttached();
   const salesCard = page.getByRole("region", { name: "Today's sales" });
-  const awning = salesCard.locator('[class*="awning"]');
+  const storefront = salesCard.locator('svg[viewBox="0 0 224 110"]');
+  await expect(storefront).toBeAttached();
   const dateBox = (await date.boundingBox())!;
-  const roofBox = (await awning.boundingBox())!;
+  const roofBox = (await storefront.boundingBox())!;
   const gap = roofBox.y - (dateBox.y + dateBox.height);
   expect(gap).toBeGreaterThanOrEqual(0);
   expect(gap).toBeLessThanOrEqual(20);
