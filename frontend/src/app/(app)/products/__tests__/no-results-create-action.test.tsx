@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { CurrentUserContext } from "@/features/auth/AuthProvider";
@@ -71,6 +71,8 @@ function renderPage(user: CurrentUser = OWNER) {
 }
 
 describe("Products no-results create action", () => {
+  afterEach(cleanup);
+
   beforeEach(async () => {
     await db.products.clear();
     // The screen short-circuits to the "Your shelf is empty" state when
@@ -96,7 +98,6 @@ describe("Products no-results create action", () => {
       version: 1,
       updatedAt: new Date().toISOString(),
     });
-    cleanup();
   });
 
   it("offers a create action that prefills the product name from the search", async () => {
