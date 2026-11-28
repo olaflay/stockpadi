@@ -305,7 +305,7 @@ export function BrowseStep(props: {
                 return (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3 border border-border/30"
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container p-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-on-surface truncate">{product.name}</p>

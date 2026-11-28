@@ -72,7 +72,7 @@ export function DashboardSalesCard({ branchId, viewerId, branchIds }: {
   if (viewerId) filters.set("own", "1");
 
   return (
-    <section aria-labelledby="dashboard-sales-title" className="financial-surfaces relative isolate mb-4 overflow-hidden rounded-3xl border border-brand-accent/15 bg-brand-container px-4 py-3 text-on-brand-container shadow-elevation-1 sm:px-5">
+    <section aria-labelledby="dashboard-sales-title" className="financial-surfaces relative isolate mb-4 overflow-hidden rounded-3xl bg-brand-container px-4 py-3 text-on-brand-container shadow-elevation-1 sm:px-5">
       <div className={storefront.crop}><StorefrontIllustration /></div>
       <div className="relative flex flex-wrap items-center justify-between gap-1">
         <h2 id="dashboard-sales-title" className="text-lg font-bold tracking-tight">

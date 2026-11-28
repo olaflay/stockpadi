@@ -152,10 +152,12 @@ export function PaymentStep(props: {
 
   async function handlePickContact() {
     const picked = await openNativeContactPicker();
-    if (picked) {
-      if (picked.name) setNewCustomerName(picked.name);
-      if (picked.phone) setNewCustomerPhone(picked.phone);
-      showToast(`Selected ${picked.name || "contact"}`, "success");
+    if (picked.status === "selected") {
+      setNewCustomerName(picked.name);
+      setNewCustomerPhone(picked.phone);
+      if (!picked.name || !picked.phone) showToast("Fill in the missing contact details.", "neutral");
+    } else if (picked.status !== "cancelled") {
+      showToast("Couldn't read that contact. Enter the details below.", "neutral");
     }
   }
 
@@ -605,7 +607,7 @@ export function PaymentStep(props: {
                       <button
                         type="button"
                         onClick={handlePickContact}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-border/80 bg-surface px-3 py-1.5 text-xs font-medium text-brand-accent hover:bg-surface-container-high transition-colors"
+                        className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-surface px-3 text-xs font-medium text-brand-accent hover:bg-surface-container-high transition-colors"
                       >
                         <BookUser size={15} />
                         <span>Pick from phonebook</span>
@@ -613,7 +615,7 @@ export function PaymentStep(props: {
                     )}
                     <input
                       aria-label="Customer name"
-                      autoFocus
+                      autoFocus={!isContactPickerSupported()}
                       value={newCustomerName}
                       onChange={(event) => setNewCustomerName(event.target.value)}
                       onKeyDown={(e) => {
@@ -625,6 +627,7 @@ export function PaymentStep(props: {
                     <div>
                       <input
                         aria-label="Phone (required for credit)"
+                        type="tel"
                         value={newCustomerPhone}
                         onChange={(event) => setNewCustomerPhone(event.target.value)}
                         onKeyDown={(e) => {

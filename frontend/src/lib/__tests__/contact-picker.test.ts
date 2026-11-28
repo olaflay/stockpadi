@@ -1,61 +1,39 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { isContactPickerSupported, openNativeContactPicker } from "../contact-picker";
 
-describe("contact-picker", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+function device(select: ReturnType<typeof vi.fn>, secure = true) {
+  const frame = { isSecureContext: secure, top: {} };
+  frame.top = frame;
+  vi.stubGlobal("window", frame);
+  vi.stubGlobal("navigator", { contacts: { select } });
+}
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+afterEach(() => vi.unstubAllGlobals());
 
-  it("returns false when ContactsManager is not in window", () => {
-    vi.stubGlobal("window", {});
-    vi.stubGlobal("navigator", { contacts: {} });
+describe("contact picker", () => {
+  it("requires a secure top-level page and a callable picker", async () => {
+    device(vi.fn(), false);
     expect(isContactPickerSupported()).toBe(false);
+    await expect(openNativeContactPicker()).resolves.toEqual({ status: "unavailable" });
   });
 
-  it("returns null when contact picker is unsupported", async () => {
-    vi.stubGlobal("window", {});
-    vi.stubGlobal("navigator", {});
-    const result = await openNativeContactPicker();
-    expect(result).toBeNull();
-  });
-
-  it("extracts name and clean phone when picker succeeds", async () => {
-    const mockSelect = vi.fn().mockResolvedValue([
-      { name: ["Tunde Balogun"], tel: ["080 3123 4567"] },
-    ]);
-
-    class FakeContactsManager {}
-
-    vi.stubGlobal("window", { ContactsManager: FakeContactsManager });
-    vi.stubGlobal("navigator", {
-      contacts: { select: mockSelect },
-    });
-
+  it("opens directly in the gesture and uses the first valid number, even if the first entry is empty", async () => {
+    const select = vi.fn().mockResolvedValue([{ name: ["", " Tunde Balogun "], tel: ["", "+234 (803)-123 4567"] }]);
+    device(select);
     expect(isContactPickerSupported()).toBe(true);
 
-    const result = await openNativeContactPicker();
-    expect(result).toEqual({
-      name: "Tunde Balogun",
-      phone: "08031234567",
-    });
-    expect(mockSelect).toHaveBeenCalledWith(["name", "tel"], { multiple: false });
+    const result = openNativeContactPicker();
+    expect(select).toHaveBeenCalledWith(["name", "tel"], { multiple: false });
+    await expect(result).resolves.toEqual({ status: "selected", name: "Tunde Balogun", phone: "+2348031234567" });
   });
 
-  it("returns null when user cancels contact picker", async () => {
-    const mockSelect = vi.fn().mockRejectedValue(new Error("User cancelled"));
-    class FakeContactsManager {}
-
-    vi.stubGlobal("window", { ContactsManager: FakeContactsManager });
-    vi.stubGlobal("navigator", {
-      contacts: { select: mockSelect },
-    });
-
-    const result = await openNativeContactPicker();
-    expect(result).toBeNull();
+  it("distinguishes cancelled, withheld fields and unavailable access", async () => {
+    const select = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([{}])
+      .mockRejectedValueOnce(new DOMException("", "AbortError"))
+      .mockRejectedValueOnce(new DOMException("", "NotAllowedError"));
+    device(select);
+    for (const status of ["cancelled", "empty", "cancelled", "unavailable"]) {
+      await expect(openNativeContactPicker()).resolves.toEqual({ status });
+    }
   });
 });

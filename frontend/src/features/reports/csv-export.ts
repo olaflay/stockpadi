@@ -1,10 +1,11 @@
 import type { Product } from "@/types/product";
 import type { Sale } from "@/types/sale";
+import { fromKobo, toKobo } from "@/lib/kobo";
 
 export function escapeCsvField(field: string | number | null | undefined): string {
   if (field === null || field === undefined) return "";
-  const str = String(field);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+  const str = typeof field === "string" && /^(?:[\t\r\n]|\s*[=+@-])/.test(field) ? `'${field}` : String(field);
+  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -74,12 +75,12 @@ export function buildSalesCsv(sales: Sale[], products: Product[]): string {
         sale.branchId,
         sale.customerId,
         paymentMethods,
-        product?.name || "Unknown Product",
+        item.productNameSnapshot ?? product?.name ?? "Unknown Product",
         product?.sku || "",
         item.quantity,
         item.unitPrice,
         item.discount,
-        (item.unitPrice - item.discount) * item.quantity,
+        fromKobo(Math.round(toKobo(item.unitPrice) * item.quantity) - toKobo(item.discount)),
       ]);
     }
   }

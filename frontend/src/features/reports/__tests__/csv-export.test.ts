@@ -121,7 +121,7 @@ describe("buildSalesCsv", () => {
             productId: "prod-1",
             quantity: 2,
             unitPrice: 700,
-            discount: 100,
+            discount: 200,
             unitLabel: "tin",
             conversionFactor: 1,
             movementClientId: "mov-1",
@@ -166,7 +166,7 @@ describe("buildSalesCsv", () => {
     expect(row).toContain("sale-valid");
     expect(row).toContain("cash; transfer");
     expect(row).toContain("Milk");
-    expect(row).toContain("1200"); // (700 - 100) * 2 = 1200
+    expect(row).toContain("1200"); // 700 × 2 − 200 = 1200
     expect(csv).not.toContain("sale-voided");
   });
 

@@ -7,7 +7,7 @@ export default function DashboardLoading() {
       <ScreenHeader title="Dashboard" hideBack={true} />
 
       {/* Hero Sales Card Placeholder */}
-      <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 border border-outline-variant/20 shadow-xs">
+      <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 shadow-xs">
         <div className="flex items-center justify-between">
           <Skeleton className="h-4 w-28 rounded" />
           <Skeleton className="h-5 w-16 rounded-full" />
@@ -31,7 +31,7 @@ export default function DashboardLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col justify-between"
+            className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 flex flex-col justify-between"
           >
             <div className="flex items-center justify-between">
               <Skeleton className="h-3.5 w-16 rounded" />
@@ -44,7 +44,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* Recent Activity List filling the screen */}
-      <div className="rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col gap-2.5 mt-1">
+      <div className="rounded-2xl p-3 bg-surface-container/60 flex flex-col gap-2.5 mt-1">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3.5 w-28 rounded" />
           <Skeleton className="h-3.5 w-12 rounded" />

@@ -14,6 +14,7 @@ import {
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { useCurrentUser } from "@/features/auth/use-current-user";
 import { BannerStrip } from "@/components/ui/BannerStrip";
+import { ScreenHeaderProvider } from "@/components/ui/ScreenHeaderContext";
 import { SyncEngine } from "@/features/sync/SyncEngine";
 import { DrawerProvider } from "@/components/ui/DrawerContext";
 import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
@@ -127,7 +128,7 @@ export function ExperienceShell({ shell, children }: { shell: Shell; children: R
       <NavigationProvider>
         <TooltipProvider>
           <KeyboardScrollHandler />
-          <BroadcastProvider><ShellContent shell={shell}>{children}</ShellContent></BroadcastProvider>
+          <BroadcastProvider><ScreenHeaderProvider><ShellContent shell={shell}>{children}</ShellContent></ScreenHeaderProvider></BroadcastProvider>
         </TooltipProvider>
       </NavigationProvider>
     </AuthProvider>

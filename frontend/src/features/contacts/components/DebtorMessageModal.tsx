@@ -131,7 +131,7 @@ function DebtorMessageForm({
       </div>
 
       {/* Live Preview Card */}
-      <div className="rounded-2xl bg-surface-container p-3.5 border border-border/30">
+      <div className="rounded-2xl bg-surface-container p-3.5">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-accent mb-1">
           <Sparkles size={14} />
           <span>Sample Live Preview</span>

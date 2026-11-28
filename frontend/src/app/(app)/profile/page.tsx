@@ -56,7 +56,7 @@ export default function ProfilePage() {
           </div>
         </section>
       )}
-      <section className="rounded-[var(--radius-card)] border border-border bg-surface-container/40 p-4">
+      <section className="rounded-[var(--radius-card)] bg-surface-container-low p-4">
         <p className="text-[length:var(--font-size-body)] text-on-surface">
           {user.accountType === "WORKER" ? "Sign in with your email and password through the normal login screen. Password resets are handled by your Business Owner." : "Sign in with your email and password through the normal login screen. Password changes are available through Forgot password."}
         </p>

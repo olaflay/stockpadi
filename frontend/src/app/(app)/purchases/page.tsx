@@ -169,7 +169,7 @@ export default function PurchasesPage() {
                 <li key={purchase.id}>
                   <RippleLink
                     href={`/purchases/${purchase.id}`}
-                    className="block rounded-xl bg-surface-container-low px-4 py-3 border border-border/20 hover:bg-surface-container transition-colors"
+                    className="block rounded-xl bg-surface-container-low px-4 py-3 hover:bg-surface-container transition-colors"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="truncate text-[length:var(--font-size-body)] font-medium text-on-surface">

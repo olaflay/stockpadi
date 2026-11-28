@@ -539,7 +539,7 @@ export default function ProductsPage() {
         </div>
       ) : (
         <div>
-          <ul className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
+          <ul className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container overflow-hidden shadow-xs">
             {filtered.slice(0, visibleLimit).map((product) => (
               <li key={product.id} className="contain-list-item transition-colors hover:bg-surface-container-high/40">
                 {deleteMode ? (

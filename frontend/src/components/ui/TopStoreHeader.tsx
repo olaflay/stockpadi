@@ -7,6 +7,8 @@ import { Bell, Menu, ChevronLeft } from "lucide-react";
 import { useSideDrawer } from "@/components/ui/DrawerContext";
 import { useAlertBadgeCount } from "@/features/alerts/use-alert-center";
 import { hasAppBackHistory } from "@/lib/app-history";
+import { useAppScreenHeader } from "./ScreenHeaderContext";
+import { SyncStatusPill } from "./SyncStatusPill";
 
 const TITLE_PATTERNS: readonly [string, string][] = [
   ["/pos", "Sell"],
@@ -86,8 +88,7 @@ function isSubPage(pathname: string): boolean {
 }
 
 /**
- * TopStoreHeader — Authoritative green top app bar.
- * Houses navigation, the page title, and the notification action.
+ * The app shell owns the page title and navigation action.
  * Unifies mobile navigation hierarchy and eliminates redundant secondary headers.
  */
 export function TopStoreHeader() {
@@ -95,39 +96,41 @@ export function TopStoreHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const alertCount = useAlertBadgeCount();
-  const pageTitle = getPageTitle(pathname);
-  const showBack = isSubPage(pathname);
+  const screen = useAppScreenHeader(pathname);
+  const pageTitle = screen?.title ?? getPageTitle(pathname);
   const shellPrefix = pathname.match(/^\/(business|work)(?=\/|$)/)?.[0] ?? "";
+  const route = pathname.slice(shellPrefix.length) || "/dashboard";
+  const showBack = isSubPage(route) || Boolean(screen?.onBack);
 
   const handleBack = () => {
+    if (screen?.onBack) {
+      screen.onBack();
+      return;
+    }
     if (hasAppBackHistory()) {
       router.back();
       return;
     }
-    const match = PARENT_FALLBACKS.find(([prefix]) => pathname.startsWith(prefix));
-    router.replace(match ? match[1] : "/dashboard");
+    const match = PARENT_FALLBACKS.find(([prefix]) => route.startsWith(prefix));
+    const destination = screen?.fallbackHref ?? match?.[1] ?? "/dashboard";
+    router.replace(shellPrefix && destination === "/dashboard" ? shellPrefix : destination);
   };
 
   return (
     <header
-      className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col shadow-sm select-none gpu-layer before:content-[''] before:absolute before:bottom-full before:inset-x-0 before:h-32 before:bg-[var(--brand-accent-configured,var(--color-brand-accent,#0a6e4d))] before:pointer-events-none"
-      style={{
-        backgroundColor: "var(--brand-accent-configured, var(--color-brand-accent, #0a6e4d))",
-        color: "var(--color-brand-accent-contrast, #ffffff)",
-        paddingTop: "env(safe-area-inset-top, 0px)",
-      }}
+      className="safe-area-top relative z-40 flex w-full flex-col select-none bg-surface-container-low text-on-surface"
       role="banner"
       aria-label="Application header"
     >
-      <div className="w-full flex h-11 sm:h-12 items-center justify-between px-4 sm:px-6 max-w-xl md:max-w-2xl mx-auto">
+      <div className="mx-auto flex min-h-[var(--touch-target-min)] w-full max-w-xl items-center gap-1 px-4 sm:px-6 md:max-w-2xl">
         {/* Left: Navigation Affordance (Back Chevron on subpages, Hamburger Drawer on root tabs) + Page Name */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           {showBack ? (
             <button
               type="button"
               onClick={handleBack}
               aria-label="Go back"
-              className="touch-hitbox flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="flex size-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full hover:bg-surface-container-high active:scale-95 focus-visible:outline-2 focus-visible:-outline-offset-2"
             >
               <ChevronLeft size={22} aria-hidden />
             </button>
@@ -136,23 +139,24 @@ export function TopStoreHeader() {
               type="button"
               onClick={openDrawer}
               aria-label="Open navigation menu"
-              className="touch-hitbox flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="flex size-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full hover:bg-surface-container-high active:scale-95 focus-visible:outline-2 focus-visible:-outline-offset-2"
             >
               <Menu size={20} aria-hidden />
             </button>
           )}
 
           <h1
-            className="truncate text-base sm:text-lg font-bold tracking-tight text-white leading-tight"
+            className="min-w-0 wrap-anywhere text-base font-semibold leading-tight tracking-tight sm:text-lg"
             title={pageTitle}
           >
             {pageTitle}
           </h1>
         </div>
+        <SyncStatusPill />
         <Link
           href={`${shellPrefix}/alerts`}
           aria-label={alertCount > 0 ? `Notifications, ${alertCount} unread` : "Notifications"}
-          className="relative flex size-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 active:bg-white/20 focus-visible:outline-2 focus-visible:-outline-offset-2"
+          className="relative flex size-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-full hover:bg-surface-container-high focus-visible:outline-2 focus-visible:-outline-offset-2"
         >
           <Bell size={21} aria-hidden />
           {alertCount > 0 && (

@@ -407,7 +407,7 @@ function NewPurchaseContent() {
         <span className="text-[length:var(--font-size-label)] text-on-surface-muted">Products *</span>
 
         {hasNoProducts ? (
-          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-5">
+          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-container-low px-4 py-5">
             <div className="flex items-center gap-3">
               <Package size={20} className="text-on-surface-muted" aria-hidden />
               <div className="flex flex-col">

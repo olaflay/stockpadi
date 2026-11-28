@@ -47,11 +47,13 @@ export function AddContactModal({
 
   async function handlePickContact() {
     const picked = await openNativeContactPicker();
-    if (picked) {
-      if (picked.name) setName(picked.name);
-      if (picked.phone) setPhone(picked.phone);
-      if (error) setError(null);
-      showToast(`Selected ${picked.name || "contact"}`, "success");
+    if (picked.status === "selected") {
+      setName(picked.name);
+      setPhone(picked.phone);
+      setError(null);
+      if (!picked.name || !picked.phone) showToast("Fill in the missing contact details.", "neutral");
+    } else if (picked.status !== "cancelled") {
+      showToast("Couldn't read that contact. Enter the details below.", "neutral");
     }
   }
 
@@ -97,7 +99,7 @@ export function AddContactModal({
           <button
             type="button"
             onClick={handlePickContact}
-            className="flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-surface-container-low px-4 py-2 text-xs font-semibold text-brand-accent hover:bg-surface-container transition-all active:scale-[0.98]"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-xl bg-surface-container-low px-4 py-2 text-xs font-semibold text-brand-accent hover:bg-surface-container transition-colors"
           >
             <BookUser size={15} />
             <span>Pick from phone contacts</span>

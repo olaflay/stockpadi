@@ -266,26 +266,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (!activeUser) {
     return (
       <div className="flex h-dvh max-h-dvh w-full max-w-full flex-col overflow-hidden bg-surface select-none">
-        {/* Top green brand header skeleton matching TopStoreHeader */}
         <header
-          className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col shadow-xs bg-[var(--brand-accent-configured,var(--color-brand-accent,#0a6e4d))]"
+          className="safe-area-top flex w-full flex-col bg-surface-container-low"
           aria-hidden
         >
-          <div className="w-full flex h-11 sm:h-12 items-center justify-between px-4 sm:px-6 max-w-xl md:max-w-2xl mx-auto">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-full bg-white/20 animate-shimmer" />
-              <div className="h-4.5 w-24 rounded-md bg-white/25 animate-shimmer" />
+          <div className="mx-auto flex min-h-[var(--touch-target-min)] w-full max-w-xl items-center justify-between px-4 sm:px-6 md:max-w-2xl">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-4.5 w-24 rounded-md" />
             </div>
-            <div className="h-5 w-16 rounded-full bg-white/20 animate-shimmer" />
+            <Skeleton className="h-5 w-16 rounded-full" />
           </div>
         </header>
 
         {/* Main content body filled across the viewport */}
         <main className="min-w-0 flex-1 flex flex-col overflow-y-auto px-4 sm:px-6 pt-2 sm:pt-2.5 w-full max-w-xl md:max-w-2xl mx-auto gap-3 pb-18 sm:pb-20">
-          {/* Status banner placeholder */}
-          <div className="flex items-center justify-center py-0.5">
-            <Skeleton className="h-4 w-40 rounded-full" />
-          </div>
 
           {/* Hero Sales Card Placeholder — borderless tonal silhouette */}
           <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 shadow-xs">

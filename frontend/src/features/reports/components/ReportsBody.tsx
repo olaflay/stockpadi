@@ -313,7 +313,7 @@ export function ReportsBody({
       {/* ==================== TAB 1: OVERVIEW ==================== */}
       {activeTab === "overview" && (
         <div className="flex flex-col gap-4 animate-step-in">
-          <section className="min-w-0 rounded-3xl border border-brand-accent/15 bg-brand-container p-4 text-on-brand-container shadow-elevation-1 sm:p-5">
+          <section className="min-w-0 rounded-3xl bg-brand-container p-4 text-on-brand-container shadow-elevation-1 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -335,7 +335,7 @@ export function ReportsBody({
 
           {/* 7-Day Performance Bar Chart — Secondary section */}
           {dayOfWeekStats.length > 0 && periodSales.length > 0 && (
-            <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
+            <section className="rounded-2xl bg-surface-container-low p-4">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <BarChart2 size={16} className="text-brand-accent" />
@@ -402,7 +402,7 @@ export function ReportsBody({
             </section>
           )}
 
-          <div className="overflow-hidden rounded-3xl border border-border/20 bg-surface-container shadow-elevation-1">
+          <div className="overflow-hidden rounded-3xl bg-surface-container shadow-elevation-1">
             <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -471,7 +471,7 @@ export function ReportsBody({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-border/20 bg-surface-container shadow-elevation-1">
+          <div className="overflow-hidden rounded-3xl bg-surface-container shadow-elevation-1">
             <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -543,7 +543,7 @@ export function ReportsBody({
           <div className="grid grid-cols-2 gap-2.5">
             <RippleLink
               href="/expenses"
-              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 border border-border/20 hover:bg-surface-container transition-colors"
+              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 hover:bg-surface-container transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface">Shop Expenses</span>
@@ -559,7 +559,7 @@ export function ReportsBody({
 
             <RippleLink
               href="/purchases"
-              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 border border-border/20 hover:bg-surface-container transition-colors"
+              className="flex flex-col gap-1.5 rounded-xl bg-surface-container-low p-3 hover:bg-surface-container transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface">Restocks</span>
@@ -580,7 +580,7 @@ export function ReportsBody({
       {activeTab === "sales" && (
         <div className="flex flex-col gap-4 animate-step-in">
           {/* Quick Cash vs Debt Snapshot — flat inline section */}
-          <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3 border border-border/20">
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3">
             <div>
               <p className="text-[length:var(--font-size-caption)] text-on-surface-muted">Cash in Hand</p>
               <p className="font-number text-base font-bold text-success tabular-nums">
@@ -623,7 +623,7 @@ export function ReportsBody({
               return (
                 <div
                   key={day.dateIso}
-                  className="rounded-3xl bg-surface-container border border-border/30 overflow-hidden shadow-xs"
+                  className="rounded-3xl bg-surface-container overflow-hidden shadow-xs"
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-2 mb-3">
@@ -730,7 +730,7 @@ export function ReportsBody({
       {activeTab === "inventory" && (
         <div className="flex flex-col gap-4 animate-step-in">
           {/* Money on Shelves (Store Valuation Card) */}
-          <section className="rounded-3xl border border-border/20 bg-surface-container p-4 shadow-elevation-1">
+          <section className="rounded-3xl bg-surface-container p-4 shadow-elevation-1">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="inline-flex items-center gap-1.5 text-base font-bold text-on-surface">
                 <span>Stock value</span>
@@ -781,7 +781,7 @@ export function ReportsBody({
           </section>
 
           {/* Running Low Warnings — secondary section */}
-          <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
+          <section className="rounded-2xl bg-surface-container-low p-4">
             <div className="flex items-center justify-between gap-2 mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
                 <span>Running Low ({lowStockProducts.length})</span>
@@ -809,7 +809,7 @@ export function ReportsBody({
                   return (
                     <li
                       key={product.id}
-                      className="flex items-center justify-between gap-2 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5 text-xs border border-border/10"
+                      className="flex items-center justify-between gap-2 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5 text-xs"
                     >
                       <span className="font-medium text-on-surface truncate min-w-0">
                         {product.name}
@@ -833,7 +833,7 @@ export function ReportsBody({
           </section>
 
           {/* Fast-Moving Goods (Best Sellers) — secondary section */}
-          <section className="rounded-2xl bg-surface-container-low p-4 border border-border/20">
+          <section className="rounded-2xl bg-surface-container-low p-4">
             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-muted inline-flex items-center gap-1.5">
               <span>Fast-Moving Goods (Top Sellers)</span>
               <InfoTooltip text="Top items ranked by the total number of units sold during this time period." />
@@ -847,7 +847,7 @@ export function ReportsBody({
                 {bestSellers.map(({ product, quantity }, idx) => (
                   <li
                     key={product?.id ?? quantity}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5 border border-border/10"
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-high/50 px-3.5 py-2.5"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <PerformancePill

@@ -30,6 +30,7 @@ vi.mock("@/components/ui/DrawerContext", () => ({
 vi.mock("@/components/ui/SyncIndicator", () => ({
   SyncIndicator: () => <div data-testid="sync-indicator" />,
 }));
+vi.mock("../SyncStatusPill", () => ({ SyncStatusPill: () => <span>Saved</span> }));
 
 vi.mock("@/features/alerts/use-alert-center", () => ({
   useAlertBadgeCount: () => unread,

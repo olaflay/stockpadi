@@ -540,7 +540,7 @@ export default function CloseDayPage() {
 
       {/* Compressible Recent Close Days History (Zero page drain & minimal cognitive load) */}
       {history.length > 0 && (
-        <details className="group mt-2 rounded-2xl border border-border/50 bg-surface-container-low p-3.5 transition-all">
+        <details className="group mt-2 rounded-2xl bg-surface-container-low p-3.5 transition-all">
           <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-xs text-on-surface select-none">
             <span>Recent close days ({history.length} on record)</span>
             <ChevronDown size={16} className="text-on-surface-muted transition-transform group-open:rotate-180" />

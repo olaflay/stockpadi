@@ -13,31 +13,36 @@ function download(blob: Blob, name: string): void {
   const link = document.createElement("a");
   link.href = url;
   link.download = name;
+  document.body.append(link);
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 async function shareOrDownload(blob: Blob, name: string, title: string): Promise<"shared" | "downloaded"> {
   const file = new File([blob], name, { type: blob.type });
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title });
-    return "shared";
+    try {
+      await navigator.share({ files: [file], title });
+      return "shared";
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "NotAllowedError")) throw error;
+    }
   }
   download(blob, name);
   return "downloaded";
 }
 
 export async function shareReceiptPdf(receipt: ReceiptViewModel): Promise<"shared" | "downloaded"> {
-  // A PDF is the same completed visual document as the image export. Keeping
-  // one canvas source prevents the two formats from drifting over time.
   const canvas = renderReceiptCanvas(receipt);
+  const width = 80;
+  const height = width * canvas.height / canvas.width;
   const document = new jsPDF({
-    orientation: canvas.width > canvas.height ? "landscape" : "portrait",
-    unit: "px",
-    format: [canvas.width, canvas.height],
-    hotfixes: ["px_scaling"],
+    orientation: "portrait",
+    unit: "mm",
+    format: [width, height],
   });
-  document.addImage(canvas, "JPEG", 0, 0, canvas.width, canvas.height, undefined, "FAST");
+  document.addImage(canvas, "JPEG", 0, 0, width, height, undefined, "FAST");
   document.setProperties({ title: `Sales receipt ${receipt.receiptNumber}`, subject: "Sales receipt" });
   return shareOrDownload(document.output("blob"), receiptExportFileName("pdf"), "Sales receipt");
 }
@@ -59,8 +64,8 @@ function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, wi
  * library or remote asset, keeping exports deterministic on low-end devices.
  */
 export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElement {
-  const width = 1080;
-  const padding = 72;
+  const width = 760;
+  const padding = 64;
   const line = 44;
   const headerBottom = receipt.voidedAt ? 272 : 232;
   const itemHeight = 82;
@@ -70,9 +75,9 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
   totalRows.push(["Total", receipt.total]);
   const totalsHeight = (totalRows.length - 1) * line + 56;
   // Account for the section labels and dividers as well as the variable rows.
-  const height = headerBottom + 182 + receipt.items.length * itemHeight
+  const height = Math.max(840, headerBottom + 182 + receipt.items.length * itemHeight
     + totalsHeight + receipt.payments.length * paymentHeight
-    + (receipt.usesCurrentCatalogLabels ? 24 : 0) + padding;
+    + (receipt.usesCurrentCatalogLabels ? 24 : 0) + padding);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -123,14 +128,15 @@ export function renderReceiptCanvas(receipt: ReceiptViewModel): HTMLCanvasElemen
   y += 36;
   context.font = "400 28px system-ui, sans-serif";
   for (const item of receipt.items) {
-    const clippedName = item.name.length > 34 ? `${item.name.slice(0, 33)}…` : item.name;
-    context.fillText(clippedName, padding, y);
+    const amount = formatCurrency(item.total);
+    const amountWidth = Math.min(context.measureText(amount).width, 240);
+    context.fillText(item.name, padding, y, width - padding * 2 - amountWidth - 24);
     context.textAlign = "right";
-    context.fillText(formatCurrency(item.total), width - padding, y);
+    context.fillText(amount, width - padding, y, amountWidth);
     context.textAlign = "left";
     context.fillStyle = "#5f5f66";
     context.font = "400 24px system-ui, sans-serif";
-    context.fillText(`${item.quantity} ${item.unitLabel} × ${formatCurrency(item.unitPrice)}`, padding, y + 32);
+    context.fillText(`${item.quantity} ${item.unitLabel} × ${formatCurrency(item.unitPrice)}`, padding, y + 32, width - padding * 2);
     context.fillStyle = "#1b1b1f";
     context.font = "500 28px system-ui, sans-serif";
     y += itemHeight;

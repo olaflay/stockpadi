@@ -4,7 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { tenantArray } from "@/lib/local-tenant";
 
-const ACTIVE_OUTBOX_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"] as const;
+export const ACTIVE_OUTBOX_STATUSES = ["pending", "syncing", "blocked", "failed", "conflict", "needs_review"] as const;
 
 /** Count of outbox items not yet confirmed synced, including recoverable failures. */
 export function usePendingSyncCount(): number {

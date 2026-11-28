@@ -282,7 +282,7 @@ export function ProductUnitConversionFields({
   const displayAlt = altUnitLabel?.trim();
 
   return (
-    <div className="flex flex-col rounded-2xl bg-surface-container border border-border/30 overflow-hidden">
+    <div className="flex flex-col rounded-2xl bg-surface-container overflow-hidden">
       {/* Banner / Toggle Card — Streamlined to minimal footprint */}
       <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">

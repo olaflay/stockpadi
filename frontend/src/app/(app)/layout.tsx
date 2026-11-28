@@ -1,6 +1,7 @@
 "use client";
 
 import { BannerStrip } from "@/components/ui/BannerStrip";
+import { ScreenHeaderProvider } from "@/components/ui/ScreenHeaderContext";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { DrawerProvider } from "@/components/ui/DrawerContext";
 import { TopStoreHeader } from "@/components/ui/TopStoreHeader";
@@ -60,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <NavigationProvider>
             <TooltipProvider>
               <KeyboardScrollHandler />
-              <BroadcastProvider><AppShellBody>{children}</AppShellBody></BroadcastProvider>
+              <BroadcastProvider><ScreenHeaderProvider><AppShellBody>{children}</AppShellBody></ScreenHeaderProvider></BroadcastProvider>
             </TooltipProvider>
           </NavigationProvider>
         </DrawerProvider>

@@ -20,6 +20,8 @@ import {
   restoreBackup,
 } from "@/features/data/restore-backup";
 import { buildProductsCsv, buildSalesCsv } from "@/features/reports/csv-export";
+import { exportAccountingWorkbook } from "@/features/reports/accounting-export";
+import { localDateKey } from "@/lib/date";
 import { getBrandingConfig } from "@/config/branding";
 
 export default function DataSettingsPage() {
@@ -28,6 +30,8 @@ export default function DataSettingsPage() {
   const [pendingBackupFile, setPendingBackupFile] = useState<File | null>(null);
   const [unsyncedWarning, setUnsyncedWarning] = useState<{ file: File; count: number } | null>(null);
   const [restoringBackup, setRestoringBackup] = useState(false);
+  const [format, setFormat] = useState<"xlsx" | "csv">("xlsx");
+  const [exporting, setExporting] = useState<"products" | "sales" | null>(null);
   const pendingCount = usePendingSyncCount();
   const failedCount = useFailedSyncCount();
   const online = useOnlineStatus();
@@ -153,42 +157,35 @@ export default function DataSettingsPage() {
     }
   }
 
-  async function handleExportProductsCsv() {
+  async function exportData(dataset: "products" | "sales") {
+    if (exporting) return;
+    setExporting(dataset);
     try {
-      const products = await tenantArray(db.products);
-      const csv = buildProductsCsv(products);
-      const blob = new Blob([csv], { type: "text/csv" });
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      const [products, sales] = await db.transaction("r", [db.products, db.sales, db.businessProfile, db.session, db.localUsers], () =>
+        Promise.all([
+          tenantArray(db.products),
+          dataset === "sales" ? tenantArray(db.sales.where("createdAtLocal").between(start, end, true, false)) : [],
+        ])
+      );
+      const blob = format === "xlsx"
+        ? await exportAccountingWorkbook(dataset === "sales" ? { dataset, sales, products } : { dataset, products })
+        : new Blob(["\uFEFF", dataset === "sales" ? buildSalesCsv(sales, products) : buildProductsCsv(products)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `products-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Products downloaded as a spreadsheet.", "success");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = dataset === "sales" ? `sales-${localDateKey(now).slice(0, 7)}.${format}` : `products-${localDateKey(now)}.${format}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      showToast("Spreadsheet ready.", "success");
     } catch {
       showToast("Couldn't export the spreadsheet. Try again.", "danger");
-    }
-  }
-
-  async function handleExportSalesCsv() {
-    try {
-      const start = new Date();
-      start.setDate(1); // Start of this month
-      start.setHours(0, 0, 0, 0);
-      const sales = await tenantArray(db.sales.where("createdAtLocal").aboveOrEqual(start.toISOString()));
-      const products = await tenantArray(db.products);
-      
-      const csv = buildSalesCsv(sales, products);
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `sales-this-month-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Sales downloaded as a spreadsheet.", "success");
-    } catch {
-      showToast("Couldn't export the spreadsheet. Try again.", "danger");
+    } finally {
+      setExporting(null);
     }
   }
 
@@ -266,27 +263,32 @@ export default function DataSettingsPage() {
         </div>
       </section>
       <section className="rounded-2xl bg-surface-container p-4">
-        <h2 className="mb-2 text-[length:var(--font-size-label)] font-medium text-on-surface">Export for accounting</h2>
-        <p className="mb-4 text-[length:var(--font-size-body)] leading-relaxed text-on-surface-muted">
-          Export your products and sales data to CSV for use in spreadsheets or accounting software.
-        </p>
-        <div className="flex flex-col gap-3">
-          <RippleButton
-            type="button"
-            onClick={handleExportProductsCsv}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-highest transition-colors"
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-on-surface">Export for accounting</h2>
+          <select
+            aria-label="Export format"
+            value={format}
+            disabled={Boolean(exporting)}
+            onChange={(event) => setFormat(event.target.value === "csv" ? "csv" : "xlsx")}
+            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-control)] bg-surface-container-high px-3 text-sm text-on-surface"
           >
-            <Download size={18} />
-            Export Products CSV
-          </RippleButton>
-          <RippleButton
-            type="button"
-            onClick={handleExportSalesCsv}
-            className="flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-4 py-2 text-[length:var(--font-size-body)] font-medium text-on-surface hover:bg-surface-container-highest transition-colors"
-          >
-            <Download size={18} />
-            Export Sales CSV (This month)
-          </RippleButton>
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="csv">CSV (.csv)</option>
+          </select>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2" aria-busy={Boolean(exporting)}>
+          {(["products", "sales"] as const).map((dataset) => (
+            <RippleButton
+              key={dataset}
+              type="button"
+              disabled={Boolean(exporting)}
+              onClick={() => void exportData(dataset)}
+              className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-2 rounded-[var(--radius-control)] bg-surface-container-high px-3 text-sm font-medium text-on-surface hover:bg-surface-container-highest disabled:opacity-65"
+            >
+              <Download size={18} aria-hidden />
+              {exporting === dataset ? "Preparing…" : dataset === "products" ? "Products" : "Sales this month"}
+            </RippleButton>
+          ))}
         </div>
       </section>
 

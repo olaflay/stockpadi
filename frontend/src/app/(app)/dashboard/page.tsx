@@ -81,7 +81,7 @@ function KpiCard({
     </>
   );
 
-  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col rounded-2xl border border-border/30 bg-surface-container p-3 text-left shadow-elevation-1 sm:p-4 hover:bg-surface-container-high transition-colors";
+  const className = "flex min-h-[var(--touch-target-min)] min-w-0 flex-col rounded-2xl bg-surface-container p-3 text-left shadow-elevation-1 sm:p-4 hover:bg-surface-container-high transition-colors";
 
   if (href) {
     return (
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         <ScreenHeader title="Dashboard" hideBack={true} />
 
         {/* Hero Focus Card Placeholder */}
-        <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 border border-outline-variant/20 shadow-xs">
+        <div className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-32 sm:h-34 bg-surface-container/60 shadow-xs">
           <div className="flex items-center justify-between">
             <Skeleton className="h-4 w-28 rounded" />
             <Skeleton className="h-5 w-16 rounded-full" />
@@ -212,7 +212,7 @@ export default function DashboardPage() {
           {Array.from({ length: expectedKpiCount }).map((_, i) => (
             <div
               key={i}
-              className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col justify-between"
+              className="h-24 sm:h-26 rounded-2xl p-3 bg-surface-container/60 flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <Skeleton className="h-3.5 w-16 rounded" />
@@ -225,7 +225,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Activity Rows filling down the screen */}
-        <div className="rounded-2xl p-3 bg-surface-container/60 border border-outline-variant/20 flex flex-col gap-2.5 mt-1">
+        <div className="rounded-2xl p-3 bg-surface-container/60 flex flex-col gap-2.5 mt-1">
           <div className="flex items-center justify-between">
             <Skeleton className="h-3.5 w-28 rounded" />
             <Skeleton className="h-3.5 w-12 rounded" />
@@ -438,7 +438,7 @@ export default function DashboardPage() {
             {metrics.topProducts.map((p) => (
               <div
                 key={p.id}
-                className="flex min-h-[var(--touch-target-min)] w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/30 bg-surface-container px-4 py-2.5 text-left shadow-elevation-1"
+                className="flex min-h-[var(--touch-target-min)] w-full flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-container px-4 py-2.5 text-left shadow-elevation-1"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--font-size-body)] font-semibold text-on-surface">{p.name}</p>

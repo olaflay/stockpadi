@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useLayoutEffect, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { hasAppBackHistory } from "@/lib/app-history";
+import { useRegisterScreenHeader } from "./ScreenHeaderContext";
 
 interface ScreenHeaderProps {
   title: string;
@@ -45,6 +46,12 @@ export function ScreenHeader({
 }: ScreenHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const customBack = useRef(onBack);
+  useLayoutEffect(() => { customBack.current = onBack; }, [onBack]);
+  const runCustomBack = useCallback(() => customBack.current?.(), []);
+  const managed = useRegisterScreenHeader({
+    title, onBack: onBack ? runCustomBack : undefined, fallbackHref: backHref ?? fallbackHref,
+  });
 
   const handleBack = () => {
     if (onBack) {
@@ -80,6 +87,10 @@ export function ScreenHeader({
     else if (pathname.includes("/contacts/") || pathname.includes("/customers/")) router.replace("/contacts");
     else router.replace("/dashboard");
   };
+
+  if (managed) {
+    return action ? <div className={`mb-3 flex justify-end ${className ?? ""}`}>{action}</div> : null;
+  }
 
   // On root tab screens, the page title, hamburger menu, and sync indicator
   // are already authoritatively displayed in the top green app bar (TopStoreHeader).

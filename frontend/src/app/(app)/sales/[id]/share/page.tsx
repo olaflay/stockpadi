@@ -42,8 +42,8 @@ export default function ShareReceiptPage({ params }: PageProps) {
   }) : null, [sale, profile?.name, customer?.name, seller?.fullName, products]);
 
   if (!hasAccountType(user, WORKER_EXPERIENCE_ACCOUNT_TYPES)) return <><ScreenHeader title="Receipt" backHref={`/sales/${id}`} /><PermissionDenied requiredAccountTypes={WORKER_EXPERIENCE_ACCOUNT_TYPES} /></>;
-  if (sale === undefined || !receipt) return <><ScreenHeader title="Receipt" backHref={`/sales/${id}`} /><Skeleton className="h-80" /></>;
   if (sale === null) return <><ScreenHeader title="Receipt" backHref="/sales" /><p className="text-[length:var(--font-size-body)] text-on-surface-muted">Sale not found.</p></>;
+  if (sale === undefined || !receipt) return <><ScreenHeader title="Receipt" backHref={`/sales/${id}`} /><Skeleton className="h-80" /></>;
   const canViewBranchSales = hasCapability(user, "VIEW_BRANCH_SALES");
   const allowed = user.accountType !== "WORKER" || (user.branchIds?.includes(sale.branchId) && (sale.createdByUserId === user.id || canViewBranchSales));
   if (!allowed) return <><ScreenHeader title="Receipt" backHref={`/sales/${id}`} /><PermissionDenied requiredAccountTypes={BUSINESS_MANAGEMENT_ACCOUNT_TYPES} /></>;
@@ -63,8 +63,8 @@ export default function ShareReceiptPage({ params }: PageProps) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
       <ScreenHeader title="Share receipt" backHref={`/sales/${id}`} />
-      <main className="flex-1 overflow-y-auto pb-2" aria-label="Receipt preview">
-        <article className="mx-auto max-w-md rounded-[var(--radius-card)] border border-border bg-surface px-4 py-5 shadow-[var(--shadow-elevation-1)]">
+      <section className="flex-1 overflow-y-auto pb-2" aria-label="Receipt preview">
+        <article className="mx-auto max-w-xs rounded-[var(--radius-card)] bg-surface-container-low px-4 py-5 shadow-[var(--shadow-elevation-1)]">
           <header className="flex items-start justify-between gap-3 border-b border-dashed border-border pb-4">
             <div className="min-w-0">
               <h2 className="wrap-anywhere text-[length:var(--font-size-title-lg)] font-semibold text-on-surface">{receipt.businessName}</h2>
@@ -90,7 +90,7 @@ export default function ShareReceiptPage({ params }: PageProps) {
           <section className="mt-4 border-t border-dashed border-border pt-3"><h2 className="text-[length:var(--font-size-caption)] font-medium uppercase tracking-wide text-on-surface-muted">Payment</h2>{receipt.payments.map((payment, index) => <div className="mt-2 flex justify-between text-[length:var(--font-size-body)] text-on-surface" key={index}><span className="capitalize">{payment.method.replace("_", " ")}</span><span className="font-number tabular-nums">{formatCurrency(payment.amount)}</span></div>)}</section>
           {receipt.usesCurrentCatalogLabels && <p className="mt-4 border-t border-dashed border-border pt-3 text-[length:var(--font-size-caption)] text-on-surface-muted">Some legacy item names use today&apos;s catalogue labels.</p>}
         </article>
-      </main>
+      </section>
       <div className="sticky bottom-0 -mx-gutter flex gap-2 cta-scrim-container px-gutter pb-[max(0.375rem,calc(env(safe-area-inset-bottom,0px)+0.25rem))] pt-1.5 sm:-mx-gutter-lg sm:px-gutter-lg">
         <RippleButton type="button" onClick={() => share("pdf")} disabled={sharing !== null} className="flex min-h-[var(--touch-target-min)] min-w-0 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-brand-accent px-3 text-[length:var(--font-size-body)] font-medium text-brand-accent-contrast disabled:opacity-50"><FileText size={18} aria-hidden />{sharing === "pdf" ? "Preparing…" : "Share PDF"}</RippleButton>
         <RippleButton type="button" onClick={() => share("image")} disabled={sharing !== null} className="flex min-h-[var(--touch-target-min)] min-w-0 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[length:var(--font-size-body)] font-medium text-on-surface disabled:opacity-50"><FileImage size={18} aria-hidden />{sharing === "image" ? "Preparing…" : "Share image"}</RippleButton>

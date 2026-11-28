@@ -297,7 +297,7 @@ export default function ReconciliationPage() {
             return (
               <div
                 key={item.clientId}
-                className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 shadow-sm border border-border/10"
+                className="flex flex-col gap-3 rounded-2xl bg-surface-container p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">

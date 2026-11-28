@@ -122,7 +122,7 @@ export default function StaffPage() {
         {nonOwnerActiveCount} of {STAFF_CAP} staff used
       </p>
 
-      <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container/60 border border-outline-variant/30 overflow-hidden shadow-xs">
+      <div className="divide-y divide-outline-variant/30 rounded-3xl bg-surface-container overflow-hidden shadow-xs">
         {staffList.map((staffMember) => (
           <RippleLink
             key={staffMember.id}

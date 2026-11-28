@@ -165,7 +165,7 @@ export default function ImportProductsPage() {
       </p>
 
       {/* Step 1 — get the template */}
-      <section className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+      <section className="rounded-[var(--radius-card)] bg-surface-container-low p-5">
         <StepBadge n={1} text="Get the template" />
         <RippleButton
           type="button"
@@ -200,7 +200,7 @@ export default function ImportProductsPage() {
       </section>
 
       {/* Step 2 — upload */}
-      <section className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+      <section className="rounded-[var(--radius-card)] bg-surface-container-low p-5">
         <StepBadge n={2} text="Upload your file" />
         <label className="flex min-h-[var(--touch-target-min)] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-2 border-dashed border-border bg-surface-container px-4 py-6 text-center hover:bg-surface-container-high transition-colors">
           <FileSpreadsheet size={26} aria-hidden className="text-on-surface-muted" />
@@ -257,7 +257,7 @@ export default function ImportProductsPage() {
             </div>
 
             {result.errors.length > 0 && (
-              <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4">
+              <div className="rounded-[var(--radius-card)] bg-surface-container-low p-4">
                 <h3 className="mb-1 text-[length:var(--font-size-label)] font-semibold text-on-surface">
                   {result.errors.length} {result.errors.length === 1 ? "row needs" : "rows need"} fixing
                 </h3>
@@ -303,7 +303,7 @@ export default function ImportProductsPage() {
 
       {/* Step 3 — review & import */}
       {result && (
-        <section className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+        <section className="rounded-[var(--radius-card)] bg-surface-container-low p-5">
           <StepBadge n={3} text="Review and import" />
 
           {hasInitialStock && branches && branches.length > 1 && (

@@ -1,51 +1,34 @@
-/**
- * Web Contacts API integration for Android / Chrome PWA.
- * Enables 1-tap contact selection directly from the user's phonebook
- * with graceful fallback when unsupported (iOS, desktop browsers).
- */
+type NativeContact = { name?: string[]; tel?: string[] };
+type NativeContacts = { select(properties: string[], options: { multiple: boolean }): Promise<NativeContact[]> };
+
+function getContactPicker(): NativeContacts | undefined {
+  if (typeof window === "undefined" || !window.isSecureContext || window.top !== window) return;
+  const contacts = (navigator as Navigator & { contacts?: NativeContacts }).contacts;
+  return typeof contacts?.select === "function" ? contacts : undefined;
+}
 
 export function isContactPickerSupported(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof navigator !== "undefined" &&
-    "contacts" in navigator &&
-    "ContactsManager" in window
-  );
+  return Boolean(getContactPicker());
 }
 
-export interface PickedContact {
-  name: string;
-  phone: string;
-}
+export type ContactPickerResult =
+  | { status: "selected"; name: string; phone: string }
+  | { status: "cancelled" | "unavailable" | "empty" };
 
-export async function openNativeContactPicker(): Promise<PickedContact | null> {
-  if (!isContactPickerSupported()) {
-    return null;
-  }
+export async function openNativeContactPicker(): Promise<ContactPickerResult> {
+  const picker = getContactPicker();
+  if (!picker) return { status: "unavailable" };
 
   try {
-    const props = ["name", "tel"];
-    const nav = navigator as unknown as {
-      contacts: {
-        select: (props: string[], opts?: { multiple?: boolean }) => Promise<Array<{ name?: string[]; tel?: string[] }>>;
-      };
-    };
+    // Call directly in the button gesture, before awaiting anything else.
+    const [selected] = await picker.select(["name", "tel"], { multiple: false });
+    if (!selected) return { status: "cancelled" };
 
-    const contacts = await nav.contacts.select(props, { multiple: false });
-    if (contacts && contacts.length > 0) {
-      const selected = contacts[0];
-      const rawName = Array.isArray(selected.name) ? selected.name[0] ?? "" : "";
-      const rawTel = Array.isArray(selected.tel) ? selected.tel[0] ?? "" : "";
-
-      return {
-        name: rawName.trim(),
-        phone: rawTel.replace(/\s+/g, ""),
-      };
-    }
-  } catch {
-    // User cancelled contact selection or permission was denied
-    return null;
+    const name = (selected.name ?? []).map((value) => value.trim()).find(Boolean) ?? "";
+    const phone = (selected.tel ?? []).map((value) => value.trim().replace(/[\s().-]/g, ""))
+      .find((value) => /^\+?\d+$/.test(value)) ?? "";
+    return name || phone ? { status: "selected", name, phone } : { status: "empty" };
+  } catch (error) {
+    return { status: error instanceof DOMException && error.name === "AbortError" ? "cancelled" : "unavailable" };
   }
-
-  return null;
 }
